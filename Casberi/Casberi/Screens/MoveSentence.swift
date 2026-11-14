@@ -93,6 +93,12 @@ struct MoveSentence: View {
     @State private var freshReceive = false
     /// Receive to your private balance on Aztec: your Aztec address (prd §1719).
     @State private var aztecReceive = false
+    /// Receive's public page, behind "Public account" (prd §1803).
+    @State private var receivePublic = false
+    /// "From another network" taken: the Network row and its list.
+    @State private var receiveOther = false
+    /// Which of Receive's Copy words reads "Copied" just now.
+    @State private var copiedPlace: String?
     /// Your private balance on Ethereum for any token but ETH and USDC:
     /// Railgun's sentence, in or back (prd §1713, §1721).
     @State private var railgunOpen = false
@@ -1421,7 +1427,7 @@ struct MoveSentence: View {
             if freshReceive, privateMode == nil, open != .verb {
                 // "your private balance" goes back to where it lands.
                 MoveFreshSentence(inTray: inTray, leave: {
-                    withAnimation(DS.Motion.standard) { freshReceive = false; open = .elsewhere }
+                    withAnimation(DS.Motion.standard) { freshReceive = false; open = nil }
                 }, payGas: { address, eth in
                     // **PAY THE GAS (prd §1779).** Send's own sentence, filled:
                     // a little ETH from your account to the address that is
@@ -1461,7 +1467,7 @@ struct MoveSentence: View {
             }
             if aztecReceive, privateMode == nil, open != .verb {
                 MoveAztecReceive(inTray: inTray, leave: {
-                    withAnimation(DS.Motion.standard) { aztecReceive = false; open = .elsewhere }
+                    withAnimation(DS.Motion.standard) { aztecReceive = false; open = nil }
                 }, addMoney: {
                     // Money on Ethereum comes in through Send's sentence to
                     // your private balance on Aztec (prd §1779).
@@ -2374,7 +2380,153 @@ struct MoveSentence: View {
                 word(YourAccount.short(account), ink: networkPicked ? MoveSentence.settledInk : DS.textPrimary)
                     .accessibilityLabel(Text("Your address, \(account)"))
             }
-            MoveClause(glue: String(localized: "on")) { receiveNetworkWord }
+            if receivePublic {
+                // Its page names every network the address is good on.
+                MovePhrase(receiveNetworks.map(\.name).formatted(.list(type: .or)) + ".", glue: String(localized: "on"),
+                           ink: DS.textPrimary)
+            } else {
+                MoveClause(glue: String(localized: "on")) { receiveNetworkWord }
+            }
+        }
+    }
+
+    // MARK: - Receive's three addresses (prd §1803)
+
+    @ViewBuilder private var receiveAddresses: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if receiveNetworks.isEmpty {
+                // Never an address the account cannot follow (§1442k).
+                receivePlace(String(localized: "Public account"), marks: [],
+                             fact: String(localized: "Not on any network from this \(ThisDevice.name) yet"),
+                             factInk: DS.attentionInk, place: "public", open: nil, copy: nil)
+            } else {
+                receivePlace(String(localized: "Public account"), marks: receiveNetworks.compactMap { Self.networkMark($0) },
+                             fact: YourAccount.short(account), place: "public",
+                             open: { receivePublic = true },
+                             copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })
+            }
+            if PrivateMove.freshAvailable {
+                // Its copy opens its page too: only there is the address
+                // watched, and only there is its rule said (prd §1779).
+                receivePlace(String(localized: "Private balance"), marks: [Self.networkMark(chainId: 1)].compactMap { $0 },
+                             fact: String(localized: "A new address each time"), place: "fresh",
+                             open: { goFresh() },
+                             copy: {
+                                 if !DemoMode.isActive {
+                                     FreshReceive.shared.ensureCurrent()
+                                     if let entry = FreshReceive.shared.current { DSPasteboard.copy(entry.address); DSHaptic.tap() }
+                                 }
+                                 goFresh()
+                             })
+            }
+            if AztecProver.isAvailable, let aztec = AztecAccountStore.shared.shown.address {
+                receivePlace(String(localized: "Private account"), ink: DS.aztecInk, marks: ["brand-aztec"],
+                             fact: String(localized: "Aztec to Aztec only"), factInk: DS.aztecInk, copyInk: DS.aztecInk, place: "aztec",
+                             open: { open = nil; aztecReceive = true },
+                             copy: {
+                                 if DemoMode.isActive { say(YourAccountDemo.actsLater); return }
+                                 DSPasteboard.copy(aztec)
+                                 DSHaptic.tap()
+                                 markCopied("aztec")
+                             })
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                // Any other network: a deposit address, by network and token.
+                Button {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { receiveOther = true }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(350))
+                        withAnimation(DS.Motion.standard) { open = .elsewhere }
+                    }
+                } label: { MoveVerbRowLabel(title: String(localized: "From another network"), glyph: "globe") }
+                    .buttonStyle(RowPress())
+                // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
+                // elsewhere sends it all here, each send approved there.
+                Button {
+                    ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
+                } label: { MoveVerbRowLabel(title: String(localized: "From another wallet"), glyph: "arrow.down.left") }
+                    .buttonStyle(RowPress())
+            }
+        }
+    }
+
+    /// One place money can land: its name and the marks of the networks it
+    /// is good on (a tap opens its page), then its fact and Copy.
+    private func receivePlace(_ name: String, ink: Color = DS.textPrimary, marks: [String], fact: String,
+                              factInk: Color = DS.textSecondary, copyInk: Color = DS.pickInk, place: String,
+                              open: (() -> Void)?, copy: (() -> Void)?) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                guard let open else { return }
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { open() }
+            } label: {
+                HStack(spacing: DS.Space.s2) {
+                    Text(verbatim: name).dsText(.heading24).foregroundStyle(ink).lineLimit(1)
+                    Spacer(minLength: DS.Space.s2)
+                    ForEach(marks, id: \.self) { MoveRowMark(network: $0) }
+                }
+                .frame(minHeight: MoveChoiceRowLabel.height)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .disabled(open == nil)
+            .accessibilityHint(Text("Opens its page"))
+            HStack(spacing: DS.Space.s2) {
+                Text(verbatim: fact).dsText(.body17).foregroundStyle(factInk).lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: DS.Space.s2)
+                if let copy {
+                    let done = copiedPlace == place
+                    Button(action: copy) {
+                        Text(done ? "Copied" : "Copy")
+                            .dsText(.heading17)
+                            .foregroundStyle(done ? DS.confirmInk : copyInk)
+                            .contentTransition(.opacity)
+                            .frame(minHeight: MoveChoiceRowLabel.height)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text("Copy the \(name) address"))
+                }
+            }
+        }
+    }
+
+    /// A Copy word marks itself for 1.2s (§867).
+    private func markCopied(_ place: String) {
+        withAnimation(DS.Motion.standard) { copiedPlace = place }
+        Task {
+            try? await Task.sleep(for: .milliseconds(1200))
+            if copiedPlace == place { withAnimation(DS.Motion.standard) { copiedPlace = nil } }
+        }
+    }
+
+    /// The public account's page: the whole address under its name, each
+    /// network by mark and name, and Share; the foot copies.
+    @ViewBuilder private var receivePublicPage: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s3) {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Public address").dsText(.body17).foregroundStyle(DS.textSecondary)
+                addressBlock(account)
+                HStack(spacing: DS.Space.s3) {
+                    ForEach(receiveNetworks, id: \.chainId) { net in
+                        HStack(spacing: DS.Space.s1) {
+                            if let mark = Self.networkMark(net) { MoveRowMark(network: mark, size: 22) }
+                            Text(verbatim: net.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        }
+                    }
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.top, DS.Space.s1)
+            }
+            if !YourAccountDemo.isDemo(account) {
+                ShareLink(item: account) {
+                    MoveVerbRowLabel(title: String(localized: "Share"), glyph: "square.and.arrow.up")
+                }
+                .buttonStyle(RowPress())
+            }
         }
     }
 
@@ -2731,8 +2883,28 @@ struct MoveSentence: View {
         case .send: return !sellShown && !toShown && !networkPicked
         case .swap: return !sellShown && buy == nil && !networkPicked
         case .buy: return buyBare
+        // The three addresses say it all, and "on network." is not said
+        // before one is picked (prd §1803: no half-finished sentence).
+        case .receive: return receiveList || (elsewhere == nil && !networkPicked && !receivePublic && !fresh)
         default: return false
         }
+    }
+
+    /// **RECEIVE OPENS ON ALL THREE ADDRESSES (prd §1803, user: "all three at
+    /// once is better b/c then its one less tap").** Until a page or another
+    /// network is taken.
+    private var receiveList: Bool {
+        // Not "no network picked": Send's pick is the same state, and
+        // Receive opens on its addresses whatever Send last asked.
+        verb == .receive && receipt == nil && stage == nil && !fresh && elsewhere == nil
+            && !receivePublic && !receiveOther
+    }
+
+    /// The networks your one public address is good on from this device
+    /// (§1442k): what it can follow, else all of them.
+    private var receiveNetworks: [Op.Network] {
+        if let reach, !YourAccountReach.isAll(reach) { return reach }
+        return Op.networks.filter { !$0.isTest }
     }
 
     /// Spend with nothing picked or typed.
@@ -2908,6 +3080,9 @@ struct MoveSentence: View {
     private func pickVerb(_ v: Verb) {
         withAnimation(DS.Motion.standard) {
             open = nil
+            // Receive opens on its three addresses, every time (prd §1803).
+            receivePublic = false
+            receiveOther = false
             guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen else { return }
             privateMode = nil
             railgunOpen = false
@@ -3290,7 +3465,7 @@ struct MoveSentence: View {
     /// the first of those is in the pick's pink: where to go next. The rows
     /// are read off the sentence on screen, so none is listed by hand.
     private var choiceRowList: [LedgerRow] {
-        guard receipt == nil, stage == nil else { return [] }
+        guard receipt == nil, stage == nil, !receiveList, !receivePublic else { return [] }
         let pick = String(localized: "Choose")
         var rows: [(rank: Int, row: LedgerRow)] = []
         // Where the money leaves from (prd §1779): the one visible place to
@@ -3924,6 +4099,10 @@ struct MoveSentence: View {
             .buttonStyle(RowPress())
         } else if verb == .sweep {
             sweepLine
+        } else if receiveList {
+            receiveAddresses
+        } else if verb == .receive, receivePublic {
+            receivePublicPage
         } else if verb == .receive {
             // **RECEIVE (§1442i, user: "when we show 'at' show …xxxx or complete
             // address. and somewhere on the page complete address should be
@@ -3985,31 +4164,8 @@ struct MoveSentence: View {
                         }
                     }
                 }
-                // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
-                // elsewhere sends it all here, each send approved there — §1484's
-                // bar, the transaction filled, never an address to paste. It needs
-                // no network picked, so it stands from the first moment; the
-                // demo's other wallet is made up too, and nothing connects.
-                if elsewhere == nil {
-                    // **THE PRIVATE DOORS, VISIBLE (prd §1779; a tester:
-                    // "when user hits receive they can't see private balance
-                    // either", "it always goes back to main").** §1719 put
-                    // both behind the network's word, which nobody knew to
-                    // tap. Rows, as "Private" was a row before it.
-                    if PrivateMove.freshAvailable {
-                        DSDoorRow(icon: "eye.slash", label: "Receive privately") { goFresh() }
-                    }
-                    if AztecProver.isAvailable, AztecAccountStore.shared.shown.address != nil {
-                        DSDoorRow(icon: "diamond", label: "Receive on Aztec") {
-                            withAnimation(DS.Motion.standard) { open = nil; aztecReceive = true }
-                            DSHaptic.selection()
-                        }
-                        .aztecDoor()
-                    }
-                    DSDoorRow(icon: "arrow.down.left", label: "From another wallet") {
-                        ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
-                    }
-                }
+                // The private doors and "From another wallet" stand on
+                // Receive's first screen now (prd §1803).
             }
         } else if limiting, let with {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
@@ -6013,6 +6169,13 @@ struct MoveSentence: View {
     private var backCard: some View {
         MoveBackCard(act: {
             withAnimation(DS.Motion.standard) {
+                // A page of Receive goes back to its three addresses.
+                if verb == .receive, elsewhere == nil, receivePublic || receiveOther {
+                    receivePublic = false
+                    receiveOther = false
+                    open = nil
+                    return
+                }
                 open = .verb
                 focus = nil
             }
@@ -6075,7 +6238,9 @@ struct MoveSentence: View {
                     // too since §1488): grey until one is picked, and a tap
                     // opens the list. The demo's copy says it acts later.
                     Spacer(minLength: 0)
-                    let ready = elsewhere != nil || (!fresh && networkPicked)
+                    let ready = elsewhere != nil || (!fresh && networkPicked) || receivePublic
+                    // The first screen's acts are its rows' own (prd §1803).
+                    if !receiveList {
                     Button {
                         if ready { copy() } else {
                             say(String(localized: "Pick a network first"))
@@ -6084,6 +6249,7 @@ struct MoveSentence: View {
                     } label: { actCard(footVerb, on: ready) }
                     .buttonStyle(PressSpring())
                     .accessibilityHint(ready ? Text("Copies your address") : Text("Pick a network first"))
+                    }
                 } else if verb == .deposit {
                     // **Buy's one act opens the seller's page (prd §1599).**
                     Spacer(minLength: 0)
@@ -6999,7 +7165,12 @@ struct MoveSentence: View {
         if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
         UIPasteboard.general.string = receiveAddress
         DSHaptic.tap()
-        say(String(localized: "Address copied"))
+        // Never an address without its networks (prd §1486, §1803).
+        if receiveList || receivePublic {
+            say(String(localized: "Copied · only on \(receiveNetworks.map(\.name).formatted(.list(type: .or)))"))
+        } else {
+            say(String(localized: "Address copied"))
+        }
     }
 
     /// **ARRIVED, READ (prd §1555).** A swap to another network that landed

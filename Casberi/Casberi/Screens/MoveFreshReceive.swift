@@ -29,6 +29,7 @@ struct MoveFreshSentence<Head: View>: View {
     @State private var copied = false
     @State private var reading = false
     @Environment(\.modelContext) private var context
+    @Environment(ShellChrome.self) private var chrome
     private var book: FreshReceive { .shared }
     private var entry: FreshAddress.Entry? { book.current }
 
@@ -39,59 +40,60 @@ struct MoveFreshSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // Receive is Move's verb word (`head`), the sentence's first
-                // (prd §1681).
-                MoveFlow {
-                    head()
-                    MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
-                                    ink: DS.textPrimary,
-                                    action: { if !moving { leave() } },
-                                    hint: Text("Picks where it lands"))
-                    MovePhrase(network.name, glue: String(localized: "on"))
+                // **MOVE'S LAYOUT (prd §1803, as §1794, §1801):** the verb is
+                // the title, the rows and the address stand under it, and the
+                // sentence stands over the button.
+                head()
+                    .allowsHitTesting(false)
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    // Its one network, said as a row and fixed (prd §1802).
+                    MoveChoiceRows(rows: [MoveChoiceRow(id: "network", name: String(localized: "Network"), value: network.name,
+                                                        mark: MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) },
+                                                        fixed: true) {}],
+                                   open: .constant(nil)) { _ in EmptyView() }
                     if let entry {
-                        MoveClause(glue: String(localized: "at")) {
-                            Button { copy(entry.address) } label: {
-                                MoveWord(copied ? String(localized: "Copied") : YourAccount.short(entry.address) + ".", ink: DS.textPrimary)
+                        // Named for what it is (prd §1803): good once.
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            Text("One-time address").dsText(.body17).foregroundStyle(DS.textSecondary)
+                            code(entry.address)
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            Button {
+                                DSHaptic.selection()
+                                withAnimation(DS.Motion.standard) {
+                                    copied = false
+                                    book.make()
+                                }
+                            } label: { MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise") }
+                                .buttonStyle(RowPress())
+                                .disabled(moving || DemoMode.isActive)
+                            ShareLink(item: entry.address) {
+                                MoveVerbRowLabel(title: String(localized: "Share"), glyph: "square.and.arrow.up")
                             }
                             .buttonStyle(RowPress())
-                            .accessibilityLabel(Text("The new address, \(entry.address)"))
-                            .accessibilityHint(Text("Copies the address"))
                         }
                     }
-                }
-                // The sentence is no control (prd §1781): the address under
-                // it and the foot copy, and the foot's back leaves.
-                .allowsHitTesting(false)
-                // The line stands over the code, where it is seen: under
-                // it, a phone's foot covers it until scrolled.
-                line
-                    .padding(.top, DS.Space.s2)
-                // **A WAY ON FROM "NEEDS A LITTLE PRIVATE ETH" (prd §1779; user,
-                // of a tester's 1,000 USDC: "do 1 and 2 before we ship").** A
-                // new account has no private ETH to pay with, so the line was
-                // a dead end. Your account can pay it: one send, yours to
-                // confirm, and the line under it says what that costs you.
-                if let entry, case .needsGas = entry.state, !DemoMode.isActive {
-                    DSDoorRow(icon: "fuelpump", title: Text(reading ? "Reading the fee…" : "Pay the gas")) {
-                        guard !reading else { return }
-                        reading = true
-                        Task {
-                            let eth = await book.gasToPay(entry)
-                            reading = false
-                            if let eth { payGas(entry.address, eth) }
+                    // One line, only when there is something to say.
+                    line
+                    // **A WAY ON FROM "NEEDS A LITTLE PRIVATE ETH" (prd §1779; user,
+                    // of a tester's 1,000 USDC: "do 1 and 2 before we ship").** A
+                    // new account has no private ETH to pay with, so the line was
+                    // a dead end. Your account can pay it: one send, yours to
+                    // confirm, and the line under it says what that costs you.
+                    if let entry, case .needsGas = entry.state, !DemoMode.isActive {
+                        DSDoorRow(icon: "fuelpump", title: Text(reading ? "Reading the fee…" : "Pay the gas")) {
+                            guard !reading else { return }
+                            reading = true
+                            Task {
+                                let eth = await book.gasToPay(entry)
+                                reading = false
+                                if let eth { payGas(entry.address, eth) }
+                            }
                         }
+                        DSFootnote("From your account, in the open. It links this address to you.")
                     }
-                    .padding(.top, DS.Space.s2)
-                    DSFootnote("From your account, in the open. It links this address to you.")
                 }
-                if let entry {
-                    code(entry.address)
-                        .padding(.top, DS.Space.s4)
-                    // The copy names where it is good (prd §1779).
-                    DSDoorRow(icon: copied ? "checkmark" : "doc.on.doc",
-                              title: Text(copied ? "Copied" : "Copy for \(network.name)")) { copy(entry.address) }
-                        .padding(.top, DS.Space.s2)
-                }
+                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -101,6 +103,8 @@ struct MoveFreshSentence<Head: View>: View {
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
         .animation(DS.Motion.standard, value: entry)
+        // The rows, the address and the sentence need the tall sheet.
+        .onAppear { chrome.moveTall = true }
         .onChange(of: beat) { was, now in
             if now > was { DSHaptic.success() }
         }
@@ -207,30 +211,34 @@ struct MoveFreshSentence<Head: View>: View {
         }
     }
 
-    /// "New address" grey, leading; "Share" pink, trailing.
+    /// The sentence over the button (prd §1794, §1803), then Back and the
+    /// one act, Copy address; "New address" and "Share" are rows above.
     private var foot: some View {
-        HStack(alignment: .center, spacing: DS.Space.s2) {
-            MoveBackCard()
-            Button {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    copied = false
-                    book.make()
+        VStack(spacing: 0) {
+            MoveFlow {
+                MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
+                MovePhrase(String(localized: "your private balance"), glue: String(localized: "to"), ink: DS.textPrimary)
+                MovePhrase(network.name, glue: String(localized: "on"))
+                if let entry {
+                    MovePhrase(YourAccount.short(entry.address) + ".", glue: String(localized: "at"), ink: DS.textPrimary)
                 }
-            } label: {
-                Text("New address").dsText(.heading24).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
             }
-            .buttonStyle(RowPress())
-            .disabled(moving || DemoMode.isActive)
-            Spacer(minLength: DS.Space.s3)
-            if let entry {
-                ShareLink(item: entry.address) {
-                    Text("Share")
-                        .dsText(.heading34)
-                        .foregroundStyle(DS.pickInk)
-                        .frame(minHeight: 48, alignment: .trailing)
+            // The sentence is no control (prd §1781).
+            .allowsHitTesting(false)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, DS.Space.s3)
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                // Back to where it was picked, never Move's menu (prd §1803).
+                MoveBackCard(act: leave, disabled: moving)
+                if let entry {
+                    Button { copy(entry.address) } label: {
+                        MoveSentence.actCard(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true)
+                    }
+                    .buttonStyle(PressSpring())
+                } else {
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(RowPress())
             }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)

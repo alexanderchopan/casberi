@@ -67,6 +67,8 @@ extension FeedScreen {
         case walletTokens
         /// Set or change the savings goal on your private balance (prd §1667).
         case savingsGoal
+        /// Where each network is read from (prd §1517, a tray since §1803).
+        case ownNodes
         /// Gas on Aztec, and Add gas (prd §1761).
         case aztecGas
         /// One thing on its way, its steps (prd §1779).
@@ -109,6 +111,7 @@ extension FeedScreen {
             case .walletFollow: "walletFollow"
             case .walletTokens: "walletTokens"
             case .savingsGoal: "savingsGoal"
+            case .ownNodes: "ownNodes"
             case .aztecGas: "aztecGas"
             case .onItsWay(let item): "onItsWay:\(item.id)"
             case .watchToken: "watchToken"
@@ -316,6 +319,8 @@ extension FeedScreen {
             WatchTokenSheet(held: walletHeldTokens)
         case .savingsGoal:
             SavingsGoalTray()
+        case .ownNodes:
+            OwnNodeTray()
         case .aztecGas:
             AztecGasTray()
         case .onItsWay(let item):

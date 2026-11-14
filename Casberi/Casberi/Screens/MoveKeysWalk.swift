@@ -72,7 +72,9 @@ struct MoveKeysWalk: View {
                 if step != .created, step != .intro {
                     Text("\(stepNumber) of \(stepCount)")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .padding(.bottom, DS.Space.s6)
+                        // The Round-ups step holds a headline, two rows and
+                        // a line: less air, so the line stays in view.
+                        .padding(.bottom, step == .roundUps ? DS.Space.s2 : DS.Space.s6)
                 }
                 content
                     .id(step)
@@ -120,13 +122,20 @@ struct MoveKeysWalk: View {
                 MoveWord(String(localized: "Your wallet,"))
                 MoveWord(String(localized: "privately."), ink: DS.pickInk)
             }
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
+            // **ONE LINE EACH, AND THE WHOLE PAGE IN VIEW (prd §1803, user:
+            // "look better; the Aztec line says Aztec to Aztec").** The
+            // paragraphs ran past the tray's foot. Each place says the one
+            // fact its address carries everywhere else, and wears the marks
+            // of the networks it is good on.
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
                 place(["Safe"], String(localized: "Public account"),
-                      String(localized: "A public multi-sig Safe on Base, Ethereum and Robinhood."))
-                place(["Privacy Pools", "Railgun"], String(localized: "Private balances"),
-                      String(localized: "On Ethereum. Move funds in from your public account. Send and receive at fresh addresses, and your balance stays hidden."))
+                      networks.map(\.name).joined(separator: ", "),
+                      marks: networks.compactMap { MoveSentence.networkMark($0) })
+                place(["Privacy Pools", "Railgun"], String(localized: "Private balance"),
+                      String(localized: "A new address each time"),
+                      marks: [MoveSentence.networkMark(chainId: 1)].compactMap { $0 })
                 place(["Aztec"], String(localized: "Private account"),
-                      String(localized: "On Aztec, a privacy network on Ethereum. For using private apps."))
+                      String(localized: "Aztec to Aztec only"), ink: DS.aztecInk)
             }
             .padding(.top, DS.Space.s6)
         case .recovery:
@@ -176,35 +185,41 @@ struct MoveKeysWalk: View {
             // that follows the pick (prd §1741a, user, of the pick beside the
             // foot's acts: "ugly and weird"; of four pieces in three sizes:
             // "this looks messy").
+            // The sums as Move's large rows, each saying what it saves, and
+            // one line (prd §1803, user: "no pill buttons; far less text").
             MoveSecurity.RoundUpStepPick(setting: $roundUps)
-                .padding(.top, DS.Space.s6)
-            // Two set lines (seen on the simulator: run together, the
-            // paragraph ended on "earning." alone).
-            small(MoveSecurity.roundUpsExample(roundUps) + "\n" + MoveSecurity.roundUpsMoves)
+                .padding(.top, DS.Space.s2)
+            small(MoveSecurity.roundUpsAt)
         case .created:
+            // **WHAT "READY" MEANT (prd §1803, user: "what Ready means; a
+            // clearer line about which networks the address works on").**
+            // The headline says what you can do now; the whole address
+            // stands under its name, then each network by mark and name.
             MoveFlow {
-                // "Ready", not "Created" (prd §1741a): the account exists
-                // before the walk starts since §1741.
-                MoveWord(String(localized: "Ready"), ink: DS.textSecondary)
-                // Pink is a tap (§1385); the tap copies, naming the networks
-                // the address works on (prd §1501).
-                Button { copyAddress() } label: { MoveWord(YourAccount.short(account), ink: DS.pickInk) }
+                MoveWord(String(localized: "Your account can"))
+                MoveWord(String(localized: "receive now."), ink: DS.pickInk)
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Public address").dsText(.body17).foregroundStyle(DS.textSecondary)
+                Button { copyAddress() } label: { AddressGroupsGrid(address: account) }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Your address, \(account)"))
                     .accessibilityHint(Text("Copies your address"))
-                MovePhrase(networks.map(\.name).formatted(.list(type: .and)) + ".", glue: String(localized: "on"))
+                HStack(spacing: DS.Space.s3) {
+                    ForEach(networks, id: \.chainId) { net in
+                        HStack(spacing: DS.Space.s1) {
+                            if let mark = MoveSentence.networkMark(net) { MoveRowMark(network: mark, size: 22) }
+                            Text(verbatim: net.name).dsText(.body17).foregroundStyle(DS.textPrimary)
+                        }
+                    }
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.top, DS.Space.s1)
             }
-            small(createdLine)
+            .padding(.top, DS.Space.s4)
+            small(String(localized: "On another network, Receive gives you a deposit address."))
         }
-    }
-
-    /// Where the address works, and where to go for the rest: a deposit
-    /// address in Receive (§1453, §1470).
-    private var createdLine: String {
-        let short = YourAccount.short(account)
-        return networks.count == 3
-            ? String(localized: "Use \(short) on these three. On any other network, get a deposit address in Receive and pick the token and network to receive on.")
-            : String(localized: "Use \(short) on these networks. On any other network, get a deposit address in Receive and pick the token and network to receive on.")
     }
 
     private func copyAddress() {
@@ -231,8 +246,9 @@ struct MoveKeysWalk: View {
 
     /// One place on the opening page: its app's mark (two for the private
     /// balances), its name at the section rung, one line under it.
-    private func place(_ apps: [String], _ name: String, _ words: String) -> some View {
-        HStack(alignment: .top, spacing: DS.Space.s4) {
+    private func place(_ apps: [String], _ name: String, _ words: String, ink: Color = DS.textSecondary,
+                       marks: [String] = []) -> some View {
+        HStack(spacing: DS.Space.s4) {
             ZStack {
                 if apps.count == 1 {
                     BridgeIcon(name: apps[0], size: DS.Mark.tile)
@@ -245,11 +261,16 @@ struct MoveKeysWalk: View {
             }
             .frame(width: DS.Mark.tile, height: DS.Mark.tile)
             .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(verbatim: name).dsText(.heading24).foregroundStyle(DS.headInk)
-                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: name).dsText(.heading20).foregroundStyle(DS.headInk)
+                Text(verbatim: words).dsText(.subhead12).foregroundStyle(ink).lineLimit(1)
             }
+            Spacer(minLength: DS.Space.s2)
+            // The words name the networks; the marks are for the eye.
+            HStack(spacing: DS.Space.s1) {
+                ForEach(marks, id: \.self) { MoveRowMark(network: $0, size: 22) }
+            }
+            .accessibilityHidden(true)
         }
         .accessibilityElement(children: .combine)
     }
@@ -264,27 +285,27 @@ struct MoveKeysWalk: View {
     // MARK: - The foot
 
     private var foot: some View {
-        HStack(alignment: .firstTextBaseline) {
+        // **THE WALK'S ACTS ARE MOVE'S CARDS (prd §1803):** the step's act
+        // in the pick's card, what puts it off in the grey one beside it,
+        // as Move's foot draws Back and its verb (§1781, §1801).
+        HStack(spacing: DS.Space.s3) {
             // The opening page has nothing to put off: Next alone.
             if step != .intro {
                 Button { step == .created ? done(.receive) : advance() } label: {
                     Text(step == .created ? String(localized: "Receive") : String(localized: "Later"))
-                        .dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+                        .dsText(.heading20).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .padding(.horizontal, DS.Space.s6)
+                        .frame(minHeight: MoveSentence.actHeight)
+                        .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous).fill(DS.fillStrong))
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(RowPress())
+                .buttonStyle(PressSpring())
                 .disabled(connecting)
             }
-            Spacer(minLength: DS.Space.s3)
-            Button { act() } label: {
-                Text(verbatim: verb)
-                    .dsText(.heading34)
-                    .foregroundStyle(verbEnabled ? DS.pickInk : DS.textTertiary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .frame(minHeight: 48, alignment: .trailing)
-            }
-            .buttonStyle(RowPress())
-            .disabled(!verbEnabled)
+            Button { act() } label: { MoveSentence.actCard(verb, on: verbEnabled) }
+                .buttonStyle(PressSpring())
+                .disabled(!verbEnabled)
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .modifier(MoveFootClearance(inTray: inTray))

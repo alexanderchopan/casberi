@@ -82,7 +82,7 @@ extension FeedScreen {
                 // Keys, Connection and Spending name themselves (prd §1786):
                 // no "Your account" over them, the page already says Account.
                 Section {
-                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal })
+                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal }, openNodes: { feedSheet = .ownNodes })
                         .walletStackRow()
                         // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
                         .task(id: chrome.walletScrollRequest) {
@@ -99,12 +99,7 @@ extension FeedScreen {
             // moves each without a signature is Permissions').
             if !walletOnPrivateAccount {
             WalletUnsignedSection(part: .safes, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
-            // Where each network is read from (prd §1517), under the Keys card.
-            // The recovery check's page is Needs you's door (§1515): the Keys
-            // card already has a Recovery key row.
-            walletDoorsSection {
-                walletDoor(.nodes)
-            }
+            // Nodes is a row under Connection now, with its tray (prd §1803).
             }
         }
     }

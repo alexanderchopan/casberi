@@ -15,6 +15,8 @@ struct MoveSecurity: View {
     let account: String
     /// Raises the savings goal's tray; nil where there is none to raise.
     var openGoal: (() -> Void)? = nil
+    /// Raises the Nodes tray (prd §1803); nil where there is none to raise.
+    var openNodes: (() -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
 
     typealias Op = YourAccountOp
@@ -82,11 +84,26 @@ struct MoveSecurity: View {
             VStack(alignment: .leading, spacing: 0) {
             row(title: String(localized: "Signs from"), value: deviceValue,
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
-            // Plural once the Aztec account exists: both keys live in iCloud
-            // Keychain (prd §1700f item 5).
-            row(title: AztecAccountStore.shared.isShown ? String(localized: "Recovery keys") : String(localized: "Recovery key"),
-                value: recoveryValue.text, tone: recoveryValue.tone,
-                verb: recoveryVerb.map { ($0, setUp) })
+            // **ONE BACKUP ROW (prd §1803, user: "One 'Backup' row replaces
+            // 'Recovery keys' and 'Private balance'").** Add where there is
+            // no recovery key yet, "iCloud Keychain" when everything is
+            // saved, "Not backed up" in amber where iCloud is off or private
+            // money sits on this phone alone, with the fix beside or under it.
+            row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone, verb: backupVerb)
+            if backupOff {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        Text("Turn on iCloud Keychain").dsText(.body17).foregroundStyle(DS.pickInk)
+                        Spacer(minLength: DS.Space.s2)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .walletRowPitch()
+            }
             if coSignerSwitchable {
                 coSignerSwitchRow
             } else {
@@ -100,14 +117,9 @@ struct MoveSecurity: View {
                 })
             }
             if addingOutside { outsideField }
-            row(title: AztecAccountStore.shared.isShown ? String(localized: "Private keys") : String(localized: "Private key"),
-                value: exportValue,
+            // Named for what it is: the way out to another wallet (prd §1803).
+            row(title: Self.exportTitle, value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
-            // Only when private money is on this phone alone (prd §1562).
-            if privateBackup != .fine {
-                row(title: String(localized: "Private balance"), value: String(localized: "Not backed up"),
-                    tone: DS.attentionInk, verb: privateBackupVerb)
-            }
             }
             .padding(.leading, Self.rowIndent)
             // **CONNECTION IS ITS OWN SECTION (prd §1786):** the networks and
@@ -123,9 +135,15 @@ struct MoveSecurity: View {
             // its state where a setting's value stands, no line.
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
+            // Where each network is read from (prd §1517), a row here and a
+            // tray behind it (prd §1803, user: "its row under Connection").
+            if let openNodes { nodesRow(openNodes) }
             }
             .padding(.leading, Self.rowIndent)
-            SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
+            // "Saving", not "Spending" (prd §1803): round-ups and the goal
+            // they fill put money away; the Wallet's Spending tile is what
+            // you spent.
+            SectionPanelName(name: String(localized: "Saving"), glyph: Self.savingGlyph, inset: 0)
                 .padding(.top, DS.Space.s3)
             VStack(alignment: .leading, spacing: 0) {
                 roundUpsRow
@@ -203,24 +221,55 @@ struct MoveSecurity: View {
         #endif
     }
 
-    /// The fix: Back up moves the device-only account's money into the
-    /// root's; signed out of iCloud, Settings is where to sign in.
-    private var privateBackupVerb: (String, () -> Void)? {
-        switch privateBackup {
-        case .fine: return nil
-        case .noICloud:
-            return (String(localized: "Settings"), {
-                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-            })
-        case .deviceOnly:
-            return (String(localized: "Back up"), backUpPrivate)
+    static var backupTitle: String { String(localized: "Backup") }
+    static var exportTitle: String { String(localized: "Move to another wallet") }
+    static let savingGlyph = "banknote"
+
+    /// iCloud is off on this device: nothing kept in iCloud Keychain leaves
+    /// it, so the row may not say "iCloud Keychain" (the demo holds no key).
+    private var backupOff: Bool {
+        !DemoMode.isActive && !YourAccountDemo.isDemo(account) && !PrivateRootKey.iCloudSignedIn
+    }
+
+    private var backupValue: (text: String?, tone: Color) {
+        if let unsettled { return (unsettled, DS.textSecondary) }
+        if backupOff || privateBackup == .deviceOnly { return (String(localized: "Not backed up"), DS.attentionInk) }
+        return recoveryValue
+    }
+
+    /// The fix beside the fact: Add or Finish the recovery key, or Back up
+    /// private money that sits on this phone alone (prd §1562). With iCloud
+    /// off the fix is its own row under this one.
+    private var backupVerb: (String, () -> Void)? {
+        guard unsettled == nil, !backupOff else { return nil }
+        if let word = recoveryVerb { return (word, setUp) }
+        if privateBackup == .deviceOnly { return (String(localized: "Back up"), backUpPrivate) }
+        return nil
+    }
+
+    private func nodesRow(_ open: @escaping () -> Void) -> some View {
+        let mine = OwnNodeModel.shared.settings.on ? OwnNodeModel.shared.settings.nodes.count : 0
+        let word = mine == 0 ? String(localized: "Casberi's list")
+            : mine == 1 ? String(localized: "1 of yours") : String(localized: "\(mine) of yours")
+        return Button { DSHaptic.selection(); open() } label: {
+            HStack(spacing: DS.Space.s3) {
+                Text("Nodes").dsText(.body17).foregroundStyle(DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
+                // A row is its own door (prd §1272): no chevron.
+                Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(RowPress())
+        .walletRowPitch()
+        .accessibilityLabel(Text("Nodes, \(word)"))
+        .task { OwnNodeModel.shared.load() }
     }
 
     private func backUpPrivate() {
         #if DEBUG
-        let title = String(localized: "Private balance")
-        working = (title, String(localized: "Backing up…"))
+        working = (Self.backupTitle, String(localized: "Backing up…"))
         Task {
             let outcome = await PrivateMigration.run(context: modelContext)
             working = nil
@@ -334,14 +383,6 @@ struct MoveSecurity: View {
                 await PrivateMoneyStore.shared.readYield(including: .ethereum)
             }
         }
-        if roundUps.on {
-            // Set aside with your sends only (prd §1578, §1690): no Save now.
-            Text(verbatim: Self.roundUpsSentence)
-                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, DS.Space.s2)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-        }
     }
 
     private func saveRoundUps(_ change: (inout RoundUps.Setting) -> Void) {
@@ -354,28 +395,25 @@ struct MoveSecurity: View {
     /// the glass box Move opens (tokens by network, then your private
     /// balance); the example under it; the switch at the foot.
     @ViewBuilder private var roundUpsTraySheet: some View {
+        // **THE SWITCH, THEN THE SUM, THEN ONE LINE (prd §1803, user: "no
+        // pill buttons; amounts as the large rows Move uses for sums; on/off
+        // before the amount; far less text").**
         DSTray(title: String(localized: "Round-ups"), height: 420) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(verbatim: Self.roundUpsSentence)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(verbatim: Self.roundUpsExample(roundUps))
-                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                // $1 or $5 (prd §1741): the walk's pick, changed here after.
-                RoundUpStepPick(setting: Binding(get: { roundUps },
-                                                 set: { picked in saveRoundUps { $0 = picked } }))
-                HStack {
-                    Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Spacer()
-                    Toggle(isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0 = $0.simple; $0.on = on } })) {
-                        Text("Round-ups")
-                    }
-                    .labelsHidden()
-                    .tint(DS.pickInk)
+            VStack(alignment: .leading, spacing: 0) {
+                DSToggleRow(title: Text("Round up what you send"),
+                            isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0 = $0.simple; $0.on = on } }))
+                    .walletRowPitch()
+                if roundUps.on {
+                    // $1 or $5 (prd §1741): the walk's pick, changed here after.
+                    RoundUpStepPick(setting: Binding(get: { roundUps },
+                                                     set: { picked in saveRoundUps { $0 = picked } }))
+                        .padding(.top, DS.Space.s2)
+                        .transition(.opacity)
                 }
-                .frame(minHeight: 44)
-                .padding(.top, DS.Space.s4)
+                Text(verbatim: Self.roundUpsAt)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s4)
                 Spacer(minLength: 0)
             }
             .padding(.vertical, DS.Space.s4)
@@ -413,6 +451,12 @@ struct MoveSecurity: View {
         String(localized: "Once it reaches \(RoundUpsPot.targetWords), it moves to your private balance and keeps earning.")
     }
 
+    /// The one line the rows cannot say (prd §1803): when the change turns
+    /// private.
+    @MainActor static var roundUpsAt: String {
+        String(localized: "At \(RoundUpsPot.targetWords) it moves to your private balance.")
+    }
+
     /// **$1 OR $5 (prd §1741, its shape §1741a).** The one choice round-ups
     /// has, as one two-part control: the walk draws it under the headline
     /// and the tray under its sentence. Each half says what it does, so no
@@ -423,20 +467,46 @@ struct MoveSecurity: View {
 
         private var picked: Int { setting.step == 5 ? 5 : 1 }
 
+        /// **THE SUMS ARE MOVE'S LARGE ROWS (prd §1803, user: "no pill
+        /// buttons; amounts as the large rows Move uses for sums").** Each
+        /// row says what a $3.40 send sets aside, so no example stands
+        /// apart from the choice; the pick takes the pick's ink and a mark.
         var body: some View {
-            HStack(spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach([1, 5], id: \.self) { step in
                     Button {
                         DSHaptic.selection()
                         withAnimation(DS.Motion.standard) { setting.step = step }
                     } label: {
-                        Chip(text: String(localized: "To the next $\(step)"), selected: picked == step, fills: true)
+                        HStack(spacing: DS.Space.s3) {
+                            Text("To the next $\(step)")
+                                .dsText(.heading24)
+                                .foregroundStyle(picked == step ? DS.pickInk : DS.textPrimary)
+                            Spacer(minLength: DS.Space.s2)
+                            Text(verbatim: Self.saves(step))
+                                .dsText(.body17)
+                                .foregroundStyle(picked == step ? DS.textPrimary : DS.textSecondary)
+                            Image(systemName: "checkmark")
+                                .dsGlyph(.caption, weight: .semibold)
+                                .foregroundStyle(DS.pickInk)
+                                .opacity(picked == step ? 1 : 0)
+                                .accessibilityHidden(true)
+                        }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(minHeight: MoveChoiceRowLabel.height)
+                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(PressSpring())
+                    .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Round up to the next $\(step)"))
                     .accessibilityAddTraits(picked == step ? [.isButton, .isSelected] : .isButton)
                 }
             }
+        }
+
+        /// What a $3.40 send sets aside at this step.
+        static func saves(_ step: Int) -> String {
+            step == 5 ? String(localized: "$1.60 on $3.40") : String(localized: "60¢ on $3.40")
         }
     }
 
@@ -583,7 +653,7 @@ struct MoveSecurity: View {
 
     private var recoveryVerb: String? {
         guard unsettled == nil, !recoveryTargets.isEmpty else { return nil }
-        return standings.contains { $0.recovery == .added } ? String(localized: "Finish") : String(localized: "Set up")
+        return standings.contains { $0.recovery == .added } ? String(localized: "Finish") : String(localized: "Add")
     }
 
     // MARK: - Reading
@@ -1172,7 +1242,7 @@ struct MoveSecurity: View {
     private var exportVerb: String? {
         guard unsettled == nil else { return nil }
         if exportedKey != nil { return String(localized: "Remove") }
-        return exportTargets.isEmpty ? nil : String(localized: "Export")
+        return exportTargets.isEmpty ? nil : String(localized: "Export keys")
     }
 
     private func export() {
@@ -1188,7 +1258,7 @@ struct MoveSecurity: View {
         if demoSays() { return }
         guard working == nil, let key = exportedKey else { return }
         let on = live.filter { s in s.exported.contains { $0.caseInsensitiveCompare(key) == .orderedSame } }.map(\.network)
-        working = (String(localized: "Private key"), String(localized: "Removing…"))
+        working = (Self.exportTitle, String(localized: "Removing…"))
         Task {
             let failed = await MoveExportKey.remove(key, account: account, from: on)
             working = nil
@@ -1209,7 +1279,7 @@ struct MoveSecurity: View {
         if demoSays() { return }
         guard working == nil else { return }
         let targets = recoveryTargets.map(\.network)
-        working = (String(localized: "Recovery key"), String(localized: "Setting up…"))
+        working = (Self.backupTitle, String(localized: "Setting up…"))
         Task {
             var done: [String] = []
             var failed: [String] = []

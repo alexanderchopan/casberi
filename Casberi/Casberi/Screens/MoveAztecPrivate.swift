@@ -655,13 +655,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
             MovePhrase(String(localized: "Ethereum"), glue: String(localized: "on"))
             MovePhrase(String(localized: "first."))
-        case .shieldNo(_, let threshold, let sanctioned):
-            MovePhrase(sanctioned ? String(localized: "Shield will not move money for this account.")
-                       : String(localized: "Shield needs a Human Passport score of \(threshold) first."), ink: DS.textPrimary)
+        case .shieldNo(_, _, true):
+            MovePhrase(String(localized: "Shield will not move money for this account."), ink: DS.textPrimary)
         case .nothingPrivate:
             MovePhrase(String(localized: "Nothing private to send on Aztec yet."), ink: DS.textSecondary)
-        case .needsGas:
-            MovePhrase(String(localized: "Your private account on Aztec needs gas first."), ink: DS.textPrimary)
+        // **WHAT IS MISSING IS A ROW, NOT THE SENTENCE (prd §1803).** The
+        // sentence keeps saying the move; an amber row under the rows says
+        // what it waits on, and the button is the fix.
+        case .shieldNo, .needsGas:
+            head()
+            if move.mode == .deposit {
+                MovePhrase(String(localized: "your private account"), glue: String(localized: "to"), ink: DS.aztecInk)
+                MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
+            } else {
+                MovePhrase(String(localized: "your private account"), glue: String(localized: "from"), ink: DS.aztecInk)
+                MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
+            }
         default:
             if !isDone { head() }
             if move.stage == .ready {
@@ -760,12 +769,23 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .needsFunds:
             Text(verbatim: fundsLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-        case .shieldNo(let score, _, let sanctioned):
+        case .shieldNo(let score, let threshold, let sanctioned):
             if !sanctioned {
-                Text("Yours is \(score).").dsText(.body17).foregroundStyle(DS.textSecondary)
+                VStack(alignment: .leading, spacing: 0) {
+                    fact(String(localized: "Shield needs"), String(localized: "Human Passport score of \(threshold)"), ink: DS.attentionInk)
+                    fact(String(localized: "Yours"), "\(score)", ink: DS.textSecondary)
+                    Button {
+                        Task { await move.read() }
+                        DSHaptic.selection()
+                    } label: { MoveVerbRowLabel(title: String(localized: "Check again"), glyph: "arrow.clockwise") }
+                        .buttonStyle(RowPress())
+                }
             }
         case .needsGas:
-            Text("30 AZTEC from your account pays for it, about $0.45.").dsText(.body17).foregroundStyle(DS.textSecondary)
+            VStack(alignment: .leading, spacing: 0) {
+                fact(String(localized: "Gas"), String(localized: "Needed first"), ink: DS.attentionInk)
+                fact(String(localized: "Costs"), String(localized: "30 AZTEC, about $0.45"), ink: DS.textSecondary)
+            }
         case .failed(let words):
             // A failure the rows carry is said once, on its step.
             if stepsRun == nil {
@@ -848,8 +868,17 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// from, who it goes to, how much and of what: what the sentence's
     /// words opened. The private account's own name wears Aztec's ink.
     private var choiceRows: [MoveChoiceRow] {
-        guard move.stage == .ready else { return [] }
         let yours = String(localized: "Your private account")
+        // Blocked (prd §1803): the rows that are already known stay, fixed.
+        switch move.stage {
+        case .shieldNo(_, _, false), .needsGas:
+            return [MoveChoiceRow(id: move.mode == .deposit ? "to" : "from",
+                                  name: move.mode == .deposit ? String(localized: "To") : String(localized: "From"),
+                                  value: yours, fixed: true) {},
+                    MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Aztec"), fixed: true) {}]
+        default: break
+        }
+        guard move.stage == .ready else { return [] }
         var rows: [MoveChoiceRow] = []
         if move.mode == .deposit {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours, ink: DS.aztecInk) { leave(.pickRecipient) })
@@ -1058,8 +1087,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     Spacer(minLength: DS.Space.s3)
                     footButton(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true) { copy(address) }
                 case .shieldNo(_, _, let sanctioned):
-                    checkAgain
-                    Spacer(minLength: DS.Space.s3)
+                    Spacer(minLength: 0)
                     // The only door a Casberi Safe has to a score (prd §1700f).
                     if !sanctioned {
                         footButton(String(localized: "Human Passport"), on: true) { passport = true }
@@ -1116,6 +1144,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// apart, each a `Chip` that fills, the pick crossfading
     /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
     /// Fits beside the act, never cut (prd §1700f item 13).
+    /// A fact under the rows: its name, then what is so, in its ink.
+    private func fact(_ name: String, _ value: String, ink: Color) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
+            Spacer(minLength: DS.Space.s2)
+            Text(verbatim: value).dsText(.body17).foregroundStyle(ink).lineLimit(1).minimumScaleFactor(0.8)
+        }
+        .frame(minHeight: 30)
+    }
+
     private var checkAgain: some View {
         Button {
             Task { await move.read() }

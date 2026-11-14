@@ -72894,3 +72894,32 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Seen:** the simulator, demo: `-moveToAztec YES -aztecDoorSample YES`, `-moveRailgun send` (menu, then "Another amount"), `-movePrivateSend YES -privateMoneySample YES`, Move › Lend. **Mac half (§1402).** The same on Catalyst; no keys rise there, so item 2's air never shows.
 
 **Checks.** `private-money-selftest.sh` reads the row tap's new code string.
+
+## §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (amends §1486, §1719, §1741a, §1779, §1496, §1517, §1667, §1690) (user, 2026-11-14, of the boards on the Design canvas "Outside Move": "all three at once is better b/c then its one less tap", then "Good, build them")
+
+**Receive: which address do I give out?**
+
+1. **Receive opens on all three addresses at once:** Public account, Private balance, Private account, each under its name with the marks of the networks it is good on, its one fact, and a Copy. Under them, "From another network" and "From another wallet". No Network row, no sentence and no button on this screen: the old "Receive at ...xxxx on network." is never said half-finished. This amends §1486's "the network is picked, always": the public address's copy says "Copied · only on Base, Ethereum or Robinhood", and its row wears their marks.
+2. **A name opens its page,** in Move's layout (§1794): the verb as title, the address under its name ("Public address", "One-time address", "Aztec address"), a fixed Network row on the two private ones, "Share" and "New address" as rows, the sentence over the button, and "Copy address" as the one act (Aztec's in its own ink). Back returns to the three addresses, never Move's menu.
+3. **Private balance's Copy copies the current one-time address and opens its page,** because only there is the address watched and its rule said ("Any token but ETH needs a little ETH sent with it").
+4. **Blocked on Aztec, the sentence stays the move's own.** What is missing is an amber row under the rows ("Shield needs · Human Passport score of 20", "Gas · Needed first"), "Check again" is a row, and the button is the fix ("Human Passport", "Add gas"). NOT SEEN on a screen: the demo raises neither state.
+
+**Account**
+
+5. **The top box says "Public account"** over the address, each network under its mark, and "Copy public address".
+6. **One Backup row** replaces "Recovery keys" and "Private balance": "Add" where there is no recovery key yet, "iCloud Keychain" when all is saved, "Not backed up" in amber where iCloud is off on this device (with "Turn on iCloud Keychain" as the row under it) or private money sits on this phone alone (with "Back up" beside it). "Private keys · Export" is "Move to another wallet · Export keys".
+7. **Nodes is a row under Connection** and a tray: the switch, then a row per network under its mark saying your node or "Casberi's list"; a tap opens that network's field and its check in place. The Wallet page it had (`WalletSection.nodes`) is no longer linked from Account; deleting the page from the model is owed (§723).
+8. **"Saving" replaces "Spending"** as the section's name: Round-ups, then Savings goal. No line stands under the Round-ups row.
+9. **Round-ups' tray:** the switch first, then "To the next $1" and "To the next $5" as Move's large rows, each saying what a $3.40 send sets aside, the pick in the pick's ink with a mark, and one line ("At $10 it moves to your private balance."). No chips.
+10. **Savings goal's tray:** one sentence saying what it is, rows (Goal typed in its row, By a date, Date), "Saved so far", and with a day set "To get there · about $N a week"; Save is Move's card at the foot. It is tracked on Account's row.
+
+**The walk**
+
+11. **First screen:** three one-line places that fit the tray: Public account (its networks, by name and mark), Private balance ("A new address each time"), Private account ("Aztec to Aztec only", in Aztec's ink).
+12. **Round-ups step:** the same two large rows and the one line.
+13. **Last screen:** "Your account can receive now.", the whole public address under its name, each network by mark and name, and "On another network, Receive gives you a deposit address."
+14. **The walk's acts are Move's cards** on every step: the act in the pick's card, "Later" or "Receive" in the grey card beside it.
+
+**Seen:** the simulator, demo: `-movePreview keys -keysStep 0|4|5`, `-openRoom Wallet -openSection yourAccount` and its Nodes, Round-ups and Savings goal trays, Move › Receive and its three pages. **Mac half (§1402).** The same on Catalyst.
+
+**Checks.** None added.

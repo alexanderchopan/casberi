@@ -118,7 +118,14 @@ on Privacy Pools; the merchant's mark on Spend's Merchant row.
 
 **Mocked and NOT built:** Send's From row in a kept first line.
 
-**Mocked 2026-11-14, awaiting the user's ruling, nothing built:** the screens
+**Built 2026-11-14 (prd §1803; user: "Good, build them"):** every board below.
+Not seen on a screen: the two Aztec blocked states (the demo raises neither).
+Owed: `WalletSection.nodes`, the old Nodes page, is unlinked and not yet
+deleted from the model. Left as they were: "From another network" keeps
+Receive's earlier Network, Token and Arrives rows; Account's Networks row is
+still words.
+
+**The boards:** the screens
 outside Move, on the canvas "Outside Move: Receive, Account, Round-ups, the
 walk" (https://claude.ai/artifact/RSAEs2ZCLomcxMqqVE9LH4). Receive lists
 all three addresses at once, each with a Copy and a page behind its name

@@ -102,9 +102,9 @@ use "Casberi/Casberi/Info.plist" '<string>com.casberi.app.privatewatch</string>'
 use "Casberi/Casberi/CasberiApp.swift" 'PrivateWatchTask.register()' "the watch is not registered at launch"
 use "Casberi/Casberi/Shell/RootShell.swift" 'PrivateWatchTask.schedule()' "the watch is never scheduled"
 use "Casberi/Casberi/Shell/ProbeHooks.swift" 'Hook(key: "backgroundRefreshProbe")' "the watch has no probe"
-use "$SEC" 'if privateBackup != .fine {' "Security draws the private balance's row when nothing needs you"
-use "$SEC" 'value: String(localized: "Not backed up"),' "the private balance's row lost its state word"
-use "$SEC" 'tone: DS.attentionInk, verb: privateBackupVerb)' "the private balance's state is not amber, or has no fix"
+use "$SEC" 'if backupOff || privateBackup == .deviceOnly { return (String(localized: "Not backed up"), DS.attentionInk) }' "Backup no longer says Not backed up, in amber, when private money sits on this phone alone (prd §1562, §1803)"
+use "$SEC" 'if privateBackup == .deviceOnly { return (String(localized: "Back up"), backUpPrivate) }' "Backup has no fix beside Not backed up (prd §1562, §1803)"
+use "$SEC" 'row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone, verb: backupVerb)' "Keys has no Backup row (prd §1803)"
 echo "  ok   one root in iCloud Keychain: the seed, the owner and the fresh addresses from it, found again, the watch through Tor"
 
 # Private is Send's, never a verb (prd §1554): "Your private balance" leads
@@ -214,7 +214,7 @@ grep -qF 'saveRoundUpsNow' "$SEC" && { echo "✗ Save now is back (prd §1578)";
 grep -qF 'roundUpsRideInETH' Casberi/Casberi/Model/PrivateOnEthereum.swift && { echo "✗ round-ups deposit into ppETH again (prd §1578)"; exit 1; }
 grep -qF 'fundedByETH' "$SENT" && { echo "✗ round-ups swap ETH ahead of the ride again: the change is set aside in USDC as you go (prd §1690)"; exit 1; }
 use Casberi/Casberi/Model/PrivateOnEthereum.swift 'checked.approvals.isEmpty else {' "the ETH swap before a round-up is not Swap's checked call (prd §1578)"
-use "$SEC" 'Text(verbatim: Self.roundUpsSentence)' "the round-ups tray no longer says how Round-ups works (prd §1690)"
+use "$SEC" 'Text(verbatim: Self.roundUpsAt)' "the round-ups tray no longer says when the change turns private (prd §1690, §1803)"
 use "$SENT" 'guard RoundUps.setting.on, !network.isTest else { return nil }' "a send on a test network rounds up into Round-ups (prd §1690)"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
@@ -250,11 +250,11 @@ FRESHV="Casberi/Casberi/Screens/MoveFreshReceive.swift"
 ! grep -q 'MovePrivateSwitch' "$SENT" || { echo "✗ a Private switch came back to Move (prd §1719)"; exit 1; }
 use "$SENT" 'let receivesPools = PrivateMove.freshAvailable' "your private balance is no longer offered where Receive lands"
 use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
-use "$FRESHV" 'MoveWord(copied ? String(localized: "Copied") : YourAccount.short(entry.address) + ".", ink: DS.textPrimary)' "the fresh address is no longer said by its tail"
+use "$FRESHV" 'MovePhrase(YourAccount.short(entry.address) + ".", glue: String(localized: "at"), ink: DS.textPrimary)' "the fresh address is no longer said by its tail"
 use "$FRESHV" 'Button { copy(address) } label: { AddressGroupsGrid(address: address) }' "the fresh address is no longer drawn whole, in groups (prd §1719: no QR)"
-use "$FRESHV" 'Text("New address").dsText(.heading24).foregroundStyle(DS.textSecondary)' "New address is not the foot's grey word"
+use "$FRESHV" 'MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise")' "New address is not a row over the foot (prd §1803)"
 use "$FRESHV" 'ShareLink(item: entry.address) {' "Share no longer shares the whole address"
-use "$FRESHV" 'action: { if !moving { leave() } },' "the fresh sentence's \"your private balance\" no longer goes back to the list"
+use "$FRESHV" 'MoveBackCard(act: leave, disabled: moving)' "the fresh page's back no longer returns to Receive's addresses (prd §1803)"
 ! grep -qE 'prefix\([0-9]+\)' "$FRESHV" || { echo "✗ the fresh sentence draws an address's head"; exit 1; }
 use "$FRESHM" 'return try await PrivacyEngine.shared.prepareDeposit(tokenId: PrivateMove.eth, value: value)' "a fresh move is no longer an ordinary deposit for your own account"
 ! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
@@ -1155,7 +1155,11 @@ use "$SENT" 'for b in sentenceBlanks {' "the rows are listed by hand again: a se
 for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend MoveFreshReceive MoveAztecReceive; do
     use "Casberi/Casberi/Screens/$f.swift" '.allowsHitTesting(false)' "$f's sentence takes a touch again (prd §1781)"
 done
-for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend MoveFreshReceive MoveAztecReceive; do
+# The two Receive pages go back to Receive's three addresses (prd §1803).
+for f in MoveFreshReceive MoveAztecReceive; do
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard(act: leave' "$f has no way back to Receive's addresses (prd §1803)"
+done
+for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
     use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard()' "$f has no way back to Move's menu (prd §1781)"
 done
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
@@ -1181,8 +1185,8 @@ use "$SENT" 'tapBlank(next == .amount && with == nil ? .with : next)' "Amount is
 use "$SENT" 'tapBlank(which == .destination && !networkPicked ? .network : which)' "a choice row no longer opens the list its word opens (prd §1779)"
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
-use "$SENT" 'DSDoorRow(icon: "eye.slash", label: "Receive privately") { goFresh() }' "Receive's private door is hidden again (prd §1779)"
-use "$SENT" 'DSDoorRow(icon: "diamond", label: "Receive on Aztec") {' "Receive's Aztec door is hidden again (prd §1779)"
+use "$SENT" 'receivePlace(String(localized: "Private balance")' "Receive's private door is hidden again (prd §1779, §1803)"
+use "$SENT" 'receivePlace(String(localized: "Private account"), ink: DS.aztecInk, marks: ["brand-aztec"],' "Receive's Aztec door is hidden again (prd §1779)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let entry, case .needsGas = entry.state, !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("On \(network.name) only. Any token but ETH needs a little ETH sent with it.")' "the private address no longer says what it takes before it is copied (prd §1779)"
@@ -1207,7 +1211,7 @@ use "$HOLD" 'feedSheet = .onItsWay(item)' "a waiting row in Holdings no longer o
 for kind in 'OnItsWay.waitingApproval(' 'OnItsWay.railgun('; do
     use "$HOLD" "$kind" "a kind of waiting lost its steps in Holdings: $kind (prd §1787)"
 done
-use "$PAGES" 'Text(verbatim: YourAccountOp.networks.map(\.name).joined(separator: " · "))' "the public address no longer says which networks it is good on (prd §1779)"
+use "$PAGES" 'ForEach(YourAccountOp.networks.filter { !$0.isTest }) { net in' "the public address no longer says which networks it is good on (prd §1779)"
 use "Casberi/Casberi/Screens/AztecBrowser.swift" 'tint: asksAztec ? DS.aztecFill : DS.pickInk,' "an Aztec app's ask wears the pick's pink again (prd §1779)"
 
 # On its way's steps, run: which step each trip is on, and the row's count.

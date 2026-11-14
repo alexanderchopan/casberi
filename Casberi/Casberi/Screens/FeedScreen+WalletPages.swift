@@ -1154,6 +1154,13 @@ struct WalletYourAccountFigure: View {
                         .foregroundStyle(DS.aztecInk)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                } else {
+                    // **PLAINLY THE PUBLIC ONE (prd §1803, user: "make it
+                    // plain this is the public account and address").**
+                    Text("Public account")
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
                 }
                 Button { copy(address) } label: {
                     if aztec != nil {
@@ -1174,19 +1181,26 @@ struct WalletYourAccountFigure: View {
                 // it (prd §1779: every address wears its rule).
                 // One line, the row lines' rung: three quiet stamps side by
                 // side read as one run of grey words on the simulator.
+                // Each under its mark (prd §1803, item 12: a network shows
+                // its icon wherever it is named).
                 if aztec == nil {
-                    Text(verbatim: YourAccountOp.networks.map(\.name).joined(separator: " · "))
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    HStack(spacing: DS.Space.s3) {
+                        ForEach(YourAccountOp.networks.filter { !$0.isTest }) { net in
+                            HStack(spacing: DS.Space.s1) {
+                                if let mark = MoveSentence.networkMark(net) { MoveRowMark(network: mark, size: 16) }
+                                Text(verbatim: net.name).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                            }
+                        }
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 }
                 Button { copy(address) } label: {
                     HStack(spacing: DS.Space.s1) {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
                             .dsSymbolSwap(copied)
                             .dsGlyph(.caption)
-                        Text(copied ? "Copied" : aztec != nil ? "Copy for Aztec" : "Copy address")
+                        Text(copied ? "Copied" : aztec != nil ? "Copy for Aztec" : "Copy public address")
                             .dsText(.heading17)
                     }
                     .foregroundStyle(copied ? DS.confirmInk : aztec != nil ? DS.aztecInk : DS.pickInk)

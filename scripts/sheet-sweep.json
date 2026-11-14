@@ -1179,6 +1179,30 @@
    "anchor": "switch:=By a date"
   },
   {
+   "id": "wallet-nodes",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#ownNodes"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:=Account"
+    },
+    {
+     "tap": "button:^Nodes"
+    }
+   ],
+   "anchor": "switch:=Your own node"
+  },
+  {
    "id": "wallet-aztec-gas",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#aztecGas"
@@ -1395,7 +1419,7 @@
      "tap": "button:^Round-ups"
     }
    ],
-   "anchor": "text:=Spend $3.40, save 60¢."
+   "anchor": "switch:=Round up what you send"
   },
   {
    "id": "your-account-co-signer",

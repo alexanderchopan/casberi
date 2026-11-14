@@ -58,7 +58,7 @@ grep -q 'unitChip("%", on: priceInPercent' "$MOVE" && grep -q 'unitChip("\$", on
 # row is the door, there before the tokens are picked (prd §1673d), and the
 # clause is drawn once a price is picked.
 grep -q 'if whenSpoken { whenClause }' "$MOVE" && grep -q 'return with == nil || buy == nil' "$MOVE" \
-  && grep -q 'LedgerRow(id: "when", name: String(localized: "When"), value: String(localized: "Now"),' "$MOVE" \
+  && grep -q 'LedgerRow(id: "choicewhen", name: Self.rowName(.when, verb: verb),' "$MOVE" \
   || { echo "✗ \"when\" waits for the bought token again (prd §1673d)"; exit 1; }
 
 grep -q 'priceWords: Self.priceWords(v, places: p.places), seconds: orderSeconds)' "$MOVE" \

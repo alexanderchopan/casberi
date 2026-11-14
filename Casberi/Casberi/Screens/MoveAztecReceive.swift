@@ -27,51 +27,54 @@ struct MoveAztecReceive<Head: View>: View {
     @ViewBuilder let head: () -> Head
 
     @State private var copied = false
+    @Environment(ShellChrome.self) private var chrome
 
     private var address: String? { AztecAccountStore.shared.shown.address }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                MoveFlow {
-                    head()
-                    MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
-                                    ink: DS.aztecInk, action: leave, hint: Text("Picks where it lands"))
-                    MovePhrase("Aztec", glue: String(localized: "on"))
+                // **MOVE'S LAYOUT (prd §1803, as §1794, §1801):** the verb is
+                // the title, the rows and the address under it, the sentence
+                // over the button.
+                head()
+                    .allowsHitTesting(false)
+                // In view wherever the Aztec address is (prd §1779).
+                Text("Aztec to Aztec only.")
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.aztecInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, DS.Space.s2)
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    // Its one network, said as a row and fixed (prd §1802).
+                    MoveChoiceRows(rows: [MoveChoiceRow(id: "network", name: String(localized: "Network"),
+                                                        value: String(localized: "Aztec"),
+                                                        mark: MoveRowMark(network: "brand-aztec"), fixed: true) {}],
+                                   open: .constant(nil)) { _ in EmptyView() }
                     if let address {
-                        MoveClause(glue: String(localized: "at")) {
-                            Button { copy(address) } label: {
-                                MoveWord(copied ? String(localized: "Copied") : AddressTail.short(address) + ".", ink: DS.textPrimary)
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            Text("Aztec address").dsText(.body17).foregroundStyle(DS.textSecondary)
+                            Button { copy(address) } label: { Self.grid(address) }
+                                .buttonStyle(RowPress())
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityLabel(Text(verbatim: address))
+                                .accessibilityHint(Text("Copies the address"))
+                        }
+                        VStack(alignment: .leading, spacing: 0) {
+                            ShareLink(item: address) {
+                                MoveVerbRowLabel(title: String(localized: "Share"), glyph: "square.and.arrow.up")
                             }
                             .buttonStyle(RowPress())
-                            .accessibilityLabel(Text("Your Aztec address, \(address)"))
-                            .accessibilityHint(Text("Copies the address"))
+                            // The way in for money on Ethereum (prd §1779).
+                            Button {
+                                DSHaptic.selection()
+                                addMoney()
+                            } label: { MoveVerbRowLabel(title: String(localized: "Add money from Ethereum"), glyph: "plus") }
+                                .buttonStyle(RowPress())
                         }
                     }
                 }
-                // The sentence is no control (prd §1781): the address under
-                // it and the foot copy, and the foot's back leaves.
-                .allowsHitTesting(false)
-                if let address {
-                    // Over the address, where it is seen before the copy.
-                    Text("Aztec to Aztec only.")
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.aztecInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
-                    Button { copy(address) } label: { Self.grid(address) }
-                        .buttonStyle(RowPress())
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, DS.Space.s4)
-                        .accessibilityLabel(Text(verbatim: address))
-                        .accessibilityHint(Text("Copies the address"))
-                    DSDoorRow(icon: "plus", label: "Add money from Ethereum") {
-                        DSHaptic.selection()
-                        addMoney()
-                    }
-                    .aztecDoor()
-                    .padding(.top, DS.Space.s4)
-                }
+                .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -80,6 +83,8 @@ struct MoveAztecReceive<Head: View>: View {
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        // The rows, the address and the sentence need the tall sheet.
+        .onAppear { chrome.moveTall = true }
     }
 
     /// An Aztec address's 64 hex digits in eight groups of eight, two rows,
@@ -120,23 +125,35 @@ struct MoveAztecReceive<Head: View>: View {
         withAnimation(DS.Motion.standard) { copied = true }
     }
 
-    /// "Copy" grey, leading; "Share" pink, trailing.
+    /// The sentence over the button (prd §1794, §1803), then Back and the
+    /// one act in Aztec's own ink; "Share" is a row above.
     private var foot: some View {
-        HStack(alignment: .center, spacing: DS.Space.s2) {
-            MoveBackCard()
-            if let address {
-                Button { copy(address) } label: {
-                    Text(copied ? "Copied" : "Copy for Aztec").dsText(.heading24).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+        VStack(spacing: 0) {
+            MoveFlow {
+                MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
+                MovePhrase(String(localized: "your private account"), glue: String(localized: "to"), ink: DS.aztecInk)
+                MovePhrase("Aztec", glue: String(localized: "on"))
+                if let address {
+                    MovePhrase(AddressTail.short(address) + ".", glue: String(localized: "at"), ink: DS.textPrimary)
                 }
-                .buttonStyle(RowPress())
-                Spacer(minLength: DS.Space.s3)
-                ShareLink(item: address) {
-                    Text("Share")
-                        .dsText(.heading34)
-                        .foregroundStyle(DS.aztecInk)
-                        .frame(minHeight: 48, alignment: .trailing)
+            }
+            // The sentence is no control (prd §1781).
+            .allowsHitTesting(false)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, DS.Space.s3)
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                // Back to where it was picked, never Move's menu (prd §1803).
+                MoveBackCard(act: leave)
+                if let address {
+                    Button { copy(address) } label: {
+                        MoveSentence.actCard(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true,
+                                             fill: DS.aztecInk, ink: .black)
+                    }
+                    .buttonStyle(PressSpring())
+                } else {
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(RowPress())
             }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
