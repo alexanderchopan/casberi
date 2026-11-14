@@ -60,21 +60,18 @@ struct WalletSpendingFigure: View {
                 .padding(.trailing, 4)
                 .accessibilityElement()
                 .accessibilityLabel(Text("Spending so far, day by day"))
-                // **THE PACE (prd §1662) LABELS THE LINE IT IS ABOUT (prd
-                // §1731):** what is left to match the last window, or how
-                // far past it, stands in the chart under the grey line's
-                // end — a running total climbs to its right, so that corner
-                // is always clear — where it was a second grey sentence
-                // under the statement and cost the chart a line of height.
-                .overlay(alignment: .bottomTrailing) {
-                    if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
-                        Text(verbatim: pace)
-                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
+                // **THE GREY LINE'S NAME STANDS UNDER THE CHART:** inside it
+                // the words sat on the baseline and the grey line's own rise
+                // ran through them, so it is a line of its own, under the
+                // grey line's end.
+                if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
+                    Text(verbatim: pace)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             } else if let pace = FeedScreen.spendingPace(reading, window: window, mask: mask) {
-                // No line to label: the pace keeps its sentence.
+                // No line to label: the last window keeps its sentence.
                 Text(verbatim: pace)
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)

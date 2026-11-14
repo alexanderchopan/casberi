@@ -497,8 +497,9 @@ enum WalletRange: String, CaseIterable {
     /// so the two stay apart even while they happen to agree.
     var chipLabel: String {
         switch self {
-        case .week:    return String(localized: "7d")
-        case .month:   return String(localized: "30d")
+        // Spending's and Activity's own words (user, 2026-11-14).
+        case .week:    return String(localized: "Week")
+        case .month:   return String(localized: "Month")
         }
     }
 

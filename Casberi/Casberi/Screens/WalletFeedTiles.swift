@@ -431,11 +431,12 @@ struct WalletBalanceHeadline: View {
                     HStack(spacing: DS.Space.s4) {
                         // Whose leads, when trails (prd §1731): the line's
                         // two ends, the same on every Wallet page.
-                        if whose {
-                            WalletWhoseSwitch()
-                            Spacer(minLength: 0)
-                        }
-                        if ranges.count > 1 { rangeChips.fixedSize(horizontal: whose, vertical: false) }
+                        if whose { WalletWhoseSwitch() }
+                        // The window is words at the line's trailing end on
+                        // every page (user, 2026-11-14: the two grey pills
+                        // "are not as well designed as rest of screen").
+                        Spacer(minLength: 0)
+                        if ranges.count > 1 { rangeChips.fixedSize(horizontal: true, vertical: false) }
                     }
                     .padding(.top, whose && ranges.count < 2 ? DS.Space.s2 : 0)
                 }
@@ -705,7 +706,7 @@ struct WalletBalanceHeadline: View {
     private var rangeChips: some View {
         // Words, as Activity's and Spending's window is (prd §1731): one
         // picker grammar on the line, never pills beside words.
-        DSRangeChips(ranges: ranges, range: range, slim: whose, onPick: onPickRange)
+        DSRangeChips(ranges: ranges, range: range, slim: true, onPick: onPickRange)
             .padding(.top, DS.Space.s2)
     }
 

@@ -23,7 +23,8 @@ final class FeedFilter {
     /// Content-first landing (reverted 2026-07-28: §131's amendment that made
     /// this persist "wherever you left it" is undone per user feedback — the
     /// app always opens on "All" now).
-    var source = "All"
+    /// …unless Settings' "Open on" says the Wallet (`OpenOn`, 2026-11-14).
+    var source = OpenOn.current.source
     var tag = "All"
 
     // Per-window now, so the init is reachable — the `private` here was

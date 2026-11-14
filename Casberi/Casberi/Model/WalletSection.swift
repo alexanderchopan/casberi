@@ -142,7 +142,11 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .apps:            return String(localized: "Accounts")
         case .nfts:            return String(localized: "NFTs")
         case .subscriptions:   return String(localized: "Subscriptions")
-        case .places:          return String(localized: "Places")
+        // "Places" did not say whether a subscription counted (user,
+        // 2026-11-14): this is the spend that is not one. "Everything
+        // else" is past the 13 characters a label gets, and its page's
+        // title would cut off.
+        case .places:          return String(localized: "The rest")
         case .fees:            return String(localized: "Fees")
         case .roundUps:        return String(localized: "Round-ups")
         case .recoveryKey:     return String(localized: "Recovery key")
@@ -204,7 +208,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .apps:            return String(localized: "No accounts")
         case .nfts:            return String(localized: "No collections")
         case .subscriptions:   return String(localized: "No subscriptions yet")
-        case .places:          return String(localized: "No places")
+        case .places:          return String(localized: "Nothing else")
         case .fees:            return String(localized: "No fees")
         case .roundUps:        return String(localized: "No round-ups")
         case .recoveryKey:     return String(localized: "Not checked yet")

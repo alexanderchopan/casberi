@@ -27,6 +27,7 @@ struct SettingsRows: View {
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
+    @AppStorage(OpenOn.key) private var opensOn = OpenOn.feed.rawValue
     /// The highest round number the corpus has been congratulated for, so a
     /// crossing is celebrated once and never re-celebrated on the next open.
     @AppStorage("settings.thingsRung") private var celebratedRung = 0
@@ -343,6 +344,19 @@ struct SettingsRows: View {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
                     }),
+            // Where the app opens (`OpenOn`): two choices, so the row flips
+            // as Theme does and its glyph is the place's own tab mark.
+            RowSpec(title: "Open on",
+                    value: (OpenOn(rawValue: opensOn) ?? .feed).label,
+                    trail: .flips,
+                    badge: ((OpenOn(rawValue: opensOn) ?? .feed) == .wallet
+                                ? ScopeTileGlyph.wallets : ScopeTileGlyph.feed, DS.textPrimary),
+                    action: {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) {
+                            opensOn = (OpenOn(rawValue: opensOn) ?? .feed).flipped.rawValue
+                        }
+                    }),
             // "Color" is GONE (prd §635, 2026-09-06). It picked the crown
             // pour's hue from six swatches and defaulted to Ink, which pours
             // nothing — a settings row whose whole job was to switch on a wash
@@ -504,7 +518,7 @@ struct SettingsRows: View {
         DSCountGrid(items: rows.count) {
             ForEach(rows, id: \.title) { row in
                 DSCountTile(count: nil, label: String(localized: String.LocalizationValue(row.title)),
-                            glyph: Self.glyph(row.title), isOn: false, inline: true, action: row.action)
+                            glyph: Self.glyph(row), isOn: false, inline: true, action: row.action)
             }
         }
     }
@@ -520,8 +534,9 @@ struct SettingsRows: View {
                 Button(action: row.action) {
                     VStack(spacing: DS.Space.s1) {
                         let side = DS.Face.seat + 12
-                        Image(systemName: Self.glyph(row.title))
+                        Image(systemName: Self.glyph(row))
                             .dsGlyph(.title, weight: .regular)
+                            .contentTransition(.symbolEffect(.replace))
                             .foregroundStyle(DS.brandInk)
                             .frame(width: side, height: side)
                             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(side),
@@ -545,8 +560,10 @@ struct SettingsRows: View {
     }
 
     /// Each setting's glyph in the box.
-    private static func glyph(_ title: String) -> String {
-        switch title {
+    private static func glyph(_ row: RowSpec) -> String {
+        switch row.title {
+        // The tile wears the place it opens on, so a tap shows its answer.
+        case "Open on": row.badge?.0 ?? ScopeTileGlyph.feed
         case "Apps": "square.grid.2x2"
         case "Avatar": "person.crop.circle"
         case "Name": "signature"
