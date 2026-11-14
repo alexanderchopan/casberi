@@ -72822,3 +72822,28 @@ The whole settled design, with its canvases, is in `docs/specs/redesign-list-202
 **Seen:** the simulator, demo, `-moveSwapDraft "20|USDC|ETH"`: the whole swap on one screen; after Add another, the first swap's rows, the pink "And", the fixed rows in grey and "Choose" on Token. **Mac half (§1402).** The same on Catalyst.
 
 **Checks.** None added.
+
+## §1798 — Shield stays Move's one way into Aztec; an app's own bridge is not added (keeps §1700d and §1700e) (user, 2026-11-14: "ravenhouse has a brdige that doesnt require human passport score why is it that we use shield instead"; shown the two side by side, "then my question is why not xochi too. this will just get confusing"; then "Yes, Shield only") — RULED; nothing built
+
+**Measured first (2026-11-14, Ethereum mainnet, read-only, both portals' source on Sourcify).**
+
+| | Shield | RavenHouse |
+|---|---|---|
+| Portal | `0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c`, no proxy | `0xAE3B5C52Aee124F0C9466B8d57f1eED17ccebF6d`, UUPS proxy (`TokenPortal` 1.2.0), 8 h timelock |
+| USDC held | $106 | $40 ($40.38 deposited ever) |
+| Gate | a signed Passport limit or Clean Hands on every deposit and exit | none: `depositToAztecPrivate(uint256,bytes32)`, `whitelist()` is the zero address |
+| Limits | Shield's signed limit, $1,000 on the Passport rail | $500 a transaction, $500 a person, $10,000 in all |
+| Fee | 0.5% (`feeBasisPoints` 50) | none on the portal's deposit |
+| Owner | one plain address | one plain address |
+| Audit | Nethermind Security, NM-0756, May 2026 (docs.human.tech/security-and-audits; the report is on request and was not read) | none named on its site, docs or bridge page |
+| Token on Aztec | Clean USDC, the shared aztec-standards Token | RavenHouse's own USDC (`0x03b8cb72…83ea3bd`) |
+
+RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at `ZKPassportWhitelist` (`0xEFFA7C4940F155F81B8e1972c6707f4B0ff8642E`, deployed, minimum age 18, domain bridge.ravenhouse.xyz), a proof made from a real passport. That is the ID step §1700e refused.
+
+1. **Move has one way into and out of Aztec, and it is Shield's.** Neither bridge is large, so size decides nothing. Shield's contract cannot be changed, is audited, and mints a token meant for every app; an app's bridge mints that app's token and funds that app only.
+2. **No app's bridge becomes a Move verb, a row or a second balance**: not RavenHouse's, not Xochi's (unread), not the next one. Two tokens called USDC on Aztec in Holdings is the confusion this ruling refuses.
+3. **An app with its own token is funded on its own page, in Casberi's browser**, where your account on Ethereum is already offered (§1700e's `BrowserEthereum`). Untried for RavenHouse.
+
+**The cost, accepted.** Shield asks a Human Passport score of 20, and an app that counts its own token shows 0 against your private balance (§1776's measurement).
+
+**Checks.** None added. **Mac half (§1402).** Nothing changes on either platform.
