@@ -528,6 +528,15 @@ step "Hosts page"
 python3 "$ROOT/scripts/hosts-doc.py" --self-test > /dev/null || fail "hosts-doc.py fails its self-test"
 python3 "$ROOT/scripts/hosts-doc.py" --check || fail "docs/hosts.md is stale — run python3 scripts/hosts-doc.py"
 
+# The website's docs are one text in three places: the page, its plain-text
+# copy for a model (llms-full.txt) and the FAQ's structured data. Edited by
+# hand they drifted, and "Library", "Threats" and "the slider" stood on
+# casberi.app for days after the app stopped saying them (2026-11-14). The
+# copies are generated from the page now, and a retired word fails here.
+step "Website docs"
+python3 "$ROOT/scripts/website-docs-audit.py" --self-test > /dev/null || fail "the website-docs audit's own self-test failed — the check is broken, not the docs"
+python3 "$ROOT/scripts/website-docs-audit.py" || fail "the website's docs drifted — run python3 scripts/website-docs-audit.py --write, and reword any retired word it names"
+
 step "Catalog sync"
 "$ROOT/scripts/catalog-sync.sh" || fail "catalog surfaces drifted — run scripts/catalog-sync.sh"
 print -P "%F{green}✓ catalog sync%f"

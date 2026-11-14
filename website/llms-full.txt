@@ -4,7 +4,7 @@
 
 Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
-Last updated: November 14, 2026
+Last updated: November 14, 2026 · Describes Casberi 3.0.30. The App Store may be a version behind.
 
 ## What Casberi does
 
@@ -92,28 +92,52 @@ Good to know: when you require your co-signer, getting your account back on a ne
 
 Move is where you do something with your money. It opens on a menu of every verb: Buy, Lend, Receive, Send, Spend, Swap and Sweep. Pick one and it's a sentence, with a row under it for each choice. A row opens its menu; the amount is typed, or picked from $20, $50, $100, Half and All. The sentence says what you've chosen, and Face ID approves it.
 
+#### Pay someone
+
 - Send money. Pick who it's to, the network, the token and the amount. To lists your contacts, your own private places and the addresses you paid last, and takes a name, an ENS name or a pasted address. Add puts another send in the same transaction.
 - Pay a name. Type a zk.money tag, or @name, in To and Send sets the payment up. Any token on Ethereum is swapped into USDC in the same transaction; from another network, Across carries the dollar there. Each payment goes to a fresh address. Paste link reads a zk.money request. Save a tag and it's a contact with Pay.
+- Pay a contact. A contact with a wallet has Send on their page in Contacts. Move opens with their name filled in.
+
+#### Get money in
+
+- Receive. Receive shows your three addresses at once — public account, private balance and private account — each with the networks it's good on and a Copy (see Private money). From another network lets someone send a token Relay bridges, and it lands as the one you pick. From another wallet connects a wallet of yours to send in from.
+- Buy with a card. Buy takes a token and an amount. The card is taken on Stripe's own page, never by Casberi, and what you bought arrives in your account.
+
+#### Change what you hold
+
 - Swap. Your phone asks Uniswap and Aerodrome directly for the best price and writes the swap itself, with no aggregator in between. The line under the sentence names the exchange and its pool fee, which is in the price.
 - Swap to another network. Pick the network for what you get, and Across carries it: ETH arrives as ETH, USDC as USDC. Activity shows it arriving.
 - Clear out dust. Sweep swaps every token worth under $1, or $5, on one network for ETH, in one transaction. A token it won't touch stays listed with the reason — most dust is sent by strangers.
-- Receive. Receive shows your three addresses at once — public account, private balance and private account — each with the networks it's good on and a Copy (see Private money). From another network lets someone send a token Relay bridges, and it lands as the one you pick. From another wallet connects a wallet of yours to send in from.
-- Buy with a card. Buy takes a token and an amount. The card is taken on Stripe's own page, never by Casberi, and what you bought arrives in your account.
+
+#### Spend it, or put it to work
+
 - Spend on a gift card. Spend takes a merchant on Bitrefill and pays from your account, on Base or Ethereum.
 - Lend. Lend puts a token of yours on Aave, where it earns; Take back returns it. What's lent has its own rows in Holdings.
-- Pay the fee without ETH. On Base, a send short of ETH for its fee pays it from your USDC, up to $5 at a time. Face ID asks once to allow that, then once for the send.
 - Round up. Every send rounds up to the next $1 or $5, your pick. The change is set aside on Aave on Base, where it earns, and once it reaches $10 the next send moves it into your private balance. What it saved is in Spending, under Round-ups.
+
+#### Keep it private
+
 - Go private. Send to Your private balance or Your private account, or tap Add money under Private in Holdings. To pay privately, pick a private token. See Private money.
 
-Before Face ID asks, the line under the sentence says the most the fee can be. Details shows the whole move and whether this exact move was run on the network and lands as written. What Details shows is what Face ID signs.
+#### Before you approve
 
-A warning takes that line's place: the move would fail, the address is sanctioned or reported, it looks like an address you've paid, it's a new contract, or it's your first send there. Then the verb reads Send anyway: the first tap arms it, the second signs.
-
-Good to know: when you require your co-signer, every send and swap needs it too.
+- The fee. Before Face ID asks, the line under the sentence says the most the fee can be.
+- Pay the fee without ETH. On Base, a send short of ETH for its fee pays it from your USDC, up to $5 at a time. Face ID asks once to allow that, then once for the send.
+- What you sign. Details shows the whole move and whether this exact move was run on the network and lands as written. What Details shows is what Face ID signs.
+- A warning. It takes the fee line's place: the move would fail, the address is sanctioned or reported, it looks like an address you've paid, it's a new contract, or it's your first send there. Then the verb reads Send anyway: the first tap arms it, the second signs.
+- Your co-signer. When you require it, every send and swap needs it too.
 
 ### Private money
 
 Two private places. Your private balance is on Ethereum, and you never choose where it sits: Casberi picks Privacy Pools or Railgun by the token. Your private account is on Aztec, an account of its own. Both show under Private in Holdings.
+
+- Add money. Tap Add money under Private in Holdings, or in Move, Send to Your private balance or Your private account. Your private balance takes $10 at least; your private account, any amount you type.
+- Pay someone privately. In Send, pick a token under Private. The sentence reads "from your private balance", and your account appears nowhere on the payment.
+- Get paid privately. In Receive, Private balance gives each payment a fresh address of its own, with New address for the next one. Private account is your Aztec address, the same every time, for payments from Aztec only.
+- See it, and take it back. Holdings is Public and Private. Each private row ends with where it sits — "DAI — Ethereum · Railgun" — and one that isn't spendable yet says "Private in about an hour". Tap a row to take it back to your account.
+- Use private apps. Apps on Aztec open in Casberi from Aztec directory, in Apps, and use your private account.
+
+Where it sits, and who carries it:
 
 | | Holding | Sending | Receiving |
 |---|---|---|---|
@@ -123,10 +147,10 @@ Two private places. Your private balance is on Ethereum, and you never choose wh
 
 All three show together under Private in Holdings. You send from whichever one holds the money. Who sends to you, and with what, decides where it lands.
 
-- Move it in. Tap Add money under Private in Holdings, or in Move, Send to Your private balance. ETH and USDC go into 0xBow's Privacy Pools, which approves each deposit before it can be spent, and once approved it earns on Aave. Any other token goes into Railgun and is private in about an hour; Railgun takes 0.25% in and 0.25% out. The line under the sentence names which one. Send to Your private account to move USDC or ETH into your Aztec account through Shield, any amount you type; Shield first asks for a Human Passport score, and the first time, 30 AZTEC goes along as its gas.
-- Pay from it. Your private tokens are rows in Send's token list, under Private. Pick one, and the sentence reads "from your private balance". From Privacy Pools, 0xBow's relayer posts the payment. From Railgun, a Railgun broadcaster posts it and takes its fee inside Railgun, shown before Face ID; if none answers, a fresh address of yours posts it, its gas paid from your private ETH. Either way, your account appears nowhere on the payment. From your Aztec account, a payment to an Aztec address stays private on Aztec; to an Ethereum address it leaves through Shield, and Needs you offers Finish about an hour later.
-- Receive into it. In Receive, Private balance gives each payment a fresh address of its own, with New address for the next one; what arrives moves in by the table above, its gas paid from your private ETH. Private account is your Aztec address, the same every time, for payments from Aztec only.
-- See it. Holdings is Public and Private. Each private row ends with where it sits — "DAI — Ethereum · Railgun" — and one that isn't spendable yet says "Private in about an hour". Tap a row to take it back to your account.
+- Into your private balance. ETH and USDC go into 0xBow's Privacy Pools, which approves each deposit before it can be spent, and once approved it earns on Aave. Any other token goes into Railgun and is private in about an hour; Railgun takes 0.25% in and 0.25% out. The line under the sentence names which one.
+- Into your private account. USDC or ETH moves into your Aztec account through Shield. Shield first asks for a Human Passport score, and the first time, 30 AZTEC goes along as its gas.
+- Who posts a payment. From Privacy Pools, 0xBow's relayer. From Railgun, a Railgun broadcaster, which takes its fee inside Railgun, shown before Face ID; if none answers, a fresh address of yours posts it, its gas paid from your private ETH. From your Aztec account, a payment to an Aztec address stays private on Aztec; to an Ethereum address it leaves through Shield, and Needs you offers Finish about an hour later.
+- What arrives at a fresh address. It moves in by the table above, its gas paid from your private ETH.
 
 Round-ups, if you turn them on: every send rounds up to the next $1 or $5; the change earns on Aave on Base, in the open; at $10, it goes private into Privacy Pools, still earning.
 
