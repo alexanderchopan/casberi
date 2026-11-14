@@ -2229,7 +2229,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1796 — Swap's rows are Network, Token, To network, To token; a whole swap fits without a scroll (amends §1795, §1794 items 3…
 - §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (…
 - §1798 — Shield stays Move's one way into Aztec; an app's own bridge is not added (keeps §1700d and §1700e)
-- §1798 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6)
+- §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6)
 
 ## Dead rulings → what replaced them (generated)
 

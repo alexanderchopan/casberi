@@ -72848,7 +72848,7 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 
 **Checks.** None added. **Mac half (§1402).** Nothing changes on either platform.
 
-## §1798 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (user, 2026-11-14, of the verbs' boards on the Design canvas: "ok for now")
+## §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (user, 2026-11-14, of the verbs' boards on the Design canvas: "ok for now")
 
 1. **Sweep says what it does:** "Sweep 2 tokens under $1 into ETH on Base." The line is a row, "Tokens under" ($1 or $5, `underList`); the sentence's own menu is deleted (the sentence takes no touch, §1781). "You get" leads with dollars, then the ETH. Every token's dollars stand at its row's trailing edge; a swept one's line names its exchange, a staying one's says why.
 2. **Buy says where it arrives and who takes the card,** as two lines under the rows ("Arrives in · Your account ...xxxx", "Card taken by · Stripe"). Its button reads "Continue with Stripe". The address block, the explaining sentence and the "Powered by" credit are deleted; the copied-address notice at the tap stays.

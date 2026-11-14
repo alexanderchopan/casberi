@@ -2058,7 +2058,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// **"SWEEP 2 TOKENS UNDER $1 INTO ETH ON BASE." (prd §1798).** It says
+    /// **"SWEEP 2 TOKENS UNDER $1 INTO ETH ON BASE." (prd §1799).** It says
     /// what it does: tokens under a line, into ETH. The line is a row
     /// ("Tokens under"), as every choice is; what comes back is the line
     /// "You get" under the rows, dollars first.
@@ -2157,7 +2157,7 @@ struct MoveSentence: View {
             guard case .swap(let s) = item, (s.sell.contract?.lowercased() ?? s.sell.symbol) == h.id else { return nil }
             return s.quote.exchange.map(YourAccountSwap.on)
         }.first
-        // Every row's dollars stand at the trailing edge (prd §1798); a
+        // Every row's dollars stand at the trailing edge (prd §1799); a
         // swept one's line names its exchange, a staying one's says why.
         return listRow(h.symbol, sub: row.stay.map(Self.sweepWords) ?? exchange,
                        trailing: worth, mark: h.symbol, dim: row.stay != nil) {
@@ -3569,7 +3569,7 @@ struct MoveSentence: View {
         ForEach(rows) { r in
             if verb == .swap, r.opens == .destination { toHead }
             // "Pay with" heads Spend's network and token, as "To" heads a
-            // swap's second side (prd §1798).
+            // swap's second side (prd §1799).
             if verb == .buy, r.opens == .network { payHead }
             if follows, r.opens == .from {
                 EmptyView()
@@ -4142,14 +4142,14 @@ struct MoveSentence: View {
             rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back, valueInk: DS.textPrimary))
         }
         if verb == .sweep, !sweepPricing, !sweepItems.isEmpty, DustSweep.isPositive(sweepBack) {
-            // Dollars first, then the ETH (prd §1798).
+            // Dollars first, then the ETH (prd §1799).
             let eth = "≈ " + Self.short(sweepBack, decimals: Op.eth.decimals) + " " + Op.eth.symbol
             let usd = ethPrice.flatMap { DustSweep.dollars(sweepBack, decimals: Op.eth.decimals, price: $0) }
             rows.append(LedgerRow(id: "get", name: String(localized: "You get"),
                                   value: usd.map { Self.money($0) + " · " + eth } ?? eth, valueInk: DS.textPrimary))
         }
         if verb == .deposit, let seller = depositSeller {
-            // **WHERE IT ARRIVES, AND WHO TAKES THE CARD (prd §1798).**
+            // **WHERE IT ARRIVES, AND WHO TAKES THE CARD (prd §1799).**
             rows.append(LedgerRow(id: "arrives", name: String(localized: "Arrives in"),
                                   value: String(localized: "Your account \(AddressTail.short(account))")))
             rows.append(LedgerRow(id: "card", name: String(localized: "Card taken by"), value: seller.name, marks: [seller.name]))
@@ -6163,7 +6163,7 @@ struct MoveSentence: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, DS.Space.s1)
             }
-            // Buy's seller is named in its line and on its button (prd §1798).
+            // Buy's seller is named in its line and on its button (prd §1799).
             // Bitrefill's credit signs Buy's foot the same way (§1473, user:
             // "put bitrefill logo like we do w/ relay").
             if verb == .buy, receipt == nil {
@@ -6269,7 +6269,7 @@ struct MoveSentence: View {
         }
         if verb == .receive { return String(localized: "Copy address") }
         if verb == .deposit {
-            // The act opens the seller's page, and says so (prd §1798).
+            // The act opens the seller's page, and says so (prd §1799).
             return depositSeller.map { String(localized: "Continue with \($0.name)") } ?? String(localized: "Buy")
         }
         if verb == .buy { return String(localized: "Spend") }
