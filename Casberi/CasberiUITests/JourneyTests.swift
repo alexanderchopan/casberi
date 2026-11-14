@@ -41,7 +41,7 @@ final class JourneyTests: XCTestCase {
         // Calendar's page in Day's folder (prd §1612 item 3), not the empty
         // Feed's box: the simulator's Keychain outlives an uninstall, so a
         // session left there fills the Feed and hides its ways in.
-        w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
+        w.openApps()
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Day"), "Day folder")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Calendar"), "Calendar")
         // The phone is the only way in, so the page asks iOS as it lands
@@ -58,7 +58,7 @@ final class JourneyTests: XCTestCase {
     /// explained" (`DemoSeedAll.swift`; the "Gerald" post it used is gone).
     @MainActor func testFind() {
         let w = Walk("find", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
+        w.openApps()
         w.tap(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
         w.type("hydration", "type hydration")
         // Not the "Everything that says …" row, which opens a page of results.
@@ -267,7 +267,7 @@ final class JourneyTests: XCTestCase {
             // Library's field finds every app (prd §1715).
             w.maybe(w.el(.button, "label == %@", "Close Casberi"), within: 5, "close Casberi's folder")
             w.begin()
-            w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
+            w.openApps()
             w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
             w.type(name, "type the name")
             // The tray's top hit is a button named for the app alone, wearing
@@ -321,7 +321,7 @@ final class JourneyTests: XCTestCase {
     /// the Search tab is deleted), then its row
     /// (counted: the Library tab, the field's focus and the row).
     @MainActor private func openApp(_ w: Walk, _ name: String) {
-        w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
+        w.openApps()
         w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
         w.type(name, "type \(name)")
         // The row as drawn, whatever element type the list gives it.
@@ -345,7 +345,7 @@ final class JourneyTests: XCTestCase {
         // stands only in Sources' library (prd §1316, §1321).
         let casberi = w.el(.button, "label == %@", "Casberi, Settings")
         if !casberi.waitForExistence(timeout: 6) {
-            w.tap(w.el(.button, "label == %@", "Apps"), "Apps tab")
+            w.openApps()
         }
         w.see(casberi, "Sources")
         w.begin()
@@ -500,6 +500,23 @@ final class JourneyTests: XCTestCase {
 
         /// A tap on something that may not be there (a cover a later journey
         /// never meets): tapped and counted when it shows, skipped when not.
+        /// Apps' page. Apps left the phone's bar for the trailing end of the
+        /// Feed's and the Wallet's title row (prd §1783), and draws no door on
+        /// its own page, where the demo's Exit lands: standing there already
+        /// (its field on screen) takes no tap, anywhere else the door does.
+        func openApps() {
+            guard broken == nil else { return }
+            let field = el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search")
+            // On screen, not merely in the tree: the pager can hold Apps'
+            // page beside the Feed, its field laid out past the edge.
+            if field.waitForExistence(timeout: 5),
+               app.windows.firstMatch.frame.contains(field.frame) {
+                shoot("Apps (already open)")
+                return
+            }
+            tap(el(.button, "label == %@", "Apps"), "Apps door")
+        }
+
         func maybe(_ e: XCUIElement, within s: TimeInterval, _ what: String) {
             guard broken == nil, e.waitForExistence(timeout: s), hittable(e, within: 3) else { return }
             e.tap()
