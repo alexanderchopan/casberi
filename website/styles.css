@@ -2170,3 +2170,17 @@ body { overflow-x: clip; }
   #catalog .store-flow .shelf::after { top: 22px; right: 16px; }
 }
 
+
+/* ===== what it does: the tl;dr card's rows, under the reel ===== */
+.what { max-width: 1040px; margin: 0 auto; }
+.what-h { font-family: 'Figtree', -apple-system, sans-serif; font-size: clamp(34px, 5.2vw, 64px); font-weight: 900;
+  letter-spacing: -.045em; line-height: 1.02; color: var(--ink); margin: 0 0 44px; }
+.what-h span { display: block; color: #7c8492; }
+.what-h em { font-style: normal; }
+.what-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 26px 48px; }
+.what-row { display: grid; grid-template-columns: 8px 1fr; column-gap: 18px; }
+.what-row i { border-radius: 3px; }
+.what-row b { display: block; font-family: 'Figtree', -apple-system, sans-serif; font-size: 21px; font-weight: 800;
+  letter-spacing: -.015em; color: var(--ink); line-height: 1.15; }
+.what-row span { display: block; font-size: 16px; font-weight: 500; color: #8b93a1; margin-top: 4px; line-height: 1.35; }
+@media (max-width: 700px) { .what-rows { grid-template-columns: 1fr; gap: 20px; } .what-h { margin-bottom: 30px; } }
