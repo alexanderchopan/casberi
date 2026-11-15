@@ -277,8 +277,10 @@ extension FeedScreen {
                                 // of, the figure Holdings draws; the switch
                                 // takes its foot as it does there (§1526).
                                 VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                    // Public and Private stand under the
+                                    // balance they split, over the map (§1815).
                                     holdingsBlockSection
-                                    walletPublicPrivateLine
+                                        .environment(\.holdingsUnderReading, walletPublicPrivateSlot)
                                     if WalletWhoseSwitch.shows(chrome) { WalletWhoseSwitch() }
                                 }
                             } else {

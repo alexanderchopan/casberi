@@ -150,6 +150,10 @@ extension EnvironmentValues {
     /// §1090). Empty everywhere but the Wallet's Holdings box, where a fresh
     /// read turns the grey blocks into the day's heat map.
     @Entry var holdingsDayMoves: [String: Double] = [:]
+    /// A line the box draws between its number and its map: Home's Public
+    /// and Private (prd §1815, user: "under the balance to put public and
+    /// private"). Nil everywhere else.
+    @Entry var holdingsUnderReading: AnyView? = nil
     /// True on the Wallet's SimpleFIN pick (prd §1702): a currency tile is
     /// that bank's cash and wears the bank's mark (`PickBankMark`).
     @Entry var holdingsPickIsBank: Bool = false
@@ -181,6 +185,7 @@ struct HoldingsTreemap: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.holdingsDayMoves) private var dayMoves
     @Environment(\.holdingsPickIsBank) private var pickIsBank
+    @Environment(\.holdingsUnderReading) private var underReading
 
     static let gap: CGFloat = 4
     static let minSide: CGFloat = 44
@@ -190,6 +195,8 @@ struct HoldingsTreemap: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             reading
+            // What the balance splits into, under it (prd §1815).
+            if let underReading { underReading }
             GeometryReader { geo in
                 let tiles = HoldingsTreemapLayout.layout(
                     holdings.map { (id: $0.id, share: sum > 0 ? $0.usd / sum : 0) },
@@ -240,27 +247,26 @@ struct HoldingsTreemap: View {
         dayMoves.isEmpty || id == HoldingsTreemapLayout.otherID ? nil : dayMoves[HoldingMoves.key(id)]
     }
 
-    /// "2 up, 1 down today", Markets' box line (§1081), when any holding
-    /// moved — over every holding, as the rows under the box list them, so
-    /// the count and the list agree even where a tile folded into "Other".
-    private var todayCaption: String? {
-        let moves = holdings.compactMap { move($0.id) }
-        guard !moves.isEmpty else { return nil }
-        let t = HoldingMoves.tally(moves)
-        switch (t.up, t.down) {
-        case (0, 0): return String(localized: "Flat today")
-        case (_, 0): return String(localized: "\(t.up) up today")
-        case (0, _): return String(localized: "\(t.down) down today")
-        default:     return String(localized: "\(t.up) up, \(t.down) down today")
-        }
+    /// The day as one percent of the whole balance (prd §1815, retiring
+    /// §1081's "2 up, 1 down today" here): over every holding, each by its
+    /// dollars. A change that rounds to zero says "Flat today" with no sign
+    /// (§83).
+    private var dayChange: Double? {
+        HoldingMoves.dayChange(holdings.map { (usd: $0.usd, move: move($0.id)) })
     }
 
-    /// All up, the gain's ink; all down, the loss's; mixed or flat, grey.
+    private var todayCaption: String? {
+        guard let change = dayChange else { return nil }
+        let tenths = (abs(change) * 1000).rounded() / 10
+        guard tenths > 0 else { return String(localized: "Flat today") }
+        let figure = tenths.formatted(.number.precision(.fractionLength(1)))
+        return change > 0 ? String(localized: "+\(figure)% today") : String(localized: "-\(figure)% today")
+    }
+
+    /// Up, the gain's ink; down, the loss's; flat, grey.
     private var todayInk: Color {
-        let t = HoldingMoves.tally(holdings.compactMap { move($0.id) })
-        if t.up > 0, t.down == 0 { return DS.confirmInk }
-        if t.down > 0, t.up == 0 { return DS.destructiveInk }
-        return DS.textSecondary
+        guard let change = dayChange, (abs(change) * 1000).rounded() > 0 else { return DS.textSecondary }
+        return change > 0 ? DS.confirmInk : DS.destructiveInk
     }
 
     /// A tile's fill: the tint when pressed; else its move's hue at its

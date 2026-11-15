@@ -147,11 +147,14 @@ combined = HM.combine(HM.replacing([:], owners: ["0x1", "0x2"],
                                           (owner: "0x2", read: .init(symbol: "ETH", usd: 1000, change: -0.02))],
                                    now: now), now: now)
 check(abs((combined["ETH"] ?? 9) - 0.01) < 1e-9, "a token in two wallets is weighted by the combined dollars")
+// The day as one percent of the whole (prd §1815).
+let day = HoldingMoves.dayChange([(usd: 1020, move: 0.02), (usd: 1000, move: nil)])
+check(day.map { abs($0 - (2020.0 / 2000.0 - 1)) < 1e-9 } ?? false, "the day's change weighs each holding by its dollars, cash flat")
+check(HoldingMoves.dayChange([(usd: 500, move: nil)]) == nil, "no move read, no day's change")
+check((HoldingMoves.dayChange([(usd: 900, move: -0.1)]) ?? 0) < 0, "a fall is negative")
 check(HoldingMoves.isFresh(at: now.addingTimeInterval(-3600), now: now), "an hour-old move is fresh")
 check(!HoldingMoves.isFresh(at: now.addingTimeInterval(-7 * 3600), now: now), "a seven-hour-old move is stale")
 check(!HoldingMoves.isFresh(at: now.addingTimeInterval(3600), now: now), "a move from the future is not fresh")
-let t = HoldingMoves.tally([0.02, -0.01, 0.0001, 0])
-check(t.up == 1 && t.down == 1, "a move that rounds to zero is neither up nor down")
 
 // ── What a borrow can bear ───────────────────────────────────────────
 typealias R = WalletRiskScale

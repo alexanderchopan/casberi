@@ -15,7 +15,7 @@ import Foundation
 /// the tile goes back to the plain fill. Kept in defaults only so a cold
 /// launch inside the holdings window (which reads nothing) still colours.
 ///
-/// The pure half (`merge`, `isFresh`, `tally`) is Foundation-only, compiled
+/// The pure half (`merge`, `isFresh`, `dayChange`) is Foundation-only, compiled
 /// whole by `scripts/wallet-makeover-selftest.sh`.
 enum HoldingMoves {
     struct Read: Equatable, Codable {
@@ -58,10 +58,22 @@ enum HoldingMoves {
 
     /// "2 up, 1 down" over the tiles the box draws; a move that rounds to
     /// zero is neither (§83).
-    static func tally(_ moves: [Double]) -> (up: Int, down: Int) {
-        moves.reduce(into: (0, 0)) { t, m in
-            if m >= 0.0005 { t.0 += 1 } else if m <= -0.0005 { t.1 += 1 }
+    /// **THE DAY, AS ONE PERCENT OF EVERYTHING HELD (prd §1815, user: "i
+    /// don't think saying 1 up today matters. it is a percent change that
+    /// matters").** Each holding's dollars now and its move give what it was
+    /// worth a day ago; the change is today's total over yesterday's. A
+    /// holding with no move (cash, a bank) counts as flat, which is what it
+    /// was. Nil with no move read at all, or nothing held a day ago.
+    static func dayChange(_ holdings: [(usd: Double, move: Double?)]) -> Double? {
+        guard holdings.contains(where: { $0.move != nil }) else { return nil }
+        var now = 0.0, before = 0.0
+        for h in holdings where h.usd > 0 {
+            now += h.usd
+            let m = h.move ?? 0
+            before += m > -1 ? h.usd / (1 + m) : h.usd
         }
+        guard before > 0 else { return nil }
+        return now / before - 1
     }
 
     /// The demo reaches nothing (§483): its four holdings move by fixed,

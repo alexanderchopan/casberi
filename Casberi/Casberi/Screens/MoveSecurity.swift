@@ -121,7 +121,6 @@ struct MoveSecurity: View {
             row(title: Self.exportTitle, value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
             }
-            .padding(.leading, Self.rowIndent)
             // **CONNECTION IS ITS OWN SECTION (prd §1786):** the networks and
             // Tor are how the account is reached, and stood among the keys.
             SectionPanelName(name: String(localized: "Connection"), glyph: Self.connectionGlyph, inset: 0)
@@ -139,7 +138,6 @@ struct MoveSecurity: View {
             // tray behind it (prd §1803, user: "its row under Connection").
             if let openNodes { nodesRow(openNodes) }
             }
-            .padding(.leading, Self.rowIndent)
             // "Saving", not "Spending" (prd §1803): round-ups and the goal
             // they fill put money away; the Wallet's Spending tile is what
             // you spent.
@@ -150,7 +148,6 @@ struct MoveSecurity: View {
                 // Beside Round-ups, which feed it (prd §1700f item 10).
                 if let openGoal { savingsGoalRow(openGoal) }
             }
-            .padding(.leading, Self.rowIndent)
             // Said once, under the keys, only on a device that cannot open
             // them (§1442n item 3; user: "the user will have created their
             // account on the device they are reading this on"): the fact is
@@ -203,12 +200,11 @@ struct MoveSecurity: View {
         }
     }
 
-    /// **A ROW STARTS UNDER ITS SECTION'S NAME (§1496, user: "it looks
-    /// weirdly indented").** These rows have no lead of their own, so at the
-    /// margin they stood under the header's glyph, left of the name they
-    /// belong to; the glyph's column and its gap in `SectionPanelName` put
-    /// them under the name, as a Feed row's words stand beside its mark.
-    static let rowIndent: CGFloat = DSRoomChassis.headGlyph + DSRoomChassis.headGap
+    // **A ROW STARTS UNDER ITS SECTION'S NAME (§1496, §1814).** These rows
+    // have no lead of their own. They were indented past the header's glyph
+    // column to stand under the name; the name is at the left edge now, and
+    // so are they (user, 2026-11-15, of Keys and Connection: "is this weird
+    // that these aren't left justified on account?").
 
     // MARK: - Private balance (prd §1562)
 

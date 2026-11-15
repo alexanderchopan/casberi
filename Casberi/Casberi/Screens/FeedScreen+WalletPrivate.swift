@@ -426,6 +426,15 @@ extension FeedScreen {
         }
     }
 
+    /// The line as the box's slot under its number; nil when it draws
+    /// nothing, so the box leaves no gap for it.
+    var walletPublicPrivateSlot: AnyView? {
+        guard selectedSeat == nil, !walletOnFollowing,
+              selectedWallet.map(YourAccountDemo.isYours) ?? true,
+              let total = portfolioShown?.totalUSD, total > 0 else { return nil }
+        return AnyView(walletPublicPrivateLine)
+    }
+
     /// One half of the balance: its word in the secondary ink, its figure.
     private func walletHalf(_ word: String, _ figure: String) -> some View {
         HStack(spacing: DS.Space.s2) {

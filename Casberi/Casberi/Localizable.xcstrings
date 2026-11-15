@@ -35307,6 +35307,34 @@
         }
       }
     },
+    "+%@%% today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+%@ %% hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日 +%@%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 +%@%%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天 +%@%%"
+          }
+        }
+      }
+    },
     "+%lld" : {
       "localizations" : {
         "es" : {
@@ -35555,6 +35583,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "，钱包 "
+          }
+        }
+      }
+    },
+    "-%@%% today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "-%@ %% hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日 -%@%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 -%@%%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天 -%@%%"
           }
         }
       }

@@ -275,8 +275,7 @@ private struct SourcesFolderTile: View {
                     .dsWell(cornerRadius: DS.Radius.widget)
                 SourcesFolderWords(name: folder.category,
                                    fact: SourcesLibrary.fact(folder).text,
-                                   needsYou: SourcesLibrary.fact(folder).needsYou,
-                                   glyph: CategoryFold.glyph(for: folder.category))
+                                   needsYou: SourcesLibrary.fact(folder).needsYou)
             }
             .contentShape(Rectangle())
         }
@@ -293,32 +292,22 @@ private struct SourcesFolderWords: View {
     let fact: String
     /// The fact is an app that needs you: the one amber word (prd §1733).
     var needsYou = false
-    /// The category's own glyph, as its Feed section wears it (prd §1737);
-    /// nil for Casberi's tile, which is no category.
-    var glyph: String?
-
     var body: some View {
-        // On the well's own edge, which is the page's (prd §1733): the `s1`
-        // these stood in was one of Library's four left insets.
-        VStack(alignment: .leading, spacing: 0) {
-            // ONE CATEGORY, ONE LOOK (prd §1737): the Feed's section is its
-            // pink glyph and a heavy name, and the folder was a plain light
-            // word. The same glyph in the glyph's pink, the name at weight.
-            HStack(spacing: DS.Space.s1) {
-                if let glyph {
-                    Image(systemName: glyph)
-                        .dsGlyph(.subhead, weight: .semibold)
-                        .foregroundStyle(DS.brandInk)
-                        .accessibilityHidden(true)
-                }
-                Text(verbatim: name)
-                    .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-            }
+        // **THE NAME ALONE, CENTRED UNDER ITS FOLDER (prd §1815, user: "apps
+        // folder names lose glyphs, yes. should the title and count for each
+        // folder be centered?").** The pink glyph was §1737's match for the
+        // Feed's section, which no longer wears one (§1814). With nothing
+        // leading it the pair is a label for the tile above, and a label
+        // under an icon sits on its centre, as the Home Screen's does.
+        VStack(alignment: .center, spacing: 0) {
+            Text(verbatim: name)
+                .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.8)
             Text(verbatim: fact)
                 .dsText(.subhead12).foregroundStyle(needsYou ? DS.attentionInk : DS.textSecondary)
                 .lineLimit(1).minimumScaleFactor(0.8)
         }
+        .frame(maxWidth: .infinity)
     }
 }
 

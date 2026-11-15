@@ -449,7 +449,9 @@ extension FeedScreen {
             // An app's page draws the doors it can fill (prd §1813): Coming
             // up where something of its waits or is due, the follow list
             // where it follows by name. No door onto an empty list (§83).
-            let coming = selectedSeat == nil || !workAsks(visible).isEmpty || !workDeadlines(visible).isEmpty
+            let waiting = workAsks(visible).count + workDeadlines(visible).count
+            let coming = selectedSeat == nil || waiting > 0
+            let watched = pageAppFollows ? followingItems(.work).count : 0
             let doors = WorkScope.allCases.filter { scope in
                 switch scope {
                 case .all: false
@@ -460,7 +462,7 @@ extension FeedScreen {
             if chrome.workScope == .all, !doors.isEmpty {
                 Section {
                     ForEach(doors) { scope in
-                        pageDoorRow(scope.label) {
+                        pageDoorRow(scope.label, count: scope == .comingUp ? waiting : watched) {
                             withAnimation(DS.Motion.standard) { chrome.workScope = scope }
                         }
                     }

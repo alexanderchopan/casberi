@@ -252,7 +252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1992 of 2066 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1993 of 2067 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2246,6 +2246,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1812 — Home and Move share one capsule, the title is the last three levels, every title is one size, and a page under Activi…
 - §1813 — A category has no page: it is a word on Activity, an app is one step from it, and what waits on you in your apps stan…
 - §1814 — Every page swipes right to its parent, the bar is Move alone, and a section's name is its name alone at the left edge…
+- §1815 — A door wears a chevron, an app's lists are rows, a folder's name is centred with no glyph, and Home says the day as a…
 
 ## Dead rulings → what replaced them (generated)
 

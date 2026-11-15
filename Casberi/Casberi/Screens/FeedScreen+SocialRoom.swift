@@ -77,12 +77,12 @@ extension FeedScreen {
             // Rows, not tiles (prd §1812); the whole page alone draws them.
             // An app's page draws the doors it can fill (prd §1813): To you
             // where something of its is, Follow where it follows by name.
-            let hasToYou = selectedSeat == nil
-                || live.contains { SocialToYou.isToYou(Self.toYouRow($0), myHandles: mine) }
+            let toYouCount = live.count { SocialToYou.isToYou(Self.toYouRow($0), myHandles: mine) }
+            let hasToYou = selectedSeat == nil || toYouCount > 0
             if chrome.socialScope == .all, hasToYou || pageAppFollows {
                 Section {
                     if hasToYou {
-                        pageDoorRow(SocialScope.toYou.label) {
+                        pageDoorRow(SocialScope.toYou.label, count: toYouCount) {
                             withAnimation(DS.Motion.standard) { chrome.socialScope = .toYou }
                         }
                     }

@@ -16,8 +16,39 @@ import SwiftUI
 extension FeedScreen {
     /// One of a page's doors: `DSMoreRow`'s grey word and chevron, at the
     /// rows' inset, a full target tall.
-    func pageDoorRow(_ title: String, action: @escaping () -> Void) -> some View {
-        DSMoreRow(title: Text(verbatim: title), action: action)
+    func pageDoorRow(_ title: String, count: Int? = nil, action: @escaping () -> Void) -> some View {
+        // **A ROW, NOT A GREY WORD (prd §1815, user: "app's lists are rows
+        // ok").** "Coming up ›" and "Following ›" stood right under the
+        // title in a count-link's grey and read as a second title; they are
+        // rows now, their count and chevron at the trailing edge.
+        // A door to a list of the page's own wears the door's chevron
+        // (§1815 item 1); a Feed row, its own door, still draws none (§1272).
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text(verbatim: title)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                if let count, count > 0 {
+                    Text(verbatim: "\(count)")
+                        .dsText(.body17)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textSecondary)
+                }
+                Image(systemName: "chevron.right")
+                    .dsGlyph(.tick, weight: .bold)
+                    .foregroundStyle(DS.textSecondary)
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: DSFeed.headHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
             .feedRowBackground()
             .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset,
                                  bottom: 0, trailing: DSRoomChassis.rowInset))

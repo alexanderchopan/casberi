@@ -34,7 +34,7 @@ extension FeedScreen {
                     figureTone: Color = DS.textPrimary, word: String? = nil,
                     wordTone: Color = DS.textSecondary, act: (() -> Void)? = nil) -> some View {
         walletDoorRow(name: name ?? section.label, figure: figure,
-                      figureTone: figureTone, word: word, wordTone: wordTone) {
+                      figureTone: figureTone, word: word, wordTone: wordTone, opens: act == nil) {
             // Account opens on the Safe, whatever was looked at last (prd
             // §1785): the address someone comes to copy is never Aztec's
             // by leftover.
@@ -46,9 +46,15 @@ extension FeedScreen {
     }
 
     /// A door's row, drawn for a section or by hand.
+    ///
+    /// **A DOOR WEARS A CHEVRON, A SECTION'S NAME DOES NOT (prd §1815, user:
+    /// "door wears a chevron; yes").** With the glyphs gone (§1814)
+    /// "Following 4" and "Keys" drew alike, and one opens a page. `opens`:
+    /// the row goes to a page; a verb or a sheet (`act`) draws none.
     func walletDoorRow(name: String, figure: String? = nil,
                        figureTone: Color = DS.textPrimary, word: String? = nil,
-                       wordTone: Color = DS.textSecondary, act: @escaping () -> Void) -> some View {
+                       wordTone: Color = DS.textSecondary, opens: Bool = false,
+                       act: @escaping () -> Void) -> some View {
         Button {
             DSHaptic.selection()
             act()
@@ -77,6 +83,12 @@ extension FeedScreen {
                         .dsText(.body17)
                         .foregroundStyle(wordTone)
                         .lineLimit(1)
+                }
+                if opens {
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.tick, weight: .bold)
+                        .foregroundStyle(DS.textSecondary)
+                        .accessibilityHidden(true)
                 }
             }
             .walletRowPitch()
