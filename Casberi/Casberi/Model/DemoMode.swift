@@ -207,6 +207,15 @@ enum DemoMode {
         let landed = Set(((try? context.fetch(FetchDescriptor<Thing>())) ?? [])
             .compactMap(\.sourceRef))
         let rows = DemoSeedAll.rooms().filter { !landed.contains($0.sourceRef ?? "") }
+        // Topping up a store that already holds an earlier day's demo: the
+        // few new rows are dated today, so the re-stamp's newest-row test
+        // reads the whole store as fresh while every older row keeps its old
+        // date (verify's All-room gate after midnight read Today as one row,
+        // "poured 3 rows", #292). Owe a re-stamp instead of trusting the head.
+        if !rows.isEmpty, landed.contains(where: { ref in
+            DemoSeedAll.refPrefixes.contains(where: ref.hasPrefix) }) {
+            restampOwed = true
+        }
         for start in stride(from: 0, to: rows.count, by: pourChunk) {
             for thing in rows[start..<min(start + pourChunk, rows.count)] {
                 context.insert(thing)
@@ -268,6 +277,8 @@ enum DemoMode {
     /// is: `pourIfNeeded` had exactly one call site too, right up until it
     /// didn't.
     private static var restamping = false
+    /// Set by a pour that topped up an already-poured store (#292).
+    private static var restampOwed = false
 
     @MainActor
     static func restampIfStale(context: ModelContext) async {
@@ -326,7 +337,9 @@ enum DemoMode {
                     // (verify's All-room gate, #292).
                     || !Calendar.current.isDateInToday(head.capturedAt))
         } ?? false
-        guard tableChanged || stale else { return }
+        let owed = restampOwed
+        guard tableChanged || stale || owed else { return }
+        restampOwed = false
 
         let calendar = Calendar.current
         let shiftDays = calendar.dateComponents(

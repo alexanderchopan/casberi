@@ -879,6 +879,9 @@ struct RootShell: View {
                 DemoMode.begin(store: bridges)
                 Task { @MainActor in
                     await DemoMode.pourIfNeeded(context: modelContext)
+                    // The activation's own re-stamp returns at once while
+                    // this pour holds `pouring`, so date the store here (#292).
+                    await DemoMode.restampIfStale(context: modelContext)
                     NSLog("[Casberi] demoEnter: ready")
                 }
             }
