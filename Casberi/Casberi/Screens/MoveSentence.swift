@@ -37,8 +37,8 @@ struct MoveSentence: View {
     var arrival: Arrival?
 
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
-         privately: PrivateMove.Mode? = nil, receivePrivately: Bool = false, lending: LendMove.Mode? = nil,
-         aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil) {
+         privately: PrivateMove.Mode? = nil, receivePrivately: Bool = false, receiveElsewhere: Bool = false,
+         lending: LendMove.Mode? = nil, aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
@@ -50,7 +50,11 @@ struct MoveSentence: View {
         let railgun = RailgunPocket.available && mode == nil && aztec == nil ? railgunPrivately : nil
         let toFresh = PrivateMove.freshAvailable && receivePrivately && mode == nil && aztec == nil && railgun == nil
         let lends = AaveLend.on && lending != nil && mode == nil && aztec == nil && railgun == nil && !toFresh
-        _verb = State(initialValue: mode != nil || aztec != nil || railgun != nil ? .send : toFresh ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        // Account's "Other networks" line opens Receive on its network list.
+        let toOther = receiveElsewhere && mode == nil && aztec == nil && railgun == nil && !toFresh && !lends
+        _verb = State(initialValue: mode != nil || aztec != nil || railgun != nil ? .send : toFresh || toOther ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        _receiveOther = State(initialValue: toOther)
+        _open = State(initialValue: toOther ? .elsewhere : nil)
         _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
         _freshReceive = State(initialValue: toFresh)
         _fresh = State(initialValue: arrival != nil)
@@ -73,7 +77,7 @@ struct MoveSentence: View {
         }
         _railgunMove = State(initialValue: railgunMove)
         _railgunOpen = State(initialValue: railgun != nil)
-        picksUpDraft = mode == nil && aztec == nil && railgun == nil && !toFresh && opening == nil && arrival == nil && !lends
+        picksUpDraft = mode == nil && aztec == nil && railgun == nil && !toFresh && !toOther && opening == nil && arrival == nil && !lends
     }
 
     /// **LEND (prd §1674): a verb.** Picked, `MoveLendSentence` draws under

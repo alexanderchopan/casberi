@@ -1338,6 +1338,16 @@ struct WalletYourAccountFigure: View {
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    // **ANY OTHER NETWORK (user, 2026-11-15).** This address
+                    // is good on the three above only; anywhere else, Receive
+                    // makes a deposit address. The line opens it, so no one
+                    // pastes this one on a chain where there is no account.
+                    // A door: grey with its chevron (prd §1385).
+                    DSMoreLink(title: Text("Other networks · deposit address")) {
+                        chrome.moveReceiveElsewhere = true
+                        chrome.moveTray = true
+                    }
+                    .dsTapTarget()
                 }
                 Button { copy(address) } label: {
                     HStack(spacing: DS.Space.s1) {
@@ -1364,7 +1374,11 @@ struct WalletYourAccountFigure: View {
     /// word marks itself for 1.2s (§867).
     private func copy(_ address: String) {
         UIPasteboard.general.string = address
-        chrome.flash(String(localized: "Address copied"), tone: .success)
+        // The public address says where it is good, as Receive's copy does
+        // (prd §1803 item 1); the Aztec one says it over the address.
+        let networks = YourAccountOp.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .or))
+        chrome.flash(chrome.yourAccountShowsAztec ? String(localized: "Address copied")
+                     : String(localized: "Copied · only on \(networks)"), tone: .success)
         withAnimation(DS.Motion.standard) { copied = true }
         Task {
             try? await Task.sleep(for: .milliseconds(1200))

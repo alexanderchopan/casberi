@@ -73037,3 +73037,13 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Mac half (§1402).** The rail keeps Home · Activity · Apps and Move; beside a pane Activity keeps its panels and Day its week (§1403). The cards, Risks without its box and the empty Home are the same views. Not yet run on the Mac.
 
 **Checks.** `plate-audit.py` (the quiet well is still the one counted plate), `face-ramp-audit.py`; `permissions-box-selftest.sh` is deleted with the box. **Seen** on the simulator: Home, Activity with the demo and on a clean install, "Activity · Telegram" from its icon, a thing raised from it, "Activity · Social" from its word after visiting an app, Risks, the empty Home. Shipped ahead of the full verify at the user's word.
+
+## §1810 — Account's box says where the public address is good, and its copy says so too (amends §1803 items 1 and 5) (user, 2026-11-15, of Account: "if we can receive on any network public should we add something here in account?", then "so maybe a line for one time address?", then of "Other networks · deposit address": "ok.")
+
+1. **One line under the three network marks:** "Other networks · deposit address", a door (grey with its chevron, `DSMoreLink`, §1385). The public address is a Safe on Base, Ethereum and Robinhood only; money sent to it on any other chain lands where there is no account. The line opens Move on Receive's "From another network" list (`ShellChrome.moveReceiveElsewhere`), the network list standing open. Not drawn when the box shows the Aztec account.
+2. **"Deposit address", never "one-time address"** here: Private balance's page already names its address "One-time address" (`MoveFreshReceive`), and the walk already says "On another network, Receive gives you a deposit address" (§1803 item 13).
+3. **Copy public address flashes "Copied · only on Base, Ethereum or Robinhood"**, as Receive's copy does (§1803 item 1). The Aztec account's copy still flashes "Address copied": its rule stands over its address.
+
+**Mac half (§1402):** the same box and line on Account's page; the line raises Move's tray as Private balance's row does.
+
+**Checks:** `ds-template-audit.py`, `localization-coverage-audit.py` (the new string in es, ja, ko, zh-Hans). **Not seen** on a screen: built on a machine with no Xcode.

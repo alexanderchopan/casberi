@@ -143597,6 +143597,34 @@
         }
       }
     },
+    "Other networks · deposit address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otras redes · dirección de depósito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "その他のネットワーク · 入金アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 네트워크 · 입금 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其他网络 · 充值地址"
+          }
+        }
+      }
+    },
     "Out" : {
       "localizations" : {
         "es" : {
