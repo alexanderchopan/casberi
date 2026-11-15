@@ -141,26 +141,16 @@ extension FeedScreen {
         }
     }
 
-    /// **THE TITLE IS THE LAST THREE LEVELS (prd §1812, amending §1811).**
-    /// The hierarchy is Home, Activity, a category, an app. A category's
-    /// page reads "Home · Activity · Work"; an app's reads "Activity · Work ·
-    /// App Store Connect", where Home is the bar's own seat. Each grey name
-    /// goes to its page, so nothing is skipped. Nil on Home's own pages and
-    /// on Activity, which already lead with Home.
+    /// **THE TITLE IS THE WHOLE PATH (prd §1813, amending §1812's last
+    /// three).** The hierarchy is Home, Activity, an app: a category is a
+    /// word on Activity and has no page. An app's page reads "Home ·
+    /// Activity · App Store Connect"; a door taken on it reads "Activity ·
+    /// App Store Connect · Coming up", where Home is the bar's own seat.
+    /// Each grey name goes to its page. Nil on Home's own pages and on
+    /// Activity, which already lead with Home.
     var titleRoot: DSTitleBack? {
         guard pageUnderActivity, roomPick != nil, clearRoomPick != nil else { return nil }
         let room = hostRoom ?? source
-        // A door taken on an app's page (prd §1812): "Work · App Store
-        // Connect · Coming up". The category goes back to its whole page.
-        if let scope = pageScope, selectedSeat != nil {
-            return DSTitleBack(word: BridgeCatalog.seatName(forSource: source)) {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    scope.clear()
-                    chrome.mergedScope[room] = nil
-                }
-            }
-        }
         // The middle name is Activity: the root is Home.
         if roomName == PlaceTab.feed.label {
             return DSTitleBack(word: PlaceTab.wallet.label) {
@@ -173,8 +163,8 @@ extension FeedScreen {
                 }
             }
         }
-        // The middle name is a category (an app's page) or Notes (a folder):
-        // the root is Activity.
+        // The middle name is an app (a door taken on its page) or Notes (a
+        // folder): the root is Activity.
         let scope = pageScope
         return DSTitleBack(word: PlaceTab.feed.label) {
             DSHaptic.selection()
@@ -185,13 +175,6 @@ extension FeedScreen {
                 chrome.sourceRequest = "All"
             }
         }
-    }
-
-    /// An app's page inside its category (prd §1812): the category's page
-    /// narrowed to the one app, on the phone.
-    var appUnderCategory: Bool {
-        pageUnderActivity && selectedSeat != nil && hostRoom == nil
-            && !Pinboard.isPinnedRoom(source) && RoomAccounts.mergedRooms.contains(source)
     }
 
     /// The title's category word pressed: drop the pick `roomPick` names and
@@ -215,18 +198,10 @@ extension FeedScreen {
                 withAnimation(DS.Motion.standard) { chrome.openWallet() }
             }
         }
-        // "Activity · Social": Activity goes back to Activity, where you
-        // were in it (no return to the top). Notes narrowed to a folder or
-        // an app goes back to Notes first, below.
-        // An app's page goes back to its category (prd §1812): the name
-        // before it in the title, never past it to Activity.
-        if appUnderCategory {
-            let room = source
-            return {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { chrome.mergedScope[room] = nil }
-            }
-        }
+        // "Activity · Bluesky": Activity goes back to Activity, where you
+        // were in it (no return to the top), the one step an app's page
+        // stands from it (prd §1813). Notes narrowed to a folder or an app
+        // goes back to Notes first, below.
         if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) {
             let room = hostRoom ?? source
             return {

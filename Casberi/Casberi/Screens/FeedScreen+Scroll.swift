@@ -127,6 +127,10 @@ extension FeedScreen {
     @ViewBuilder
     func feedScrollSections(_ visible: [Thing], hiding shown: Set<UUID>, nextEventID: UUID?) -> some View {
         let byCategory = feedSectionRows(visible, hiding: shown)
+        // An app standing in Needs you stands only there (prd §1813): one
+        // row per app on the whole of Activity. Its next-newest thing under
+        // its category read as the same row twice (an alarm, then the alarm).
+        let needs = quietActivity ? Set(activityNeedThings(visible).map(\.source)) : []
         ForEach(scrollCategories.map(Self.sectionID), id: \.self) { id in
             let category = String(id.dropFirst(Self.sectionPrefix.count))
             // Live again inside the closure: `List` may run it after a heal
@@ -140,13 +144,19 @@ extension FeedScreen {
             if quietActivity {
                 // **ONE RULE (prd §1809)**: each app's newest thing; Day's
                 // is each app's next.
-                activitySection(category,
-                                category == RoomAccounts.dayRoom ? Self.nextPerApp(dayFeedRows.live)
-                                    : Self.newestPerApp(rows),
-                                nextEventID: nextEventID) {
+                // **A CATEGORY IS A WORD, NOT A PAGE (prd §1813, user: "what
+                // if there were no category pages. the only place categories
+                // show is on activity").** Its name opens nothing; a row's
+                // icon opens its app, one step from here. Notes is no
+                // category: its word opens your notes, as before.
+                let open: (() -> Void)? = category == HomeScope.notesSection ? {
                     chrome.activityReturn = category
                     openCategory(category)
-                }
+                } : nil
+                activitySection(category,
+                                category == RoomAccounts.dayRoom ? Self.nextPerApp(dayFeedRows.live)
+                                    : Self.newestPerApp(rows.filter { !needs.contains($0.source) }),
+                                nextEventID: nextEventID, open: open)
             } else {
                 scrollSection(category,
                               category == HomeScope.notesSection || category == RoomAccounts.dayRoom
@@ -174,8 +184,9 @@ extension FeedScreen {
     }
 
     /// One category of Activity: its word, then its rows, no day label, no
-    /// More row. The word opens the category's page; a row's icon opens the
-    /// app's; the row opens the thing.
+    /// More row. The word is a label (prd §1813; the Wallet's and Notes'
+    /// open their own pages); a row's icon opens the app's; the row opens
+    /// the thing.
     @ViewBuilder
     func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
                          open: (() -> Void)?) -> some View {
@@ -224,7 +235,10 @@ extension FeedScreen {
         let yours = YourAccountDemo.shownAddress
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         let wants = pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
-        if needs > 0 || wants != nil {
+        // What waits on you in your apps (prd §1813): the lists a category's
+        // page led with, Coming up's asks and what is to you, now here.
+        let waiting = quietActivity ? activityNeedThings(visible) : []
+        if needs > 0 || wants != nil || !waiting.isEmpty {
             SectionPanelGroup(anchor: Self.scrollAnchor(WalletSection.needsYou.label)) {
                 ActivityWord(name: WalletSection.needsYou.label, open: nil)
             } rows: {
@@ -246,9 +260,49 @@ extension FeedScreen {
                         chrome.openWalletPage(.needsYou)
                     }
                 }
+                if !waiting.isEmpty {
+                    daySection("", waiting, nextEventID: nil, dated: false, headed: false,
+                               inFeed: true, leadOpens: { thing in
+                                   chrome.activityReturn = WalletSection.needsYou.label
+                                   chrome.openAppPage(thing.source)
+                               })
+                }
             }
             .environment(\.feedSectionPanelFilled, false)
+            .environment(\.dsTitleOnly, true)
         }
+    }
+
+    /// **WHAT WAITS ON YOU IN YOUR APPS (prd §1813).** A category's page led
+    /// with these: Work's asks (a review asked of you, a failed run, an open
+    /// dispute: `WorkAsk`) and what someone said to you (a reply, a mention
+    /// naming you). With no category page they stand in Needs you, each
+    /// app's newest, a week at most, by both rules' own window. A like or a
+    /// new follower is news, not an ask, and stays its app's row.
+    func activityNeedThings(_ visible: [Thing]) -> [Thing] {
+        let now = Date.now
+        let week = visible.filter {
+            $0.isLive && $0.capturedAt <= now && now.timeIntervalSince($0.capturedAt) <= WorkAsk.window
+                && !Pinboard.inRoom($0)
+        }
+        guard !week.isEmpty else { return [] }
+        // Each source's section once, never each row's.
+        var sectionOf: [String: String] = [:]
+        for source in Set(week.map(\.source)) {
+            sectionOf[source] = Self.scrollCategory(ofSource: source) ?? ""
+        }
+        let mine = socialMyHandles
+        return Self.newestPerApp(week.filter { thing in
+            switch sectionOf[thing.source] {
+            case RoomAccounts.workRoom:
+                return WorkAsk.needsYou(WorkStage.Row(thing), at: thing.capturedAt, now: now)
+            case RoomAccounts.socialRoom:
+                guard thing.socialContext == "reply" || thing.socialContext == "mention" else { return false }
+                return SocialToYou.isToYou(Self.toYouRow(thing), myHandles: mine)
+            default:
+                return false
+            }
+        })
     }
 
     /// One ask: its glyph in the attention hue, its name, its state in the

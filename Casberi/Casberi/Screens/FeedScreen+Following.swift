@@ -11,7 +11,7 @@ extension FeedScreen {
     @ViewBuilder
     func followingBox(_ room: Following.Room) -> some View {
         let reading = FollowingReading.shared
-        let items = reading.items(for: room)
+        let items = followingItems(room)
         Group {
             if items.isEmpty {
                 if reading.read.contains(room) {
@@ -58,10 +58,16 @@ extension FeedScreen {
     /// sites and its channels, prd §1204), so the two rows say which is which.
     @ViewBuilder
     func followingSections(_ room: Following.Room, verb: String? = nil) -> some View {
-        let items = FollowingReading.shared.items(for: room)
+        let items = followingItems(room)
         Section {
             DSDoorRow(icon: "plus", title: Text(verbatim: verb ?? room.verb)) {
-                feedSheet = .followingAdd(room)
+                // On an app's page the verb is that app's (prd §1813): the
+                // tray its + row raised from the section.
+                if pageUnderActivity, let seat = selectedSeat {
+                    followByName(seat.name)
+                } else {
+                    feedSheet = .followingAdd(room)
+                }
             }
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                       bottom: 0, trailing: DSRoomChassis.rowInset))

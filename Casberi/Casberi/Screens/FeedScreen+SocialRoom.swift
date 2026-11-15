@@ -75,12 +75,20 @@ extension FeedScreen {
         // the tiles stand on the category's own screen.
         if Self.sectionCapNow == nil, pageUnderActivity {
             // Rows, not tiles (prd §1812); the whole page alone draws them.
-            if chrome.socialScope == .all {
+            // An app's page draws the doors it can fill (prd §1813): To you
+            // where something of its is, Follow where it follows by name.
+            let hasToYou = selectedSeat == nil
+                || live.contains { SocialToYou.isToYou(Self.toYouRow($0), myHandles: mine) }
+            if chrome.socialScope == .all, hasToYou || pageAppFollows {
                 Section {
-                    pageDoorRow(SocialScope.toYou.label) {
-                        withAnimation(DS.Motion.standard) { chrome.socialScope = .toYou }
+                    if hasToYou {
+                        pageDoorRow(SocialScope.toYou.label) {
+                            withAnimation(DS.Motion.standard) { chrome.socialScope = .toYou }
+                        }
                     }
-                    pageDoorRow(SocialScope.follow.label) { feedSheet = .socialFollow }
+                    if pageAppFollows {
+                        pageDoorRow(SocialScope.follow.label) { feedSheet = .socialFollow }
+                    }
                 }
             }
         } else if Self.sectionCapNow == nil {

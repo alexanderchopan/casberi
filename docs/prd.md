@@ -73081,3 +73081,18 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Mac half (§1402).** The rail names the places, so the capsule is the phone's alone. The one title size reaches every title row on the iPad and the Mac through the same template; not run on the Mac.
 
 **Checks.** None new. **Seen** on the simulator with the demo: Home with the capsule lit, Activity, an app's page with its category and no cover.
+
+## §1813 — A category has no page: it is a word on Activity, an app is one step from it, and what waits on you in your apps stands in Needs you (amends §1812, §1811, §1809, §1808, §1296) (user, 2026-11-15, of the canvas "Casberi without category pages": "what if there were no category pages. the only place categories show is on activity", "Build it", "build then ship to ios testflight and app store release")
+
+**Why.** §1812 kept four levels (Home, Activity, a category, an app) and spent a day on what that cost: a title that could not hold all four, a rule for which three to show, and the question of whether an app goes back to its category or to Activity. A category's page was Activity's own rows filtered to one category, plus a few doors.
+
+1. **A category is a word on Activity, and opens nothing** (amends §1809 item 3, §1808, §1811 item 3's chevron on these words). The hierarchy on the phone is Home, Activity, an app. Activity's category names are labels: no chevron, no press (`FeedScreen.feedScrollSections`). The Wallet's word still opens Money and Notes' still opens your notes; neither is a category's page. A door that asks for a category (a link, a widget, a hook) lands on its section of Activity (`ShellChrome.openCategoryPage`, which sets no `pageRoom`).
+2. **An app's page is one step from Activity** (amends §1812 item 2). It reads "Home · Activity · App Store Connect", the whole path at the one size, and Activity goes back to Activity where you left it. A door taken on it reads "Activity · App Store Connect · Coming up". `appUnderCategory` is deleted.
+3. **An app's page draws its own doors** (amends §1812 item 6). To you stands on a Social app that has something to you and Coming up on a Work app with something waiting or due, each narrowed to that app; no door opens an empty list (§83). Follow, Watch and Subscriptions stand only on an app that follows by name (`FollowByName.whats`, `pageAppFollows`): Follow on Bluesky, Watch on GitHub, never Watch on Stripe; the list is that app's own (`followingItems`) and its first row raises that app's tray. Life's Subscriptions is Mail's (`pageAppIsMail`). Media's Play and Read are gone from these pages: they told one app from another.
+4. **Needs you takes what waits on you in your apps** (amends §1296 for Activity's Needs you alone). Work's asks (`WorkAsk.needsYou`: a review asked of you, a failed run, an open dispute) and a reply or a mention naming you, each app's newest, a week at most, as rows that open the thing (`activityNeedThings`). An app standing there stands only there, one row per app on the whole of Activity: its next-newest thing under its category read as the same row twice. A like or a new follower is news and stays its app's row.
+
+**Lost, said plainly.** There is no single list of everything in Social or Work across apps on the phone: Activity shows each app's newest thing and anything older is on that app's page.
+
+**Mac half (§1402).** None: the iPad and the Mac keep their category rooms as the second column, with their tiles and covers. Not built there.
+
+**Checks.** None new. **Seen** on the simulator with the demo: Activity with plain category words, an app's page titled "Home · Activity · <app>" going back to Activity, and its doors.

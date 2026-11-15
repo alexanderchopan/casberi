@@ -141,7 +141,7 @@ extension FeedScreen {
         // the tiles stand on the category's own screen.
         if Self.sectionCapNow == nil, pageUnderActivity {
             // Rows, not tiles (prd §1812); the whole page alone draws them.
-            if chrome.lifeScope == .all {
+            if chrome.lifeScope == .all, pageAppIsMail {
                 Section {
                     ForEach(LifeScope.allCases.filter { $0 != .all }) { scope in
                         pageDoorRow(scope.label) {
@@ -446,9 +446,20 @@ extension FeedScreen {
         // the tiles stand on the category's own screen.
         if Self.sectionCapNow == nil, pageUnderActivity {
             // Rows, not tiles (prd §1812); the whole page alone draws them.
-            if chrome.workScope == .all {
+            // An app's page draws the doors it can fill (prd §1813): Coming
+            // up where something of its waits or is due, the follow list
+            // where it follows by name. No door onto an empty list (§83).
+            let coming = selectedSeat == nil || !workAsks(visible).isEmpty || !workDeadlines(visible).isEmpty
+            let doors = WorkScope.allCases.filter { scope in
+                switch scope {
+                case .all: false
+                case .comingUp: coming
+                case .watch: pageAppFollows
+                }
+            }
+            if chrome.workScope == .all, !doors.isEmpty {
                 Section {
-                    ForEach(WorkScope.allCases.filter { $0 != .all }) { scope in
+                    ForEach(doors) { scope in
                         pageDoorRow(scope.label) {
                             withAnimation(DS.Motion.standard) { chrome.workScope = scope }
                         }

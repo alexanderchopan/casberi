@@ -1231,13 +1231,20 @@ final class ShellChrome {
     /// Activity returns.
     var activityReturn: String?
 
-    /// Open a category's page, every app in it.
+    /// A category asked for on the phone.
+    ///
+    /// **A CATEGORY HAS NO PAGE (prd §1813, user: "what if there were no
+    /// category pages. the only place categories show is on activity").**
+    /// The hierarchy is Home, Activity, an app. Asking for a category lands
+    /// on its section of Activity, the scroll `routeIntoFeed` makes of a
+    /// category with no `pageRoom`. The Wallet's is its Money page and
+    /// Notes' is your notes, as before: neither is a category's page.
     func openCategoryPage(_ category: String) {
         if category == CategoryFold.walletRoom { openWalletActivity(); return }
         if category == HomeScope.notesSection { mergedScope[Pinboard.room] = nil; sourceRequest = Pinboard.room; return }
         mergedScope[category] = nil
         resetPageDoors()
-        pageRoom = category
+        pageRoom = nil
         sourceRequest = category
     }
 

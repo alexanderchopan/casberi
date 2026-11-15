@@ -64,9 +64,15 @@ extension FeedScreen {
         // the tiles stand on the category's own screen.
         if Self.sectionCapNow == nil, pageUnderActivity {
             // Rows, not tiles (prd §1812); the whole page alone draws them.
-            if chrome.mediaScope == .all {
+            // An app's page keeps Subscriptions where the app follows by
+            // name; Play and Read told one app from another, and an app is
+            // one of them already (prd §1813).
+            let doors = MediaScope.allCases.filter { scope in
+                scope != .all && (selectedSeat == nil || (scope == .subscriptions && pageAppFollows))
+            }
+            if chrome.mediaScope == .all, !doors.isEmpty {
                 Section {
-                    ForEach(MediaScope.allCases.filter { $0 != .all }) { scope in
+                    ForEach(doors) { scope in
                         pageDoorRow(scope.label) {
                             withAnimation(DS.Motion.standard) { chrome.mediaScope = scope }
                         }
@@ -88,8 +94,15 @@ extension FeedScreen {
         }
         if !pageUnderActivity { roomScopeSection }
         if subscriptions {
-            followingSections(.reading, verb: String(localized: "Follow a site"))
-            followingSections(.media, verb: String(localized: "Follow a channel or show"))
+            // An app's page lists its own kind (prd §1813): sites on RSS and
+            // Substack, channels and shows on the rest.
+            let sites = selectedSeat.map { FollowByName.landing(for: $0.name) == .reading }
+            if !pageUnderActivity || sites != false {
+                followingSections(.reading, verb: String(localized: "Follow a site"))
+            }
+            if !pageUnderActivity || sites != true {
+                followingSections(.media, verb: String(localized: "Follow a channel or show"))
+            }
         } else {
             groupedSections(liftingCover(days, id: cover?.id), nextEventID: nextEventID,
                             boundary: boundaryThingID(in: days),

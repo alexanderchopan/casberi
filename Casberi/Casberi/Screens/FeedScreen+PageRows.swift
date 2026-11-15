@@ -24,6 +24,32 @@ extension FeedScreen {
             .listRowSeparator(.hidden)
     }
 
+    /// **AN APP'S PAGE DRAWS ITS OWN DOORS (prd §1813).** With no category
+    /// page, Follow, Watch and Subscriptions stand on the app that follows
+    /// by name (`FollowByName`, the apps a section's + lists): Follow on
+    /// Bluesky, Watch on GitHub, never Watch on Stripe. True with no app
+    /// picked.
+    var pageAppFollows: Bool {
+        guard let seat = selectedSeat else { return true }
+        return FollowByName.whats[seat.name] != nil
+    }
+
+    /// Mailing lists are Mail's (prd §1813): Life's Subscriptions row stands
+    /// on a mail app's page, never on Calendar's or Health's.
+    var pageAppIsMail: Bool {
+        guard let seat = selectedSeat else { return true }
+        return FeedLook.mailSources.contains(seat.name)
+    }
+
+    /// What a room follows, narrowed to the app whose page this is (prd
+    /// §1813): GitHub's page lists GitHub's repos, not every watch in Work.
+    func followingItems(_ room: Following.Room) -> [Following.Item] {
+        let items = FollowingReading.shared.items(for: room)
+        guard pageUnderActivity, let seat = selectedSeat else { return items }
+        let source = seat.source ?? seat.name
+        return items.filter { $0.seat == source || $0.seat == seat.name }
+    }
+
     /// The door a page under Activity is narrowed through: its word, and the
     /// way back to the whole page. Nil on the whole page, off the phone, and
     /// in a sheet.
