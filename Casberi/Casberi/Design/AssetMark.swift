@@ -265,7 +265,34 @@ struct ProtocolBadge: ViewModifier {
     }
 }
 
+/// **A FACE WEARS ITS APP ON ACTIVITY (prd §1810).** Activity is one row per
+/// app, and a row led by a person's face did not say which app it was; the
+/// app's mark rides the face's corner at `ProtocolBadge`'s size and ring. Only
+/// where a row is its title alone (`\.dsTitleOnly`): an app's own page, a
+/// category's page and a sheet already say the app.
+struct AppCorner: ViewModifier {
+    let source: String?
+    @Environment(\.dsTitleOnly) private var titleOnly
+    @Environment(\.dsGroupedSource) private var groupedSource
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .bottomTrailing) {
+            if titleOnly, groupedSource == nil, let source {
+                BridgeIcon(name: source, size: DS.Mark.inline, circular: true)
+                    .overlay(Circle().stroke(DS.page, lineWidth: 1.5))
+                    .offset(x: 3, y: 3)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
 extension View {
+    /// The app's mark on a face's corner, on Activity only (`AppCorner`).
+    func appCorner(_ source: String?) -> some View {
+        modifier(AppCorner(source: source))
+    }
+
     /// A protocol's mark on this lead's corner, or nothing (`ProtocolBadge`).
     func protocolBadge(_ mark: String?) -> some View {
         modifier(ProtocolBadge(mark: mark))

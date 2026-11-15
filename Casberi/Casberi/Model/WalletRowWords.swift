@@ -40,11 +40,45 @@ enum WalletRowWords {
         /// The figure is money that stayed yours (a move between your own
         /// accounts): unsigned, in the primary ink, never the received green.
         var stayed = false
+        /// The figure is what a card paid out: unsigned, in the primary ink,
+        /// as a shop's row reads ("Blue Bottle · $6.50").
+        var spent = false
     }
 
     /// The row's words off a stored title; nil for a title in another shape.
     static func read(_ title: String) -> Words? {
-        swap(title) ?? safe(title) ?? moved(title)
+        swap(title) ?? safe(title) ?? moved(title) ?? spent(title)
+    }
+
+    // MARK: - Card spending
+
+    /// **A CARD'S ROW SAYS ITS AMOUNT ONCE (prd §1810).** "Spent $12.40 with
+    /// MetaMask Card" and "Settled $246.31 of card spending" carry the figure
+    /// in the sentence, and the row drew the transfer's own beside it
+    /// ("−12.40 USDC"), which cut the name to make room. The card is the
+    /// name and the sentence's figure stands on the right, as a shop's row
+    /// reads. A send, a receive and a swap keep their sentence (§1805).
+    static func spent(_ title: String) -> Words? {
+        let seam = TitleSeam.split(title)
+        // A card's name is drawn as written ("ether.fi Cash"); what a
+        // settlement settled is a common noun and takes a capital.
+        for (verb, joint, noun) in [("Spent ", " with ", false), ("Settled ", " of ", true)] {
+            guard seam.name.hasPrefix(verb),
+                  let at = seam.name.range(of: joint) else { continue }
+            let start = seam.name.index(seam.name.startIndex, offsetBy: verb.count)
+            guard start < at.lowerBound else { return nil }
+            let figure = seam.name[start..<at.lowerBound].trimmingCharacters(in: .whitespaces)
+            let who = seam.name[at.upperBound...].trimmingCharacters(in: .whitespaces)
+            // A figure is money: a currency sign or a digit leads it, and a
+            // digit is in it.
+            guard let first = figure.first, first.isNumber || first.isCurrencySymbol,
+                  figure.contains(where: \.isNumber), !figure.contains(" "),
+                  let initial = who.first else { return nil }
+            return Words(name: noun ? initial.uppercased() + who.dropFirst() : who,
+                         figure: figure, qualifier: seam.line,
+                         spoken: seam.name, spent: true)
+        }
+        return nil
     }
 
     // MARK: - Moves between your own accounts

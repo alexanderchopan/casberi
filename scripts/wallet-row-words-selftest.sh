@@ -96,6 +96,21 @@ check(WalletRowWords.read("Moved ETH · Main → Cold")
       "no amount: the symbol goes on the line")
 check(WalletRowWords.read("Moved to Archive")  == nil, "a Moved with no accounts is left alone")
 
+// A card's row says its amount once (prd §1810): the card is the name, the
+// sentence's figure stands on the right in the primary ink.
+check(WalletRowWords.read("Spent $12.40 with MetaMask Card")
+      == W(name: "MetaMask Card", figure: "$12.40", spoken: "Spent $12.40 with MetaMask Card", spent: true),
+      "a card spend names the card, the figure on the right")
+check(WalletRowWords.read("Spent $4.20 with ether.fi Cash — on credit")
+      == W(name: "ether.fi Cash", figure: "$4.20", qualifier: "on credit",
+           spoken: "Spent $4.20 with ether.fi Cash", spent: true),
+      "the seam rides as the qualifier")
+check(WalletRowWords.read("Settled $246.31 of card spending")
+      == W(name: "Card spending", figure: "$246.31", spoken: "Settled $246.31 of card spending", spent: true),
+      "a settlement names what it settled")
+check(WalletRowWords.read("Spent with care") == nil, "no figure, no rewrite")
+check(WalletRowWords.read("Spent a lot with Visa") == nil, "a word is not a figure")
+
 // Anything else is nil: the row keeps its seam.
 for other in ["Received 0.4 ETH from vitalik.eth", "Deposited 0.5 ETH into Aave",
               "Executed after 2h — a transfer went through",
@@ -155,6 +170,12 @@ mutate "a move keeps its sentence" \
 mutate "a move's amount signed and green" \
     '                     stayed: true)' \
     '                     stayed: false)'
+mutate "a card spend keeps its sentence and says the amount twice (prd §1810)" \
+    'swap(title) ?? safe(title) ?? moved(title) ?? spent(title)' \
+    'swap(title) ?? safe(title) ?? moved(title)'
+mutate "a card's figure in the received green" \
+    'spoken: seam.name, spent: true)' \
+    'spoken: seam.name, spent: false)'
 mutate "the article stays" \
     'act = String(act.dropFirst(article.count))' \
     'act = String(act)'
@@ -184,11 +205,11 @@ grep -q 'words.map { (name: $0.name, line: $0.qualifier) } ?? TitleSeam.split(ti
     || fail "BandRow no longer takes the words' name and qualifier over the seam"
 grep -q 'let lead = \[words?.clause, said\].compactMap { $0 }' "$ROWS" \
     || fail "BandRow no longer leads the line with the words' clause"
-grep -q 'else if let figure = words?.figure {' "$ROWS" \
+grep -q 'if let figure = words?.figure {' "$ROWS" \
     || fail "BandRow no longer draws the words' figure on the right"
 grep -q '?? words?.spoken' "$ROWS" \
     || fail "BandRow no longer speaks a swap's verb (prd §1555)"
-grep -q 'foregroundStyle(words?.stayed == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)' "$ROWS" \
+grep -q 'foregroundStyle(words?.stayed == true || words?.spent == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)' "$ROWS" \
     || fail "BandRow draws a move between your own accounts in the received green (prd §1550)"
 
 print "✓ wallet-row-words self-test passed"

@@ -613,6 +613,8 @@ struct BandRow: View {
     /// Under the Wallet's "Needs you" heading, which says what a stuck word
     /// or "your signature is needed" would (prd §1378).
     @Environment(\.dsUnderNeedsYou) private var underNeedsYou
+    /// On Activity, where a row is its title alone (prd §1497).
+    @Environment(\.dsTitleOnly) private var titleOnly
 
     /// A lead that is a picture OF the thing, which under an app header rides
     /// the trailing edge as a thumbnail (prd §1103b). A face, a mark, a site's
@@ -806,6 +808,7 @@ struct BandRow: View {
                       : line(project: project, leader: leader, qualifier: qualifier),
                   leadIsPicture: isPicture(leader),
                   face: personFace,
+                  trailingBesideLine: artTrails,
                   yourWords: !imageOnly && Pinboard.isNote(thing)) {
             leaderView
                 .overlay(alignment: .bottomTrailing) {
@@ -828,22 +831,34 @@ struct BandRow: View {
                            cyclesOnChange: !moneyColumn,
                            restsOnMark: leader == .glyph)
         } trailing: {
+            if artTrails, let art = thing.previewImageURL {
+                // **EVERY ACTIVITY ROW IS ONE HEIGHT (prd §1810).** The
+                // picture a like or a post carries rode under the name at
+                // the tile's size, so those rows stood twice as tall as the
+                // rest; on Activity it rides the trailing edge at the lead's.
+                RemoteThumb(urlString: art, size: DS.Mark.row,
+                            fallback: thing.source,
+                            perishable: thing.source == "Twitch")
+            } else {
             VStack(alignment: .trailing, spacing: 1) {
-                if let money = moneyAmount {
+                // The words' figure leads (prd §1810): a card's row would
+                // draw the transfer's own beside the sentence's.
+                if let figure = words?.figure {
+                    // A swap's incoming leg (prd §1414), in the received ink
+                    // unless the symbol is flagged a look-alike; a move
+                    // between your own accounts in the primary ink (§1550),
+                    // and what a card paid out (§1810).
+                    Text(figure)
+                        .dsText(.price17)
+                        .monospacedDigit()
+                        .foregroundStyle(words?.stayed == true || words?.spent == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
+                        .lineLimit(1)
+                } else if let money = moneyAmount {
                     Text(money.text)
                         .dsText(.price17)
                         .monospacedDigit()
                         .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
                                          ? DS.confirmInk : DS.textPrimary)
-                        .lineLimit(1)
-                } else if let figure = words?.figure {
-                    // A swap's incoming leg (prd §1414), in the received ink
-                    // unless the symbol is flagged a look-alike; a move
-                    // between your own accounts in the primary ink (§1550).
-                    Text(figure)
-                        .dsText(.price17)
-                        .monospacedDigit()
-                        .foregroundStyle(words?.stayed == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
                         .lineLimit(1)
                 } else if let figure = titleFigure {
                     Text(figure)
@@ -884,8 +899,11 @@ struct BandRow: View {
                         .lineLimit(1)
                 }
             }
+            }
         } below: {
-            if imageOnly {
+            if artTrails {
+                // On the trailing edge (prd §1810).
+            } else if imageOnly {
                 // A wordless screenshot (prd §218): the picture IS the row, so
                 // it takes the content slot and the name says only where from.
                 PhotoWell(thing: thing)
@@ -932,6 +950,12 @@ struct BandRow: View {
                                                 isAlarm: isAlarm))
     }
 
+    /// The row's picture rides the trailing edge at the lead's size: on
+    /// Activity, where a row is its title and nothing under it (prd §1810).
+    private var artTrails: Bool {
+        titleOnly && groupedSource == nil && !imageOnly && Self.artRidesBesideIdentity(thing)
+    }
+
     /// The lead, in the ladder `leader` resolves. Always inside the anatomy's
     /// 26pt frame; a circle draws at `Face.rowCircle`, as it always did.
     @ViewBuilder var leaderView: some View {
@@ -939,6 +963,8 @@ struct BandRow: View {
         case .avatar(let avatar):
             RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                         fallback: thing.source, circular: true)
+                // The flag outranks the app on that corner.
+                .appCorner(thing.isFlagged ? nil : thing.source)
         case .wallet(let addr):
             // **THE WALLET'S OWN FACE, NEVER A BLOCKIE (prd §1551, user:
             // "make sure also an activity we are using the ENS or the Casberi
@@ -951,6 +977,7 @@ struct BandRow: View {
             SenderInitial(sender: sender, size: DS.Face.rowCircle)
         case .chatFace:
             ChatStoredFace(thing: thing, size: DS.Face.rowCircle)
+                .appCorner(thing.isFlagged ? nil : thing.source)
         case .brand(let mark):
             BridgeIcon(name: mark, size: DS.Face.rowCircle, circular: true)
         case .carried(let mark):
@@ -2390,6 +2417,8 @@ struct PostCard: View {
     /// Who the post is by — `SocialRoomSource.author(of:)`, which is where the
     /// three copies of this became one (prd §756). The empty-handle fallback
     /// lives there.
+    /// On Activity, where a row is its title alone (prd §1497).
+    @Environment(\.dsTitleOnly) private var titleOnly
     private var author: String { SocialRoomSource.author(of: thing) }
 
     /// The words themselves (2026-07-27, the room's own catch-up with the
@@ -2448,11 +2477,21 @@ struct PostCard: View {
         // and fits the name slot, it IS the name; the quote and the media
         // still ride below. `SocialRoom.rowSentence` is the rule.
         let sentence = SocialRoom.rowSentence(words: words, author: author)
+        // **EVERY ACTIVITY ROW IS ONE HEIGHT (prd §1810).** A notice's one
+        // picture ("rui liked your video") rode under the sentence and made
+        // the row twice as tall as its neighbours; on Activity it rides the
+        // trailing edge at the lead's size. A post's own words, quote and
+        // pictures stay under it.
+        let trails: String? = titleOnly && sentence != nil && thing.quote == nil
+            && thing.parent == nil && thing.imageURLs.count <= 1
+            ? thing.previewImageURL.flatMap { $0.isEmpty ? nil : $0 } : nil
         DSFeedRow(name: sentence ?? author,
-                  face: thing.authorAvatarURL.flatMap { $0.isEmpty ? nil : $0 }) {
+                  face: thing.authorAvatarURL.flatMap { $0.isEmpty ? nil : $0 },
+                  trailingBesideLine: trails != nil) {
             if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: thing.source, circular: true)
+                    .appCorner(thing.source)
             } else {
                 BridgeIcon(name: thing.source, size: DS.Mark.row)
             }
@@ -2468,7 +2507,11 @@ struct PostCard: View {
                     Text("Doing").dsText(.label12).foregroundStyle(DS.pickInk)
                 }
             }
+            if let trails {
+                RemoteThumb(urlString: trails, size: DS.Mark.row, fallback: thing.source)
+            }
         } below: {
+            if trails == nil {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let parent = thing.parent {
                     ReplyingToRow(parent: parent)
@@ -2510,6 +2553,7 @@ struct PostCard: View {
                 }
             }
             .padding(.top, 2)
+            }
         }
     }
 }
@@ -2646,6 +2690,7 @@ struct SocialThreadCard: View {
             if let avatar = head.authorAvatarURL, !avatar.isEmpty {
                 RemoteThumb(urlString: avatar, size: DS.Face.rowCircle,
                             fallback: head.source, circular: true)
+                    .appCorner(head.source)
             } else {
                 BridgeIcon(name: head.source, size: DS.Mark.row)
             }

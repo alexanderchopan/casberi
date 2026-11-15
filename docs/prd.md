@@ -73037,3 +73037,15 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Mac half (§1402).** The rail keeps Home · Activity · Apps and Move; beside a pane Activity keeps its panels and Day its week (§1403). The cards, Risks without its box and the empty Home are the same views. Not yet run on the Mac.
 
 **Checks.** `plate-audit.py` (the quiet well is still the one counted plate), `face-ramp-audit.py`; `permissions-box-selftest.sh` is deleted with the box. **Seen** on the simulator: Home, Activity with the demo and on a clean install, "Activity · Telegram" from its icon, a thing raised from it, "Activity · Social" from its word after visiting an app, Risks, the empty Home. Shipped ahead of the full verify at the user's word.
+
+## §1810 — Activity's rows: a card says its amount once, every row is one height, a face wears its app (amends §1414, §1386, §730, §1685) (user, 2026-11-14, of the canvas "Casberi design improvements", "Activity now" beside "Activity proposed": "ok do all")
+
+1. **A card's row says its amount once** (amends §1414's shapes, §1386's guard). "Spent $12.40 with MetaMask Card" and "Settled $246.31 of card spending" carried the figure in the sentence, and the row drew the transfer's own beside it ("−12.40 USDC") and cut the name to make room; §1386's guard compared the two as strings and missed it. The card is the name and the sentence's figure stands on the right in the primary ink, as a shop's row reads (`WalletRowWords.spent`); VoiceOver keeps the sentence. In every money list, not Activity alone.
+2. **Every Activity row is one height** (amends §730 on Activity). A notice's picture ("rui liked your video") and the art that rides beside an identity stood under the name at the tile's size, so those rows were twice as tall as their neighbours. On Activity the picture rides the trailing edge at the lead's size (`BandRow.artTrails`, `PostCard`). A post's own words, quote and pictures stay under it, and so does a wordless screenshot.
+3. **A face wears its app** (extends §1685's corner to apps). Activity is one row per app, and a row led by a person's face did not say which app it was. The app's mark rides the face's corner at the protocol badge's size and ring (`AppCorner`), on Activity only; a flag outranks it.
+
+**Not built, said plainly.** The canvas drew a receive as its sender's name over the amount and a swap without its verb; both keep the sentence Move wrote (§1805). A deposit, a withdrawal and a Wise transfer keep their sentences: each says its amount once already. A chat's bubble and a post's own picture still make a taller row.
+
+**Mac half (§1402).** The card rows are the same view on the Mac. The trailing picture and the app's corner draw only where a row is its title alone, which beside a pane is the same Activity list; not run on the Mac.
+
+**Checks.** `wallet-row-words-selftest.sh` (the card shapes, two new mutations). **Seen** on the simulator with the demo: Activity.
