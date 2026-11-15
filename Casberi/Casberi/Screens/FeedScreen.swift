@@ -1591,8 +1591,14 @@ struct FeedScreen: View {
         // The Wallet's place is Home (prd §1807): the whole app is the
         // wallet, so its own page takes the place's word.
         if (hostRoom ?? source) == CategoryFold.walletRoom { return PlaceTab.wallet.label }
-        // A category's or an app's page stands at Activity's place (§1809):
-        // "Activity · Social", "Activity · X".
+        // A door taken on a page (prd §1812): the page's own name stands
+        // before it, the app's on an app's page, else the category's.
+        if pageScope != nil { return selectedSeat?.name ?? BridgeCatalog.seatName(forSource: source) }
+        // An app's page names its category before it (prd §1812):
+        // "Activity · Work · App Store Connect".
+        if appUnderCategory { return BridgeCatalog.seatName(forSource: source) }
+        // A category's page stands at Activity's place (§1809):
+        // "Home · Activity · Social".
         if pageUnderActivity { return PlaceTab.feed.label }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }

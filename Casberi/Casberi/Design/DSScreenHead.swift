@@ -23,7 +23,7 @@ struct DSScreenHead: View {
 
     var body: some View {
         title
-            .dsText(.heading34)
+            .dsText(DSRoomTitleRow.rung)
             .foregroundStyle(ink)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
@@ -39,6 +39,15 @@ struct DSScreenHead: View {
 /// Every room draws it first in its list, and You's three screens (Apps,
 /// Addresses, Settings) draw it in place of their own heads.
 struct DSRoomTitleRow: View {
+    /// **EVERY TITLE IS ONE SIZE (prd §1812, user: "keep name and one size
+    /// for every title").** The longest path the app draws, "Activity · Work
+    /// · App Store Connect" beside its settings disc, fits at this rung on
+    /// the phone, so Home, Activity, a category and an app all wear it and
+    /// no title steps down or loses a name. It was `heading34`, stepping to
+    /// 28 and 24 by the length of the name (§1389), which drew three sizes
+    /// across three pages.
+    static let rung: DSTextStyle = .heading20
+
     let title: String
     var pick: String? = nil
     /// The category's word pressed while a pick follows it: back to the
@@ -54,9 +63,10 @@ struct DSRoomTitleRow: View {
     var onSettings: (() -> Void)? = nil
     /// **THE WHOLE PATH (prd §1811).** The place this page is two steps under,
     /// named first and pressable: "Home · Activity · Social". A category's
-    /// page read "Activity · Social", so Home was two taps away. A path too
-    /// long for the row drops its middle word ("Home · App Store Connect"),
-    /// never the root.
+    /// page read "Activity · Social", so Home was two taps away. **The path is
+    /// always whole** (prd §1812, user: "we should have a rule and stick to
+    /// it"): three names, and a path too long for the row steps down a rung,
+    /// every name at once, and never loses one.
     var root: DSTitleBack? = nil
     @Environment(\.sizeCategory) private var sizeCategory
     /// In a thing sheet the title is the thing's, and wraps (prd §1258).
@@ -98,32 +108,11 @@ struct DSRoomTitleRow: View {
             // THE PAIR STEPS DOWN TOGETHER (prd §1389): beside the demo's
             // pill the two words share the room, so the whole title takes
             // the next rung rather than the pick alone shrinking and cutting.
-            // Two fits, never one with a branch inside: `ViewThatFits` counts
-            // its direct subviews, and a conditional is one of them.
-            Group {
-                if root != nil {
-                    ViewThatFits(in: .horizontal) {
-                        pickedTitle(title, pick: pick, rung: .heading34)
-                        pickedTitle(title, pick: pick, rung: .heading28)
-                        // Smaller before shorter: an app's page carries its
-                        // settings disc, and losing the word that goes back
-                        // one step costs more than a rung.
-                        pickedTitle(title, pick: pick, rung: .heading24)
-                        // The path without its middle (prd §1811): the root
-                        // and where you stand.
-                        pickedTitle(title, pick: pick, rung: .heading34, middle: false)
-                        pickedTitle(title, pick: pick, rung: .heading28, middle: false)
-                        pickedTitle(title, pick: pick, rung: .heading24, fits: true, middle: false)
-                    }
-                } else {
-                    ViewThatFits(in: .horizontal) {
-                        pickedTitle(title, pick: pick, rung: .heading34)
-                        pickedTitle(title, pick: pick, rung: .heading28)
-                        // The last rung never overflows: a pair longer than even this
-                        // ("Wallet · Subscriptions" beside the pill) shrinks in place.
-                        pickedTitle(title, pick: pick, rung: .heading24, fits: true)
-                    }
-                }
+            // One rung (prd §1812); the second never overflows, for a
+            // name longer than any the catalogue has, or a larger text size.
+            ViewThatFits(in: .horizontal) {
+                pickedTitle(title, pick: pick, rung: Self.rung)
+                pickedTitle(title, pick: pick, rung: Self.rung, fits: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
@@ -134,7 +123,7 @@ struct DSRoomTitleRow: View {
             Button(action: onSettings) {
                 HStack(alignment: .center, spacing: DS.Space.s2) {
                     Text(verbatim: title)
-                        .dsText(.heading34)
+                        .dsText(Self.rung)
                         .foregroundStyle(DS.headInk)
                         .lineLimit(1)
                         // Half, not 0.6: beside the demo's Exit pill, "App
@@ -169,8 +158,7 @@ struct DSRoomTitleRow: View {
     /// button too, its sliders disc after it. `fixedSize` so `ViewThatFits`
     /// measures the pair whole.
     private func pickedTitle(_ title: String, pick: String,
-                             rung: DSTextStyle, fits: Bool = false,
-                             middle: Bool = true) -> some View {
+                             rung: DSTextStyle, fits: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             if let root {
                 Button(action: root.action) {
@@ -182,7 +170,6 @@ struct DSRoomTitleRow: View {
                 .accessibilityHint(Text("Opens \(root.word)"))
                 Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
             }
-            if middle {
             // The word that goes back is grey, where you stand is the
             // head ink (user, 2026-10-15: "is sources supposed to be
             // gray, eg only one is white"), as the walk's title greys
@@ -199,7 +186,6 @@ struct DSRoomTitleRow: View {
                 Text(verbatim: title).foregroundStyle(DS.textTertiary)
             }
             Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
-            }
             if let onSettings {
                 Button(action: onSettings) {
                     // The pick's own text is the label, so its baseline is the
@@ -239,9 +225,10 @@ struct DSRoomTitleRow: View {
     /// The rung's line at its full size, scaled for Dynamic Type as the
     /// words are.
     static var height: CGFloat {
-        let style = DSTextStyle.heading34
-        return UIFontMetrics(forTextStyle: style.relative)
-            .scaledValue(for: style.lineHeight * style.platformSize / style.size)
+        let style = rung
+        // Never under a finger's height: the names in it are the way back.
+        return max(DS.Hit.min, UIFontMetrics(forTextStyle: style.relative)
+            .scaledValue(for: style.lineHeight * style.platformSize / style.size))
     }
 
     private var label: Text {

@@ -1236,8 +1236,18 @@ final class ShellChrome {
         if category == CategoryFold.walletRoom { openWalletActivity(); return }
         if category == HomeScope.notesSection { mergedScope[Pinboard.room] = nil; sourceRequest = Pinboard.room; return }
         mergedScope[category] = nil
+        resetPageDoors()
         pageRoom = category
         sourceRequest = category
+    }
+
+    /// A page opens whole (prd §1812): a door taken on the last visit (To
+    /// you, Coming up, Following) is not where it lands.
+    func resetPageDoors() {
+        socialScope = .all
+        workScope = .all
+        mediaScope = .all
+        lifeScope = .all
     }
 
     /// Open one app's page: its category's, narrowed to it.
@@ -1246,6 +1256,7 @@ final class ShellChrome {
         if Pinboard.isWritten(source) || source == Pinboard.room { sourceRequest = source; return }
         guard let host = RoomAccounts.host(ofSource: source) else { sourceRequest = source; return }
         pickSeat(host.seat, in: host.room)
+        resetPageDoors()
         pageRoom = host.room
         sourceRequest = host.room
     }

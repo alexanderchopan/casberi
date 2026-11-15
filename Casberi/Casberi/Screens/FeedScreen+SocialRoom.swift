@@ -34,7 +34,9 @@ extension FeedScreen {
         let inFeed = Self.sectionCapNow != nil
         let you = !inFeed && chrome.socialScope == .toYou
         let live = visible.live
-        let toYou: [Thing] = inFeed ? [] : you
+        // A page under Activity leads with no To you group (prd §1812): To
+        // you is a door there, and its rows stand in their days.
+        let toYou: [Thing] = inFeed || (pageUnderActivity && !you) ? [] : you
             ? live.filter { SocialToYou.isToYou(Self.toYouRow($0), myHandles: mine) }
             : SocialToYou.leading(live.map { (Self.toYouRow($0), $0.capturedAt) },
                                   myHandles: mine, now: .now).map { live[$0] }
@@ -71,7 +73,17 @@ extension FeedScreen {
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil {
+        if Self.sectionCapNow == nil, pageUnderActivity {
+            // Rows, not tiles (prd §1812); the whole page alone draws them.
+            if chrome.socialScope == .all {
+                Section {
+                    pageDoorRow(SocialScope.toYou.label) {
+                        withAnimation(DS.Motion.standard) { chrome.socialScope = .toYou }
+                    }
+                    pageDoorRow(SocialScope.follow.label) { feedSheet = .socialFollow }
+                }
+            }
+        } else if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: SocialScope.allCases, active: chrome.socialScope,
                          attention: [], verbs: [.follow]) { picked in
@@ -91,7 +103,8 @@ extension FeedScreen {
             #endif
         }
         }
-        roomScopeSection
+        // The faces under the tiles went with them on the phone (§1812).
+        if !pageUnderActivity { roomScopeSection }
         if you {
             groupedSections(liftingCover(days, id: cover?.id), nextEventID: nextEventID)
         } else {

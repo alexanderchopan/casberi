@@ -77,6 +77,8 @@ enum PlaceTab: String, Identifiable, CaseIterable {
             case .feed:
                 chrome.goToFeed()
             case .wallet:
+                // Home, not the category you left Activity from (§1812).
+                chrome.activityReturn = nil
                 chrome.openWallet()
             case .move:
                 // Move is an act, not a place (prd §1442): its tab raises
@@ -134,30 +136,66 @@ struct PlaceTabBar: View {
     /// card on Home.
     static let places: [PlaceTab] = [.wallet, .feed]
     var body: some View {
-        // **MOVE STANDS ALONE (prd §1809, user: "wdyt if activity was a tile
-        // on home").** Home is the one place and Activity is a card on it,
-        // so the capsule that named two places is gone: the bar is the act,
-        // at the trailing edge, over wherever you stand. Home and Activity
-        // are still side by side on the swipe (`places`).
+        // Home is the one place and Activity is a card on it (prd §1809), so
+        // the capsule that named two places is gone. Home and Activity are
+        // still side by side on the swipe (`places`).
         HStack(spacing: DS.Space.s2) {
             Spacer(minLength: 0)
-            moveCircle
-                // The capture flight lands on the one thing here.
-                .background { FeedTabFrame() }
+            // **HOME AND MOVE, ONE CAPSULE (prd §1812, user: "no matter what
+            // screen someone is on they can always get back home"; "the
+            // wallet icon should be in a capsule w/ the money icon"; "i don't
+            // think it should be on the left").** The place, then the act, on
+            // the bar's own glass at the trailing edge.
+            HStack(spacing: 0) {
+                homeSeat
+                moveSeat
+            }
+            .dsGlass(cornerRadius: size / 2, tint: Self.lens)
+            // The capture flight lands on the one thing here.
+            .background { FeedTabFrame() }
         }
     }
 
-    /// Move's own circle, the bar's height, at the trailing edge: it raises
-    /// the Move tray over wherever you stand (prd §1442), through the one
-    /// door every tab press takes.
+    /// You are on Home itself: the Wallet's place with no page of its open.
+    private var atHome: Bool {
+        current == .wallet && (chrome.walletSection ?? .home) == .home
+    }
+
+    /// Home's seat: the wallet glyph the place wears on the rail (prd
+    /// §1402). On Home it stands on the strong fill in the pick's pink, as
+    /// the picked tab did in the capsule of places (§1715); anywhere else it
+    /// is grey, and one tap from any page.
+    private var homeSeat: some View {
+        Button {
+            taps[.wallet, default: 0] &+= 1
+            DSHaptic.tap()
+            open(.wallet)
+        } label: {
+            Image(systemName: PlaceTab.wallet.glyph)
+                .dsGlyph(.body, weight: .semibold)
+                .foregroundStyle(atHome ? DS.pickInk : DS.textSecondary)
+                .symbolEffect(.bounce, value: taps[.wallet] ?? 0)
+                .frame(width: size, height: size)
+                .background {
+                    Circle().fill(atHome ? DS.fillStrong : .clear)
+                        .padding(DS.Space.s1)
+                }
+                .dsTapTarget(Circle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(verbatim: PlaceTab.wallet.label))
+        .accessibilityAddTraits(atHome ? .isSelected : [])
+    }
+
+    /// Move's seat, the capsule's trailing end: it raises the Move tray over
+    /// wherever you stand (prd §1442), through the one door every tab press
+    /// takes.
     ///
-    /// **GLASS, WITH A PINK GLYPH (user, 2026-11-09, of the canvas "Move
-    /// button: white or glass with pink": "lets make move glass w/ pink";
-    /// amends prd §1735 item 2's solid ink disc).** The circle is the bar's
-    /// own glass and its glyph wears the verb's pink (`DS.pickInk`), always:
-    /// the places wear pink only while picked, so Move is told apart by
-    /// being pink at rest, with no word under it.
-    private var moveCircle: some View {
+    /// **A PINK GLYPH ON THE BAR'S GLASS (user, 2026-11-09, of the canvas
+    /// "Move button: white or glass with pink": "lets make move glass w/
+    /// pink"; amends prd §1735 item 2's solid ink disc).** Its glyph wears the
+    /// verb's pink (`DS.pickInk`), always, with no word under it.
+    private var moveSeat: some View {
         Button {
             taps[.move, default: 0] &+= 1
             DSHaptic.tap()
@@ -165,7 +203,6 @@ struct PlaceTabBar: View {
         } label: {
             MoveMark(size: size, taps: taps[.move] ?? 0)
                 .frame(width: size, height: size)
-                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
                 .dsTapTarget(Circle())
         }
         .buttonStyle(PressSpring())

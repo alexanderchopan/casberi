@@ -168,8 +168,15 @@ extension FeedScreen {
         // AND no cover: the suppression was written when the faces were a card
         // in the feed, and they left for the shell in §362, then for the dock's
         // own capsule in §753. The room went a month with an empty slot.
+        // **A PAGE UNDER ACTIVITY DRAWS NO COVER (prd §1812, user: "we are
+        // getting rid of the cards too on app pages … that way it looks
+        // consistent").** Activity draws none (§1807), so a category's or an
+        // app's page opened from it led with a headline larger than its own
+        // name, repeating the row you tapped. The covers stand down the way
+        // they do in the Feed's sections (§1208c): the newest thing stays a
+        // row. The pane and the rooms on the iPad and the Mac keep theirs.
         let heroShown = liveStream != nil || anniversary != nil || topicMap != nil
-            || sourceHead != nil || distribution != nil
+            || sourceHead != nil || distribution != nil || pageUnderActivity
         if let liveStream {
             insightSection { LiveStreamHero(thing: liveStream) { openThing(liveStream) } }
         } else if let sourceHead {

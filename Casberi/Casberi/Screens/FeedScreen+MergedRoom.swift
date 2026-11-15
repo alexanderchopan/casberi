@@ -139,7 +139,18 @@ extension FeedScreen {
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil {
+        if Self.sectionCapNow == nil, pageUnderActivity {
+            // Rows, not tiles (prd §1812); the whole page alone draws them.
+            if chrome.lifeScope == .all {
+                Section {
+                    ForEach(LifeScope.allCases.filter { $0 != .all }) { scope in
+                        pageDoorRow(scope.label) {
+                            withAnimation(DS.Motion.standard) { chrome.lifeScope = scope }
+                        }
+                    }
+                }
+            }
+        } else if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: LifeScope.allCases, active: chrome.lifeScope) { picked in
                 withAnimation(DS.Motion.standard) { chrome.lifeScope = picked }
@@ -433,7 +444,18 @@ extension FeedScreen {
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil {
+        if Self.sectionCapNow == nil, pageUnderActivity {
+            // Rows, not tiles (prd §1812); the whole page alone draws them.
+            if chrome.workScope == .all {
+                Section {
+                    ForEach(WorkScope.allCases.filter { $0 != .all }) { scope in
+                        pageDoorRow(scope.label) {
+                            withAnimation(DS.Motion.standard) { chrome.workScope = scope }
+                        }
+                    }
+                }
+            }
+        } else if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: WorkScope.allCases, active: chrome.workScope, attention: [], verbs: []) { picked in
                 withAnimation(DS.Motion.standard) { chrome.workScope = picked }
@@ -445,7 +467,7 @@ extension FeedScreen {
                                       trailing: DSRoomChassis.inset))
         }
         }
-        roomScopeSection
+        if !pageUnderActivity { roomScopeSection }
         if watching {
             followingSections(.work)
         } else if comingUp {

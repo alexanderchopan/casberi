@@ -62,7 +62,18 @@ extension FeedScreen {
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil {
+        if Self.sectionCapNow == nil, pageUnderActivity {
+            // Rows, not tiles (prd §1812); the whole page alone draws them.
+            if chrome.mediaScope == .all {
+                Section {
+                    ForEach(MediaScope.allCases.filter { $0 != .all }) { scope in
+                        pageDoorRow(scope.label) {
+                            withAnimation(DS.Motion.standard) { chrome.mediaScope = scope }
+                        }
+                    }
+                }
+            }
+        } else if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: MediaScope.allCases, active: chrome.mediaScope,
                          attention: [], verbs: []) { picked in
@@ -75,7 +86,7 @@ extension FeedScreen {
                                       trailing: DSRoomChassis.inset))
         }
         }
-        roomScopeSection
+        if !pageUnderActivity { roomScopeSection }
         if subscriptions {
             followingSections(.reading, verb: String(localized: "Follow a site"))
             followingSections(.media, verb: String(localized: "Follow a channel or show"))

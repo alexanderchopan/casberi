@@ -241,7 +241,7 @@ extension FeedScreen {
                 }
                 if needs > 0 {
                     activityAskRow(glyph: ScopeTileGlyph.wallets,
-                                   name: first ?? String(localized: "Money"),
+                                   name: first ?? String(localized: "Wallet"),
                                    word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
                         chrome.openWalletPage(.needsYou)
                     }
@@ -279,7 +279,11 @@ extension FeedScreen {
         // you"): a stuck transfer or a dated ask leaves this list.
         let asks = Set(walletUpcoming(money).map(\.id))
         let moves = Self.newestPerApp(Self.walletMoves(money).filter { !asks.contains($0.id) })
-        activitySection(String(localized: "Money"), moves, nextEventID: nextEventID) {
+        // **THE WORD IS THE CATEGORY'S OWN (prd §1812, user: "'money'
+        // shouldn't be the category title it should be wallet like it is in
+        // the app library").** Every other word on Activity is its Apps
+        // category; this one read "Money".
+        activitySection(String(localized: "Wallet"), moves, nextEventID: nextEventID) {
             DSHaptic.selection()
             chrome.openWalletActivity()
         }
