@@ -504,6 +504,10 @@ extension FeedScreen {
         // What earns says so, in the one Holdings grammar (prd §1718,
         // network · fact · place): "Ethereum · 3.8% on Aave · Privacy Pools";
         // the rate unread, "Ethereum · On Aave · Privacy Pools".
+        // A balance the last check proved does not match the chain says so,
+        // in amber, in place of its line (prd §1569a).
+        case .held where PrivateMoneyStore.shared.mismatched:
+            (nil, DS.textSecondary, String(localized: "Doesn't match Ethereum"), DS.attentionInk)
         case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
         case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)

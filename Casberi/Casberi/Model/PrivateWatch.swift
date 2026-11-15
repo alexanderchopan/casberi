@@ -197,7 +197,7 @@ enum PrivateWatch {
         guard network.isTest || PrivateOnEthereum.owner != nil else { return false }
         let started = Date()
         do {
-            let found = try await PrivacyEngine.exclusive {
+            let (found, checked) = try await PrivacyEngine.exclusive {
                 if network.isTest {
                     #if DEBUG
                     try await PrivateAccount.open(root, reason: nil)
@@ -205,9 +205,26 @@ enum PrivateWatch {
                 } else {
                     try await PrivateOnEthereum.open(root, reason: nil)
                 }
-                return try await PrivacyEngine.shared.discover()
+                let found = try await PrivacyEngine.shared.discover()
+                // Checked against Ethereum itself (prd §1569a); a check that
+                // could not run (the light client's hosts unreachable) proves
+                // nothing either way and is tried at the next read.
+                let checked: PrivacyEngineWire.Checked?
+                do { checked = try await PrivacyEngine.shared.check() } catch {
+                    NSLog("privateWatch| checked | %@ | unreachable | %@", network.name, String(describing: error))
+                    checked = nil
+                }
+                return (found, checked)
             }
             store.reconcile(found, root: root, network: network)
+            if let checked {
+                store.recordCheck(checked, root: root)
+                NSLog("privateWatch| checked | %@ | %@ | state %d leaves %@ | keystore %d leaves %@ | %d of %d notes in the tree | %d ms",
+                      network.name, checked.checked ? "matches" : "MISMATCH",
+                      checked.trees["state"]?.leaves ?? 0, (checked.trees["state"]?.known ?? false) ? "known" : "unknown",
+                      checked.trees["keystore"]?.leaves ?? 0, (checked.trees["keystore"]?.known ?? false) ? "known" : "unknown",
+                      checked.notes - checked.notesMissing, checked.notes, checked.ms)
+            }
             await store.fillLabelHashes()
             NSLog("privateWatch| notes | %@ | %@ | %d found | %d unspent | %d s", network.name, root, found.notes.count,
                   store.notes.filter { $0.root == root }.count, Int(Date().timeIntervalSince(started)))

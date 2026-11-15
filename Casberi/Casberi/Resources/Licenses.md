@@ -194,6 +194,8 @@ The app's Privacy Pools engine (privacy-engine.js) bundles, unmodified:
 - Privacy Pools v2 SDK (@0xbow/privacy-pools-v2-sdk 1.0.2). Copyright (c) 2025-2026 0xbow. MIT License.
 - snarkjs 0.7.5, circomlibjs 0.1.7, ffjavascript, wasmcurves, wasmbuilder, fastfile and r1csfile, by iden3. GNU General Public License, version 3.
 - viem 2.45.3 and ox, by wevm. MIT License.
+- Kohaku provider (@kohaku-eth/provider 0.1.0-alpha.14), by the Ethereum Foundation. MIT License.
+- Colibri (@corpus-core/colibri-stateless 3.1.1, with its WebAssembly, colibri.wasm). Copyright (c) 2025, 2026 corpus.core GmbH and Contributors. MIT License.
 - zod, @noble/curves, @noble/hashes, @noble/ciphers, @zk-kit/lean-imt, @ethereumjs/rlp, multiformats, buffer, bfj, js-sha3, blake2b-wasm and logplease. MIT License. ejs. Apache License, Version 2.0, below.
 
 The licence notices of each are kept at the end of privacy-engine.js. Its exact sources and build are in tools/privacy-pools-engine in Casberi's source.

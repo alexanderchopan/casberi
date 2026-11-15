@@ -193,6 +193,12 @@ final class PrivacyEngine: NSObject {
         try await call(.discover, Wire.Empty(), as: Wire.Discovered.self)
     }
 
+    /// The balance `discover` found, checked against Ethereum itself through
+    /// Kohaku's verified provider (prd §1569a). `discover` first.
+    func check() async throws -> Wire.Checked {
+        try await call(.check, Wire.Empty(), as: Wire.Checked.self)
+    }
+
     /// A private transfer to `recipient` through the relayer, proof included.
     func prepareTransfer(tokenId: String, amount: String, to recipient: String) async throws -> Wire.PreparedSpend {
         try await call(.prepareTransfer, Wire.Spend(tokenId: tokenId, amount: amount, recipient: recipient),
@@ -327,8 +333,10 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
             for (key, value) in http.allHeaderFields {
                 if let key = key as? String, let value = value as? String { headers[key] = value }
             }
+            // Base64, so a binary answer (Colibri's proofs, prd §1569a)
+            // reaches the page byte for byte.
             replyHandler(["status": http.statusCode, "headers": headers,
-                                "body": String(decoding: data, as: UTF8.self)], nil)
+                                "body64": data.base64EncodedString()], nil)
         }
     }
 
@@ -385,6 +393,11 @@ final class PrivacyEngineScheme: NSObject, WKURLSchemeHandler {
             guard let url = Bundle.main.url(forResource: "privacy-engine", withExtension: "js"),
                   let data = try? Data(contentsOf: url) else { fail(task, 404, "no bundle"); return }
             answer(task, data, type: "text/javascript")
+        case "colibri.wasm":
+            // Kohaku's verified provider's light client (prd §1569a).
+            guard let url = Bundle.main.url(forResource: "colibri", withExtension: "wasm"),
+                  let data = try? Data(contentsOf: url) else { fail(task, 404, "no light client"); return }
+            answer(task, data, type: "application/wasm")
         default:
             let pins = MainActor.assumeIsolated { PrivacyEngine.shared.pins }
             guard let wanted = PrivacyArtifacts.request(path: path, pins: pins) else {

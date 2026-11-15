@@ -40,6 +40,19 @@ final class PrivateMoneyStore {
     func seenInPool(_ commitment: String) -> Bool { poolSeen.contains(commitment.lowercased()) }
     @ObservationIgnored private var yieldRead: Date = .distantPast
 
+    /// **CHECKED AGAINST ETHEREUM (prd §1569a).** False once the last check
+    /// proved the notes read do not match the chain: a tree's root the
+    /// contract does not know, or a note that is no leaf of it. Held rows say
+    /// so in amber. A check that could not run changes nothing; a launch
+    /// checks again. Kept per root: one root's clean check never clears
+    /// another's mismatch.
+    private(set) var mismatchedRoots: Set<String> = []
+    var mismatched: Bool { !mismatchedRoots.isEmpty }
+
+    func recordCheck(_ checked: PrivacyEngineWire.Checked, root: String) {
+        if checked.checked { mismatchedRoots.remove(root) } else { mismatchedRoots.insert(root) }
+    }
+
     /// **RESTORING YOUR PRIVATE BALANCE (prd §1567).** True while a new
     /// phone finds a root's notes or walks its fresh addresses back (prd
     /// §1562): Holdings' Private header says so in one line, never a page.

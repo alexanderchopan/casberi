@@ -33,6 +33,8 @@ REACH="Casberi/Casberi/Model/NetworkReach.swift"
 NETJS="tools/privacy-pools-engine/src/net.js"
 ENGJS="tools/privacy-pools-engine/src/engine.js"
 BUNDLE="Casberi/Casberi/Resources/privacy-engine.js"
+VERIFIED="tools/privacy-pools-engine/src/verified.js"
+WATCH="Casberi/Casberi/Model/PrivateWatch.swift"
 for f in "$WIRE" "$ART" "$PINS" "$ENGINE" "$KEY" "$REACH" "$NETJS" "$ENGJS" "$BUNDLE"; do
     [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -102,6 +104,25 @@ python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["scenar
 # The seed is device-only behind Face ID outside DEBUG simulator builds.
 use "$KEY" "kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, [.biometryCurrentSet]" "the seed is no longer device-only behind Face ID"
 use "$KEY" "kSecAttrSynchronizable as String: false" "the seed may sync"
+# Checked against Ethereum through Kohaku's provider (prd §1569a): it fails
+# closed, it asks only whether a tree's root is known (never a note), its
+# hosts are the engine's declared ones, binary proofs cross the door intact,
+# and the watch checks what it has just discovered.
+use "$VERIFIED" "proofStrategy: Strategy.VerifiedOnly" "the verified provider answers unverified when a proof fails"
+[[ $(grep -c "p.request(" "$VERIFIED") -eq 1 ]] || { echo "✗ the check asks the chain something besides isKnownRoot"; exit 1; }
+use "$VERIFIED" "functionName: 'isKnownRoot', args: [BigInt(root)]" "the check no longer asks whether a root is known"
+for host in $(grep -oE "https://[a-z0-9.-]+" "$VERIFIED" | sed 's#https://##' | sort -u); do
+    awk '/service: "Privacy Pools engine"/,/directWhenRefused/' "$REACH" | grep -qF "\"$host\"" || { echo "✗ the verified provider reaches $host, which the engine does not declare"; exit 1; }
+done
+use "$ENGINE" '"body64": data.base64EncodedString()' "the door hands the page text, which mangles a binary proof"
+use "$NETJS" "atob(reply.body64 ?? '')" "net.js no longer reads the door's base64 body"
+use "$ENGINE" 'case "colibri.wasm":' "the scheme no longer serves the light client"
+awk '/static func findNotes\(of root/,/^    }$/' "$WATCH" > /tmp/pe-watch.$$
+use /tmp/pe-watch.$$ "checked = try await PrivacyEngine.shared.check()" "the watch no longer checks what it discovered"
+[[ $(grep -n 'PrivacyEngine.shared.discover()' /tmp/pe-watch.$$ | cut -d: -f1) -lt $(grep -n 'PrivacyEngine.shared.check()' /tmp/pe-watch.$$ | cut -d: -f1) ]] || { echo "✗ the watch checks before it discovers"; rm -f /tmp/pe-watch.$$; exit 1; }
+rm -f /tmp/pe-watch.$$
+use "$BUNDLE" "isKnownRoot" "the shipped bundle has no Ethereum check — rebuild"
+use "$BUNDLE" "body64" "the shipped bundle's door reads a text body the app no longer sends — rebuild"
 echo "  ok   the door is asked before the funnel, pins are checked before a file is kept, the page reaches no host, two networks behind one switch"
 
 TMP=$(mktemp -d /tmp/privacy-engine-selftest.XXXXXX)
@@ -126,7 +147,7 @@ check((try? W.decode(W.Registered.self, from: "not json")) == nil, "a reply that
 let openJSON = (try? W.encode(W.Open(seed: "0x" + String(repeating: "ab", count: 32), revocableKeyIndex: "0x0", owner: "0x01", network: .sepolia))) ?? ""
 check(openJSON.contains(#""chainId":11155111"#) && openJSON.contains(#""withdrawProcessor":"0x7430cc030d7eb8C83E76cD983996982C8C054204""#),
       "open carries the network the page checks")
-check(Set(W.Method.allCases.map(\.rawValue)) == ["info", "open", "close", "isRegistered", "prepareRegister", "prepareDeposit", "discover", "prepareTransfer", "prepareWithdraw", "bench", "labelHash", "relay", "prepareRagequit", "prepareYieldDeposit", "prepareBridgedYieldDeposit"],
+check(Set(W.Method.allCases.map(\.rawValue)) == ["info", "open", "close", "isRegistered", "prepareRegister", "prepareDeposit", "discover", "check", "prepareTransfer", "prepareWithdraw", "bench", "labelHash", "relay", "prepareRagequit", "prepareYieldDeposit", "prepareBridgedYieldDeposit"],
       "the methods are the page's")
 
 // The network door.

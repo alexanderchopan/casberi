@@ -43,8 +43,11 @@ async function engineFetch(input, init = {}) {
     // browser's own wording for a network failure, so viem retries as usual.
     throw new TypeError(`Failed to fetch (${String(refusal?.message ?? refusal)})`);
   }
+  // The body comes as base64: Colibri's proofs are binary, and text would
+  // mangle them (prd §1569a).
   const nullBody = [101, 204, 205, 304].includes(reply.status);
-  return new Response(nullBody ? null : (reply.body ?? ''), { status: reply.status, headers: reply.headers ?? {} });
+  const bytes = nullBody ? null : Uint8Array.from(atob(reply.body64 ?? ''), (c) => c.charCodeAt(0));
+  return new Response(bytes, { status: reply.status, headers: reply.headers ?? {} });
 }
 
 globalThis.fetch = engineFetch;

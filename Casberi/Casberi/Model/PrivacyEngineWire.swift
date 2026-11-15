@@ -15,7 +15,7 @@ enum PrivacyEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, close, isRegistered, prepareRegister, prepareDeposit
-        case discover, prepareTransfer, prepareWithdraw, bench, labelHash, relay
+        case discover, check, prepareTransfer, prepareWithdraw, bench, labelHash, relay
         case prepareRagequit, prepareYieldDeposit, prepareBridgedYieldDeposit
     }
 
@@ -197,6 +197,23 @@ enum PrivacyEngineWire {
     struct Discovered: Decodable, Equatable {
         let notes: [Note]
         let balances: [Balance]
+        let ms: Int
+    }
+
+    /// The balance `discover` found, checked against Ethereum itself through
+    /// Kohaku's verified provider (prd §1569a): each tree's root proven known
+    /// to its contract, and every note counted a leaf of the proven state tree.
+    struct Checked: Decodable, Equatable {
+        struct Tree: Decodable, Equatable {
+            let leaves: Int
+            let known: Bool
+            let readMs: Int
+            let verifyMs: Int
+        }
+        let checked: Bool
+        let trees: [String: Tree]
+        let notes: Int
+        let notesMissing: Int
         let ms: Int
     }
 

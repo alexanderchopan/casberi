@@ -52,6 +52,22 @@ const result = await build({
 const bytes = result.outputFiles[0].contents;
 const sha = createHash('sha256').update(bytes).digest('hex');
 const mb = (n) => (n / 1048576).toFixed(2);
+
+// Colibri's WebAssembly (prd §1569a), served beside the bundle over the
+// app's scheme, byte for byte the pinned package's.
+const wasmOut = join(here, '../../Casberi/Casberi/Resources/colibri.wasm');
+const wasm = readFileSync(join(here, 'node_modules/@corpus-core/colibri-stateless/c4w.wasm'));
+const wasmSha = createHash('sha256').update(wasm).digest('hex');
+if (check) {
+  const committedWasm = createHash('sha256').update(readFileSync(wasmOut)).digest('hex');
+  if (committedWasm !== wasmSha) {
+    console.error(`colibri.wasm differs from the pinned package's:\n  committed ${committedWasm}\n  package   ${wasmSha}`);
+    process.exit(1);
+  }
+} else {
+  writeFileSync(wasmOut, wasm);
+  console.log(`colibri.wasm  ${mb(wasm.length)} MB  sha256 ${wasmSha}`);
+}
 if (check) {
   const committed = readFileSync(out);
   const committedSha = createHash('sha256').update(committed).digest('hex');

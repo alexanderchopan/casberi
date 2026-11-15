@@ -519,12 +519,17 @@ enum NetworkReach {
         // (`PrivacyEngineWire.allows`), through the funnel.
         Endpoint(service: "Privacy Pools engine",
                  reach: .whenConnected(bridge: "Privacy Pools"),
-                 purpose: "Reads Privacy Pools v2 on Ethereum for your private balance: the pool's notes and keystore, and Aave's rate on what is private, from MEV Blocker's public node; which deposits 0xBow has approved, from its review service; and its relayer's fees, which it then hands a private send to post. In a test build, the same on the Sepolia testnet (old logs from Tenderly's node, the one that keeps them all). Carries your account's address and your notes' public commitments, never a key or a note's secret.",
+                 purpose: "Reads Privacy Pools v2 on Ethereum for your private balance: the pool's notes and keystore, and Aave's rate on what is private, from MEV Blocker's public node; which deposits 0xBow has approved, from its review service; and its relayer's fees, which it then hands a private send to post. Then checks what it read against Ethereum itself, through the Ethereum Foundation's Kohaku provider: Colibri's prover proves the pool knows the trees your balance was rebuilt from, and two checkpoint services give the chain's starting point; the questions name only those trees, never a note. In a test build, the same on the Sepolia testnet (old logs from Tenderly's node, the one that keeps them all). Carries your account's address and your notes' public commitments, never a key or a note's secret.",
                  hosts: ["rpc.mevblocker.io", "api-v2.0xbow.io",
                          "relayer-v2-prod-149184580131.us-east1.run.app",
                          "ethereum-sepolia-rpc.publicnode.com", "api-dev.0xbow.io",
                          "relayer-v2-staging-149184580131.us-east1.run.app",
-                         "sepolia.gateway.tenderly.co"],
+                         "sepolia.gateway.tenderly.co",
+                         // Kohaku's verified provider, Colibri's hosts (prd §1569a).
+                         "mainnet.colibri-proof.tech", "mainnet1.colibri-proof.tech",
+                         "sync-mainnet.beaconcha.in", "mainnet.checkpoint.sigp.io",
+                         "sepolia.colibri-proof.tech", "sepolia1.colibri-proof.tech",
+                         "checkpoint-sync.sepolia.ethpandaops.io", "beaconstate-sepolia.chainsafe.io"],
                  throughTor: true,
                  // Tenderly refuses every Tor exit (the Railgun entry's
                  // measurement), so its log reads go direct and say so.

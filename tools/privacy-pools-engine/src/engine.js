@@ -20,6 +20,7 @@ import {
   ProofService, RelayerInteractor, ViemRPCInteractor, APP_IDENTIFIER, prepareYieldSwapDeposit,
 } from '@0xbow/privacy-pools-v2-sdk';
 import { syntheticInputs } from './synthetic.js';
+import { checkAccount } from './verified.js';
 import * as snarkjs from 'snarkjs';
 import { getAddress } from 'viem';
 
@@ -389,6 +390,15 @@ const methods = {
     const balances = {};
     for (const n of notes) if (n.status === NoteStatus.ACTIVE) balances[n.tokenId] = hex(BigInt(balances[n.tokenId] ?? 0) + BigInt(n.value));
     return { notes, balances: Object.entries(balances).map(([tokenId, value]) => ({ tokenId, value })), ms: Math.round(now() - t) };
+  },
+
+  // The balance `discover` found, checked against Ethereum itself through
+  // Kohaku's verified provider (src/verified.js, prd §1569a). `discover` first.
+  async check() {
+    const t = now();
+    const notes = account.notes.getNotes({ status: NoteStatus.ACTIVE }).map((n) => n.commitment);
+    const r = await checkAccount(account, { notes, hash: account.hash, say: logger('verified').warn, now });
+    return { ...r, ms: Math.round(now() - t) };
   },
 
   // Balance to balance (prd §1567): the recipient's own private account,

@@ -69188,6 +69188,29 @@ Mock: the design canvas "Private money with 0xBow".
 
 **Mac half (§1402).** None: nothing is drawn.
 
+## §1569a — The private balance is checked against Ethereum itself through Kohaku's verified provider: each tree's root proven known to its contract by Colibri, every counted note a leaf of the proven tree (amends §1569) (user, 2026-11-14: "what if anything can we do w kohaku today", "so what can we do to use it and say we are?", "Yes, measure it", "ok lets do what we need") — BUILT
+
+**Why.** §1569 waited for a provider that verifies `eth_getLogs` and sends every request through the host. Kohaku's `@kohaku-eth/provider` gained a Colibri adapter, and Colibri does both: it takes the host's `fetch` and proves `eth_getLogs`. But proving each log is too slow for a phone, so the logs stay where they were and one proven call vouches for all of them.
+
+**Measured (2026-11-14, Ethereum mainnet, Node and a WebKit harness; `tools`-free scratch scripts).**
+1. Plain logs from MEV Blocker, v2's four contracts since 25,884,231: 54 windows, 8,352 logs, 52 s direct, 93 s over Tor.
+2. Colibri, remote prover, fail-closed: a block number, a call or a balance verified in 0.2–0.5 s direct, 0.5–3 s over Tor; its prover answered Tor.
+3. Proving logs: 0.2–0.3 s a log (a first sync 25–40 min); with completeness proofs, 5.6 min for one 1,000-block window (Colibri's cap). Neither is used.
+4. The check itself: the SDK's own readers rebuilt the state tree (2,873 leaves) and the keystore (424) in about 30 s each, their roots computed in 0.3 s and 0.04 s, and `isKnownRoot` through Colibri said known in 1.9 s and 1.1 s. The same tree with one leaf dropped: unknown, both trees.
+5. WebKit: Colibri's WebAssembly loads, and verified calls go through an app-side door. Its proven `eth_getLogs` stalls after the first proof there; the check never asks for one.
+
+**What is built.**
+1. `tools/privacy-pools-engine/src/verified.js`: `check` rebuilds both trees with the SDK's readers (kept, so later passes fetch only new logs), computes each root, asks `isKnownRoot(root)` through Kohaku's provider with `Strategy.VerifiedOnly`, and requires every ACTIVE note's commitment to be a leaf of the proven state tree, matched on the page. Colibri's prover, consensus API and two checkpoint services are pinned per chain (Ethereum, Sepolia) and declared in the engine's `NetworkReach` entry; nothing else is reached.
+2. `PrivateWatch.findNotes(of:on:)` checks right after `discover`, inside the same exclusive flow. A check that cannot run proves nothing and is tried at the next read; a mismatch sets `PrivateMoneyStore.mismatched`, and each held private row says "Doesn't match Ethereum" in amber in place of its line until a check matches.
+3. The engine's door carries bodies as base64 (`body64`) both ways, since Colibri's proofs are binary and the text door mangled them.
+4. `Resources/colibri.wasm` (1.33 MB) is the pinned package's file, written and checked by `build.mjs`; the scheme serves it. The bundle grew 75 KB.
+
+**Kohaku's adapter fails open.** It passes no proof strategy, and Colibri's default answers unverified, with a warning, when a proof fails (measured: with no checkpoint storage, every answer fell back to the plain node). The engine sets `VerifiedOnly`; the same default upstream is worth a fix.
+
+**What it does not prove.** That a note is unspent: spends are not leaves, and asking about one note's nullifier would name it to the prover and the node. A hidden spend overstates the balance until a send fails on chain.
+
+**Mac half (§1402).** The Mac runs the same engine and draws the same held rows; nothing of its own.
+
 ## §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the surface (amends §1455, §1456, §1462, §1496) (user, 2026-10-27: "we should just turn cosigner on or off. this allowance stuff has too many edge cases"; "ok" to one row) — RULED, built in 878
 
 **Why.** Testing on mainnet, "$100 a month" turned out to mean six separate allowances (ETH and the network's dollar on three networks), sends only, and every other token and every swap needing the co-signer anyway. Every wording tried ("of each coin", "per token and per network", "anything else needs …") left the person more confused, because the feature was co-signer protection with a carve-out, not a cap. A switch says what it does.

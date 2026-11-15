@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@0xbow/privacy-pools-v2-sdk": "1.0.2",
+    "@corpus-core/colibri-stateless": "3.1.1",
+    "@kohaku-eth/provider": "0.1.0-alpha.14",
     "@zk-kit/lean-imt": "2.2.4",
     "circomlibjs": "0.1.7",
     "snarkjs": "0.7.5",
