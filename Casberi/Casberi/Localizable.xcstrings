@@ -47974,6 +47974,34 @@
         }
       }
     },
+    "Activity order" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Orden de la actividad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アクティビティの並び"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "활동 순서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "动态顺序"
+          }
+        }
+      }
+    },
     "Acts as the sender, calling a token contract to move its tokens." : {
       "localizations" : {
         "es" : {
@@ -114157,6 +114185,34 @@
         }
       }
     },
+    "Make your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crea tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントを作る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 만드세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "创建你的账户"
+          }
+        }
+      }
+    },
     "Make your account first" : {
       "localizations" : {
         "es" : {
@@ -141721,6 +141777,34 @@
         }
       }
     },
+    "Opens %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@を開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开%@"
+          }
+        }
+      }
+    },
     "Opens %@'s page" : {
       "localizations" : {
         "es" : {
@@ -142809,6 +142893,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "展开此部分"
+          }
+        }
+      }
+    },
+    "Opens this section. Hold for the sections." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre esta sección. Mantén pulsado para ver las secciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このセクションを開きます。長押しでセクションを表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 섹션을 엽니다. 길게 누르면 섹션이 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开此部分。长按查看各个部分。"
           }
         }
       }
@@ -170897,6 +171009,34 @@
         }
       }
     },
+    "See in your activity" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ver en tu actividad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アクティビティで見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 활동에서 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的活动中查看"
+          }
+        }
+      }
+    },
     "See more on Nymis" : {
       "localizations" : {
         "es" : {
@@ -172973,6 +173113,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已从 Aztec 转出。约一小时后 Aztec 的证明会到达 Ethereum，届时在此完成。"
+          }
+        }
+      }
+    },
+    "Sent privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado de forma privada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開で送信済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 보냄"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已私密发送"
           }
         }
       }
@@ -225482,6 +225650,34 @@
         }
       }
     },
+    "Your account is ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta está lista"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの準備ができました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 준비되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户已就绪"
+          }
+        }
+      }
+    },
     "Your account needs a little %@ of its own to buy gas for Aztec" : {
       "localizations" : {
         "es" : {
@@ -256568,34 +256764,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "落地时 ≈ %@"
-          }
-        }
-      }
-    },
-    "See in your activity" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ver en tu actividad"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "アクティビティで見る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "내 활동에서 보기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在你的活动中查看"
           }
         }
       }
