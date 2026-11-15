@@ -73049,3 +73049,15 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Mac half (§1402).** The card rows are the same view on the Mac. The trailing picture and the app's corner draw only where a row is its title alone, which beside a pane is the same Activity list; not run on the Mac.
 
 **Checks.** `wallet-row-words-selftest.sh` (the card shapes, two new mutations). **Seen** on the simulator with the demo: Activity.
+
+## §1811 — The title is the whole path, and a word that opens wears a chevron (amends §1809, §1262) (user, 2026-11-14: "navigation is weird when you are on a feed page … you have to go to activity first before you can get to home / wallet and so that is two taps"; of the canvas "Casberi navigation options", options A and D: "build a and d")
+
+1. **A page under Activity names Home first** (amends §1809 item 6). "Activity · Social" reads "Home · Activity · Social": Home goes home, Activity goes back to Activity where you left it, as before. Every category's and app's page on the phone, Notes included (`FeedScreen.titleRoot`, `DSRoomTitleRow.root`). Going home drops the return to the category you left Activity from.
+2. **A path too long for the row drops its middle, never Home** (amends §1262's two rungs). The row tries the whole path at 34 and 28, then Home and where you stand at 34, 28 and 24: "Home · App Store Connect". Activity is then the swipe right.
+3. **A word that opens wears a chevron** (amends §1809 item 5). On Activity, Money and each category's word open a page and Needs you does not, and the three drew alike. A door's word wears `DSPushRow`'s chevron at its size and gap; a label stays bare (`ActivityWord`).
+
+**Not built, said plainly.** Coming back to Activity still lands on the category's word, not the row you left. A Home seat in the bottom band and categories as picks on Activity (options B and C on the canvas) were not chosen. The Wallet's own pages already lead with Home and are unchanged.
+
+**Mac half (§1402).** The rail names the places on the Mac and the iPad, so no page there stands under Activity and the title is unchanged; the chevron draws on the phone's quiet Activity only. Not run on the Mac.
+
+**Checks.** None new. **Seen** on the simulator with the demo: Activity's words, "Home · Activity · Social", Home from it.

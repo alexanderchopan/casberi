@@ -52,6 +52,12 @@ struct DSRoomTitleRow: View {
     /// page, the glyph the long press's Settings wears, so what an app's page
     /// manages is found on the page. Nil keeps the words labels.
     var onSettings: (() -> Void)? = nil
+    /// **THE WHOLE PATH (prd §1811).** The place this page is two steps under,
+    /// named first and pressable: "Home · Activity · Social". A category's
+    /// page read "Activity · Social", so Home was two taps away. A path too
+    /// long for the row drops its middle word ("Home · App Store Connect"),
+    /// never the root.
+    var root: DSTitleBack? = nil
     @Environment(\.sizeCategory) private var sizeCategory
     /// In a thing sheet the title is the thing's, and wraps (prd §1258).
     @Environment(\.dsTitleWraps) private var wraps
@@ -92,12 +98,32 @@ struct DSRoomTitleRow: View {
             // THE PAIR STEPS DOWN TOGETHER (prd §1389): beside the demo's
             // pill the two words share the room, so the whole title takes
             // the next rung rather than the pick alone shrinking and cutting.
-            ViewThatFits(in: .horizontal) {
-                pickedTitle(title, pick: pick, rung: .heading34)
-                pickedTitle(title, pick: pick, rung: .heading28)
-                // The last rung never overflows: a pair longer than even this
-                // ("Wallet · Subscriptions" beside the pill) shrinks in place.
-                pickedTitle(title, pick: pick, rung: .heading24, fits: true)
+            // Two fits, never one with a branch inside: `ViewThatFits` counts
+            // its direct subviews, and a conditional is one of them.
+            Group {
+                if root != nil {
+                    ViewThatFits(in: .horizontal) {
+                        pickedTitle(title, pick: pick, rung: .heading34)
+                        pickedTitle(title, pick: pick, rung: .heading28)
+                        // Smaller before shorter: an app's page carries its
+                        // settings disc, and losing the word that goes back
+                        // one step costs more than a rung.
+                        pickedTitle(title, pick: pick, rung: .heading24)
+                        // The path without its middle (prd §1811): the root
+                        // and where you stand.
+                        pickedTitle(title, pick: pick, rung: .heading34, middle: false)
+                        pickedTitle(title, pick: pick, rung: .heading28, middle: false)
+                        pickedTitle(title, pick: pick, rung: .heading24, fits: true, middle: false)
+                    }
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        pickedTitle(title, pick: pick, rung: .heading34)
+                        pickedTitle(title, pick: pick, rung: .heading28)
+                        // The last rung never overflows: a pair longer than even this
+                        // ("Wallet · Subscriptions" beside the pill) shrinks in place.
+                        pickedTitle(title, pick: pick, rung: .heading24, fits: true)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
@@ -143,8 +169,20 @@ struct DSRoomTitleRow: View {
     /// button too, its sliders disc after it. `fixedSize` so `ViewThatFits`
     /// measures the pair whole.
     private func pickedTitle(_ title: String, pick: String,
-                             rung: DSTextStyle, fits: Bool = false) -> some View {
+                             rung: DSTextStyle, fits: Bool = false,
+                             middle: Bool = true) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
+            if let root {
+                Button(action: root.action) {
+                    Text(verbatim: root.word)
+                        .foregroundStyle(DS.textTertiary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Opens \(root.word)"))
+                Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+            }
+            if middle {
             // The word that goes back is grey, where you stand is the
             // head ink (user, 2026-10-15: "is sources supposed to be
             // gray, eg only one is white"), as the walk's title greys
@@ -161,6 +199,7 @@ struct DSRoomTitleRow: View {
                 Text(verbatim: title).foregroundStyle(DS.textTertiary)
             }
             Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+            }
             if let onSettings {
                 Button(action: onSettings) {
                     // The pick's own text is the label, so its baseline is the

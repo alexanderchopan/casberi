@@ -1348,9 +1348,19 @@ struct ActivityWord: View {
         .listRowSeparator(.hidden)
     }
 
+    /// **A WORD THAT OPENS WEARS A CHEVRON (prd §1811).** "Money" and
+    /// "Social" open a page and "Needs you" does not, and the three drew
+    /// alike; the door's chevron is `DSPushRow`'s, at its size and gap.
     private var word: some View {
-        Text(verbatim: name)
-            .dsText(.label12)
+        HStack(spacing: 3) {
+            Text(verbatim: name)
+                .dsText(.label12)
+            if open != nil {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(.tick, weight: .bold)
+                    .accessibilityHidden(true)
+            }
+        }
             .foregroundStyle(DS.textSecondary)
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.trailing, DS.Space.s4)

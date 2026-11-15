@@ -56,7 +56,7 @@ extension FeedScreen {
     var roomTitle: some View {
         HStack(spacing: DS.Space.s3) {
             DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick,
-                           onSettings: appSettings)
+                           onSettings: appSettings, root: titleRoot)
                 .demoTagOnTitle()
             // THE ACCOUNTS ARE A MENU ON THE TITLE where the rail stands (prd
             // §1405): the strip that floated over the rows in the band is
@@ -138,6 +138,25 @@ extension FeedScreen {
             .buttonStyle(PressSpring())
             .fixedSize()
             .accessibilityLabel(Text("Accounts"))
+        }
+    }
+
+    /// **HOME IS ONE TAP FROM ANY PAGE UNDER ACTIVITY (prd §1811, user: "you
+    /// have to go to activity first before you can get to home … so that is
+    /// two taps").** A category's or an app's page names Home first, and the
+    /// word goes there. Nil on Home's own pages and on Activity, which
+    /// already lead with Home.
+    var titleRoot: DSTitleBack? {
+        guard pageUnderActivity, roomPick != nil, clearRoomPick != nil else { return nil }
+        let room = hostRoom ?? source
+        return DSTitleBack(word: PlaceTab.wallet.label) {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) {
+                // Home, not the category you left Activity from.
+                chrome.activityReturn = nil
+                chrome.mergedScope[room] = nil
+                chrome.openWallet()
+            }
         }
     }
 
