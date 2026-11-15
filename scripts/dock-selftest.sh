@@ -378,7 +378,7 @@ grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
 # SETTINGS ARE ON THE ACCOUNT PAGE (prd §1808, amending §1111): the deep
 # link and -openSettings open Account, and Apps holds no Settings folder (a
 # second way into Settings is a second meaning).
-[ "$(grep -c 'chrome.openWalletPage(.yourAccount)' "$TMP/root.nc")" -ge 2 ] \
+[ "$(grep -c 'chrome.openSettings()' "$TMP/root.nc")" -ge 2 ] \
   || { echo "✗ RootShell's settings doors (the deep link, -openSettings) no longer open"; \
        echo "  the Account page, where Casberi's settings are (prd §1808)."; fail=1; }
 ! grep -rq 'SourcesSettingsFolder\|CasberiFolder(' Casberi/Casberi --include='*.swift' \
@@ -393,7 +393,7 @@ strip_comments "Casberi/Casberi/Shell/LibrarySearch.swift" > "$TMP/tray.nc"
 # (prd §1808), never a second screen.
 [ ! -f "Casberi/Casberi/Shell/RoomsTray.swift" ] \
   || { echo "✗ the rooms tray is back — Search is Library's field (prd §1715)."; fail=1; }
-grep -q 'chrome.openWalletPage(.yourAccount)' "$TMP/tray.nc" \
+grep -q 'chrome.openSettings()' "$TMP/tray.nc" \
   || { echo "✗ the search's Settings hit no longer opens the Account page (prd §1808)."; fail=1; }
 grep -q 'route.present(' "$TMP/tray.nc" \
   && { echo "✗ the search presents a screen of its own — it stands in Library (prd §1715)."; fail=1; }

@@ -324,7 +324,7 @@ struct CasberiApp: App {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
                     // Casberi's own settings: the Account page (prd §1808).
-                    focusedChrome?.openWalletPage(.yourAccount)
+                    focusedChrome?.openSettings()
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }

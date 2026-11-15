@@ -1065,10 +1065,10 @@ struct RootShell: View {
                 if wait > 0 {
                     Task { @MainActor in
                         try? await Task.sleep(for: .seconds(wait))
-                        chrome.openWalletPage(.yourAccount)
+                        chrome.openSettings()
                     }
                 } else {
-                    chrome.openWalletPage(.yourAccount)
+                    chrome.openSettings()
                 }
             }
             // `-openSafe YES` — the Safe screen itself (prd §1514), for
@@ -2933,9 +2933,9 @@ struct RootShell: View {
         case "account", "apps":
             sceneState.route.present(.apps)
         case "settings":
-            // Casberi's own settings: the Account page (prd §1808); the
-            // apps are casberi://apps.
-            chrome.openWalletPage(.yourAccount)
+            // Casberi's own settings: the Account page, at its Settings
+            // card (prd §1808, §1809); the apps are casberi://apps.
+            chrome.openSettings()
         // casberi://room/<category | Your notes> — the Category widget's
         // door (2026-10-04): the room a tray pick lands in. On a cold launch
         // a category's apps are not listed yet and the first ask lands

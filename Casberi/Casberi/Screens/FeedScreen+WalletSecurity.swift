@@ -117,7 +117,7 @@ extension FeedScreen {
             // and settings together … as one"): Casberi's own settings close
             // the page, the rows Apps' folder drew.
             if !walletOnPrivateAccount {
-                walletCard(String(localized: "Settings"), glyph: "gearshape") {
+                walletCard(String(localized: "Settings"), glyph: "gearshape", anchor: ShellChrome.settingsAnchor) {
                     // ACTIVITY'S ORDER IS A SETTING AGAIN (prd §1807, amending
                     // §1345): the Reorder tile left with Activity's tile row,
                     // so the same sheet opens from here.

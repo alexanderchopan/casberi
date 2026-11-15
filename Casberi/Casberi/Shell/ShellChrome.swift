@@ -1264,6 +1264,17 @@ final class ShellChrome {
     /// Your Account's header shows the Aztec account's address, picked by
     /// its row under Your account (prd §1700f item 2); else the Safe's.
     var yourAccountShowsAztec = false
+    /// Settings' card on the Account page, as a scroll request.
+    static let settingsAnchor = "account.settings"
+
+    /// **A DOOR TO SETTINGS LANDS ON SETTINGS (prd §1809).** They are the
+    /// last card of the Account page since §1808, so the doors that named
+    /// them (`casberi://settings`, ⌘,, the search's hit, `-openSettings`)
+    /// open the page scrolled to that card, never at the top of Account.
+    func openSettings() {
+        openYourAccount(at: Self.settingsAnchor)
+    }
+
     func openYourAccount(at anchor: String) {
         walletScope = nil
         walletSection = .yourAccount

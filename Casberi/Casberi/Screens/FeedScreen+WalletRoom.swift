@@ -320,6 +320,15 @@ extension FeedScreen {
             // Where a launch opens the Wallet: Yours, unless you last chose
             // Everything (prd §1526).
             .task { WalletWhoseSwitch.applyLaunchChoice(chrome) }
+            // A door to Settings (prd §1809): the card is the page's last,
+            // so its own rows may not exist yet to hear the request; the
+            // page's head does, and scrolls the card in.
+            .task(id: chrome.walletScrollRequest) {
+                guard chrome.walletScrollRequest == ShellChrome.settingsAnchor else { return }
+                try? await Task.sleep(for: .milliseconds(400))
+                cardScrollTarget = ShellChrome.settingsAnchor
+                chrome.walletScrollRequest = nil
+            }
             // The last followed wallet gone takes the switch with it, so a
             // Yours or Following pick returns to All (prd §1590).
             .onChange(of: WalletWhoseSwitch.followed.isEmpty) { _, none in
