@@ -62,7 +62,8 @@ enum SocialRoomSource {
             arrivedLive: Corpus.arrivedLive(thing),
             hasPostText: (thing.postText?.isEmpty == false),
             hasPreviewImage: thing.previewImageData != nil,
-            socialContext: thing.socialContext)
+            socialContext: thing.socialContext,
+            followedPost: thing.sourceRef?.hasPrefix(XLiveFollowing.refPrefix) == true)
     }
 
     /// What anatomy this row wears. The one entry point the feed calls.

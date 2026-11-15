@@ -146,11 +146,15 @@ enum SocialRoom {
         var hasPostText: Bool
         var hasPreviewImage: Bool
         var socialContext: String?
+        /// The ref is a Following post's (`XLiveFollowing.refPrefix`). X lands
+        /// those as `.chat`, the kind its conversations also wear, so the kind
+        /// alone cannot tell a post from a transcript.
+        var followedPost: Bool
 
         init(source: String, kind: String, tags: [String] = [],
              isImportReceipt: Bool = false, arrivedLive: Bool = false,
              hasPostText: Bool = false, hasPreviewImage: Bool = false,
-             socialContext: String? = nil) {
+             socialContext: String? = nil, followedPost: Bool = false) {
             self.source = source
             self.kind = kind
             self.tags = tags
@@ -159,6 +163,7 @@ enum SocialRoom {
             self.hasPostText = hasPostText
             self.hasPreviewImage = hasPreviewImage
             self.socialContext = socialContext
+            self.followedPost = followedPost
         }
     }
 
@@ -228,6 +233,12 @@ enum SocialRoom {
 
         // AN ARCHIVE OF SOMEBODY'S OWN WRITING (§313, §375, §396a).
         case "X":
+            // A FOLLOWING POST IS A POST, with its author's face. It lands as
+            // `.chat` (`XLiveFollowing`, prd §1582) and took the transcript
+            // branch below, which drew its title beside the X mark and never
+            // read the avatar the row stores. Clamped, as Bluesky's are: it is
+            // a live room and the next post is the point.
+            if row.followedPost { return hasReplies ? .thread(whole: false) : .post(whole: false) }
             if row.kind == "chat" { return .excerpt(lines: 2) }
             // A fact about the ACCOUNT rather than about anything it posted —
             // a connected app, the day you joined, a handle you used to wear.

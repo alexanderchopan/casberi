@@ -343,6 +343,12 @@ check("a post is drawn WHOLE, not clamped", kind(xPost) == .post(whole: true))
 check("a thread is drawn whole too", kind(xPost, replies: true) == .thread(whole: true))
 check("a liked post is still a post", kind(Row(source: "X", kind: "link")) == .post(whole: true))
 check("a DM is a transcript", kind(Row(source: "X", kind: "chat")) == .excerpt(lines: 2))
+// A Following post wears the DM's kind; its ref is what says it is a post.
+let xFollowed = Row(source: "X", kind: "chat", hasPostText: true, followedPost: true)
+check("a Following post is a post, clamped, never a transcript",
+      kind(xFollowed) == .post(whole: false) && kind(xFollowed, replies: true) == .thread(whole: false))
+check("a Following post that is a picture alone is a post too",
+      kind(Row(source: "X", kind: "chat", followedPost: true)) == .post(whole: false))
 // A post card over one of these would draw a face and a handle over a fact
 // about the account.
 check("a connected app is a fact about the account, not a post",
