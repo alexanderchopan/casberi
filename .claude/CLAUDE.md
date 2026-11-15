@@ -75,7 +75,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Account-detail sheet gate (verify-mac.sh step 2d, 2026-09-21) — a Catalyst sheet does NOT inherit the presenter's environment, and the shipped Mac build died on every Accounts → Settings row that raises one** → docs/verify.md · prd §872
 - **Both verify scripts are provably complete** → docs/verify.md
 - **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19)** → docs/verify.md
-- **PERF: the pass ran every harness TWICE for eleven days (2026-09-01), and was mostly IDLE CORES — time every step before optimising it** → docs/verify.md · prd §612
+- **PERF: the pass ran every harness twice (2026-09-01) — time every step before optimising it** → docs/verify.md · prd §612
 
 - `-refusedForget YES` — clear every learned Alchemy chain refusal and drop the holdings window, so the next read asks every selected chain again (prd §827b). A refusal stands a WEEK: right in the field, a trap at a desk → prd §827b
 - **Every `seeded` key is `.v2`, because the `.v1` flags are POISONED (prd §827a).** The old loop recorded the flag BEFORE the guard that adds the chain, and the add could not persist from `init`. → docs/hooks/wallet.md · prd §827a
@@ -112,7 +112,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Design-template audit (scripts/ds-template-audit.py) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh)** → docs/verify.md · prd §282
-- **CI, at last (.github/workflows/static-checks.yml)** → docs/verify.md
+- **CI (.github/workflows/static-checks.yml)** → docs/verify.md
 - **The logic self-tests could never pass on a hosted runner, three causes deep (2026-09-16)** → docs/verify.md
 - **verify.sh's audit list is provably complete now** → docs/verify.md
 - **Live-integrations heartbeat (scripts/live-integrations.sh)** → docs/verify.md
@@ -163,7 +163,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Ranking sweep (-rankSweep "q1|q2|…")** (`-rankSweep` `-semanticFloor` `-expandDistance`) → docs/verify.md · prd §318
 - **Perf pass (scripts/perf.sh)** (`-Onone`) → docs/verify.md · prd §257
 - **Mac verify (scripts/verify-mac.sh)** → docs/verify.md
-- **The Mac verify's cleanup is BOUNDED — a fix, not a precaution** → docs/verify.md
+- **The Mac verify's cleanup is bounded** → docs/verify.md
 - **iCloud sync on the Mac, and the four things no check could see** → docs/verify.md · prd §607
 - **Mac nightly (scripts/nightly-mac.sh), a step of the nightly audit task** → docs/verify.md
 
