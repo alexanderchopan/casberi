@@ -1356,7 +1356,12 @@ struct WalletYourAccountFigure: View {
                             .dsText(.heading17)
                     }
                     .foregroundStyle(copied ? DS.confirmInk : aztec != nil ? DS.aztecInk : DS.pickInk)
-                    .dsTapTarget()
+                    // The 44pt hit area without the 44pt of layout: the
+                    // networks line (§1803) left the box no room for the
+                    // air, and the word was clipped at its foot.
+                    .padding(.vertical, DS.Space.s3)
+                    .contentShape(Rectangle())
+                    .padding(.vertical, -DS.Space.s3)
                 }
                 .buttonStyle(RowPress())
             }
