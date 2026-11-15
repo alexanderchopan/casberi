@@ -257,6 +257,19 @@ extension FeedScreen {
         }
     }
 
+    /// **THE SWIPE RIGHT IS THE TITLE'S WAY BACK (prd §1814).** The word a
+    /// swipe right goes back to inside this room, on the phone: the name
+    /// `clearRoomPick` is pressed on. Nil where the way back leaves the room
+    /// (Activity to Home, a page to Activity), which the pager walks.
+    var pageBackWord: String? {
+        guard roomSizeClass == .compact, !inSheet, clearRoomPick != nil else { return nil }
+        if pageScope == nil {
+            if activityUnderHome { return nil }
+            if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) { return nil }
+        }
+        return roomName
+    }
+
     /// **AN APP'S SETTINGS ARE ON ITS PAGE (prd §1444, user: "the settings
     /// should be in the library somehow or on the apps actual feed page").**
     /// The app the title names, pressed, opens its account page, the one its long

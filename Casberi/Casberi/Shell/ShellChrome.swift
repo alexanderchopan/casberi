@@ -188,6 +188,18 @@ final class ShellChrome {
     /// carousel: user "if you swiped on the screen the rooms change like
     /// swiping tinder cards … so the feed feels more like a carousel").
     var pageDragTarget: String? = nil
+    /// **EVERY PAGE SWIPES RIGHT TO ITS PARENT (prd §1814).** The word the
+    /// page on screen goes back to inside its own room, the grey name its
+    /// title leads with ("Home" over Positions, the app over one of its
+    /// lists); nil where the page has no parent or its parent is another
+    /// place, which the pager walks to itself. The phone's active
+    /// `FeedScreen` publishes it.
+    var pageBackWord: String? = nil
+    /// Bumped by a swipe right that goes back inside a room: the active
+    /// screen takes its title's own way back (`FeedScreen.clearRoomPick`).
+    var swipeBack = 0
+    /// The swipe's target while it heads for `pageBackWord`: no room's name.
+    static let backTarget = "you:back"
     /// True for the beat that commits a swipe: the card underneath slides
     /// the rest of the way to rest instead of tracking a finger that is gone.
     var pageDragCommitted = false

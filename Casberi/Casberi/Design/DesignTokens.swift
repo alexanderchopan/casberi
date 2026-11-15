@@ -173,7 +173,12 @@ enum DS {
     /// stand right under the holdings map and read as more of its tiles at
     /// the map's own fill (user: "the tiles are too gray, it makes them
     /// bleed into the treemap").
-    static let fillQuiet  = Color.adaptive(dark: "#ffffff0f", light: "#00000008")
+    ///
+    /// **DARKER AGAIN (prd §1814, user: "we can make the gray cards on home
+    /// darker too"; "on the phone they are much lighter than they are on the
+    /// sim").** 6% white read as a grey slab on the phone's OLED, where black
+    /// is black; 4% keeps the card's edge and lets the map above lead.
+    static let fillQuiet  = Color.adaptive(dark: "#ffffff0a", light: "#00000008")
     static let fillLine   = Color.adaptive(dark: "#ffffff1a", light: "#00000014")
     static let fillStrong = Color.adaptive(dark: "#ffffff29", light: "#00000024")
 

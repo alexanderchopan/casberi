@@ -26,6 +26,7 @@ struct SettingsHome: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var context
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     #if DEBUG
     /// `-connectTap` fires once a launch, not at every mount.
@@ -63,7 +64,20 @@ struct SettingsHome: View {
             // stood in the content because §752 kept the top clear.
             // LIBRARY IS A TAB (prd §1327 items 2, 5): its name alone, as
             // every tab's page reads; the bar says where the others are.
-            DSRoomTitleRow(title: String(localized: "Apps"))
+            // **"HOME · APPS" ON THE PHONE (prd §1814).** Apps opens from
+            // its card on Home, and the bar is Move alone: the title leads
+            // with Home, pressable, as Home's own pages do.
+            Group {
+                if sizeClass == .compact, route.sheet == nil {
+                    DSRoomTitleRow(title: PlaceTab.wallet.label, pick: String(localized: "Apps"),
+                                   onTitle: {
+                                       DSHaptic.selection()
+                                       withAnimation(DS.Motion.standard) { chrome.openWallet() }
+                                   })
+                } else {
+                    DSRoomTitleRow(title: String(localized: "Apps"))
+                }
+            }
                 .demoTagOnTitle()
                 .dsRoomTitleListRow(inSheet: route.sheet != nil)
             // The places' row is gone (prd §1327 item 1): they are tabs.

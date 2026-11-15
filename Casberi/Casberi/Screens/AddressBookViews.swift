@@ -1923,13 +1923,8 @@ struct AddressCard: View {
             // ACTIVITY, named the way Wallet names it (prd §499) — the list
             // ran straight out of the note with no header, so two unlike
             // sections read as one run of rows.
-            // The Feed's section name (prd §1268): its pink glyph first.
+            // The Feed's section name (prd §1268), no glyph (prd §1814).
             HStack(spacing: DSRoomChassis.headGap) {
-                Image(systemName: "clock")
-                    .dsGlyph(.body)
-                    .foregroundStyle(DS.brandInk)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
                 Text("Activity")
                     .dsText(.heading24)
                     .foregroundStyle(DS.headInk)

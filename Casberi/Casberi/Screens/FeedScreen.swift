@@ -2160,6 +2160,16 @@ struct FeedScreen: View {
             guard isActive else { return }
             chrome.walkSheetOpen = open
         }
+        // The pager's swipe right (prd §1814): what this page goes back to
+        // inside its room, and the going.
+        .onChange(of: isActive ? pageBackWord : nil, initial: true) { _, word in
+            guard isActive else { return }
+            chrome.pageBackWord = word
+        }
+        .onChange(of: chrome.swipeBack) { _, _ in
+            guard isActive, pageBackWord != nil else { return }
+            clearRoomPick?()
+        }
         // One `.sheet(item:)` for every sheet this screen presents — see
         // `FeedSheetRoute`'s doc comment for why five separate `.sheet`
         // modifiers here caused the first tap to silently self-dismiss.

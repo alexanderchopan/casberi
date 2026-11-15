@@ -33,7 +33,7 @@ extension FeedScreen {
     func walletDoor(_ section: WalletSection, name: String? = nil, figure: String? = nil,
                     figureTone: Color = DS.textPrimary, word: String? = nil,
                     wordTone: Color = DS.textSecondary, act: (() -> Void)? = nil) -> some View {
-        walletDoorRow(glyph: section.glyph, name: name ?? section.label, figure: figure,
+        walletDoorRow(name: name ?? section.label, figure: figure,
                       figureTone: figureTone, word: word, wordTone: wordTone) {
             // Account opens on the Safe, whatever was looked at last (prd
             // §1785): the address someone comes to copy is never Aztec's
@@ -46,7 +46,7 @@ extension FeedScreen {
     }
 
     /// A door's row, drawn for a section or by hand.
-    func walletDoorRow(glyph: String, glyphTone: Color = DS.brandInk, name: String, figure: String? = nil,
+    func walletDoorRow(name: String, figure: String? = nil,
                        figureTone: Color = DS.textPrimary, word: String? = nil,
                        wordTone: Color = DS.textSecondary, act: @escaping () -> Void) -> some View {
         Button {
@@ -54,11 +54,7 @@ extension FeedScreen {
             act()
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
-                Image(systemName: glyph)
-                    .dsGlyph(.body)
-                    .foregroundStyle(glyphTone)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
+                // No glyph, at the left edge (prd §1814).
                 Text(verbatim: name)
                     .dsText(.heading24)
                     .foregroundStyle(DS.headInk)

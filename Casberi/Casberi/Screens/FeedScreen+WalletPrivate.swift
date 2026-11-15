@@ -458,11 +458,6 @@ extension FeedScreen {
     private func walletPrivateHead(total: String?) -> some View {
         Button { walletOpenPrivate(.deposit) } label: {
             HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
-                Image(systemName: "eye.slash")
-                    .dsGlyph(.body)
-                    .foregroundStyle(DS.pickInk)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
                 Text("Private")
                     .dsText(.heading24)
                     .foregroundStyle(DS.headInk)

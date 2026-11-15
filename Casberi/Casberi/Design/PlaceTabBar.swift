@@ -111,7 +111,6 @@ enum PlaceTab: String, Identifiable, CaseIterable {
 /// scroll fold the band already had; prd §1735); a scroll back up unfolds it.
 struct PlaceTabBar: View {
     @Environment(ShellChrome.self) private var chrome
-    let current: PlaceTab?
     let open: (PlaceTab) -> Void
     /// Each tab's presses, for the glyph's bounce (user, 2026-10-19: "they
     /// should" animate when touched). Library's face spins instead, on the
@@ -141,53 +140,21 @@ struct PlaceTabBar: View {
         // still side by side on the swipe (`places`).
         HStack(spacing: DS.Space.s2) {
             Spacer(minLength: 0)
-            // **HOME AND MOVE, ONE CAPSULE (prd §1812, user: "no matter what
-            // screen someone is on they can always get back home"; "the
-            // wallet icon should be in a capsule w/ the money icon"; "i don't
-            // think it should be on the left").** The place, then the act, on
-            // the bar's own glass at the trailing edge.
-            HStack(spacing: 0) {
-                homeSeat
-                moveSeat
-            }
-            .dsGlass(cornerRadius: size / 2, tint: Self.lens)
-            // The capture flight lands on the one thing here.
-            .background { FeedTabFrame() }
+            // **MOVE ALONE (prd §1814, retiring §1812's Home seat; user: "now
+            // that activity no longer has category pages, do we need to have
+            // wallet be a button in the capsule at bottom?").** The seat was
+            // one tap home from four levels down; the levels are Home,
+            // Activity and an app now, every page swipes right to its parent
+            // and every title leads back, so the act stands by itself on the
+            // bar's glass, as §1809 first drew it.
+            moveSeat
+                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
+                // The capture flight lands on the one thing here.
+                .background { FeedTabFrame() }
         }
     }
 
-    /// You are on Home itself: the Wallet's place with no page of its open.
-    private var atHome: Bool {
-        current == .wallet && (chrome.walletSection ?? .home) == .home
-    }
-
-    /// Home's seat: the wallet glyph the place wears on the rail (prd
-    /// §1402). On Home it stands on the strong fill in the pick's pink, as
-    /// the picked tab did in the capsule of places (§1715); anywhere else it
-    /// is grey, and one tap from any page.
-    private var homeSeat: some View {
-        Button {
-            taps[.wallet, default: 0] &+= 1
-            DSHaptic.tap()
-            open(.wallet)
-        } label: {
-            Image(systemName: PlaceTab.wallet.glyph)
-                .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(atHome ? DS.pickInk : DS.textSecondary)
-                .symbolEffect(.bounce, value: taps[.wallet] ?? 0)
-                .frame(width: size, height: size)
-                .background {
-                    Circle().fill(atHome ? DS.fillStrong : .clear)
-                        .padding(DS.Space.s1)
-                }
-                .dsTapTarget(Circle())
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(verbatim: PlaceTab.wallet.label))
-        .accessibilityAddTraits(atHome ? .isSelected : [])
-    }
-
-    /// Move's seat, the capsule's trailing end: it raises the Move tray over
+    /// Move's seat: it raises the Move tray over
     /// wherever you stand (prd §1442), through the one door every tab press
     /// takes.
     ///

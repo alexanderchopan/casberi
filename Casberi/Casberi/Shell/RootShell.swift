@@ -2628,8 +2628,7 @@ struct RootShell: View {
                             // The demo's mark rides the page's title row now
                             // (`demoTagOnTitle`, prd §1389), never the band:
                             // the bar unfolds across the width and would meet it.
-                            PlaceTabBar(current: PlaceTab.current(sceneState.filter.source),
-                                        open: openPlaceTab)
+                            PlaceTabBar(open: openPlaceTab)
                         }
                     } else if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
                         DockDoors(onAccounts: {

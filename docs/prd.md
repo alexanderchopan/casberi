@@ -73096,3 +73096,23 @@ RavenHouse's owner can switch a gate on: `updateWhitelist` points the portal at 
 **Mac half (§1402).** None: the iPad and the Mac keep their category rooms as the second column, with their tiles and covers. Not built there.
 
 **Checks.** None new. **Seen** on the simulator with the demo: Activity with plain category words, an app's page titled "Home · Activity · <app>" going back to Activity, and its doors.
+
+## §1814 — Every page swipes right to its parent, the bar is Move alone, and a section's name is its name alone at the left edge (amends §1813, §1812, §1809, §1807, §1496, §1252, §752) (user, 2026-11-15, of the canvas "Casberi without category pages" and five builds on the simulator: "right now the list runs together", "we can now give the section titles in feed same size we use in wallet … the feed is now cleaner", "when i am on Apps page it swiped back to wallet but most other pages don't swipe", "now that activity no longer has category pages, do we need to have wallet be a button in the capsule at bottom?", "Yes, both", "we can make the gray cards on home darker too", "on the phone they are much lighter than they are on the sim", "right now with the glyphs everywhere it can bleed all together", "yes drop and put to left edge")
+
+Four changes, one day, all toward fewer things on the screen.
+
+1. **Every page on the phone swipes right to its parent, and nowhere on the left.** Measured before: Apps (a card on Home) swiped right to Activity; Home's pages (Holdings, Positions, Account) sprang back on the right and walked to Activity on the left; an app's page went back to Activity. Now Apps goes Home; a page with a parent inside its own room (a Home page, an app's list, a Notes folder, the private account) goes to that parent through the same action its title's grey word takes (`FeedScreen.clearRoomPick`, published as `ShellChrome.pageBackWord`, taken on `swipeBack`); a page whose parent is another place is walked by the pager as before. Home and Activity alone stand side by side. The card under a dragged page names where it goes ("Home", "Activity", the app), never "Feed" or "Wallet". This retires the 2026-10-28 rule against a swipe back on in-room pages: its reason was the swipe between five places, and there are two.
+
+2. **The bar is Move alone (retiring §1812's Home seat).** The seat was one tap home from four levels down. The levels are Home, Activity and an app; item 1 makes Home one or two swipes from anywhere, and every title leads back. Apps is titled "Home · Apps" on the phone, Home pressable, because the bar no longer takes you out of it.
+
+3. **A section's name is its name alone, at the left edge (amending §1496 and §1252's glyph on a section name).** Activity's category words were `label12` grey and the sections ran into one list; they took the Wallet's section rung (`heading24`, white) with more air above. Then the glyph went, everywhere: a pink symbol led every section name in the column where the rows' icons and their own pink verbs stand, so a title stopped reading as a title. The name stands where the glyph stood, hanging left of the rows' words; position separates the sections and pink means a verb or a pick again. Drawn by `ActivityWord`, `SectionPanelName`, `walletDoorRow`, the Feed's pinned header, the Private head, the address card's Activity and Apps' open folder. An app's own mark in a header (`SectionPanelName.mark`) stays. `section-glyph-audit.py` is reversed: it fails a section name led by a glyph, with two named allowances (a field's glyph, a back row's chevron). §1496's "a name starts where every row's title starts" is retired with it; the rung and the rows' column stand.
+
+4. **Home's cards are darker.** `DS.fillQuiet` in the dark goes from 6% to 4% white: on the phone's OLED the 6% read as a grey slab. The map's tiles keep `fillFaint`.
+
+**Lost, said plainly.** One tap home from a deep page is two swipes or a tap at the top now. A section no longer shows its category's symbol; Apps' folder grid still does.
+
+**Owed.** `SectionPanelName.glyph` and the glyph arguments its callers pass are no longer drawn and are still in the code; they go once this look has stood on the phone.
+
+**Mac half (§1402).** The swipe and the bar are the phone's: the rail keeps Home · Activity · Apps and Move, and nothing walks differently there. Section names lose their glyph on the iPad and the Mac too, since the templates are shared; not looked at there.
+
+**Checks.** `section-glyph-audit.py` (reversed, 8 self-test cases). **Seen** on the simulator with the demo: Following → GitHub → Activity → Home on three swipes right, Apps → Home, Holdings → Home, a swipe left on Holdings staying put, the bar as Move alone, "Home · Apps", Activity's names at the left edge.

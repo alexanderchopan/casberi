@@ -2699,6 +2699,24 @@ struct MainSurface: View {
             // the walk's ends spring back, as they did beside the rail (§1402).
             return
         }
+        // Back inside the room (prd §1814): the page comes to rest as a room
+        // swipe's does, a cut, and the screen takes its title's way back.
+        if target == ShellChrome.backTarget {
+            var plain = Transaction()
+            plain.disablesAnimations = true
+            withTransaction(plain) {
+                chrome.pageDragX = 0
+                chrome.pageDragProgress = 0
+                chrome.pageDragTarget = nil
+            }
+            GestureGate.set(swipe: false)
+            chrome.swipeBack &+= 1
+            return
+        }
+        // Apps goes to Home itself, not the page of it you last opened.
+        if target == CategoryFold.walletRoom, HomeScope.Place(source: filter.source) != nil {
+            chrome.walletSection = .home
+        }
         // The card leaving is the heaviest thing the dock does, and it felt
         // like a chip tick (2026-09-06, the haptic grammar).
         DSHaptic.fly()
@@ -2768,6 +2786,20 @@ struct MainSurface: View {
             // The tabs, in the bar's order (prd §1327 item 6); Markets walks
             // from the Wallet, whose tile it is.
             let walk = phoneWalk
+            // **EVERY PAGE SWIPES RIGHT TO ITS PARENT, AND NOWHERE ON THE LEFT
+            // (prd §1814, user: "when i am on Apps page it swiped back to
+            // wallet but most other pages don't swipe").** Apps opens from
+            // Home and swiped to Activity; Home's pages sprang back on the
+            // right and walked to Activity on the left. Apps goes Home, and
+            // a page with a parent in its own room (Positions, an app's
+            // list, a Notes folder) goes to it, the way its title's grey
+            // word does. Home and Activity alone stand side by side.
+            if HomeScope.Place(source: filter.source) != nil {
+                return delta < 0 ? CategoryFold.walletRoom : nil
+            }
+            if filter.source != "All", chrome.pageBackWord != nil {
+                return delta < 0 ? ShellChrome.backTarget : nil
+            }
             // A page at Activity's place goes back to Activity on the swipe
             // right, and nowhere on the left (prd §1809).
             if filter.source != "All", filter.source != CategoryFold.walletRoom,
@@ -3678,7 +3710,11 @@ private struct PagerCover: View {
             let edge: Alignment = side >= 0 ? .leading : .trailing
             VStack(alignment: side >= 0 ? .leading : .trailing,
                    spacing: DS.Space.s3) {
-                if HomeScope.contains(label) {
+                if label == ShellChrome.backTarget {
+                    // The page this one goes back to, by its word (§1814).
+                    Text(verbatim: chrome.pageBackWord ?? "")
+                        .dsText(.heading40).foregroundStyle(DS.headInk)
+                } else if HomeScope.contains(label) {
                     // You's places by their own words: the Feed (prd §1203,
                     // the source is "All") and, since a room opened on top
                     // goes back to the pole it came from, Notes (Markets is
@@ -3687,7 +3723,7 @@ private struct PagerCover: View {
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
                          : HomeScope.Place(source: label) == .settings ? String(localized: "Apps")
                          : HomeScope.Place(source: label) == .move ? String(localized: "Move")
-                         : String(localized: "Feed"))
+                         : PlaceTab.feed.label)
                         .dsText(.heading40).foregroundStyle(DS.headInk)
                 } else {
                     // Bare, as the dock draws it — no rim, no disc (user:
@@ -3704,7 +3740,8 @@ private struct PagerCover: View {
                     } else {
                         BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
                     }
-                    Text(label)
+                    // The Wallet's place is Home (prd §1807).
+                    Text(label == CategoryFold.walletRoom ? PlaceTab.wallet.label : label)
                         .dsText(.heading40)
                         .foregroundStyle(DS.headInk)
                 }

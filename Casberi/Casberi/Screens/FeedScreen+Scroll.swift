@@ -562,11 +562,6 @@ extension FeedScreen {
                         }
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
-                            Image(systemName: wallet ? Self.walletHomeGlyph(section) : CategoryFold.glyph(for: section))
-                                .dsGlyph(.body)
-                                .foregroundStyle(DS.brandInk)
-                                .frame(width: DSRoomChassis.headGlyph)
-                                .accessibilityHidden(true)
                             // No transition: the name changes where the list's
                             // own copy stands under it, and the push-off is the
                             // motion. An animated word here drew two names at once.
@@ -905,13 +900,13 @@ struct SectionPanelName<Trailing: View>: View {
                     .frame(width: DSRoomChassis.headGlyph)
                     .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 8 }
                     .accessibilityHidden(true)
-            } else {
-                Image(systemName: glyph)
-                    .dsGlyph(.body)
-                    .foregroundStyle(DS.brandInk)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
             }
+            // **NO GLYPH, AT THE LEFT EDGE (prd §1814, user: "with the glyphs
+            // everywhere it can bleed all together"; "drop and put to left
+            // edge").** A pink symbol led every name, in the column the rows'
+            // icons and their own pink verbs stand in; the name hangs left of
+            // the rows' words now and position does the separating. `glyph`
+            // is no longer drawn here; an app's own `mark` still is.
             if choices.isEmpty, let open {
                 Button {
                     DSHaptic.selection()
@@ -1409,20 +1404,30 @@ struct ActivityWord: View {
     /// **A WORD THAT OPENS WEARS A CHEVRON (prd §1811).** "Money" and
     /// "Social" open a page and "Needs you" does not, and the three drew
     /// alike; the door's chevron is `DSPushRow`'s, at its size and gap.
+    ///
+    /// **A SECTION'S NAME, AT THE LEFT EDGE (prd §1814, user: "we can now
+    /// give the section titles in feed same size we use in wallet … the feed
+    /// is now cleaner"; "the list runs together"; "drop and put to left
+    /// edge").** The word was a small grey label and the sections ran into
+    /// one list. It is the section rung now (§1496), white, with no glyph,
+    /// standing in the icons' column so it hangs left of every row's words,
+    /// and a section's worth of air above it.
     private var word: some View {
-        HStack(spacing: 3) {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
             Text(verbatim: name)
-                .dsText(.label12)
+                .dsText(.heading24)
+                .foregroundStyle(DS.headInk)
+                .lineLimit(1)
             if open != nil {
                 Image(systemName: "chevron.right")
                     .dsGlyph(.tick, weight: .bold)
+                    .foregroundStyle(DS.textSecondary)
                     .accessibilityHidden(true)
             }
         }
-            .foregroundStyle(DS.textSecondary)
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.trailing, DS.Space.s4)
-            .padding(.top, DS.Space.s3)
+            .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
             .contentShape(Rectangle())
     }

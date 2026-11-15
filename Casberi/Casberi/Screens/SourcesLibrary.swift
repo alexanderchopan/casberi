@@ -417,10 +417,6 @@ struct SourcesOpenFolder: View {
                 .accessibilityAddTraits(.isButton)
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
-                    Image(systemName: CategoryFold.glyph(for: folder.category))
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.brandInk)
-                        .frame(width: DSRoomChassis.headGlyph)
                     Text(verbatim: folder.category)
                         .dsText(.heading24).foregroundStyle(DS.headInk)
                     Spacer(minLength: DS.Space.s2)
