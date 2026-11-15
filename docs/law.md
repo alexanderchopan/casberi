@@ -49,7 +49,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A deadline is a bar with ticks, never a thumb (§1006).
 
 ### 3. Shell and navigation
-- The rooms tray is deleted (§1714), and Search with it: it is Apps' field (§1715). Library is named Apps (§1741). On the phone the bar is Feed · Wallet in the capsule with Move's circle apart at the trailing edge; Apps ends the Feed's and the Wallet's title row at the top right, and is still the last page of the swipe (§1783). The Mac's rail is Feed · Wallet · Apps and Move (§1402). The rail's face goes to the Feed. Every room draws its own name first (§930).
+- The rooms tray is deleted (§1714), and Search with it: it is Apps' field (§1715). Library is named Apps (§1741). On the phone the bar is Move alone; Home and Activity stand side by side on the swipe, Apps is a card on Home, and every page swipes right to its parent (§1809, §1814). The Mac's rail is Home · Activity · Apps and Move (§1807, §1402). The rail's face goes to the Feed. Every room draws its own name first (§930).
 - Rooms are reached from Library (a tap on an app of yours goes to its room, §1418) and the Feed's section names (a category's room, §1152). A Library folder's name opens the folder, never a room (§1714).
 - Search's results are unchanged by §1714: typing finds apps, accounts, people, notes and things in groups (§1171, §1185, §1589); Return opens an exact name or hands the words to Find.
 - Notes, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).

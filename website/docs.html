@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Casberi — Docs</title>
-<meta name="description" content="What Casberi does, and how to use it: the Feed, the Wallet, Move, Apps and Search.">
+<meta name="description" content="What Casberi does, and how to use it: Home, Activity, Move, Apps and Search.">
 <meta property="og:title" content="Casberi — Docs">
 <meta property="og:description" content="What Casberi does, and how to use it.">
 <meta property="og:type" content="article">
@@ -366,8 +366,8 @@
   <a class="top" href="#features">Features</a>
   <a class="top" href="#how-to-use">How to use</a>
   <a class="sub" href="#start">Start here</a>
-  <a class="sub" href="#feed">Feed</a>
-  <a class="sub" href="#wallet">Wallet</a>
+  <a class="sub" href="#home">Home</a>
+  <a class="sub" href="#activity">Activity</a>
   <a class="sub" href="#account">Your account</a>
   <a class="sub" href="#move">Move</a>
   <a class="sub" href="#private">Private money</a>
@@ -394,7 +394,7 @@
       <a href="#features"><span>1</span>Features</a>
       <a href="#how-to-use"><span>2</span>How to use</a>
     </div>
-    <p class="updated">Last updated November 14, 2026 · Describes Casberi 3.0.30. The App Store may be a version behind.</p>
+    <p class="updated">Last updated November 15, 2026 · Describes Casberi 3.0.30. The App Store may be a version behind.</p>
   </header>
 
   <!-- ================= FEATURES AT A GLANCE ================= -->
@@ -406,7 +406,7 @@
     <div class="glance-group" id="read">
       <h4>Read</h4>
       <div class="glance-grid">
-        <a class="glance" href="#feed"><b>Feed</b><span>Everything your apps bring in, in one list, by category. Or one app on its own.</span></a>
+        <a class="glance" href="#activity"><b>Activity</b><span>What happened, in your money and in every app you connect: one row per app, under what needs you.</span></a>
         <a class="glance" href="#apps"><b>Apps</b><span>Connect mail, photos, wallets, calendars and a hundred more apps.</span></a>
         <a class="glance" href="#search"><b>Search</b><span>Share from any app or take a screenshot, then find it by what it says.</span></a>
       </div>
@@ -415,7 +415,7 @@
     <div class="glance-group" id="money">
       <h4>Money</h4>
       <div class="glance-grid">
-        <a class="glance" href="#wallet"><b>Wallet</b><span>Every account you follow in one balance, with holdings, spending and risks. Following is read-only.</span></a>
+        <a class="glance" href="#home"><b>Home</b><span>Every account you have and follow in one balance, with holdings, spending and risks. Following is read-only.</span></a>
         <a class="glance" href="#account"><b>Your account</b><span>A public account (Safe) on Base, Ethereum and Robinhood, a private balance (Privacy Pools and Railgun) on Ethereum, and a private account (Aztec) on Aztec. Only your keys move them.</span></a>
         <a class="glance" href="#move"><b>Move</b><span>Send, receive, swap, sweep, lend, buy with a card or spend on a gift card. Face ID approves every move.</span></a>
       </div>
@@ -424,9 +424,9 @@
     <div class="glance-group" id="yours">
       <h4>Yours</h4>
       <div class="glance-grid">
-        <a class="glance" href="#subscriptions"><b>Subscriptions</b><span>What renews and when, found on its own. What it costs, in the Wallet.</span></a>
+        <a class="glance" href="#subscriptions"><b>Subscriptions</b><span>What renews and when, found on its own. What it costs, in Spending.</span></a>
         <a class="glance" href="#privacy"><b>Privacy</b><span>No sign-up, no server, no analytics. Every wallet read goes through Tor on iPhone and iPad.</span></a>
-        <a class="glance" href="#settings"><b>Your options</b><span>Your name and photo, the order of your Feed, widgets, theme, notifications, and where your data lives.</span></a>
+        <a class="glance" href="#settings"><b>Your options</b><span>Your name and photo, the order of Activity, widgets, theme, notifications, and where your data lives.</span></a>
       </div>
     </div>
   </section>
@@ -441,8 +441,8 @@
     <p class="deck">Four steps to start. Then one short page for each part of the app.</p>
     <div class="subtoc">
       <a href="#start">Start here</a>
-      <a href="#feed">Feed</a>
-      <a href="#wallet">Wallet</a>
+      <a href="#home">Home</a>
+      <a href="#activity">Activity</a>
       <a href="#account">Your account</a>
       <a href="#move">Move</a>
       <a href="#private">Private money</a>
@@ -458,45 +458,46 @@
 
     <h3 id="start">Start here</h3>
     <ol class="steps">
-      <li><b>Open it.</b> There’s no account and nothing to sign up for. It opens on your own Feed, empty, with six apps to start with.</li>
-      <li><b>Tap Apps</b>, the grid at the top right. It holds every app you can connect, by category.</li>
+      <li><b>Open it.</b> There’s no account and nothing to sign up for. It opens on Home: your balance, and six cards.</li>
+      <li><b>Tap Apps</b>, a card on Home. It holds every app you can connect, by category.</li>
       <li><b>Pick one and connect it.</b> Calendar and Photos are one tap; an account needs only an address.</li>
-      <li><b>Tap Feed.</b> What you connected is there.</li>
+      <li><b>Open Activity.</b> What you connected is there.</li>
     </ol>
-    <p>Casberi is two places along the bottom, and one act. <b>Feed</b> is what’s happening and <b>Wallet</b> is what you have; swipe between them. <b>Move</b>, the circle at the right, is what you do with your money. <b>Apps</b>, the grid at the top right, is your apps and Casberi’s settings, and its field is Search. On the Mac, Feed, Wallet, Apps and Move run down the side, ⌘1 to ⌘4 open them, and ⌘F goes to Apps’ field.</p>
-    <div class="pager"><a href="#feed"><span>Next</span>Feed →</a></div>
+    <p>Casberi is one wallet, in three parts. <b>Home</b> is what you have: your balance, a map of what it’s in, and six cards — Account, Activity, Apps, Holdings, Risks and Watchlist. <b>Activity</b> is what happened, in your money and your apps; it’s a card on Home, and one swipe to its side. <b>Move</b>, the circle at the bottom, is what you do with your money, and the only thing on the bar. A page’s title says where you are: its grey words go back, and so does a swipe to the right. On the Mac, Home, Activity, Apps and Move run down the side, ⌘1 to ⌘4 open them, and ⌘F goes to Apps’ field.</p>
+    <div class="pager"><a href="#home"><span>Next</span>Home →</a></div>
 
-    <h3 id="feed">Feed</h3>
-    <p>The Feed puts every app you connect in one list, so you don’t open ten apps to see what happened today.</p>
-    <figure class="shot tall fade"><div class="frame"><img src="shots/feed.jpg" alt="The Feed: the newest thing, then a section for each category, with Feed, Wallet and Move along the bottom and Apps at the top right." width="300" height="652" loading="lazy"></div></figure>
-    <p>It leads with the newest thing, then <b>Newest</b>: the five latest, whatever day they came. Under that, one section per category — Day, Notes, Social, Work, Media, Life and Agents — each with today’s rows, one per app. Tap a section’s name for the whole category, or an app for that app alone. A section’s <b>+</b> adds what fits there: an event or a reminder in Day, a note or a voice note in Notes.</p>
-    <p><b>Day</b> is what’s ahead: meetings, reminders and renewals, in date order. Money isn’t in the Feed; it has the Wallet.</p>
-    <p>Tap any row to open it, then open it in the app it came from, or share it. Some rows let you act in place: start an email, put an event on your calendar, turn a note into a reminder. Each write asks first.</p>
-    <div class="pager"><a href="#wallet"><span>Next</span>Wallet →</a></div>
-
-    <h3 id="wallet">Wallet</h3>
-    <p>The Wallet adds up every account you have and follow, so you see all your money in one place, and what could hurt it.</p>
-    <figure class="shot tall fade"><div class="frame"><img src="shots/wallet.jpg" alt="The Wallet’s Home: one balance and its line, then Account, Needs you, Permissions, Risks and Watchlist." width="300" height="652" loading="lazy"></div></figure>
+    <h3 id="home">Home</h3>
+    <p>Home adds up every account you have and follow, so you see all your money in one place, and what could hurt it.</p>
+    <figure class="shot tall fade"><div class="frame"><img src="shots/home.jpg" alt="Home: one balance over a map of what it’s in, Public and Private, then six cards: Account, Activity, Apps, Holdings, Risks and Watchlist." width="300" height="652" loading="lazy"></div></figure>
     <ul class="nothere">
-      <li><strong>See what you have.</strong> <b>Home</b> leads with your balance and its line. <b>Holdings</b> is Public and Private: your tokens, positions and NFTs, then every private balance — Privacy Pools, Railgun and Aztec — in one block. <b>Activity</b> lists every transaction by day.</li>
-      <li><strong>Choose whose money.</strong> The switch under the balance — <b>Yours · Following · All</b> — shows your own account, the accounts you follow, or everything added up. Every page of the Wallet follows it.</li>
+      <li><strong>See what you have.</strong> Home leads with your balance over a map of the tokens it’s in, then Public and Private as two figures. <b>Holdings</b> is Public and Private: your tokens, positions and NFTs, then everything private — Privacy Pools, Railgun and Aztec — in one block.</li>
+      <li><strong>Choose whose money.</strong> The switch under the balance — <b>Yours · Following · All</b> — shows your own account, the accounts you follow, or everything added up. Every page follows it.</li>
       <li><strong>See what you spend.</strong> <b>Spending</b> sets this week or month against the last one, split into Subscriptions, Places, Fees and Round-ups. Fees and round-ups stay out of the total.</li>
-      <li><strong>See what could hurt you.</strong> <b>Needs you</b> lists everything waiting on you. <b>Permissions</b> lists who can spend from you, each approval one tap from a cancellation, and what you’ve let apps on Aztec do, each with Take back. <b>Risks</b> lists address poisoning, fake tokens and fake transfers, and what a privacy scan of your account found.</li>
-      <li><strong>Follow an account.</strong> Tap <b>+</b> and type an address, ENS, <code>.sol</code> or basename, or connect a wallet app or an exchange.</li>
+      <li><strong>See what could hurt you.</strong> <b>Risks</b> lists address poisoning, fake tokens and fake transfers, what a privacy scan of your account found, and who can spend from you: each approval one tap from a cancellation, and what you’ve let apps on Aztec do, each with Take back.</li>
+      <li><strong>Watch a token.</strong> <b>Watchlist</b> follows the price of any token, whether you hold it or not.</li>
+      <li><strong>Follow an account.</strong> <b>Following</b>, on Account, takes an address, ENS, <code>.sol</code> or basename, or a wallet app or an exchange.</li>
     </ul>
     <p><strong>Good to know:</strong> following is read-only. It asks for no permissions, so it can never trade or move funds.</p>
     <details class="more">
       <summary>If you use DeFi</summary>
-      <p>The Wallet also carries Aave and Morpho health, Uniswap positions in or out of range, Hyperliquid liquidation distance, Aerodrome locks and their weekly vote deadline, staked ETH and HYPE, exchange balances and validators — all in one total.</p>
+      <p>Home also carries Aave and Morpho health, Uniswap positions in or out of range, Hyperliquid liquidation distance, Aerodrome locks and their weekly vote deadline, staked ETH and HYPE, exchange balances and validators — all in one total.</p>
       <p>A Safe reads as a Safe: owners, threshold, signature queue. If this device is an owner, <b>Sign</b> sends that one signature to Safe’s own service after Face ID; it can never execute a transaction on its own. MetaMask Card, ether.fi and Plasma One card spends, Peer onramp fills, 0xBow deposits clearing and Railgun shields show as ordinary rows. Spam folds into a pile you can mute.</p>
     </details>
+    <div class="pager"><a href="#activity"><span>Next</span>Activity →</a></div>
+
+    <h3 id="activity">Activity</h3>
+    <p>Activity is what happened, in your money and in every app you connect, so you don’t open ten apps to see.</p>
+    <figure class="shot tall fade"><div class="frame"><img src="shots/activity.jpg" alt="Activity: Needs you, then Wallet and a section for each kind of app, one row per app." width="300" height="652" loading="lazy"></div></figure>
+    <p>It leads with <b>Needs you</b>: what’s waiting on you, in your account and in your apps. Then <b>Wallet</b>, your latest moves, and a section for each kind of app — Day, Notes, Social, Work, Media, Life and Agents — with one row per app, its newest thing. Tap a row to open the thing; tap its icon for that app alone.</p>
+    <p><b>Day</b> is each app’s next thing: meetings, reminders and renewals. <b>Wallet</b> opens Money, every move by day.</p>
+    <p>Tap any row to open it, then open it in the app it came from, or share it. Some rows let you act in place: start an email, put an event on your calendar, turn a note into a reminder. Each write asks first.</p>
     <div class="pager"><a href="#account"><span>Next</span>Your account →</a></div>
 
     <h3 id="account">Your account</h3>
     <p>An account of your own lets you move money from Casberi, with no phrase to write down. Casberi never holds it: only your keys can move it. It lives on Base, Ethereum and Robinhood.</p>
     <p>It comes in three parts: your <b>public account</b> (a Safe, on Base, Ethereum and Robinhood), your <b>private balance</b> (Privacy Pools and Railgun, on Ethereum) and your <b>private account</b> (Aztec, on Aztec). See <a href="#private">Private money</a>. The private account is made the first time you use it, from a key in your iCloud Keychain, and every transaction it makes is proved on your iPhone.</p>
-    <figure class="shot tall fade"><div class="frame"><img src="shots/account.jpg" alt="Account: your public account’s address and networks, two private doors, then your keys." width="300" height="652" loading="lazy"></div></figure>
-    <p>Your account is made the first time you open the Wallet. <b>Finish setup</b>, on the Wallet’s Home, takes four steps:</p>
+    <figure class="shot tall fade"><div class="frame"><img src="shots/account.jpg" alt="Account: your public account’s address and networks, two private doors, Following, then your keys." width="300" height="652" loading="lazy"></div></figure>
+    <p>Your account is made for you the first time you open Casberi. <b>Finish setup</b>, on Home, takes four steps:</p>
     <ol class="steps">
       <li><b>A recovery key in iCloud Keychain.</b> If you lose this device, your account opens on another.</li>
       <li><b>A co-signer in another wallet</b>, if you want one. That wallet signs once to prove it can.</li>
@@ -504,7 +505,7 @@
       <li><b>Round-ups</b>, if you want them. See <a href="#move">Move</a>.</li>
     </ol>
     <ul class="nothere">
-      <li><strong>See your account.</strong> <b>Account</b>, on the Wallet’s Home, opens on your public account: its address, its networks and Copy. Under it, Private is a door each to your private balance and your private account. Then your keys: this iPhone, Backup, the co-signer and Export keys. Then Networks, Tor and Nodes, and last, round-ups and your savings goal.</li>
+      <li><strong>See your account.</strong> <b>Account</b>, a card on Home, opens on your public account: its address, its networks and Copy. Under it, Private is a door each to your private balance and your private account, and Following is the accounts you follow. Then your keys: this iPhone, Backup, the co-signer and Export keys. Then Networks, Tor and Nodes, round-ups and your savings goal, and last, Casberi’s settings.</li>
       <li><strong>See your Aztec address.</strong> <b>Private account</b> opens a page of its own: your Aztec address, one tap to copy, under its rule, Aztec to Aztec only. The address at the top of Account is always your public one.</li>
       <li><strong>Check your recovery key.</strong> Once a month, Needs you asks you to: Face ID and a test signature, no fee, nothing sent.</li>
       <li><strong>Take it elsewhere.</strong> <b>Export keys</b> asks which account. For your Safe it makes a new private key, adds it as an owner on every network, Robinhood included, and shows it once, so the account opens in another wallet without Casberi. For Aztec it shows the account’s own keys once. Your co-signer approves either.</li>
@@ -597,9 +598,9 @@
     <div class="pager"><a href="#apps"><span>Next</span>Apps →</a></div>
 
     <h3 id="apps">Apps</h3>
-    <p>Apps is where you connect apps and find everything that’s yours. It’s the grid at the top right of the Feed and the Wallet, and the last page when you swipe.</p>
+    <p>Apps is where you connect apps and find everything that’s yours. It’s a card on Home.</p>
     <figure class="shot tall fade"><div class="frame"><img src="shots/apps.jpg" alt="Apps: a search field, then a folder for each category with its apps." width="300" height="652" loading="lazy"></div></figure>
-    <p>It’s a search field and folders: Casberi’s own settings first, then a folder for each category with its apps. Tap an app you have and its feed rises; hold it for Open and Settings. Two open a page of their own: <b>Contacts</b>, in Social, and <b>Calendar</b>, in Day, which is your calendars and the ones you subscribe to. The Wallet folder starts with <b>Aztec directory</b>, where apps on Aztec open in Casberi; the ones you’ve connected stand beside it as tiles, and connect again on their own.</p>
+    <p>It’s a search field and folders, one for each category with its apps. Tap an app you have and its page opens; hold it for Open and Settings. Two open a page of their own: <b>Contacts</b>, in Social, and <b>Calendar</b>, in Day, which is your calendars and the ones you subscribe to. The Wallet folder starts with <b>Aztec directory</b>, where apps on Aztec open in Casberi; the ones you’ve connected stand beside it as tiles, and connect again on their own.</p>
     <p><b>Contacts</b> is everyone you deal with, one row a person: the cards on your phone, the people you follow and the names in your wallet. A contact with a wallet has <b>Send</b>, and one with a zk.money tag has <b>Pay</b>. When a transfer names an address you don’t know, <b>Save</b> asks who it is: someone you have, or a new name. Every transfer with them then reads the name.</p>
     <figure class="shot tall fade"><div class="frame"><img src="shots/contacts.jpg" alt="Contacts: everyone you deal with, one row a person." width="300" height="652" loading="lazy"></div></figure>
     <p>Over a hundred apps, connecting three ways:</p>
@@ -612,13 +613,13 @@
 
     <h3 id="subscriptions">Subscriptions</h3>
     <p>Casberi finds what you pay for again and again, so nothing renews without you seeing it.</p>
-    <p>Every subscription is in Apps, under <b>Subscriptions</b>, with the day it renews. Casberi finds a charge that repeats at one price, from your cards, Apple Wallet or Rocket Money. Add any it missed with <b>Track a subscription</b>. What they cost is in the Wallet, under Spending › Subscriptions, with the month’s total and a calendar of renewals.</p>
+    <p>Every subscription is in Apps, under <b>Subscriptions</b>, with the day it renews. Casberi finds a charge that repeats at one price, from your cards, Apple Wallet or Rocket Money. Add any it missed with <b>Track a subscription</b>. What they cost is in Spending, under Subscriptions, with the month’s total and a calendar of renewals.</p>
     <p>The mailing lists that write to you are under <b>Mail lists</b>, each with a way out. To follow a calendar you don’t own, paste its link — <code>webcal://</code> or an <code>.ics</code> — under Calendars. Its events land in Day.</p>
     <div class="pager"><a href="#notes"><span>Next</span>Notes →</a></div>
 
     <h3 id="notes">Notes</h3>
     <p>Notes keeps everything you write in one place: your own notes, and what Obsidian, Notion, Day One and Apple Journal hold.</p>
-    <p>It’s a section of the Feed; your notes’ page — All, Folders, Voice — is in Apps’ Notes folder. Check off a list, record a voice note, attach a picture or a sketch, file into folders, or lock one. A passage you keep from anything you read lands here as a highlight.</p>
+    <p>It’s a section of Activity; your notes’ page — All, Folders, Voice — is in Apps’ Notes folder. Check off a list, record a voice note, attach a picture or a sketch, file into folders, or lock one. A passage you keep from anything you read lands here as a highlight.</p>
     <div class="pager"><a href="#search"><span>Next</span>Search →</a></div>
 
     <h3 id="search">Search</h3>
@@ -665,7 +666,7 @@
     <div class="pager"><a href="#settings"><span>Next</span>Your options →</a></div>
 
     <h3 id="settings">Your options</h3>
-    <p>Casberi’s own settings come first in Apps: your photo and name, your data, the order of the Feed’s sections, theme, notifications, language, support and licenses.</p>
+    <p>Casberi’s own settings close the Account page: your photo and name, your data, the order of Activity’s sections, theme, notifications, language, support and licenses.</p>
     <p><strong>Your data</strong> is all on your device. Export, import or delete it anytime, and turn iCloud sync on if you want it.</p>
     <p><strong>Notifications</strong> are two switches, <b>Wallet</b> and <b>Feed</b>. They arrive as Casberi finds them, one per app.</p>
     <p><strong>An agent you bring</strong> — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, Grok, NEAR AI or Muse — connects from Apps like every other app. Its key lives in the Keychain, and what it sends goes from your device straight to that provider, billed to you. <strong>Your own model</strong> is a server you run that speaks OpenAI’s format: give its address, a key only if it asks for one, and pick a model. Apple Intelligence needs no key. In the composer, the agent you connected is picked; Send asks it, and if it fails, it says so. There is no Casberi server in between.</p>
@@ -673,7 +674,7 @@
     <h3 id="stuck" class="plain">If something’s missing</h3>
     <details>
       <summary>I connected an app and nothing showed up</summary>
-      <p>Pull down on the Feed to refresh. If it’s an Apple app, check iOS Settings → Casberi and make sure you said yes. Some apps are quiet on purpose: Trello, for instance, only shows cards assigned to you, and the app tells you so.</p>
+      <p>Pull down on Activity to refresh. If it’s an Apple app, check iOS Settings → Casberi and make sure you said yes. Some apps are quiet on purpose: Trello, for instance, only shows cards assigned to you, and the app tells you so.</p>
     </details>
     <details>
       <summary>My screenshots aren’t updating</summary>
@@ -681,11 +682,11 @@
     </details>
     <details>
       <summary>An account shows no balance</summary>
-      <p>Give the first read a moment, then pull to refresh. Pick <b>Following</b> on the Wallet’s switch and check the address.</p>
+      <p>Give the first read a moment, then pull to refresh. Pick <b>Following</b> on Home’s switch and check the address.</p>
     </details>
     <details>
       <summary>Tor can’t connect, or my wallets aren’t refreshing</summary>
-      <p>Wallet › Account shows Tor as On, Connecting or Can’t connect. Some networks block Tor: try another Wi-Fi, or cellular. Casberi starts Tor’s connections again when your network changes. Until it connects, each wallet shows its last reading, with its time.</p>
+      <p>Account shows Tor as On, Connecting or Can’t connect. Some networks block Tor: try another Wi-Fi, or cellular. Casberi starts Tor’s connections again when your network changes. Until it connects, each wallet shows its last reading, with its time.</p>
     </details>
     <details>
       <summary>A swap was refused before Face ID</summary>
@@ -723,8 +724,8 @@
     <details><summary>Is it audited?</summary><p>Casberi’s own code has not been independently audited. It deploys no contract of its own: your account is built from Safe’s audited contracts and, when you require your co-signer, Rhinestone’s audited OwnableValidator, and swaps call Uniswap, Aerodrome and Across contracts directly. Every move is run on the network before Face ID, and the source is public under the GPLv3.</p></details>
     <details><summary>How do round-ups work?</summary><p>Turn on round-ups and every send rounds up to the next $1 or $5, your pick. The change is set aside on Aave on Base, where it earns in the open. Once it reaches $10, the next send moves it into your private balance in Privacy Pools, where it keeps earning: one Face ID for both. What it saved is under Spending, in Round-ups, and stays out of your spending total.</p></details>
     <details><summary>How does my private balance work?</summary><p>It’s money only you can see, on Ethereum. You never choose where it sits: ETH and USDC go into 0xBow’s Privacy Pools, where 0xBow reviews each deposit before it can be spent and it earns interest on Aave once approved; any other token goes into Railgun, private in about an hour. Tap Add money under Private in Holdings, or in Move pick Send and choose Your private balance as the recipient, $10 at least. To pay from it, pick a private token in Send’s token list: a relayer or a Railgun broadcaster posts the payment for a fee shown before Face ID, so it doesn’t come from your account’s address. Take it back returns it to your account at any time. Your account owns it; Casberi never does.</p></details>
-    <details><summary>How does my private account on Aztec work?</summary><p>It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to <b>Your private account</b> to move USDC or ETH in through Shield, any amount you type; Shield first asks for a Human Passport score of 20, and the first time, 30 AZTEC goes along as gas. To pay from it, pick its token under Private in Send’s token list: privately to any Aztec account, or out to any Ethereum address. Aztec’s directory is in Apps’ Wallet folder: its apps open in Casberi, and connect once you pick Casberi in the app and match the emoji. An app you’ve connected stands beside the directory as a tile, and what you’ve let it do is in Wallet › Permissions, with Take back.</p></details>
-    <details><summary>What if Casberi goes away?</summary><p>Your money stays where it is. Export a private key from Wallet › Account: it’s added as an owner of your account and shown once, and the account opens in another wallet without Casberi.</p></details>
+    <details><summary>How does my private account on Aztec work?</summary><p>It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to <b>Your private account</b> to move USDC or ETH in through Shield, any amount you type; Shield first asks for a Human Passport score of 20, and the first time, 30 AZTEC goes along as gas. To pay from it, pick its token under Private in Send’s token list: privately to any Aztec account, or out to any Ethereum address. Aztec’s directory is in Apps’ Wallet folder: its apps open in Casberi, and connect once you pick Casberi in the app and match the emoji. An app you’ve connected stands beside the directory as a tile, and what you’ve let it do is in Risks, with Take back.</p></details>
+    <details><summary>What if Casberi goes away?</summary><p>Your money stays where it is. Export a private key from Account: it’s added as an owner of your account and shown once, and the account opens in another wallet without Casberi.</p></details>
     <details><summary>Which networks?</summary><p>Your account is on Base, Ethereum and Robinhood Chain. The accounts you follow are read on Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain, Arc, Tempo, Plasma, Robinhood Chain and Solana, plus Bitcoin wallets and the exchanges you connect.</p></details>
     <details><summary>Why Tor?</summary><p>So no service you ask about a wallet learns where you are, or that the wallets you look at belong to one person. It’s always on for wallet reads on iPhone and iPad, and your other apps never go through it.</p></details>
   </section>
@@ -859,8 +860,8 @@
 {"@type": "Question", "name": "Is it audited?", "acceptedAnswer": {"@type": "Answer", "text": "Casberi’s own code has not been independently audited. It deploys no contract of its own: your account is built from Safe’s audited contracts and, when you require your co-signer, Rhinestone’s audited OwnableValidator, and swaps call Uniswap, Aerodrome and Across contracts directly. Every move is run on the network before Face ID, and the source is public under the GPLv3."}},
 {"@type": "Question", "name": "How do round-ups work?", "acceptedAnswer": {"@type": "Answer", "text": "Turn on round-ups and every send rounds up to the next $1 or $5, your pick. The change is set aside on Aave on Base, where it earns in the open. Once it reaches $10, the next send moves it into your private balance in Privacy Pools, where it keeps earning: one Face ID for both. What it saved is under Spending, in Round-ups, and stays out of your spending total."}},
 {"@type": "Question", "name": "How does my private balance work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s money only you can see, on Ethereum. You never choose where it sits: ETH and USDC go into 0xBow’s Privacy Pools, where 0xBow reviews each deposit before it can be spent and it earns interest on Aave once approved; any other token goes into Railgun, private in about an hour. Tap Add money under Private in Holdings, or in Move pick Send and choose Your private balance as the recipient, $10 at least. To pay from it, pick a private token in Send’s token list: a relayer or a Railgun broadcaster posts the payment for a fee shown before Face ID, so it doesn’t come from your account’s address. Take it back returns it to your account at any time. Your account owns it; Casberi never does."}},
-{"@type": "Question", "name": "How does my private account on Aztec work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to Your private account to move USDC or ETH in through Shield, any amount you type; Shield first asks for a Human Passport score of 20, and the first time, 30 AZTEC goes along as gas. To pay from it, pick its token under Private in Send’s token list: privately to any Aztec account, or out to any Ethereum address. Aztec’s directory is in Apps’ Wallet folder: its apps open in Casberi, and connect once you pick Casberi in the app and match the emoji. An app you’ve connected stands beside the directory as a tile, and what you’ve let it do is in Wallet › Permissions, with Take back."}},
-{"@type": "Question", "name": "What if Casberi goes away?", "acceptedAnswer": {"@type": "Answer", "text": "Your money stays where it is. Export a private key from Wallet › Account: it’s added as an owner of your account and shown once, and the account opens in another wallet without Casberi."}},
+{"@type": "Question", "name": "How does my private account on Aztec work?", "acceptedAnswer": {"@type": "Answer", "text": "It’s an account of its own on Aztec, where your balance, payments and apps are all private. It’s made the first time you use it, from a key in your iCloud Keychain, and every transaction is proved on your iPhone. Send to Your private account to move USDC or ETH in through Shield, any amount you type; Shield first asks for a Human Passport score of 20, and the first time, 30 AZTEC goes along as gas. To pay from it, pick its token under Private in Send’s token list: privately to any Aztec account, or out to any Ethereum address. Aztec’s directory is in Apps’ Wallet folder: its apps open in Casberi, and connect once you pick Casberi in the app and match the emoji. An app you’ve connected stands beside the directory as a tile, and what you’ve let it do is in Risks, with Take back."}},
+{"@type": "Question", "name": "What if Casberi goes away?", "acceptedAnswer": {"@type": "Answer", "text": "Your money stays where it is. Export a private key from Account: it’s added as an owner of your account and shown once, and the account opens in another wallet without Casberi."}},
 {"@type": "Question", "name": "Which networks?", "acceptedAnswer": {"@type": "Answer", "text": "Your account is on Base, Ethereum and Robinhood Chain. The accounts you follow are read on Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain, Arc, Tempo, Plasma, Robinhood Chain and Solana, plus Bitcoin wallets and the exchanges you connect."}},
 {"@type": "Question", "name": "Why Tor?", "acceptedAnswer": {"@type": "Answer", "text": "So no service you ask about a wallet learns where you are, or that the wallets you look at belong to one person. It’s always on for wallet reads on iPhone and iPad, and your other apps never go through it."}}
 ]}
