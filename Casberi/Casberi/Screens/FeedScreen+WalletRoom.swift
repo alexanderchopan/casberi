@@ -53,7 +53,9 @@ extension FeedScreen {
         case .activity:
             WalletActivityFigure(moves: Self.walletMoves(visible.live))
         // Home's doors state their own count (prd §1480).
-        case .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes:
+        case .permissions, .threats:
+            EmptyView()
+        case .yourAccount, .following, .needsYou, .recoveryKey, .nodes:
             walletPageFigure(section, upcoming: upcoming)
         // The watchlist's count, and a token's price and chart (prd §1632).
         case .watchlist, .watchedToken:
@@ -189,6 +191,10 @@ extension FeedScreen {
                 // Home's box (prd §1807); at the standard height the map
                 // kept two holdings and Other.
                 homeExtra: walletHomeExtra,
+                // **RISKS HAS NO BOX (prd §1809, user: "Risks shouldn't have
+                // a box remember we got rid of it").** The disc never worked
+                // and the trend said little; the page is its rows.
+                boxless: active == .threats || active == .permissions,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.
@@ -1771,6 +1777,11 @@ extension FeedScreen {
                     // map's own eyebrow saying the header's words again. The
                     // header is the card's title and always was.
                     GenRender(id: "root", els: blockStream.els)
+                        // Private money read after the map was drawn folds
+                        // into its tokens when it lands (prd §1809).
+                        .onChange(of: walletPrivateByToken) { _, _ in
+                            if let shown = portfolioShown { blockStream.paint(walletMapDoc(shown)) }
+                        }
                         // The day's heat map (prd §1090): each tile's move.
                         .environment(\.holdingsDayMoves, walletHoldingMoves)
                         // SimpleFIN picked: its cash wears the bank's mark (prd §1702).

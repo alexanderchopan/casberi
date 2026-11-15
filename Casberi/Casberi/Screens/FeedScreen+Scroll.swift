@@ -23,8 +23,14 @@ extension FeedScreen {
     @MainActor static var sectionCapNow: (category: String, rows: Int)?
 
     /// Whether this screen is the stacked Feed: the phone's All page.
+    ///
+    /// **WITH OR WITHOUT AN APP CONNECTED (prd §1809).** It waited for a
+    /// connected app, so a new phone with your things already in iCloud and
+    /// no app connected yet drew the older page: a "Newest" cover and large
+    /// section names. One Activity for everyone; with nothing at all, the
+    /// start box (`feedStarts`).
     var scrollsCategories: Bool {
-        source == "All" && roomScopeInRoom && filter.tag == "All" && bridges.connectedCount > 0
+        source == "All" && roomScopeInRoom && filter.tag == "All"
     }
 
     /// The categories the Feed stacks: every one with a room, in the dock's
@@ -131,10 +137,62 @@ extension FeedScreen {
             // first. Day and Notes are gathered, not one app's, and keep
             // their own rows.
             let rows = category == HomeScope.notesSection ? notesFeedRows.live : (byCategory[category] ?? []).live
-            scrollSection(category,
-                          category == HomeScope.notesSection || category == RoomAccounts.dayRoom
-                              ? rows : Self.newestPerApp(rows),
-                          nextEventID: nextEventID)
+            if quietActivity {
+                // **ONE RULE (prd §1809)**: each app's newest thing; Day's
+                // is each app's next.
+                activitySection(category,
+                                category == RoomAccounts.dayRoom ? Self.nextPerApp(dayFeedRows.live)
+                                    : Self.newestPerApp(rows),
+                                nextEventID: nextEventID) {
+                    chrome.activityReturn = category
+                    openCategory(category)
+                }
+            } else {
+                scrollSection(category,
+                              category == HomeScope.notesSection || category == RoomAccounts.dayRoom
+                                  ? rows : Self.newestPerApp(rows),
+                              nextEventID: nextEventID)
+            }
+        }
+    }
+
+    /// **ACTIVITY IS QUIET (prd §1809, user: "feed still feels overwhelming
+    /// b/c of sections, and b/c money has three rows while some others only
+    /// have one").** On the phone's Activity every category is a small grey
+    /// word over one row per app; beside a pane the sections keep their
+    /// panels, where Day's week stands in the pane (§1403).
+    var quietActivity: Bool { source == "All" && roomBoxPlace == .list && roomSizeClass == .compact }
+
+    /// Day's rule (prd §1809): each app's next thing — an event's start, a
+    /// to-do's due date — today or ahead, soonest first.
+    static func nextPerApp(_ things: [Thing]) -> [Thing] {
+        let today = groupingCalendar.startOfDay(for: .now)
+        var seen = Set<String>()
+        return things.filter { dayWhen($0) >= today }
+            .sorted { dayWhen($0) < dayWhen($1) }
+            .filter { seen.insert($0.source).inserted }
+    }
+
+    /// One category of Activity: its word, then its rows, no day label, no
+    /// More row. The word opens the category's page; a row's icon opens the
+    /// app's; the row opens the thing.
+    @ViewBuilder
+    func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
+                         open: (() -> Void)?) -> some View {
+        let _ = { memo.sectionCounts[name] = rows.count }()
+        if !rows.isEmpty {
+            SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
+                ActivityWord(name: name, open: open)
+            } rows: {
+                daySection("", rows, nextEventID: nextEventID, dated: false, headed: false,
+                           inFeed: true, leadOpens: { thing in
+                               chrome.activityReturn = name
+                               chrome.openAppPage(thing.source)
+                           })
+            }
+            .environment(\.feedSectionPanelFilled, false)
+            // The title and the app's icon, no line under it (prd §1497).
+            .environment(\.dsTitleOnly, true)
         }
     }
 
@@ -157,12 +215,19 @@ extension FeedScreen {
     /// Wallet, each a row onto its page. Nothing waiting, no section.
     @ViewBuilder
     func activityNeedsSection(_ visible: [Thing]) -> some View {
-        let needs = walletNeedsCount(upcoming: walletUpcoming(activityMoneyRows(visible)))
+        let asks = walletUpcoming(activityMoneyRows(visible))
+        let needs = walletNeedsCount(upcoming: asks)
+        // **THE ROW NAMES WHAT WAITS (prd §1809).** It read "Money · 13"
+        // directly over the Money section, two Moneys in a row; it is the
+        // first thing waiting now, and how many more.
+        let first = asks.first(where: \.isLive)?.title
         let yours = YourAccountDemo.shownAddress
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         let wants = pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
         if needs > 0 || wants != nil {
-            panelSection(WalletSection.needsYou.label, glyph: WalletSection.needsYou.glyph, things: []) {
+            SectionPanelGroup(anchor: Self.scrollAnchor(WalletSection.needsYou.label)) {
+                ActivityWord(name: WalletSection.needsYou.label, open: nil)
+            } rows: {
                 if let wants {
                     activityAskRow(glyph: WalletSection.yourAccount.glyph,
                                    name: WalletSection.yourAccount.label, word: wants) {
@@ -175,12 +240,14 @@ extension FeedScreen {
                     }
                 }
                 if needs > 0 {
-                    activityAskRow(glyph: ScopeTileGlyph.wallets, name: String(localized: "Money"),
-                                   word: "\(needs)") {
+                    activityAskRow(glyph: ScopeTileGlyph.wallets,
+                                   name: first ?? String(localized: "Money"),
+                                   word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
                         chrome.openWalletPage(.needsYou)
                     }
                 }
             }
+            .environment(\.feedSectionPanelFilled, false)
         }
     }
 
@@ -201,9 +268,9 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    /// **MONEY, THE LATEST THREE (prd §1807).** What moved, newest first,
-    /// then the door to all of it: the Wallet's Activity page, where
-    /// Spending's doors stand.
+    /// **MONEY, BY THE SAME RULE (prd §1809, amending §1807's latest
+    /// three).** Each money app's newest move, as every category reads; the
+    /// word opens all of it, the Wallet's Money page.
     @ViewBuilder
     func activityMoneySection(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let money = activityMoneyRows(visible)
@@ -211,21 +278,10 @@ extension FeedScreen {
         // "one of money moves as a transfer that needs attention is needs
         // you"): a stuck transfer or a dated ask leaves this list.
         let asks = Set(walletUpcoming(money).map(\.id))
-        let moves = Array(Self.walletMoves(money).filter { !asks.contains($0.id) }
-            .sorted { $0.capturedAt > $1.capturedAt }.prefix(3))
-        if !moves.isEmpty {
-            panelSection(String(localized: "Money"), glyph: ScopeTileGlyph.wallets, things: moves) {
-                let _ = { Self.sectionCapNow = (CategoryFold.walletRoom, 3) }()
-                categorySections(CategoryFold.walletRoom, moves, nextEventID: nextEventID)
-                let _ = { Self.sectionCapNow = nil }()
-                DSMoreRow(title: Text("All money")) { chrome.openWalletActivity() }
-                    .padding(.leading, DS.Mark.row + DS.Space.s3)
-                    .feedRowBackground()
-                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .listRowSeparator(.hidden)
-            }
-            .environment(\.dsTitleOnly, true)
+        let moves = Self.newestPerApp(Self.walletMoves(money).filter { !asks.contains($0.id) })
+        activitySection(String(localized: "Money"), moves, nextEventID: nextEventID) {
+            DSHaptic.selection()
+            chrome.openWalletActivity()
         }
     }
 
@@ -1265,5 +1321,41 @@ struct PinnedHeaderPushed: ViewModifier {
                 if abs(push.height - h) > 0.25 { push.height = h }
             }
             .offset(y: -push.offset)
+    }
+}
+
+/// **A CATEGORY IN ACTIVITY IS A SMALL GREY WORD (prd §1809, user: "i think
+/// activity still needs section headers but they can be small … otherwise
+/// they all bleed together").** The rung and ink of the day label it
+/// replaces; pressed, it opens the category's page. Nil: a label.
+struct ActivityWord: View {
+    let name: String
+    let open: (() -> Void)?
+
+    var body: some View {
+        Group {
+            if let open {
+                Button(action: open) { word }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Opens \(name)"))
+            } else {
+                word
+            }
+        }
+        .accessibilityAddTraits(.isHeader)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+    }
+
+    private var word: some View {
+        Text(verbatim: name)
+            .dsText(.label12)
+            .foregroundStyle(DS.textSecondary)
+            .padding(.leading, DSRoomChassis.rowInset)
+            .padding(.trailing, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
+            .padding(.bottom, DS.Space.s1)
+            .contentShape(Rectangle())
     }
 }

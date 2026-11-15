@@ -289,7 +289,9 @@ extension FeedScreen {
         let homeCover = ledeThing ?? fallbackCover
         // ACTIVITY DRAWS NO BOX (prd §1807): its sections are the page. The
         // first run keeps its start box, and a pane or a room keeps its lead.
-        let drawsLead = !(scroll && source == "All") || feedStarts
+        // The start box only while there is nothing to list (prd §1809).
+        let starts = feedStarts && !visible.contains(where: \.isLive)
+        let drawsLead = !(scroll && source == "All") || starts
         if drawsLead { homeLead(homeCover, heroShown: heroShown) }
         // THE PANE'S FEED BOX CARRIES THE DAY (prd §1403): under today's
         // cover, the week, the next thing, Needs you and the days ahead —
@@ -412,7 +414,7 @@ extension FeedScreen {
         // in its own frame, stacked, in place of today's category runs.
         if scroll {
             // Needs you, then Money, then each category (prd §1807).
-            if source == "All", !feedStarts {
+            if source == "All", !starts {
                 activityNeedsSection(visible)
                 activityMoneySection(visible, nextEventID: nextEventID)
             }
@@ -787,11 +789,11 @@ extension FeedScreen {
         }
         chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
         // On the phone a category is a section of Activity, so asking for it
-        // only scrolls there (`routeIntoFeed`). Its own page rises the way an
-        // app's does (prd §1808): every app's rows, and its menu to narrow
-        // to one.
-        if roomSizeClass == .compact, category != CategoryFold.walletRoom {
-            chrome.appSheet = ShellChrome.AppSheet(source: category)
+        // only scrolls there (`routeIntoFeed`). Its own page stands at
+        // Activity's place (prd §1809, amending §1808's risen sheet): a
+        // page's rows raise their things, one way to open a thing.
+        if roomSizeClass == .compact {
+            chrome.openCategoryPage(category)
         } else {
             chrome.sourceRequest = category
         }
@@ -975,7 +977,10 @@ extension FeedScreen {
                             places: [UUID: String] = [:],
                             // Under a category's heading on the Feed (prd §1734):
                             // the day is a quiet label and a row takes `rowAir`.
-                            inFeed: Bool = false) -> some View {
+                            inFeed: Bool = false,
+                            // A row's icon opens its app's page (prd §1809):
+                            // Activity's rows pass it, nothing else does.
+                            leadOpens: ((Thing) -> Void)? = nil) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -1080,6 +1085,7 @@ extension FeedScreen {
                         } else {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i], replies: replies, air: sectionAir(thing, inFeed: inFeed))
+                                .overlay(alignment: .topLeading) { leadDoor(thing, leadOpens) }
                         }
                     }
                 }
@@ -1104,6 +1110,24 @@ extension FeedScreen {
     /// The caller's gates stand (§264, §482, §486): the line is still a claim
     /// about the list on screen, so a scope with no rows draws nothing.
     /// Takes the render's `visible` (the Feed-freeze rule) for that reason.
+    /// **THE ICON OPENS THE APP, THE ROW OPENS THE THING (prd §1809).** A
+    /// clear control over the row's lead, the size of its head, so the
+    /// stream you came to read (X, a feed) is one tap from Activity.
+    @ViewBuilder
+    func leadDoor(_ thing: Thing, _ open: ((Thing) -> Void)?) -> some View {
+        if let open {
+            Button {
+                DSHaptic.selection()
+                open(thing)
+            } label: {
+                Color.clear.contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .frame(width: DS.Mark.row + DS.Space.s3, height: 44)
+            .accessibilityLabel(Text("Open \(BridgeCatalog.seatName(forSource: thing.source))"))
+        }
+    }
+
     @ViewBuilder
     func caughtUpFooter(_ rows: [Thing]) -> some View {
         if reachedFetchCeiling {

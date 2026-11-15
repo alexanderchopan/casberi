@@ -330,8 +330,12 @@ extension View {
     /// be a shade off a well.
     /// `recessed` takes `surfaceWell` — an opaque well sunk below the page —
     /// where the default `fillFaint` is a translucent lift over it (§715).
-    func dsWell(cornerRadius: CGFloat = DS.Radius.card, recessed: Bool = false) -> some View {
-        background(recessed ? DS.surfaceWell : DS.fillFaint,
+    /// `quiet` takes `fillQuiet`, a step under the well, for a control's
+    /// face that stands beside a figure drawn at the well's fill (Home's
+    /// cards under the holdings map, prd §1809).
+    func dsWell(cornerRadius: CGFloat = DS.Radius.card, recessed: Bool = false,
+                quiet: Bool = false) -> some View {
+        background(recessed ? DS.surfaceWell : quiet ? DS.fillQuiet : DS.fillFaint,
                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 

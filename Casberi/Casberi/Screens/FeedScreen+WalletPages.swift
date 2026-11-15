@@ -261,8 +261,7 @@ extension FeedScreen {
           // Following picked keeps its doors, which are that pick's own.
           if selectedSeat == nil, !walletOnFollowing {
             walletHomeCards(yours: yours, walkClosed: walkClosed, onAll: onAll,
-                            yoursPicked: yoursPicked, permissions: permissions,
-                            flagged: counts.flagged)
+                            yoursPicked: yoursPicked, flagged: counts.flagged)
           } else {
             // Account (prd §1536): your Casberi account's keys and settings,
             // not a pick — Yours on the switch is the pick.
@@ -399,12 +398,13 @@ extension FeedScreen {
 
     // MARK: - Home's cards
 
-    /// **HOME'S SIX CARDS, A–Z (prd §1807).** Account, Apps, Holdings,
-    /// Permissions, Risks, Watchlist: each a button onto its page, its state
-    /// on its top edge. Needs you left Home for Activity, where it leads.
+    /// **HOME'S SIX CARDS, A–Z (prd §1807, §1809).** Account, Activity,
+    /// Apps, Holdings, Risks, Watchlist: each a button onto its place, its
+    /// state on its top edge. Activity is a card since §1809; Permissions
+    /// is inside Risks.
     @ViewBuilder
     func walletHomeCards(yours: String?, walkClosed: Int, onAll: Bool, yoursPicked: Bool,
-                         permissions: Int, flagged: Int) -> some View {
+                         flagged: Int) -> some View {
         let pending = yours.map { walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         let unseen = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }.count
         let riskWord: String? = flagged > 0
@@ -413,7 +413,8 @@ extension FeedScreen {
                ? String(localized: "Unscanned") : String(localized: "None"))
         let tokens = Watchlist.shared.tokens
         let mover = WatchlistRules.biggestMover(tokens, quotes: WatchlistPrices.shared.quotes)
-        let apps = bridges.bridges.count
+        // The apps you have connected, never the catalogue's size.
+        let apps = bridges.connectedCount
         let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
         let week = (selectedWallet.map { wallet.valueSamples(forAddress: $0) }
             ?? wallet.combinedValueSamples(only: walletFollowingOnly))
@@ -440,6 +441,23 @@ extension FeedScreen {
                     chrome.walletSection = .yourAccount
                 }
             }
+            // **ACTIVITY IS A CARD (prd §1809, user: "wdyt if activity was a
+            // tile on home").** The place beside Home on the swipe. No count
+            // (user: "there are always new ones"): a number that never
+            // reaches zero says nothing.
+            // What it wears instead (user: "if it could show app icons in
+            // circles on it that would be interesting"): the three apps
+            // that last brought something, newest first, side by side.
+            DSHomeCard(glyph: PlaceTab.feed.glyph, name: PlaceTab.feed.label,
+                       trailing: activityFaces.isEmpty ? nil : AnyView(
+                           HStack(spacing: DS.Space.s1) {
+                               ForEach(activityFaces, id: \.self) { name in
+                                   BridgeIcon(name: name, size: DS.Face.badge, circular: true)
+                               }
+                           }),
+                       height: cardHeight) {
+                PlaceTab.open(.feed, chrome: chrome, route: route)
+            }
             DSHomeCard(glyph: PlaceTab.library.glyph, name: PlaceTab.library.label,
                        figure: apps > 0 ? "\(apps)" : nil,
                        height: cardHeight) {
@@ -455,11 +473,6 @@ extension FeedScreen {
                            : nil,
                        height: cardHeight) {
                 chrome.walletSection = .holdings
-            }
-            DSHomeCard(glyph: WalletSection.permissions.glyph, name: WalletSection.permissions.label,
-                       figure: permissions > 0 ? "\(permissions)" : String(localized: "None"),
-                       height: cardHeight) {
-                chrome.walletSection = .permissions
             }
             DSHomeCard(glyph: WalletSection.threats.glyph, name: WalletSection.threats.label,
                        figure: riskWord,
@@ -489,6 +502,33 @@ extension FeedScreen {
             RecoveryCheckState.shared.refresh()
         }
         .task(id: tokens.map(\.id)) { await WatchlistPrices.shared.refreshIfStale(tokens) }
+        // Read when Home stands and when something lands, never in a body
+        // (prd §628).
+        .task(id: chrome.refreshPulse) { loadActivityFaces() }
+    }
+
+    /// The apps behind the newest things outside the Wallet, three at most,
+    /// for the Activity card: names only, never a model kept (prd §617).
+    @MainActor
+    func loadActivityFaces() {
+        let now = Date.now
+        var recent = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt <= now },
+                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        recent.fetchLimit = 60
+        let things = (try? modelContext.fetch(recent)) ?? []
+        var seen = Set<String>()
+        var faces: [String] = []
+        for thing in things where thing.isLive {
+            let source = thing.source
+            // An app's mark only: a note of yours has none, and drew a grey
+            // person among the icons.
+            guard let category = BridgeCatalog.category(forSource: source),
+                  category != CategoryFold.walletCategory, !Pinboard.isWritten(source) else { continue }
+            let name = BridgeCatalog.seatName(forSource: source)
+            if seen.insert(name).inserted { faces.append(name) }
+            if faces.count == 3 { break }
+        }
+        if faces != activityFaces { activityFaces = faces }
     }
 
     // MARK: - Holdings' doors
@@ -862,33 +902,27 @@ extension FeedScreen {
         case .needsYou:
             walletNeedsYouPage(upcoming: upcoming, nextEventID: nextEventID)
         case .permissions:
-            // The authorizations you gave Aztec apps count as permissions too
-            // (prd §1762): the page is not empty while one stands.
-            if counts(\.delegations) + counts(\.approvals) == 0, !walletShowsAztecGrants {
-                // What you just took back, else the empty rows (§769).
-                if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }
-                else { walletRevokedTodaySection }
-            }
-            walletActingSection
-            walletApprovalsSection
-            walletAztecGrantsSection
-            // What can move a Safe of yours with nobody signing (prd §1786,
-            // from Account's page): on All, or with your account picked.
-            if let account = YourAccountDemo.shownAddress,
-               chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
-                WalletUnsignedSection(part: .unsigned, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
-            }
+            walletPermissionRows(standsEmpty: true)
         case .threats:
             // What gives your addresses away, by Nymis (prd §1701).
             let privacy = walletPrivacySlots
             walletPrivacySection(privacy)
-            if walletSecurityCounts.flagged == 0 && privacy.isEmpty { walletSkeletonRowsSection }
+            // Empty rows only while the whole page is empty: with a
+            // permission under it the page has rows (prd §1809).
+            let allowed = selectedSeat == nil && !walletOnFollowing
+                && (counts(\.delegations) + counts(\.approvals) > 0 || walletShowsAztecGrants)
+            if walletSecurityCounts.flagged == 0 && privacy.isEmpty && !allowed { walletSkeletonRowsSection }
             walletFlaggedSection(.poisoning, anchor: .poisoning,
                                  word: String(localized: "Address poisoning"))
             walletFlaggedSection(.spoofedSymbol, anchor: .fakeTokens,
                                  word: String(localized: "Fake tokens"))
             walletFlaggedSection(.fakeTransfer, anchor: .fakeTransfers,
                                  word: String(localized: "Fake transfers"))
+            // **PERMISSIONS ARE RISKS' (prd §1809, user: "we can finally
+            // combine permissions and risk").** Both answer "is anything
+            // unsafe?": what was found, then what you allowed. An app or
+            // Following picked keeps Permissions as its own door.
+            if selectedSeat == nil, !walletOnFollowing { walletPermissionRows(standsEmpty: false) }
         case .holdingAccounts:
             let following = walletHolderGroups.following
             if following.isEmpty { walletSkeletonRowsSection }
@@ -1114,23 +1148,31 @@ extension FeedScreen {
         // **YOUR BALANCE, REACHED (prd §1710)**: the disc is what the
         // wallets hold, the delegates and modules the Delegations list holds
         // (§1677) reach their accounts', the grants sit inside at their dollars.
-        case .permissions:
-            WalletPermissionsFigure(grants: walletLive.exposure.all,
-                                    acting: walletPermissionsActing,
-                                    held: walletPermissionsHeld,
-                                    asOf: walletLive.asOf,
-                                    aztecApps: walletShowsAztecGrants ? AztecGrantsShape.byApp(AztecGrantsStore.shared.grants) : []) { walletOpenPermission($0) }
-        // **WHETHER THEY ARE GROWING (prd §1633).**
-        case .threats:
-            let things = walletThreatThings
-            let trend = ThreatTrend.read(things.map(\.capturedAt), now: .now)
-            let weekStart = trend.starts.last ?? .now
-            WalletThreatsFigure(trend: trend,
-                                unseenThisWeek: things.contains {
-                                    $0.capturedAt >= weekStart && !ThreatsSeen.shared.contains($0.id)
-                                })
         default:
             EmptyView()
+        }
+    }
+
+    /// Permissions' rows: who acts for you, what you approved, what Aztec
+    /// apps hold, and what moves a Safe with nobody signing. On Risks the
+    /// empty rows are Risks' own, so they are not drawn twice.
+    @ViewBuilder
+    func walletPermissionRows(standsEmpty: Bool) -> some View {
+        // The authorizations you gave Aztec apps count as permissions too
+        // (prd §1762): the page is not empty while one stands.
+        if standsEmpty, counts(\.delegations) + counts(\.approvals) == 0, !walletShowsAztecGrants {
+            // What you just took back, else the empty rows (§769).
+            if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }
+            else { walletRevokedTodaySection }
+        }
+        walletActingSection
+        walletApprovalsSection
+        walletAztecGrantsSection
+        // What can move a Safe of yours with nobody signing (prd §1786,
+        // from Account's page): on All, or with your account picked.
+        if let account = YourAccountDemo.shownAddress,
+           chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
+            WalletUnsignedSection(part: .unsigned, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
         }
     }
 

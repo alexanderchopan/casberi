@@ -169,6 +169,11 @@ enum DS {
     /// ground (`#1c1c1e`) to within a shade, and it reaches every well at
     /// once because there is one token. Light is untouched.
     static let fillFaint  = Color.adaptive(dark: "#ffffff1a", light: "#00000008")
+    /// A step under `fillFaint` in the dark: Home's cards (prd §1809), which
+    /// stand right under the holdings map and read as more of its tiles at
+    /// the map's own fill (user: "the tiles are too gray, it makes them
+    /// bleed into the treemap").
+    static let fillQuiet  = Color.adaptive(dark: "#ffffff0f", light: "#00000008")
     static let fillLine   = Color.adaptive(dark: "#ffffff1a", light: "#00000014")
     static let fillStrong = Color.adaptive(dark: "#ffffff29", light: "#00000024")
 

@@ -84,7 +84,7 @@ INK_ALLOWED = {
 WELL_ALLOWED = {
     # No box draws a well since prd §1381: the top box keeps its size and place, no fill.
     "Glass.swift": (0, "the definition itself"),
-    "SourcesLibrary.swift": (2, "a Library folder's face and Casberi's own folder, App Library's folders (prd §1316, §1319)"),
+    "SourcesLibrary.swift": (1, "a Library folder's face, App Library's folders (prd §1316; Casberi's own folder left with §1808)"),
     "Composer.swift": (1, "the composer's draft field — the floating layer"),
     "VoiceListeningBand.swift": (1, "the live transcript, one band for the composer and the note sheet (§970) — the floating layer"),
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "

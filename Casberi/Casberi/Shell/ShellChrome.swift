@@ -1219,6 +1219,37 @@ final class ShellChrome {
         sourceRequest = CategoryFold.walletRoom
     }
 
+    /// **A CATEGORY OR AN APP IS A PAGE AT ACTIVITY'S PLACE (prd §1809, user:
+    /// "a thing should open one way only just like it does in wallet").**
+    /// The room standing there on the phone, so the routing that makes a
+    /// category a section of Activity and an app a risen sheet lets it land:
+    /// a page's rows raise their things as sheets, as the Wallet's do, and
+    /// nothing that holds things is itself a sheet. Nil on Home and Activity.
+    var pageRoom: String?
+    /// The category of Activity a page was opened from, so coming back
+    /// lands there and not at the top (prd §1809): read and cleared when
+    /// Activity returns.
+    var activityReturn: String?
+
+    /// Open a category's page, every app in it.
+    func openCategoryPage(_ category: String) {
+        if category == CategoryFold.walletRoom { openWalletActivity(); return }
+        if category == HomeScope.notesSection { mergedScope[Pinboard.room] = nil; sourceRequest = Pinboard.room; return }
+        mergedScope[category] = nil
+        pageRoom = category
+        sourceRequest = category
+    }
+
+    /// Open one app's page: its category's, narrowed to it.
+    func openAppPage(_ source: String) {
+        if BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory { openWalletActivity(); return }
+        if Pinboard.isWritten(source) || source == Pinboard.room { sourceRequest = source; return }
+        guard let host = RoomAccounts.host(ofSource: source) else { sourceRequest = source; return }
+        pickSeat(host.seat, in: host.room)
+        pageRoom = host.room
+        sourceRequest = host.room
+    }
+
     /// One of the Wallet's pages, from Activity's rows (prd §1807).
     func openWalletPage(_ section: WalletSection) {
         walletScope = nil

@@ -798,6 +798,8 @@ struct FeedScreen: View {
     /// The Feed's Day section reads its own rows (prd §1343): the Feed's
     /// list carries none of what is ahead, and the section is all ahead.
     @State var dayFeedRows: [Thing] = []
+    /// The apps on Home's Activity card (prd §1809), read in a task.
+    @State var activityFaces: [String] = []
     /// The Feed's Notes section reads its own rows too (prd §1347): the
     /// Feed's list is the newest `allRoomFetchLimit` things and drops the
     /// apps you write in, so a note older than that window, or any journal
@@ -1581,10 +1583,17 @@ struct FeedScreen: View {
         if let pinnedWalletSection { return pinnedWalletSection.label }
         // The private account's page reads "Account · Private account" (prd §1786).
         if walletOnPrivateAccountPage { return WalletSection.yourAccount.label }
+        // **ACTIVITY IS HOME'S (prd §1809)**: "Home · Activity" on the
+        // phone, Home pressable back, as every page of the Wallet reads.
+        if activityUnderHome { return PlaceTab.wallet.label }
+        if Pinboard.isPinnedRoom(source), pageUnderActivity, !notesNarrowed { return PlaceTab.feed.label }
         if HomeScope.contains(source) { return youPlaceName }
         // The Wallet's place is Home (prd §1807): the whole app is the
         // wallet, so its own page takes the place's word.
         if (hostRoom ?? source) == CategoryFold.walletRoom { return PlaceTab.wallet.label }
+        // A category's or an app's page stands at Activity's place (§1809):
+        // "Activity · Social", "Activity · X".
+        if pageUnderActivity { return PlaceTab.feed.label }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 

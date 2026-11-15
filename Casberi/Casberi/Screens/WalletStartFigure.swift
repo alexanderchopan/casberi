@@ -1,25 +1,33 @@
 import SwiftUI
 
-/// **A WALLET WITH NO ACCOUNT IS WHERE THE FIRST ONE STARTS (prd §1364, user:
-/// "we need to give user a way to add wallet or something so they don't
-/// fail", of B: "perfect!").** Home's box holds the follow field itself:
-/// the statement, one sentence, `WalletWatchField` (the ONE way to watch,
-/// §466) with its peek, and the line the balance will draw, dotted in the
-/// brand hue. Connecting a wallet app stays on the Wallet's account page.
-/// "Start with any address", never "Watch a wallet", under the title Wallet.
+/// **AN EMPTY HOME LEADS WITH YOUR ACCOUNT (prd §1809, amending §1364's
+/// "Start with any address").** Nobody is shown the demo any more, so this
+/// is the first screen every new person sees, and it led with following
+/// someone else's wallet. Casberi is a wallet: the lead is yours. With no
+/// account, making one; with one and nothing in it, putting money in. Either
+/// is one row into Move, where both are done. Watching an address is still
+/// here, second, in the one field that watches (§466).
+///
+/// No sentence under the statement: the row says the act and the field says
+/// what it takes. The dotted line is the balance's, waiting.
 struct WalletStartFigure: View {
+    @Environment(ShellChrome.self) private var chrome
+    /// Your account exists and holds nothing yet.
+    var made = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text("Start with any address")
+            Text(made ? "Your account is ready" : "Make your account")
                 .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
-            Text("Holdings and activity will appear here.")
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            DSDoorRow(icon: made ? "plus" : WalletSection.yourAccount.glyph,
+                      title: Text(made ? "Add money" : "Create account")) {
+                DSHaptic.selection()
+                chrome.moveTray = true
+            }
             WalletWatchField(onWatched: {}, showsPeekChip: true, showsConnect: false,
                              onConnectFound: { _ in })
-                .padding(.top, DS.Space.s3)
+                .padding(.top, DS.Space.s2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(alignment: .bottom) {

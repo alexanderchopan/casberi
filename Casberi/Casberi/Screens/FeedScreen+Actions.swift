@@ -388,7 +388,7 @@ extension FeedScreen {
         if portfolio == nil || portfolioScope != scopeKey, !DemoMode.isActive,
            let last = WalletLastReading.reading(scope: scopeKey, wallets: watched) {
             let shown = last.hiding(walletHidden)
-            blockStream.paint(shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown, appsApart: walletOnAll))
+            blockStream.paint(shown.isEmpty ? [] : walletMapDoc(shown))
             portfolio = last
             portfolioScope = scopeKey
             WalletPerf.openDrew()
@@ -414,10 +414,11 @@ extension FeedScreen {
                 // the tallest late-arriving block, so ITS unanimated insert
                 // was the most jarring of the pops.
                 // The tokens you hid stay out of the map (`HiddenTokens`).
-                let hides = !read.portfolio.hiddenItems(walletHidden).isEmpty
                 let shown = read.portfolio.hiding(walletHidden)
                 withAnimation(DS.Motion.standard) {
-                    blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown, appsApart: walletOnAll))
+                    // Drawn from the portfolio, never the read's own document:
+                    // the map folds private money into its tokens (§1809).
+                    blockStream.paint(shown.isEmpty ? [] : walletMapDoc(shown))
                     portfolio = read.portfolio
                     portfolioScope = scopeKey
                 }

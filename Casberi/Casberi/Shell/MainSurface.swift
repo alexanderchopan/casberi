@@ -2089,9 +2089,17 @@ struct MainSurface: View {
                 filter.source = walletLanding(source)
                 return
             }
-            // On the phone a category is a section of the Feed and an app
-            // rises as a sheet over it (prd §1208), whichever door wrote the
-            // filter: the page underneath stays where it was, else the Feed.
+            // Home and Activity are the places; a page stood only while its
+            // room did (prd §1809).
+            if source == "All" || source == CategoryFold.walletRoom { chrome.pageRoom = nil }
+            // Back in Activity from a page: the category you left from.
+            if source == "All", let back = chrome.activityReturn {
+                chrome.activityReturn = nil
+                chrome.feedJump = back
+            }
+            // On the phone a category is a section of the Feed (prd §1208),
+            // whichever door wrote the filter, unless it was asked for as a
+            // page (§1809): the page underneath stays where it was.
             if source != "All", let routed = routeIntoFeed(source) {
                 // A category left the filter on the Feed; an app rose as a
                 // sheet over the page you were on, so that page comes back.
@@ -2267,7 +2275,13 @@ struct MainSurface: View {
         // The Notes door opens every note; an app's icon narrows it (§1235).
         if label == Pinboard.room { chrome.mergedScope[Pinboard.room] = nil }
         let target: String
-        if CategoryFold.isCategory(label) {
+        if !isRegular, let page = chrome.pageRoom, label == page {
+            // A PAGE ASKED FOR BY ITS ROOM (prd §1809) lands as that room:
+            // never resolved to the venue you last opened in it, which put
+            // Telegram where all of Social was asked for. The pick the door
+            // made, or cleared, stands.
+            target = page
+        } else if CategoryFold.isCategory(label) {
             // THE WALLET IS A TAB (prd §1327): it lands with nothing in it,
             // and before the launch walk has listed its venues. Waiting on
             // the venues left the tab, its swipe and every Markets door dead
@@ -2624,6 +2638,11 @@ struct MainSurface: View {
     }
 
     private func routeIntoFeed(_ label: String, keepingPick: Bool) -> Routed? {
+        // A PAGE AT ACTIVITY'S PLACE (prd §1809): the category asked for as a
+        // page lands as its room, and an app as its category's, narrowed.
+        if let page = chrome.pageRoom, (RoomAccounts.host(ofSource: label)?.room ?? label) == page {
+            return nil
+        }
         if label == Pinboard.room, !keepingPick { chrome.mergedScope[Pinboard.room] = nil }
         // The Notes CATEGORY is the Feed's Notes section (prd §1347), as Day's
         // is; `Pinboard.room` stays the page Library's folder pushes.
@@ -2652,22 +2671,16 @@ struct MainSurface: View {
         // §1344); an app picked from the tray, or one that lives in Day
         // (Calendar, Reminders…), still rises over the page you are on.
         if label != Pinboard.room,
-           RoomAccounts.host(ofSource: label).map({ HomeScope.isFeedSection($0.room) }) == true {
-            let sheet = ShellChrome.AppSheet(source: label)
+           let host = RoomAccounts.host(ofSource: label), HomeScope.isFeedSection(host.room) {
+            // **AN APP IS A PAGE, NEVER A SHEET (prd §1809, retiring §1208a's
+            // risen app).** A sheet that holds things pushed them inside
+            // itself, a second way to open a thing. The app lands as its
+            // category's page narrowed to it ("Activity · X"), and whatever
+            // was up (Apps, a sheet) steps aside for it.
             chrome.routedRequest = label
-            // A sheet still closing refuses a second one (UIKit's "already
-            // presenting"), so a door taken from inside one waits it out, as
-            // `ShellChrome.openApp` does.
-            if route.sheet != nil || !route.path.isEmpty {
-                route.path = []
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(450))
-                    chrome.appSheet = sheet
-                }
-            } else {
-                chrome.appSheet = sheet
-            }
-            return .app
+            chrome.pageRoom = host.room
+            if route.sheet != nil || !route.path.isEmpty { route.path = [] }
+            return nil
         }
         return nil
     }
@@ -2755,6 +2768,12 @@ struct MainSurface: View {
             // The tabs, in the bar's order (prd §1327 item 6); Markets walks
             // from the Wallet, whose tile it is.
             let walk = phoneWalk
+            // A page at Activity's place goes back to Activity on the swipe
+            // right, and nowhere on the left (prd §1809).
+            if filter.source != "All", filter.source != CategoryFold.walletRoom,
+               !HomeScope.isMarkets(filter.source) {
+                return delta < 0 ? "All" : nil
+            }
             let here = PlaceTab.current(filter.source)?.source ?? HomeScope.walkStop(filter.source)
             guard let i = walk.firstIndex(of: here) else { return delta < 0 ? "All" : nil }
             return walk.indices.contains(i + delta) ? walk[i + delta] : nil

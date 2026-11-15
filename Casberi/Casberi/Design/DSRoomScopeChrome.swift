@@ -54,6 +54,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// leads with the map, the line and the switch, and has no tiles under
     /// it for a taller box to move.
     var homeExtra: CGFloat = 0
+    /// The page showing draws no box (prd §1809): its title, then its rows.
+    /// Only where nothing stands under the box for its absence to move.
+    var boxless: Bool = false
     let onPick: (Scope) -> Void
 
     let accounts: [DSAccountSlot]
@@ -121,7 +124,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
         // The same two numbers here, so the tiles land at one y everywhere.
         VStack(alignment: .leading, spacing: DSRoomChassis.leadGap) {
             // THE BOX IS THE PANE'S where there is one (prd §1403).
-            if boxPlace != .listWithoutBox { lead }
+            if boxPlace != .listWithoutBox, !boxless { lead }
             // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
             // drew Actions and the Overview rows under these until the merge;
             // the room's own list follows the chrome now, as in every room.

@@ -76,7 +76,9 @@ struct DSHomeCard<Lead: View>: View {
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: height)
-            .dsWell(cornerRadius: DS.Radius.widget)
+            // A step darker than the well (prd §1809): the map above is
+            // drawn at the well's fill, and the cards are not its tiles.
+            .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
         .buttonStyle(PressSpring())

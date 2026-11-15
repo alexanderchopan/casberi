@@ -373,6 +373,32 @@ extension FeedScreen {
         return pools + aztec + railgun.shown.compactMap { railgun.usd($0, units: $0.amount) }.reduce(0, +)
     }
 
+    /// Your private balance by token, in dollars: Privacy Pools' held notes
+    /// and Railgun's, the money the Wallet counts as one "Private" venue.
+    var walletPrivateByToken: [String: Double] {
+        let store = PrivateMoneyStore.shared
+        var out: [String: Double] = [:]
+        for row in store.rows where row.kind == .held {
+            if let usd = PrivateMoney.rowUSD(row, prices: store.shownPrices) {
+                out[row.symbol.uppercased(), default: 0] += usd
+            }
+        }
+        let railgun = RailgunHoldings.shared
+        for held in railgun.shown {
+            if let usd = railgun.usd(held, units: held.amount) { out[held.symbol.uppercased(), default: 0] += usd }
+        }
+        return out
+    }
+
+    /// **THE MAP IS TOKENS, WHOLE (prd §1809, user: "if it says public and
+    /// private below it whats the point it should be aggregated … of
+    /// tokens").** The read counts private money as one venue; the map
+    /// folds it back into the tokens it is, so ETH is one tile at all of
+    /// your ETH and the line under the map says how it splits.
+    func walletMapDoc(_ shown: WalletPortfolio) -> [String] {
+        WalletIngest.holdingsDoc(shown.foldingPrivate(walletPrivateByToken), appsApart: walletOnAll)
+    }
+
     /// **PUBLIC AND PRIVATE, UNDER HOME'S BALANCE (prd §1807).** The balance
     /// said as its two halves, each a figure; the line opens Holdings, where
     /// both are listed. Yours and All only, as the Private section stands
@@ -642,5 +668,34 @@ struct WalletPrivateAsks: View {
             chrome.refreshRooms()
             NSLog("privateTakeBack| row | %@", hash)
         }
+    }
+}
+
+extension WalletPortfolio {
+    /// The portfolio with its one "Private" venue folded into the tokens it
+    /// holds (prd §1809), for the map. The venue's dollars are what moves:
+    /// `byToken` gives the shares, so a price read a moment apart never
+    /// changes the total. Unchanged with no such venue or nothing priced.
+    func foldingPrivate(_ byToken: [String: Double]) -> WalletPortfolio {
+        guard let i = positions.firstIndex(where: { $0.symbol == PrivateMoney.walletSymbol }) else { return self }
+        let known = byToken.values.reduce(0, +)
+        guard known > 0 else { return self }
+        let venue = positions[i]
+        let label = venue.holders.first?.label ?? String(localized: "Private")
+        var out = self
+        out.positions.remove(at: i)
+        for (symbol, usd) in byToken.sorted(by: { $0.key < $1.key }) where usd > 0 {
+            let add = venue.usd * usd / known
+            let holder = Holder(address: PrivateMoney.holderID, label: label, usd: add)
+            if let j = out.positions.firstIndex(where: { $0.symbol.uppercased() == symbol }) {
+                let held = out.positions[j]
+                out.positions[j] = Position(symbol: held.symbol, usd: held.usd + add, route: held.route,
+                                            holders: held.holders + [holder], parts: held.parts)
+            } else {
+                out.positions.append(Position(symbol: symbol, usd: add, route: nil, holders: [holder]))
+            }
+        }
+        out.positions.sort { $0.usd == $1.usd ? $0.symbol < $1.symbol : $0.usd > $1.usd }
+        return out
     }
 }

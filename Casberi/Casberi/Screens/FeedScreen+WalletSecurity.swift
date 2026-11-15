@@ -274,66 +274,7 @@ enum JustRevoked {
 }
 
 extension FeedScreen {
-    // MARK: - Permissions' and Threats' boxes (prd §1654, §1633)
-
-    /// A circle in Permissions' pack (prd §1654): an app holding one grant
-    /// opens that grant's sheet; an app holding several, or More, opens the
-    /// Approvals list under the box in full.
-    /// What the Delegations list holds, as the pack draws it (prd §1677):
-    /// the same read `walletActingSection` lists, so a circle and a row can
-    /// never disagree.
-    var walletPermissionsActing: [PermissionsPack.Acting] {
-        let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
-                                                      acting: walletLive.acting)
-        return WalletPermissions.actingHolders(holders).map {
-            PermissionsPack.Acting(key: $0.key, name: $0.name,
-                                   module: $0.power == .movesWithoutSignature,
-                                   accounts: $0.accounts)
-        }
-    }
-
-    /// What each wallet in scope holds, for Permissions' disc (prd §1710):
-    /// the shown portfolio's holders, places left out.
-    var walletPermissionsHeld: [String: Double] {
-        guard let positions = portfolioShown?.positions else { return [:] }
-        return PermissionsPack.heldByAccount(
-            positions.flatMap { p in p.holders.map { (holder: $0.address, usd: $0.usd) } },
-            isVenue: WalletPortfolio.isVenue)
-    }
-
-    func walletOpenPermission(_ piece: PermissionsPack.Piece) {
-        // A delegate opens its sheet (§1594), as its row does; a module, or a
-        // More holding only these, lands on Delegations.
-        if let key = piece.actingKey, !piece.module,
-           let d = WalletDelegation.find(key, in: walletLive.acting) {
-            feedSheet = .delegation(d)
-            return
-        }
-        if piece.isActing || (piece.isMore && piece.grantIDs.isEmpty) {
-            if !walletSecurityOpen(.delegations) { walletSecurityToggle(.delegations) }
-            cardScrollTarget = SecurityAnchor.delegations.id
-            return
-        }
-        if !piece.isMore, piece.grantIDs.count == 1 {
-            guard let thing = walletLive.activeApprovals
-                .first(where: { $0.isLive && $0.id == piece.grantIDs[0] }) else {
-                chrome.flash(String(localized: "That grant is no longer here."), tone: .failure)
-                return
-            }
-            feedSheet = .thing(thing, walk: .none)
-            return
-        }
-        if !walletSecurityOpen(.approvals) { walletSecurityToggle(.approvals) }
-        cardScrollTarget = SecurityAnchor.approvals.id
-    }
-
-    /// Every flagged transfer Threats lists, of the three kinds.
-    var walletThreatThings: [Thing] {
-        let kinds: [WalletWarning.Kind] = [.poisoning, .spoofedSymbol, .fakeTransfer]
-        return walletLive.flagged.live.filter { thing in
-            kinds.contains { $0.securityFlag.map { thing.hasSecurityFlag($0) } ?? false }
-        }
-    }
+    // MARK: - Permissions' rows (prd §1633)
 
     /// The grants taken back today, once nothing is left (prd §1633): the
     /// empty pack draws its skeleton (§1677), and this says what went.

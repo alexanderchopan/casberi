@@ -224,7 +224,12 @@ struct HoldingsTreemap: View {
                                 : WalletValue.money(litShare * sum),
                             caption: String(localized: "Other"))
         } else if let today = todayCaption {
-            DSFigureReading(number: total, caption: today)
+            // **THE LINE WEARS THE DAY, THE BALANCE STAYS WHITE (prd §1809,
+            // user: "should we make the balance green?").** Green means up
+            // and red means down (§936); a balance is neither, so the colour
+            // goes on the line that says which way the day went, and only
+            // when it went one way.
+            DSFigureReading(number: total, caption: today, captionInk: todayInk)
         } else {
             DSFigureReading(number: total, caption: caption)
         }
@@ -248,6 +253,14 @@ struct HoldingsTreemap: View {
         case (0, _): return String(localized: "\(t.down) down today")
         default:     return String(localized: "\(t.up) up, \(t.down) down today")
         }
+    }
+
+    /// All up, the gain's ink; all down, the loss's; mixed or flat, grey.
+    private var todayInk: Color {
+        let t = HoldingMoves.tally(holdings.compactMap { move($0.id) })
+        if t.up > 0, t.down == 0 { return DS.confirmInk }
+        if t.down > 0, t.up == 0 { return DS.destructiveInk }
+        return DS.textSecondary
     }
 
     /// A tile's fill: the tint when pressed; else its move's hue at its

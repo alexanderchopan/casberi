@@ -116,7 +116,6 @@ struct PlaceTabBar: View {
     /// shower its tap deals (`PlaceTab.open`).
     @State private var taps: [PlaceTab: Int] = [:]
 
-    private var folded: Bool { chrome.minimized }
     /// **THE LABELS WIN OVER THE PAGE (user, 2026-10-15: "it is hard to see
     /// the icons and words especially when selected").** The glass takes the
     /// page's own ground as its tint, so a busy row under the bar sinks back
@@ -134,72 +133,18 @@ struct PlaceTabBar: View {
     /// have, then what happened. Apps left the swipe and the title row for a
     /// card on Home.
     static let places: [PlaceTab] = [.wallet, .feed]
-    /// One tab's width in the hugging capsule.
-    static let tabWidth: CGFloat = 88
     var body: some View {
-        // THE BAR FOLDS INTO MOVE (prd §1735): read down, the places draw
-        // into the act's circle at the trailing edge and Move stands alone,
-        // one tap from anywhere on the page. A scroll back up brings the
-        // places out again; no circle is left on the leading side.
+        // **MOVE STANDS ALONE (prd §1809, user: "wdyt if activity was a tile
+        // on home").** Home is the one place and Activity is a card on it,
+        // so the capsule that named two places is gone: the bar is the act,
+        // at the trailing edge, over wherever you stand. Home and Activity
+        // are still side by side on the swipe (`places`).
         HStack(spacing: DS.Space.s2) {
-            if !folded {
-                tabs
-                    .transition(.scale(scale: 0.2, anchor: .trailing).combined(with: .opacity))
-            }
-            // The capsule hugs its two places at the leading edge and Move
-            // stands alone at the trailing one (prd §1783), as iOS sets a
-            // tab bar and its search circle.
             Spacer(minLength: 0)
             moveCircle
-                // Folded, the capture flight lands on the one thing left.
-                .background { if folded { FeedTabFrame() } }
+                // The capture flight lands on the one thing here.
+                .background { FeedTabFrame() }
         }
-        .animation(DS.Motion.standard, value: folded)
-    }
-
-    /// **THE ACT STANDS APART (prd §1715, amends §1640's Search circle; user,
-    /// 2026-11-01, of the split: "ok we can split it then as long as it
-    /// collapses").** The three places keep their order in the capsule
-    /// (Library at the right as the App Library is) and Move is its own
-    /// circle at the trailing edge, the shape iOS gives a search tab, here
-    /// given to the one control that is an act. Read down, the places fold
-    /// into Move's circle and Move stands alone (prd §1735).
-    private var tabs: some View {
-        HStack(spacing: 0) {
-            ForEach(Self.places) { tab in
-                Button {
-                    taps[tab, default: 0] &+= 1
-                    DSHaptic.selection()
-                    open(tab)
-                } label: {
-                    VStack(spacing: 2) {
-                        mark(tab, on: tab == current, glyphSize: .body, taps: taps[tab] ?? 0)
-                            .frame(height: 26)
-                        Text(verbatim: tab.label)
-                            .dsText(.label12)
-                            .foregroundStyle(tab == current ? DS.brandInk : DS.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
-                    .frame(width: Self.tabWidth)
-                    .frame(maxHeight: .infinity)
-                    .background {
-                        if tab == current {
-                            Capsule().fill(DS.fillStrong).padding(.vertical, DS.Space.s1)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(verbatim: tab.label))
-                .accessibilityAddTraits(tab == current ? [.isButton, .isSelected] : .isButton)
-                .background { if tab == .feed { FeedTabFrame() } }
-            }
-        }
-        .padding(.horizontal, DS.Space.s1)
-        .frame(height: size)
-        .dsGlass(cornerRadius: size / 2, tint: Self.lens)
     }
 
     /// Move's own circle, the bar's height, at the trailing edge: it raises
@@ -226,15 +171,6 @@ struct PlaceTabBar: View {
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text(verbatim: PlaceTab.move.label))
         .accessibilityHint(Text("Swap, send or receive money"))
-    }
-
-    /// Every place wears its glyph (prd §1741): Apps is the grid, and your
-    /// face left the tab for Move's circle (`MoveMark`).
-    private func mark(_ tab: PlaceTab, on: Bool, glyphSize: DSGlyph, taps: Int = 0) -> some View {
-        Image(systemName: tab.glyph)
-            .dsGlyph(glyphSize, weight: on ? .semibold : .regular)
-            .foregroundStyle(on ? DS.brandInk : DS.textPrimary)
-            .symbolEffect(.bounce, value: taps)
     }
 }
 

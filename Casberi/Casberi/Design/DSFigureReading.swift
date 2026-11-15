@@ -21,6 +21,9 @@ struct DSFigureReading: View {
     /// The number's ink — the change on a money line is the one place a
     /// number wears gain or loss (§936: red and green mean up and down).
     var numberInk: Color = DS.textPrimary
+    /// The caption's ink: a line that says up or down wears the gain's or
+    /// the loss's (prd §1809); every other caption is secondary.
+    var captionInk: Color = DS.textSecondary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -52,7 +55,7 @@ struct DSFigureReading: View {
     }
 
     private var captionText: Text {
-        let base = Text(caption).foregroundStyle(DS.textSecondary)
+        let base = Text(caption).foregroundStyle(captionInk)
         guard let alarm, !alarm.isEmpty else { return base }
         return base + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
             + Text(alarm).foregroundStyle(DS.destructiveInk)

@@ -31,6 +31,13 @@ extension FeedScreen {
     var walletOnFollowing: Bool { WalletWhose.isFollowing(chrome.walletScope) }
 
     /// The wallets Following stands for, when it is lit; nil otherwise.
+    /// The Wallet holds your own account and nothing else, and no read is
+    /// on its way: the new person's Home (prd §1809).
+    var walletOnlyYourEmptyAccount: Bool {
+        guard let own = YourAccountDemo.shownAddress, holdingsReads == 0, !walletOnFollowing else { return false }
+        return WalletStore.shared.addresses.allSatisfy { WalletWatch.sameAddress($0.address, own) }
+    }
+
     var walletFollowingOnly: [String]? { walletOnFollowing ? WalletWhoseSwitch.followed : nil }
 
     /// All: no account, app or group picked.
@@ -77,7 +84,7 @@ extension FeedScreen {
         DSHaptic.selection()
         withAnimation(DS.Motion.standard) {
             walletHidden = HiddenTokens.current
-            if let shown = portfolioShown { blockStream.paint(WalletIngest.holdingsDoc(shown, appsApart: walletOnAll)) }
+            if let shown = portfolioShown { blockStream.paint(walletMapDoc(shown)) }
             else if portfolio != nil { blockStream.paint([]) }
         }
     }
@@ -530,6 +537,12 @@ extension FeedScreen {
             // (prd §1364).
             if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 WalletStartFigure()
+                    .modifier(rowEntrance(0))
+            } else if walletOnlyYourEmptyAccount {
+                // Your account, made on the first open, with nothing in it
+                // yet (prd §1809): the way to put money in, never "No
+                // balance yet" over a drawing of nothing.
+                WalletStartFigure(made: true)
                     .modifier(rowEntrance(0))
             } else {
                 // Still reading says so, never "No balance yet" (prd §1587).

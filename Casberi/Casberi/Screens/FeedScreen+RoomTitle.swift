@@ -147,6 +147,26 @@ extension FeedScreen {
     /// the Testnets room stands on (it has no view across networks).
     var clearRoomPick: (() -> Void)? {
         guard roomPick != nil else { return nil }
+        // "Home · Activity": Home goes home (prd §1809).
+        if activityUnderHome {
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { chrome.openWallet() }
+            }
+        }
+        // "Activity · Social": Activity goes back to Activity, where you
+        // were in it (no return to the top). Notes narrowed to a folder or
+        // an app goes back to Notes first, below.
+        if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) {
+            let room = hostRoom ?? source
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    chrome.mergedScope[room] = nil
+                    chrome.sourceRequest = "All"
+                }
+            }
+        }
         // An open Notes folder: "Notes" goes back to the folders (prd §1312).
         if Pinboard.isPinnedRoom(source), openNotesFolderName != nil {
             return {
@@ -236,8 +256,16 @@ extension FeedScreen {
     var roomPick: String? {
         // Notes names the open folder (prd §1312), else the app you picked
         // from the tray (prd §1235).
-        if Pinboard.isPinnedRoom(source) { return openNotesFolderName ?? selectedSeat?.name }
+        if Pinboard.isPinnedRoom(source) {
+            // "Activity · Notes" on the phone; a folder or an app picked
+            // reads "Notes · Books", as before.
+            return openNotesFolderName ?? selectedSeat?.name
+                ?? (pageUnderActivity ? String(localized: "Notes") : nil)
+        }
+        if activityUnderHome { return PlaceTab.feed.label }
         if HomeScope.contains(source) { return nil }
+        // The page at Activity's place: the app picked, else the category.
+        if pageUnderActivity { return selectedSeat?.name ?? BridgeCatalog.seatName(forSource: hostRoom ?? source) }
         if let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,
            let slot = rail.slots.first(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
@@ -265,6 +293,25 @@ extension FeedScreen {
         }
         return nil
     }
+
+    /// Activity on the phone, titled under Home (prd §1809). The rail's
+    /// layouts keep "Activity": their places stand side by side in the rail.
+    var activityUnderHome: Bool {
+        source == "All" && !inSheet && roomSizeClass == .compact
+    }
+
+    /// A category or an app standing as a page at Activity's place on the
+    /// phone (prd §1809, `ShellChrome.pageRoom`).
+    ///
+    /// Every page off Home and Activity reads this way, Notes and Testnets
+    /// included: with no bar (§1809) the title's first word is the way back.
+    var pageUnderActivity: Bool {
+        roomSizeClass == .compact && !inSheet && source != "All"
+            && (hostRoom ?? source) != CategoryFold.walletRoom && !HomeScope.isMarkets(source)
+    }
+
+    /// Notes showing one folder or one app's notes.
+    var notesNarrowed: Bool { openNotesFolderName != nil || selectedSeat != nil }
 
     /// The Wallet's Account page is showing the private account's own page.
     var walletOnPrivateAccountPage: Bool {
