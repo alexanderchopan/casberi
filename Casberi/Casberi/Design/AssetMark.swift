@@ -278,8 +278,10 @@ struct AppCorner: ViewModifier {
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottomTrailing) {
             if titleOnly, groupedSource == nil, let source {
-                BridgeIcon(name: source, size: DS.Mark.inline, circular: true)
-                    .overlay(Circle().stroke(DS.page, lineWidth: 1.5))
+                // An app is a rounded square, a person a circle (prd §1122).
+                BridgeIcon(name: source, size: DS.Mark.inline)
+                    .overlay(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.inline), style: .continuous)
+                        .stroke(DS.page, lineWidth: 1.5))
                     .offset(x: 3, y: 3)
                     .accessibilityHidden(true)
             }
