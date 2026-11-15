@@ -137,11 +137,14 @@ feed_wallet_gone() { # $1 a root holding the files below; prints the breach and 
   local moves
   moves=$(grep -v '^[[:space:]]*//' "$root/$SCROLL" | grep -Ewc 'walletMoves' || true)
   [[ "$moves" -le 1 ]] \
-    || { echo "✗ $SCROLL reads the Wallet's moves $moves times — Money's latest three is the one read (prd §1807, §1489)"; return 1; }
+    || { echo "✗ $SCROLL reads the Wallet's moves $moves times — Money's rows are the one read (prd §1809, §1489)"; return 1; }
   grep -v '^[[:space:]]*//' "$root/$FEED" | grep -Ewq 'walletMoves' \
     && { echo "✗ $FEED reads the Wallet's moves — the Feed has no Wallet section (prd §1489)"; return 1; }
+  # Money follows every category's rule since prd §1809: each app's newest.
+  grep -q 'Self.newestPerApp(Self.walletMoves(money)' "$root/$SCROLL" \
+    || { echo "✗ Money on Activity is no longer each app's newest move (prd §1809)"; return 1; }
   grep -q 'prefix(3)' "$root/$SCROLL" \
-    || { echo "✗ Money on Activity is no longer the latest three (prd §1807)"; return 1; }
+    && { echo "✗ Money on Activity is capped at three again — one rule for every category (prd §1809)"; return 1; }
   return 0
 }
 feed_wallet_gone . || exit 1

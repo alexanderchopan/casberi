@@ -7,15 +7,6 @@ import SwiftUI
 /// `WatchTokenSheet`.
 extension FeedScreen {
 
-    /// Home draws it on All and on Yours, never on Following or with an app
-    /// picked: it is no account's (prd §1632 item 2, §1491's rule).
-    var walletWatchlistShows: Bool {
-        guard !walletOnFollowing, selectedSeat == nil else { return false }
-        if walletOnAll { return true }
-        guard let yours = YourAccountDemo.shownAddress, let scope = chrome.walletScope else { return false }
-        return WalletWatch.sameAddress(scope, yours)
-    }
-
     /// What your own account holds, by symbol, in dollars: the line a
     /// watched token you hold wears. Your Casberi account only (§1526: only
     /// it is yours), never a wallet you follow.
@@ -70,28 +61,6 @@ extension FeedScreen {
     }
 
     // MARK: - Home
-
-    /// **ONE DOOR, LIKE PERMISSIONS (prd §1632 item 2, user: "the watchlist
-    /// could be a row like permissions … and show an up down percentage of
-    /// the change … that would keep home clean").** It trails the day's
-    /// biggest mover in its ink ("HYPE −4.6%"), or the count when nothing
-    /// moved; nothing watched, the verb, which opens the search at once.
-    @ViewBuilder
-    var walletWatchlistHomeSection: some View {
-        let tokens = Watchlist.shared.tokens
-        walletDoorsSection {
-            if tokens.isEmpty {
-                walletDoor(.watchlist, name: String(localized: "Watch a token"),
-                           act: { feedSheet = .watchToken })
-            } else if let mover = WatchlistRules.biggestMover(tokens, quotes: WatchlistPrices.shared.quotes) {
-                walletDoor(.watchlist, word: "\(mover.symbol) \(mover.change.words)",
-                           wordTone: mover.change.tone == .up ? DS.confirmInk : DS.destructiveInk)
-            } else {
-                walletDoor(.watchlist, figure: "\(tokens.count)")
-            }
-        }
-        .task(id: tokens.map(\.id)) { await WatchlistPrices.shared.refreshIfStale(tokens) }
-    }
 
     // MARK: - The Watchlist page
 
@@ -248,5 +217,15 @@ extension FeedScreen {
             chrome.walletSection = .watchlist
             chrome.watchedTokenID = nil
         }
+    }
+}
+
+extension FeedScreen {
+    /// The watchlist's prices for Home's Watchlist card (prd §1807): the one
+    /// read outside the watchlist's own page, on screen like the others, and
+    /// kept in this file so every caller of the read stands in one place
+    /// (`watchlist-selftest.sh`).
+    func walletWatchlistRefresh(_ tokens: [WatchedToken]) async {
+        await WatchlistPrices.shared.refreshIfStale(tokens)
     }
 }

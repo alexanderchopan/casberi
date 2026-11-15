@@ -501,7 +501,7 @@ extension FeedScreen {
             if yours == nil, onAll { YourAccountFirstOpen.makeIfFresh() }
             RecoveryCheckState.shared.refresh()
         }
-        .task(id: tokens.map(\.id)) { await WatchlistPrices.shared.refreshIfStale(tokens) }
+        .task(id: tokens.map(\.id)) { await walletWatchlistRefresh(tokens) }
         // Read when Home stands and when something lands, never in a body
         // (prd §628).
         .task(id: chrome.refreshPulse) { loadActivityFaces() }

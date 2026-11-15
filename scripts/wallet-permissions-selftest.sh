@@ -341,7 +341,7 @@ strip "$FEED" > "$FEED_BARE"
 # the checkup's own counts, and the delegations count is the acting list's
 # own split. Since prd §1762 an Aztec app's authorizations are permissions
 # too, so the skeleton also waits on there being none of those.
-grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0, !walletShowsAztecGrants {' "$FEED_BARE" && grep -q 'if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }' "$FEED_BARE" \
+grep -q 'if standsEmpty, counts(\\.delegations) + counts(\\.approvals) == 0, !walletShowsAztecGrants {' "$FEED_BARE" && grep -q 'if JustRevoked.today(scope: chrome.walletScope).isEmpty { walletSkeletonRowsSection }' "$FEED_BARE" \
   || fail "the Permissions page's empty gate has drifted from the checkup's counts"
 grep -q 'delegations: WalletPermissions.actingHolders(holders).count' "$FEED_BARE" \
   || fail "the checkup's delegations no longer count the acting list's own holders"
@@ -391,8 +391,13 @@ grep -q 'walletActingSection' "$FEED" \
 # §1633's revoked-today branch and the lead verb stand before them).
 # Since prd §1480 the lists stand on the Permissions page: the acting list,
 # then the approvals. Signatures waiting on you lead Needs you instead.
-order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 'case .permissions:$' \
+# Since prd §1809 the lists are one builder, `walletPermissionRows`, drawn by
+# the Permissions page and by Risks, which holds Permissions on the whole
+# Wallet: the order is read where it is written once.
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 10 'func walletPermissionRows(' \
         | grep -A 1 'walletActingSection' | head -2)
+grep -q 'walletPermissionRows(standsEmpty: false)' "$FEED_BARE" \
+  || fail "Risks no longer draws Permissions' rows (prd §1809)"
 print -r -- "$order" | sed -n '1p' | grep -q 'walletActingSection' \
   || fail "the acting list no longer leads the Permissions page (prd §1480)"
 print -r -- "$order" | sed -n '2p' | grep -q 'walletApprovalsSection' \

@@ -36,12 +36,13 @@ fi
 # Read only where it is on screen, never by a sweep.
 callers="$(grep -rlE 'WatchlistPrices\.shared\.refreshIfStale' Casberi/Casberi | sort)"
 [[ "$callers" == "$SCREEN" ]] || { echo "✗ refreshIfStale is called outside the watchlist's screens:"; print -r -- "$callers"; exit 1; }
-# Home draws it on All and Yours only: never on Following, never on an app pick.
-shows="$(awk '/var walletWatchlistShows: Bool/,/^    }/' "$SCREEN")"
-print -r -- "$shows" | grep -qF 'guard !walletOnFollowing, selectedSeat == nil else { return false }' \
-  || { echo "✗ Home's watchlist no longer stands down on Following and an app pick"; exit 1; }
-grep -qF 'if walletWatchlistShows { walletWatchlistHomeSection }' Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift \
-  || { echo "✗ Home no longer draws the watchlist behind walletWatchlistShows"; exit 1; }
+# Home's Watchlist is one of its cards (prd §1807), and the cards are the
+# whole Wallet's: never drawn on Following, never on an app pick.
+PAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"
+grep -qF 'DSHomeCard(glyph: WalletSection.watchlist.glyph, name: WalletSection.watchlist.label,' "$PAGES" \
+  || { echo "✗ Home no longer draws the Watchlist card (prd §1807)"; exit 1; }
+grep -B3 'walletHomeCards(yours: yours' "$PAGES" | grep -qF 'if selectedSeat == nil, !walletOnFollowing {' \
+  || { echo "✗ Home's cards no longer stand down on Following and an app pick"; exit 1; }
 # A token watched by its contract charts too: when DeFiLlama has no window,
 # the coin CoinGecko lists it as (AZTEC on Ethereum drew an empty box).
 charts="$(awk '/static func charts\(ids:/,/^    }/' "$STORE")"

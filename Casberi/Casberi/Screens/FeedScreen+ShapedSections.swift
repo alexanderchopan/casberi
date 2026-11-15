@@ -462,10 +462,6 @@ extension FeedScreen {
                     // three places' rows (prd §1785) and On its way (prd
                     // §1787) are gone from it: Holdings lists both.
                     walletHomeDoors(upcoming: upcoming)
-                    // The tokens you watch, open (prd §1632 item 2).
-                    // Watchlist is a card on the whole Wallet's Home (prd
-                    // §1807); a pick keeps its door.
-                    if walletWatchlistShows, selectedSeat != nil || walletOnFollowing { walletWatchlistHomeSection }
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,

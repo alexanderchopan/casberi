@@ -352,7 +352,7 @@ deny DSScopeTiles.swift "DragGesture" \
 chrome_bare=$(sed -e 's://.*$::' Casberi/Casberi/Design/DSRoomScopeChrome.swift)
 # The lead stands only where the box draws (prd §1403): beside a pane the
 # column leaves it to the pane, so the line is gated — same place, one gate.
-lead_at=$(print -r -- "$chrome_bare" | grep -nE "^            (lead|if boxPlace != \.listWithoutBox \{ lead \})$" | head -1 | cut -d: -f1 || true)
+lead_at=$(print -r -- "$chrome_bare" | grep -nE "^            (lead|if boxPlace != \.listWithoutBox(, !boxless)? \{ lead \})$" | head -1 | cut -d: -f1 || true)
 tiles_at=$(print -r -- "$chrome_bare" | grep -n "DSScopeTiles(" | head -1 | cut -d: -f1 || true)
 [[ -n "$lead_at" && -n "$tiles_at" ]] && (( lead_at < tiles_at )) \
   || fail "drift: the chrome's lead box is not drawn before its tiles — controls at the top, or a moving bar (§752, §765)"
