@@ -253,6 +253,9 @@ final class ShellChrome {
     /// Move opens on Receive with its Private switch on: a fresh address
     /// (prd §1560). Cleared when the tray closes.
     var moveFreshReceive = false
+    /// Move opens on Receive's From another network: a deposit address
+    /// (Account's "Other networks" line). Cleared when the tray closes.
+    var moveReceiveElsewhere = false
     /// The sentence Move was holding when the tray closed (prd §1586): a
     /// swipe down is not a cancel, so the next open picks it up. Memory
     /// only, and only for a few minutes.

@@ -58,7 +58,7 @@ struct MoveTrayPresenter: ViewModifier {
                               YourAccountFirstOpen.walked(yours)
                               chrome.walkClosed += 1
                           }
-                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
+                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveReceiveElsewhere = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -230,6 +230,7 @@ struct MoveScreen: View {
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
                              privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,
+                             receiveElsewhere: chrome.moveReceiveElsewhere,
                              lending: chrome.moveLend, aztecPrivately: chrome.moveAztec,
                              railgunPrivately: chrome.moveRailgun)
                     .transition(.opacity)
