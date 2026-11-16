@@ -79,6 +79,16 @@ import SwiftData
 ///   `deposits-by-label` answers `[]` for every v2 deposit tried.
 /// - Status values are v1's minus the terminal pair: pending | approved |
 ///   declined | poi_required (0xBow's website-v2 `services/api-types.ts`).
+/// - **NO LONGER (measured 2026-11-16):** the events feed carries no
+///   `reviewStatus` on any row, and its `status` filter answers "status
+///   filter is not available on the public feed" — 0xBow took review status
+///   off the public feed. A v2 deposit's status is now readable only by its
+///   LABEL (`/labels/<Poseidon(label)>/status`), and the label is encrypted
+///   to the ASP: only the depositor knows it. So a watched wallet's v2
+///   deposit lands with NO state tag and is not polled (`depositThing`'s
+///   `reviewed: false`); your own deposits are asked by label in
+///   `PrivateMoneyStore`. v1's `deposits-by-label` still answers (the
+///   block-25581320 deposit read `approved` the same day).
 /// - v2 has no `pools-stats`; its per-asset `acceptedDepositsCount` is at
 ///   `/1/public/assets-stats` and is NOT read yet, so a v2 deposit lands
 ///   without a cover line rather than with v1's figure.
@@ -128,11 +138,10 @@ enum PrivacyPoolsBridge {
 
     private static let aspBase = "https://api.0xbow.io/1/public"
 
-    /// Where each version's deposits are managed — the door a status row
-    /// opens. `app.0xbow.io` stopped resolving by 2026-10-21; v1 lives at the
-    /// project's own domain now and v2 at its subdomain.
+    /// Where v1 deposits are managed — the door a status row opens (only v1
+    /// rows get one since 2026-11-16). `app.0xbow.io` stopped resolving by
+    /// 2026-10-21; v1 lives at the project's own domain.
     static let v1AppURL = "https://privacypools.com"
-    static let v2AppURL = "https://v2.privacypools.com"
 
     // MARK: - V2 (same addresses on every v2 chain; mainnet read only)
 
@@ -140,7 +149,6 @@ enum PrivacyPoolsBridge {
     static let v2PoolVault = "0x0eb42804bf897662af851370eaeadcdbec1b97ed"
     /// PoolVault's `Initialized` block — nothing v2 exists before it.
     private static let v2DeployBlock = 25_884_277
-    private static let v2ASPBase = "https://api-v2.0xbow.io/1/public"
 
     /// Entrypoint `Deposited(address indexed asset, address indexed depositor,
     /// uint256 amount, uint256 fee)`. Same topic0 as v1's Entrypoint (same
@@ -300,9 +308,9 @@ enum PrivacyPoolsBridge {
 
     /// Each entry: label (decimal), scope (decimal), symbol, amount (display
     /// string), wallet (lowercased hex), status (last seen; "" = just landed,
-    /// baseline unknown). A v2 entry adds `v: "2"`, its `tx` and its `asset`
-    /// (the ASP answers v2 by transaction under an asset) and has no scope;
-    /// its `label` is the deposit's commitment, the key its row lands under.
+    /// baseline unknown). v1 only since 2026-11-16: a v2 deposit's status
+    /// cannot be read (the header's note), and `pollStatuses` sweeps the
+    /// `v: "2"` entries kept before.
     private static func pending() -> [[String: String]] {
         (UserDefaults.standard.array(forKey: pendingKey) as? [[String: String]]) ?? []
     }
@@ -698,16 +706,19 @@ enum PrivacyPoolsBridge {
 
     /// A deposit row, either version. `value` and `symbol` are nil together
     /// when the asset did not resolve, and then `what` is the word "crypto".
+    /// `reviewed: false` (v2) lands it with no state tag: its review status
+    /// cannot be read (the header's 2026-11-16 note), and a `Pending` that
+    /// never moves would be a false status (prd §83).
     private static func depositThing(what: String, value: Double?, symbol: String?,
                                      capturedAt: Date, txHash: String,
-                                     ref: String, wallet: String) -> Thing {
+                                     ref: String, wallet: String, reviewed: Bool = true) -> Thing {
         let thing = Thing(
             kind: .transaction,
             title: String(localized: "Put \(what) into Privacy Pools"),
             content: "https://etherscan.io/tx/\(txHash)",
             source: "Privacy Pools",
             capturedAt: capturedAt,
-            tags: ["Shielded", "Pending"],
+            tags: reviewed ? ["Shielded", "Pending"] : ["Shielded"],
             sourceRef: ref)
         thing.walletAddress = wallet
         // The amount as DATA (prd §369, 2026-08-12) — the same
@@ -856,10 +867,9 @@ enum PrivacyPoolsBridge {
         let times = await blockTimes(blocks: deposits.map(\.block))
         var out: [Thing] = []
         var seen = Set<String>()
-        var watchlist = pending()
         for deposit in deposits {
             // The commitment is the key a later ragequit names; a miss keys
-            // the row by its transaction, which still polls but cannot join.
+            // the row by its transaction, which cannot join.
             let commitment = await v2Commitment(for: deposit)
             let key = commitment ?? "v2:\(deposit.txHash)"
             let ref = depositRefPrefix + key
@@ -870,16 +880,8 @@ enum PrivacyPoolsBridge {
             let capturedAt = times[deposit.block] ?? .now
             out.append(depositThing(what: what, value: value, symbol: deposit.paid?.symbol,
                                     capturedAt: capturedAt, txHash: deposit.txHash,
-                                    ref: ref, wallet: wallet))
-            let fresh = Date.now.timeIntervalSince(capturedAt) < 86_400
-            watchlist.append([
-                "v": "2", "label": key, "tx": deposit.txHash, "asset": deposit.asset,
-                "symbol": deposit.paid?.symbol ?? "", "amount": amount ?? "",
-                "wallet": wallet.lowercased(),
-                "status": fresh ? "pending" : "",
-            ])
+                                    ref: ref, wallet: wallet, reviewed: false))
         }
-        setPending(watchlist)
         return out
     }
 
@@ -923,37 +925,6 @@ enum PrivacyPoolsBridge {
                         raw: WalletIngest.hexToDouble("0x" + valueHex),
                         block: WalletIngest.hexToInt(blockHex), txHash: txHash)
         }
-    }
-
-    /// Review status for v2 deposits, by transaction: the ASP's events feed
-    /// for each asset with something watched, newest first, paged until every
-    /// watched transaction is found or five pages are read. Returns tx → status;
-    /// an unreachable asset answers nothing and its entries wait a pass.
-    private static func v2Statuses(for entries: [[String: String]]) async -> [String: String] {
-        var wanted: [String: Set<String>] = [:]   // asset → tx hashes
-        for e in entries {
-            guard let asset = e["asset"], let tx = e["tx"] else { continue }
-            wanted[asset, default: []].insert(tx)
-        }
-        var out: [String: String] = [:]
-        for (asset, txs) in wanted {
-            var missing = txs
-            for page in 1...5 where !missing.isEmpty {
-                guard let root = await IngestSupport.getJSON(
-                        "\(v2ASPBase)/events?page=\(page)&perPage=100",
-                        headers: ["X-Asset": asset]) as? [String: Any],
-                      let events = root["events"] as? [[String: Any]], !events.isEmpty
-                else { break }
-                for event in events where (event["type"] as? String) == "deposit" {
-                    guard let tx = (event["txHash"] as? String)?.lowercased(),
-                          missing.contains(tx),
-                          let status = event["reviewStatus"] as? String else { continue }
-                    out[tx] = status
-                    missing.remove(tx)
-                }
-            }
-        }
-        return out
     }
 
     // MARK: - Ragequit exits (prd §228)
@@ -1107,9 +1078,30 @@ enum PrivacyPoolsBridge {
         thing.tags = tags
     }
 
+    /// Strips a deposit row's state tag: for a v2 deposit whose review
+    /// status can no longer be read, no state is the honest one.
+    @MainActor
+    private static func clearState(label: String, context: ModelContext) {
+        let ref = depositRefPrefix + label
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
+        guard let thing = (try? context.fetch(descriptor))?.first, thing.isLive else { return }
+        let tags = thing.tags.filter { !PrivacyPoolsRoom.states.contains($0) }
+        guard tags != thing.tags else { return }
+        thing.tags = tags
+    }
+
     @MainActor
     private static func pollStatuses(context: ModelContext,
                                      existing: Set<String>) async -> Int {
+        // v2 entries from before 2026-11-16 can never be answered (the
+        // header's note): their rows lose the `Pending` that would never move,
+        // and they leave the watchlist.
+        let stale = pending().filter { $0["v"] == "2" }
+        for e in stale {
+            guard let label = e["label"] else { continue }
+            clearState(label: label, context: context)
+        }
+        if !stale.isEmpty { setPending(pending().filter { $0["v"] != "2" }) }
         let entries = pending()
         guard !entries.isEmpty else { return 0 }
 
@@ -1128,17 +1120,6 @@ enum PrivacyPoolsBridge {
             for row in rows {
                 guard let label = row["label"] as? String,
                       let status = row["reviewStatus"] as? String else { continue }
-                statuses[label] = status
-            }
-        }
-        // v2 answers by transaction; filed back under the entry's own key so
-        // the switch below treats both versions alike.
-        let v2 = entries.filter { $0["v"] == "2" }
-        if !v2.isEmpty {
-            let byTx = await v2Statuses(for: v2)
-            for e in v2 {
-                guard let tx = e["tx"], let label = e["label"],
-                      let status = byTx[tx] else { continue }
                 statuses[label] = status
             }
         }
@@ -1173,7 +1154,7 @@ enum PrivacyPoolsBridge {
                     let ref = "privacypools:status:\(label)"
                     if !existing.contains(ref) {
                         let thing = Thing(kind: .transaction, title: title,
-                                          content: e["v"] == "2" ? v2AppURL : v1AppURL,
+                                          content: v1AppURL,
                                           source: "Privacy Pools",
                                           capturedAt: .now, sourceRef: ref)
                         thing.walletAddress = e["wallet"]
@@ -1204,7 +1185,7 @@ enum PrivacyPoolsBridge {
                         let thing = Thing(
                             kind: .transaction,
                             title: String(localized: "Privacy Pools needs proof for your \(what) deposit — open 0xBow"),
-                            content: e["v"] == "2" ? v2AppURL : v1AppURL,
+                            content: v1AppURL,
                             source: "Privacy Pools",
                             capturedAt: .now, sourceRef: ref)
                         thing.walletAddress = e["wallet"]

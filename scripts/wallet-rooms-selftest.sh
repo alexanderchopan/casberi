@@ -163,8 +163,16 @@ grep -q 'thing.priceValue = value' "$BR_METAMASK" \
   || { echo "✗ MetaMaskCardBridge no longer stamps priceValue — every spend would be unpriced and the card could state no money at all"; exit 1; }
 grep -q 'thing.priceCurrency = currency' "$BR_METAMASK" \
   || { echo "✗ MetaMaskCardBridge no longer stamps priceCurrency — spends would drop out of every total with nothing on screen to say so"; exit 1; }
-grep -q 'tags: \["Shielded", "Pending"\]' "$BR_POOLS" \
+grep -q 'tags: reviewed ? \["Shielded", "Pending"\] : \["Shielded"\]' "$BR_POOLS" \
   || { echo "✗ a Privacy Pools deposit no longer lands wearing a state tag — Needs you could never find the one that needs proof"; exit 1; }
+# v2's review status left the public feed (measured 2026-11-16): a watched v2
+# deposit lands with no state and is never polled, or it reads Pending for life.
+grep -q 'ref: ref, wallet: wallet, reviewed: false))' "$BR_POOLS" \
+  || { echo "✗ a v2 deposit lands as Pending, a status nothing can ever move"; exit 1; }
+! grep -q 'reviewStatus' <(sed -n '/private static func v2Things/,/^    }$/p' "$BR_POOLS") \
+  || { echo "✗ the v2 read looks for reviewStatus again, which the public feed no longer carries"; exit 1; }
+grep -q 'let stale = pending().filter { $0\["v"\] == "2" }' "$BR_POOLS" \
+  || { echo "✗ v2 entries kept before 2026-11-16 are no longer swept — their rows would read Pending for life"; exit 1; }
 
 # --- prd §397 (2026-08-17) --------------------------------------------------
 # The money a deposit's row states (the ledger column, the receipt). Without
