@@ -69211,6 +69211,18 @@ Mock: the design canvas "Private money with 0xBow".
 
 **Mac half (§1402).** The Mac runs the same engine and draws the same held rows; nothing of its own.
 
+## §1569b — The check against Ethereum runs outside the engine's one-flow queue, at most every ten minutes a root, so a Move never waits on it (amends §1569a) (user, 2026-11-15, pasting another session's diagnosis of a Move to private that sat on "Preparing…": "i just had this happen") — BUILT
+
+**What was wrong.** §1569a's check ran inside `PrivacyEngine.exclusive`, right after the watch's `discover`. Its first pass reads both trees' logs (67 s on Sepolia, longer on Ethereum), and the watch reads every 20–60 s while a deposit waits for approval or a send is unseen. A Move to private waits for that queue before its proof, so it sat on "Preparing…" behind each read with nothing saying why. Not seen on the phone's log; read off the code, and it matches the report.
+
+1. **The check reads no open account.** `check` takes the network and the commitments `discover` returned (`Wire.Check`), builds its own tree readers per network, and is account-free (`PrivacyEngine.accountFree`), so it runs after `exclusive` returns. A Move can take the queue while a check is still reading logs.
+2. **At most once per `findEvery` (ten minutes) a root**, and a check that could not run is tried at the next read. The readers stay in the page, so later passes fetch only new logs.
+3. **Guarded** (`privacy-engine-selftest.sh`): the watch's check comes after `discover` and outside `exclusive` (a check moved back inside is caught), `check` is account-free, and `verified.js` reads no open account.
+
+**Not done.** A Move still waits for a `discover` already holding the queue, which has no time limit and no word on screen; that predates §1569a.
+
+**Mac half (§1402).** The same engine and watch; nothing of its own.
+
 ## §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the surface (amends §1455, §1456, §1462, §1496) (user, 2026-10-27: "we should just turn cosigner on or off. this allowance stuff has too many edge cases"; "ok" to one row) — RULED, built in 878
 
 **Why.** Testing on mainnet, "$100 a month" turned out to mean six separate allowances (ETH and the network's dollar on three networks), sends only, and every other token and every swap needing the co-signer anyway. Every wording tried ("of each coin", "per token and per network", "anything else needs …") left the person more confused, because the feature was co-signer protection with a carve-out, not a cap. A switch says what it does.

@@ -60,6 +60,13 @@ enum PrivacyEngineWire {
         let network: PrivacyNetwork
     }
 
+    /// The check against Ethereum (prd §1569a): no open account, only the
+    /// network and the commitments `discover` returned.
+    struct Check: Encodable {
+        let network: PrivacyNetwork
+        let notes: [String]
+    }
+
     struct Deposit: Encodable, Equatable {
         let tokenId: String
         let value: String

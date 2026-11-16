@@ -133,7 +133,9 @@ final class PrivacyEngine: NSObject {
 
     /// What needs no open account: everything else must be called inside
     /// `exclusive`, or it is refused before it reaches the page.
-    static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash]
+    /// `check` is one (prd §1569a): it reads no open account, so it never
+    /// holds the queue a Move waits on.
+    static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check]
 
     func call<Params: Encodable, Value: Decodable>(_ method: Wire.Method, _ params: Params,
                                                   as type: Value.Type) async throws -> Value {
@@ -193,10 +195,11 @@ final class PrivacyEngine: NSObject {
         try await call(.discover, Wire.Empty(), as: Wire.Discovered.self)
     }
 
-    /// The balance `discover` found, checked against Ethereum itself through
-    /// Kohaku's verified provider (prd §1569a). `discover` first.
-    func check() async throws -> Wire.Checked {
-        try await call(.check, Wire.Empty(), as: Wire.Checked.self)
+    /// The notes `discover` found, checked against Ethereum itself through
+    /// Kohaku's verified provider (prd §1569a). Called OUTSIDE `exclusive`:
+    /// it takes a minute on a first read, and a Move must not wait on it.
+    func check(network: PrivacyNetwork, notes: [String]) async throws -> Wire.Checked {
+        try await call(.check, Wire.Check(network: network, notes: notes), as: Wire.Checked.self)
     }
 
     /// A private transfer to `recipient` through the relayer, proof included.

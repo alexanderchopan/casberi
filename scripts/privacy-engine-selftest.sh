@@ -117,10 +117,16 @@ done
 use "$ENGINE" '"body64": data.base64EncodedString()' "the door hands the page text, which mangles a binary proof"
 use "$NETJS" "atob(reply.body64 ?? '')" "net.js no longer reads the door's base64 body"
 use "$ENGINE" 'case "colibri.wasm":' "the scheme no longer serves the light client"
+# The check never holds the engine's one-flow queue (a Move to private sat
+# on "Preparing…" behind it, 2026-11-15): it is account-free, its watch call
+# comes after `exclusive` has returned, and nothing calls it inside one.
 awk '/static func findNotes\(of root/,/^    }$/' "$WATCH" > /tmp/pe-watch.$$
-use /tmp/pe-watch.$$ "checked = try await PrivacyEngine.shared.check()" "the watch no longer checks what it discovered"
-[[ $(grep -n 'PrivacyEngine.shared.discover()' /tmp/pe-watch.$$ | cut -d: -f1) -lt $(grep -n 'PrivacyEngine.shared.check()' /tmp/pe-watch.$$ | cut -d: -f1) ]] || { echo "✗ the watch checks before it discovers"; rm -f /tmp/pe-watch.$$; exit 1; }
+use /tmp/pe-watch.$$ "await check(found, root: root, on: network)" "the watch no longer checks what it discovered"
+[[ $(grep -n 'PrivacyEngine.shared.discover()' /tmp/pe-watch.$$ | cut -d: -f1) -lt $(grep -n 'await check(found, root: root, on: network)' /tmp/pe-watch.$$ | cut -d: -f1) ]] || { echo "✗ the watch checks before it discovers"; rm -f /tmp/pe-watch.$$; exit 1; }
+awk '/PrivacyEngine.exclusive \{/{d=1} d&&/^            \}$/{d=0} d' /tmp/pe-watch.$$ | grep -q 'check(' && { echo "✗ the check runs inside PrivacyEngine.exclusive, where a Move waits on it"; rm -f /tmp/pe-watch.$$; exit 1; }
 rm -f /tmp/pe-watch.$$
+grep -qF '.labelHash, .check]' "$ENGINE" || { echo "✗ check is not account-free, so it must run inside the queue"; exit 1; }
+grep -q 'account\.' "$VERIFIED" && { echo "✗ verified.js reads the open account, so the check cannot leave the queue"; exit 1; }
 use "$BUNDLE" "isKnownRoot" "the shipped bundle has no Ethereum check — rebuild"
 use "$BUNDLE" "body64" "the shipped bundle's door reads a text body the app no longer sends — rebuild"
 echo "  ok   the door is asked before the funnel, pins are checked before a file is kept, the page reaches no host, two networks behind one switch"

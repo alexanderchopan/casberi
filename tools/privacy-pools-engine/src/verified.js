@@ -17,7 +17,7 @@
 // and asking the chain about one note's nullifier would name it.
 import { colibri } from '@kohaku-eth/provider/colibri';
 import Colibri, { Strategy, set_wasm_url } from '@corpus-core/colibri-stateless';
-import { MerkleService, createEvmKeystoreInteractor, createEvmPoolVaultInteractor } from '@0xbow/privacy-pools-v2-sdk';
+import { MerkleService, ViemRPCInteractor, createEvmKeystoreInteractor, createEvmPoolVaultInteractor } from '@0xbow/privacy-pools-v2-sdk';
 import { decodeFunctionResult, encodeFunctionData } from 'viem';
 
 // Colibri's hosts, pinned to the ones `NetworkReach` declares for the
@@ -85,13 +85,16 @@ async function knows(p, contract, root) {
 const leafKey = (h) => BigInt(h).toString(16);
 
 // One pass over both trees; a later pass fetches only the logs since the last.
-export async function checkAccount(account, { notes, hash, say, now }) {
-  const n = account.network;
+// It needs no open account, only the network and the commitments `discover`
+// returned, so the app runs it outside the engine's one-flow queue: a check
+// that takes a minute never holds a Move.
+export async function checkTrees(n, { notes, hash, say, now }) {
   const key = `${n.chainId}:${n.pool}:${n.keystore}`;
   if (!readers.has(key)) {
+    const rpcInteractor = ViemRPCInteractor.create({ rpcUrl: n.rpcUrl });
     readers.set(key, {
-      state: createEvmPoolVaultInteractor({ rpcInteractor: account.rpc, contractAddress: n.pool, deploymentBlock: BigInt(n.fromBlock) }),
-      keystore: createEvmKeystoreInteractor({ rpcInteractor: account.rpc, contractAddress: n.keystore, deploymentBlock: BigInt(n.fromBlock) }),
+      state: createEvmPoolVaultInteractor({ rpcInteractor, contractAddress: n.pool, deploymentBlock: BigInt(n.fromBlock) }),
+      keystore: createEvmKeystoreInteractor({ rpcInteractor, contractAddress: n.keystore, deploymentBlock: BigInt(n.fromBlock) }),
     });
   }
   const tree = readers.get(key);

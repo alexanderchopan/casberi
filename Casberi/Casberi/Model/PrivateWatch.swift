@@ -187,6 +187,32 @@ enum PrivateWatch {
         await store.refresh(force: true)
     }
 
+    /// **CHECKED AGAINST ETHEREUM (prd §1569a), OUTSIDE THE QUEUE.** The
+    /// notes a read found, checked through Kohaku's verified provider. It
+    /// takes a minute on a first read (both trees' logs), so it runs after
+    /// `exclusive` has let go: inside it, a Move to private sat on
+    /// "Preparing…" behind every background read (build of 2026-11-14). At
+    /// most once per `findEvery` a root; a check that could not run proves
+    /// nothing either way and is tried at the next read.
+    private static var lastChecked: [String: Date] = [:]
+
+    private static func check(_ found: PrivacyEngineWire.Discovered, root: String, on network: PrivacyNetwork) async {
+        guard Date().timeIntervalSince(lastChecked[root] ?? .distantPast) > findEvery else { return }
+        lastChecked[root] = Date()
+        do {
+            let checked = try await PrivacyEngine.shared.check(network: network, notes: found.notes.map(\.commitment))
+            PrivateMoneyStore.shared.recordCheck(checked, root: root)
+            NSLog("privateWatch| checked | %@ | %@ | state %d leaves %@ | keystore %d leaves %@ | %d of %d notes in the tree | %d ms",
+                  network.name, checked.checked ? "matches" : "MISMATCH",
+                  checked.trees["state"]?.leaves ?? 0, (checked.trees["state"]?.known ?? false) ? "known" : "unknown",
+                  checked.trees["keystore"]?.leaves ?? 0, (checked.trees["keystore"]?.known ?? false) ? "known" : "unknown",
+                  checked.notes - checked.notesMissing, checked.notes, checked.ms)
+        } catch {
+            lastChecked[root] = nil
+            NSLog("privateWatch| checked | %@ | unreachable | %@", network.name, String(describing: error))
+        }
+    }
+
     /// One root's notes, read from the pool with its keys and kept: alone
     /// through the engine (finding 8), opened from the root (no prompt:
     /// nothing spends). False when it could not be read.
@@ -197,7 +223,7 @@ enum PrivateWatch {
         guard network.isTest || PrivateOnEthereum.owner != nil else { return false }
         let started = Date()
         do {
-            let (found, checked) = try await PrivacyEngine.exclusive {
+            let found = try await PrivacyEngine.exclusive {
                 if network.isTest {
                     #if DEBUG
                     try await PrivateAccount.open(root, reason: nil)
@@ -205,26 +231,11 @@ enum PrivateWatch {
                 } else {
                     try await PrivateOnEthereum.open(root, reason: nil)
                 }
-                let found = try await PrivacyEngine.shared.discover()
-                // Checked against Ethereum itself (prd §1569a); a check that
-                // could not run (the light client's hosts unreachable) proves
-                // nothing either way and is tried at the next read.
-                let checked: PrivacyEngineWire.Checked?
-                do { checked = try await PrivacyEngine.shared.check() } catch {
-                    NSLog("privateWatch| checked | %@ | unreachable | %@", network.name, String(describing: error))
-                    checked = nil
-                }
-                return (found, checked)
+                return try await PrivacyEngine.shared.discover()
             }
             store.reconcile(found, root: root, network: network)
-            if let checked {
-                store.recordCheck(checked, root: root)
-                NSLog("privateWatch| checked | %@ | %@ | state %d leaves %@ | keystore %d leaves %@ | %d of %d notes in the tree | %d ms",
-                      network.name, checked.checked ? "matches" : "MISMATCH",
-                      checked.trees["state"]?.leaves ?? 0, (checked.trees["state"]?.known ?? false) ? "known" : "unknown",
-                      checked.trees["keystore"]?.leaves ?? 0, (checked.trees["keystore"]?.known ?? false) ? "known" : "unknown",
-                      checked.notes - checked.notesMissing, checked.notes, checked.ms)
-            }
+            // After the queue is released: a Move never waits on the check.
+            await check(found, root: root, on: network)
             await store.fillLabelHashes()
             NSLog("privateWatch| notes | %@ | %@ | %d found | %d unspent | %d s", network.name, root, found.notes.count,
                   store.notes.filter { $0.root == root }.count, Int(Date().timeIntervalSince(started)))

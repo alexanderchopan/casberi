@@ -20,7 +20,7 @@ import {
   ProofService, RelayerInteractor, ViemRPCInteractor, APP_IDENTIFIER, prepareYieldSwapDeposit,
 } from '@0xbow/privacy-pools-v2-sdk';
 import { syntheticInputs } from './synthetic.js';
-import { checkAccount } from './verified.js';
+import { checkTrees } from './verified.js';
 import * as snarkjs from 'snarkjs';
 import { getAddress } from 'viem';
 
@@ -392,12 +392,14 @@ const methods = {
     return { notes, balances: Object.entries(balances).map(([tokenId, value]) => ({ tokenId, value })), ms: Math.round(now() - t) };
   },
 
-  // The balance `discover` found, checked against Ethereum itself through
-  // Kohaku's verified provider (src/verified.js, prd §1569a). `discover` first.
-  async check() {
+  // The notes `discover` found, checked against Ethereum itself through
+  // Kohaku's verified provider (src/verified.js, prd §1569a). It reads no open
+  // account: the app passes the network and the commitments, and calls it
+  // outside the one-flow queue.
+  async check({ network, notes }) {
+    if (!NETWORKS.has(Number(network?.chainId))) throw Object.assign(new Error(`chain ${network?.chainId} is not a network this engine serves`), { name: 'NotServed' });
     const t = now();
-    const notes = account.notes.getNotes({ status: NoteStatus.ACTIVE }).map((n) => n.commitment);
-    const r = await checkAccount(account, { notes, hash: account.hash, say: logger('verified').warn, now });
+    const r = await checkTrees(network, { notes: notes ?? [], hash: await poseidon(), say: logger('verified').warn, now });
     return { ...r, ms: Math.round(now() - t) };
   },
 
