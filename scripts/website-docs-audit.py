@@ -143,13 +143,28 @@ def updated_of(page):
     return plain(m.group(1)) if m else None
 
 
+def built_of(page):
+    """How it's built: the page's claims, each link spelled out so a model can follow it."""
+    if '<section id="built">' not in page:
+        return ""
+    s = page[page.index('<section id="built">'):]
+    s = s[:s.index("</section>")]
+    s = re.sub(r"<a href=\"([^\"]+)\">(.*?)</a>", r"\2 (\1)", s, flags=re.S)
+    out = ["## " + plain(re.search(r"<h2>(.*?)</h2>", s, re.S).group(1)) + "\n"]
+    deck = re.search(r"<p class=\"deck\">(.*?)</p>", s, re.S)
+    if deck:
+        out.append(plain(deck.group(1)) + "\n")
+    out += ["- " + plain(li) for li in re.findall(r"<li>(.*?)</li>", s, re.S)]
+    return "\n\n" + "\n".join(out) + "\n"
+
+
 def text_for(page, old_text):
     """The whole text file: its own header and app list, the page's words between."""
     head = old_text[:old_text.index("## What Casberi does")]
     head = re.sub(r"Last updated: .*", "Last updated: " + (updated_of(page) or ""), head)
     every = old_text[old_text.index("## Every app"):old_text.index("## Questions, answered")]
     faq = "\n".join(f"- {a} — {b}" for a, b in faq_of(page))
-    return head + body_of(page) + "\n\n\n" + every + "## Questions, answered\n\n" + faq + "\n"
+    return head + body_of(page) + "\n\n\n" + every + "## Questions, answered\n\n" + faq + "\n" + built_of(page)
 
 
 LD = re.compile(r"(<script type=\"application/ld\+json\">\n\{\"@context\":\"https://schema.org\",\"@type\":\"FAQPage\",\"mainEntity\":\[\n)(.*?)(\n\]\}\n</script>)", re.S)
@@ -235,6 +250,10 @@ def self_test():
 <section id="faq">
 <details><summary>Do I need an account?</summary><p>No. It’s free.</p></details>
 </section>
+<section id="built">
+<h2>How it’s built</h2>
+<ul class="built"><li><strong>No server.</strong> See <a href="https://example.org/hosts.md">every host</a>.</li></ul>
+</section>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
 ROWS
@@ -254,12 +273,14 @@ ROWS
     expect("the text keeps its own header and app list", text.startswith("# Casberi\n\nLast updated: May 1, 2026 · Describes Casberi 9.9.9") and "## Every app\n\nA list." in text)
     for want in ("- Feed — Everything your apps bring in.", "1. Open it. It's yours.", "#### Pay someone",
                  "- Send. Pick who.", "How it works: the long part.", "Good to know: it asks first.",
-                 "- Do I need an account? — No. It's free."):
+                 "- Do I need an account? — No. It's free.", "## How it's built",
+                 "- No server. See every host (https://example.org/hosts.md)."):
         expect(f"the text says: {want}", want in text)
     expect("a picture adds no words", "shots/x.jpg" not in text and "figcaption" not in text)
     # mutations: each must be caught
     expect("a sentence changed on the page only is caught", any("not what docs.html says" in p for p in problems(page.replace("Pick who.", "Pick anyone."), text)))
     expect("a sentence changed in the text only is caught", any("not what docs.html says" in p for p in problems(page, text.replace("Pick who.", "Pick anyone."))))
+    expect("a How it's built link changed on the page only is caught", any("not what docs.html says" in p for p in problems(page.replace("example.org/hosts.md", "example.org/other.md"), text)))
     expect("an FAQ answer changed without its structured data is caught", any("structured data" in p for p in problems(page.replace("<p>No. It’s free.</p>", "<p>No. It costs nothing.</p>"), text)))
     expect("a date changed on the page only is caught", any("Last updated" in p for p in problems(page.replace("May 1, 2026", "May 2, 2026"), text)))
     expect("a missing date line is caught", any("no \"Last updated\"" in p for p in problems(page.replace('class="updated"', 'class="was"'), text)))

@@ -22,6 +22,15 @@ Key facts:
 - [Docs](https://casberi.app/docs.html): why Casberi exists, the problems it answers, and a walkthrough of every surface
 - [Privacy](https://casberi.app/privacy.html): what is stored, where, and what Casberi never does
 
+## How it's built
+
+- [Source](https://github.com/alexanderchopan/casberi): the whole app, public under the GPLv3
+- [Architecture and threat model](https://github.com/alexanderchopan/casberi/blob/main/docs/architecture.md): what the app holds, what signs, what leaves the device, what it trusts
+- [Every host](https://github.com/alexanderchopan/casberi/blob/main/docs/hosts.md): every host the app can reach, generated from the code
+- [Verify it yourself](https://github.com/alexanderchopan/casberi/blob/main/docs/verify-it-yourself.md): one command per claim, with the output to expect
+- [Dependencies](https://github.com/alexanderchopan/casberi/blob/main/docs/dependencies.md): version, source and licence of each
+- [Security policy](https://github.com/alexanderchopan/casberi/blob/main/SECURITY.md): how to report a vulnerability
+
 ## Optional
 
 - [llms-full.txt](https://casberi.app/llms-full.txt): the full documentation as plain text
