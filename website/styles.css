@@ -1914,8 +1914,9 @@ body { overflow-x: clip; }
 .hero-keep { font-family: 'Figtree', -apple-system, sans-serif; font-size: 17px; font-weight: 600;
   letter-spacing: -.01em; line-height: 1.5; color: #9aa3b2; max-width: 760px; margin: 14px auto 0; }
 .hero-keep span { display: block; }
-@media (max-width: 600px) { .hero-keep { font-size: 12.5px; margin: 10px -8px 0; max-width: none; }
-  .hero-keep span { white-space: nowrap; } }   /* one sentence per line on a 390px phone, measured */
+@media (max-width: 600px) { .hero-keep { font-size: min(12.5px, 3.15vw); margin: 10px -8px 0; max-width: none; }
+  .hero-keep span { white-space: nowrap; } }   /* one sentence per line: the size follows the width, so 375px fits too (2026-11-16) */
+@media (max-width: 359px) { .hero-keep span { white-space: normal; text-wrap: balance; } }   /* narrower than that, a sentence wraps rather than shrinks */
 .hero-verbs span { font-size: 13px; font-weight: 650; padding: 9px 15px; }
 /* plain words, a pink check each: facts, not pills (2026-11-16) */
 .hero-facts { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
