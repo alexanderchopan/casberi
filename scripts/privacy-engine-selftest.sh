@@ -44,7 +44,14 @@ use() { grep -qF -- "$2" "$1" || { echo "✗ $3"; exit 1; } }
 # The door is asked BEFORE the funnel sends, and the funnel is the only send.
 awk '/class PrivacyEngineNet/,/^}$/' "$ENGINE" > /tmp/pe-net.$$
 use /tmp/pe-net.$$ 'guard PrivacyEngineWire.allows(url, declared: declared) else {' "the network door no longer asks PrivacyEngineWire.allows"
-use /tmp/pe-net.$$ 'IngestSupport.sendRequest(request, service: PrivacyEngine.service)' "the engine's requests no longer go through the funnel"
+use /tmp/pe-net.$$ 'IngestSupport.sendRequest(request, service: service)' "the engine's requests no longer go through the funnel"
+# The service a request is filed under comes from the app's own rule, and the
+# door checks that service's hosts (prd §1825); a circuit the page names is
+# only ever an address (`PrivacyEngineWire.isolation`).
+use /tmp/pe-net.$$ 'let service = PrivacyEngine.service(for: purpose)' "the door no longer files a request under the service its purpose names"
+use /tmp/pe-net.$$ 'NetworkReach.endpoint(forService: service)?.hosts' "the door no longer checks a request against its own service's hosts"
+use /tmp/pe-net.$$ 'let isolation = PrivacyEngineWire.isolation(body["isolate"])' "the door takes a circuit from the page without checking it is an address"
+use /tmp/pe-net.$$ 'IngestSupport.$torIsolation.withValue(isolation)' "the door no longer sends a holdings read on its wallet's circuit"
 if [[ $(grep -n 'PrivacyEngineWire.allows' /tmp/pe-net.$$ | cut -d: -f1) -gt $(grep -n 'IngestSupport.sendRequest' /tmp/pe-net.$$ | cut -d: -f1) ]]; then
     echo "✗ the funnel sends before the door is asked"; rm -f /tmp/pe-net.$$; exit 1
 fi
@@ -109,7 +116,21 @@ use "$KEY" "kSecAttrSynchronizable as String: false" "the seed may sync"
 # hosts are the engine's declared ones, binary proofs cross the door intact,
 # and the watch checks what it has just discovered.
 use "$VERIFIED" "proofStrategy: Strategy.VerifiedOnly" "the verified provider answers unverified when a proof fails"
-[[ $(grep -c "p.request(" "$VERIFIED") -eq 1 ]] || { echo "✗ the check asks the chain something besides isKnownRoot"; exit 1; }
+# The private-money half only: the holdings check below asks for balances.
+awk '/export async function verifyHoldings/{exit} {print}' "$VERIFIED" > /tmp/pe-trees.$$
+[[ $(grep -c "p.request(" /tmp/pe-trees.$$) -eq 1 ]] || { echo "✗ the check asks the chain something besides isKnownRoot"; rm -f /tmp/pe-trees.$$; exit 1; }
+rm -f /tmp/pe-trees.$$
+# The holdings check (prd §1825): hybrid mode, so the prover is never sent an
+# address (remote mode sent it two of three times, measured); fail closed;
+# only the node's requests carry the wallet's circuit; one wallet a call.
+awk '/export async function verifyHoldings/,0' "$VERIFIED" > /tmp/pe-hold.$$
+use /tmp/pe-hold.$$ "prover_mode: 'hybrid'" "the holdings check no longer runs Colibri in hybrid mode (the prover would see the address)"
+use /tmp/pe-hold.$$ "proofStrategy: Strategy.VerifiedOnly" "the holdings check answers unverified when a proof fails"
+use /tmp/pe-hold.$$ "new URL(url).host === node ? { isolate: owner } : {}" "a holdings request other than the node's carries the wallet's circuit"
+use /tmp/pe-hold.$$ "purpose: 'holdings'" "the holdings check's requests are no longer filed under their own service"
+if grep -q "prover_mode: 'remote'" /tmp/pe-hold.$$; then echo "✗ the holdings check runs in remote mode"; rm -f /tmp/pe-hold.$$; exit 1; fi
+rm -f /tmp/pe-hold.$$
+use "$ENGINE" "static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check, .verifyHoldings]" "the holdings check waits on the engine's one-flow queue"
 use "$VERIFIED" "functionName: 'isKnownRoot', args: [BigInt(root)]" "the check no longer asks whether a root is known"
 for host in $(grep -oE "https://[a-z0-9.-]+" "$VERIFIED" | sed 's#https://##' | sort -u); do
     awk '/service: "Privacy Pools engine"/,/directWhenRefused/' "$REACH" | grep -qF "\"$host\"" || { echo "✗ the verified provider reaches $host, which the engine does not declare"; exit 1; }
@@ -125,7 +146,7 @@ use /tmp/pe-watch.$$ "await check(found, root: root, on: network)" "the watch no
 [[ $(grep -n 'PrivacyEngine.shared.discover()' /tmp/pe-watch.$$ | cut -d: -f1) -lt $(grep -n 'await check(found, root: root, on: network)' /tmp/pe-watch.$$ | cut -d: -f1) ]] || { echo "✗ the watch checks before it discovers"; rm -f /tmp/pe-watch.$$; exit 1; }
 awk '/PrivacyEngine.exclusive \{/{d=1} d&&/^            \}$/{d=0} d' /tmp/pe-watch.$$ | grep -q 'check(' && { echo "✗ the check runs inside PrivacyEngine.exclusive, where a Move waits on it"; rm -f /tmp/pe-watch.$$; exit 1; }
 rm -f /tmp/pe-watch.$$
-grep -qF '.labelHash, .check]' "$ENGINE" || { echo "✗ check is not account-free, so it must run inside the queue"; exit 1; }
+grep -qF '.labelHash, .check, .verifyHoldings]' "$ENGINE" || { echo "✗ check is not account-free, so it must run inside the queue"; exit 1; }
 grep -q 'account\.' "$VERIFIED" && { echo "✗ verified.js reads the open account, so the check cannot leave the queue"; exit 1; }
 use "$BUNDLE" "isKnownRoot" "the shipped bundle has no Ethereum check — rebuild"
 use "$BUNDLE" "body64" "the shipped bundle's door reads a text body the app no longer sends — rebuild"
@@ -153,8 +174,16 @@ check((try? W.decode(W.Registered.self, from: "not json")) == nil, "a reply that
 let openJSON = (try? W.encode(W.Open(seed: "0x" + String(repeating: "ab", count: 32), revocableKeyIndex: "0x0", owner: "0x01", network: .sepolia))) ?? ""
 check(openJSON.contains(#""chainId":11155111"#) && openJSON.contains(#""withdrawProcessor":"0x7430cc030d7eb8C83E76cD983996982C8C054204""#),
       "open carries the network the page checks")
-check(Set(W.Method.allCases.map(\.rawValue)) == ["info", "open", "close", "isRegistered", "prepareRegister", "prepareDeposit", "discover", "check", "prepareTransfer", "prepareWithdraw", "bench", "labelHash", "relay", "prepareRagequit", "prepareYieldDeposit", "prepareBridgedYieldDeposit"],
+check(Set(W.Method.allCases.map(\.rawValue)) == ["info", "open", "close", "isRegistered", "prepareRegister", "prepareDeposit", "discover", "check", "prepareTransfer", "prepareWithdraw", "bench", "labelHash", "relay", "prepareRagequit", "prepareYieldDeposit", "prepareBridgedYieldDeposit", "verifyHoldings"],
       "the methods are the page's")
+// The holdings check's door (prd §1825): a circuit is an address or nothing,
+// and only `holdings` is a purpose.
+check(W.isolation("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045") == "0xd8da6bf26964af9d7eed9e03e53415d37aa96045", "a wallet's address names its circuit, lowercased")
+check(W.isolation("rpc.mevblocker.io") == nil, "a host is never a circuit the page may name")
+check(W.isolation("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA9604") == nil, "a short address is no circuit")
+check(W.isolation("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 ") == nil, "an address with anything after it is no circuit")
+check(W.isolation(42) == nil, "a number is no circuit")
+check(W.Purpose(rawValue: "holdings") == .holdings && W.Purpose(rawValue: "anything") == nil, "holdings is the one purpose")
 
 // The network door.
 let declared = ["api-dev.0xbow.io", "ethereum-sepolia-rpc.publicnode.com"]

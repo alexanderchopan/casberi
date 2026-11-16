@@ -36,6 +36,8 @@ final class PrivacyEngine: NSObject {
     /// `NetworkReach` service names: the engine's reads, and its circuits.
     static let service = "Privacy Pools engine"
     static let circuitsService = "Privacy Pools circuits"
+    /// The Wallet's holdings check (prd §1825), filed under its own service.
+    static let holdingsService = "Wallet check"
     static let scheme = "casberi-engine"
 
     typealias Wire = PrivacyEngineWire
@@ -135,7 +137,7 @@ final class PrivacyEngine: NSObject {
     /// `exclusive`, or it is refused before it reaches the page.
     /// `check` is one (prd §1569a): it reads no open account, so it never
     /// holds the queue a Move waits on.
-    static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check]
+    static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check, .verifyHoldings]
 
     func call<Params: Encodable, Value: Decodable>(_ method: Wire.Method, _ params: Params,
                                                   as type: Value.Type) async throws -> Value {
@@ -202,6 +204,15 @@ final class PrivacyEngine: NSObject {
         try await call(.check, Wire.Check(network: network, notes: notes), as: Wire.Checked.self)
     }
 
+    /// One wallet's Ethereum holdings, read through the verified provider
+    /// (prd §1825). Account-free, so it never waits on a Move.
+    func verifyHoldings(owner: String, tokens: [String?]) async throws -> Wire.VerifiedHoldings {
+        try await call(.verifyHoldings,
+                       Wire.VerifyHoldings(chainId: HoldingsCheck.chainId, rpcUrl: HoldingsCheck.rpcUrl,
+                                           owner: owner, tokens: tokens),
+                       as: Wire.VerifiedHoldings.self)
+    }
+
     /// A private transfer to `recipient` through the relayer, proof included.
     func prepareTransfer(tokenId: String, amount: String, to recipient: String) async throws -> Wire.PreparedSpend {
         try await call(.prepareTransfer, Wire.Spend(tokenId: tokenId, amount: amount, recipient: recipient),
@@ -258,6 +269,11 @@ final class PrivacyEngine: NSObject {
     static var declaredHosts: [String] {
         NetworkReach.endpoint(forService: service)?.hosts ?? []
     }
+
+    /// The service a request is filed under, and the hosts it may reach.
+    static func service(for purpose: Wire.Purpose?) -> String {
+        purpose == .holdings ? holdingsService : service
+    }
 }
 
 // MARK: - The page's process
@@ -309,7 +325,10 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
             replyHandler(nil, "malformed request")
             return
         }
-        let declared = MainActor.assumeIsolated { PrivacyEngine.declaredHosts }
+        let purpose = (body["purpose"] as? String).flatMap(PrivacyEngineWire.Purpose.init(rawValue:))
+        let service = PrivacyEngine.service(for: purpose)
+        let isolation = PrivacyEngineWire.isolation(body["isolate"])
+        let declared = MainActor.assumeIsolated { NetworkReach.endpoint(forService: service)?.hosts ?? [] }
         guard PrivacyEngineWire.allows(url, declared: declared) else {
             NSLog("privacyEngine| refused | %@", url.host ?? raw)
             replyHandler(nil, "host not declared: \(url.host ?? "?")")
@@ -326,9 +345,15 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
         // Old logs from the node that keeps them (prd §1554); the rest, and a
         // range past its head, from the network's own node.
         let network = MainActor.assumeIsolated { PrivacyEngine.shared.network ?? .sepolia }
-        let routed = network.logsUrl.map { PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl, logsUrl: $0) } ?? url
+        // A holdings read keeps the node the Wallet named (prd §1825).
+        let routed = purpose == nil
+            ? network.logsUrl.map { PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl, logsUrl: $0) } ?? url
+            : url
         Task { @MainActor in
-            guard let (data, http) = await Self.send(request, to: routed, fallback: url, relayerUrl: network.relayerUrl) else {
+            let answer = await IngestSupport.$torIsolation.withValue(isolation) {
+                await Self.send(request, to: routed, fallback: url, relayerUrl: network.relayerUrl, service: service)
+            }
+            guard let (data, http) = answer else {
                 replyHandler(nil, "no answer from \(url.host ?? "?")")
                 return
             }
@@ -347,12 +372,13 @@ private final class PrivacyEngineNet: NSObject, WKScriptMessageHandlerWithReply 
     /// to `fallback` when that node has not reached the head yet; a free
     /// node's 429 is waited out, a few times, before it is an answer.
     @MainActor
-    private static func send(_ request: URLRequest, to url: URL, fallback: URL, relayerUrl: String) async -> (Data, HTTPURLResponse)? {
+    private static func send(_ request: URLRequest, to url: URL, fallback: URL, relayerUrl: String,
+                             service: String) async -> (Data, HTTPURLResponse)? {
         var request = request
         request.url = url
         var unanswered = 0
         for attempt in 0..<6 {
-            guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service) else {
+            guard let (data, http) = await IngestSupport.sendRequest(request, service: service) else {
                 // The relayer's front end refuses some Tor exits, and a quote
                 // or a relay that dies there is the whole move (measured
                 // 2026-10-26: two of two failed on one circuit). Its

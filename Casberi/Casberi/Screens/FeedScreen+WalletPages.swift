@@ -747,7 +747,8 @@ extension FeedScreen {
     /// still reads as the heading. A press opens what the door opens.
     /// The name and figure are the primary ink (prd §1731): grey at this
     /// rung read as a row you could not press.
-    func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, figure: String?, tone: Color = DS.textPrimary,
+    func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, lineInk: Color = DS.textSecondary,
+                                      figure: String?, tone: Color = DS.textPrimary,
                                       act: @escaping () -> Void,
                                       @ViewBuilder mark: () -> Mark) -> some View {
         Button {
@@ -768,7 +769,7 @@ extension FeedScreen {
                     if let line {
                         Text(verbatim: line)
                             .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
+                            .foregroundStyle(lineInk)
                             .lineLimit(1)
                     }
                 }
@@ -793,7 +794,13 @@ extension FeedScreen {
     func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
                             act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
         ForEach(tokens) { token in
-            walletPreviewRow(token.symbol, line: token.networksLine, figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
+            // Ethereum disagreed twice in a row (prd §1825): said in amber
+            // where the networks stand, as on the Tokens list.
+            let differs = HoldingsCheckStore.shared.mismatched(token)
+            walletPreviewRow(token.symbol,
+                             line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
+                             lineInk: differs ? DS.attentionInk : DS.textSecondary,
+                             figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
                 AssetMark(name: token.symbol, size: DS.Mark.badge)
             }
             // Hide from the row you see first, as from the Tokens list

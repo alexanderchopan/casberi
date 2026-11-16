@@ -27,7 +27,7 @@ async function bodyText(body) {
   return String(body);
 }
 
-async function engineFetch(input, init = {}) {
+async function engineFetch(input, init = {}, extra = {}) {
   const request = input instanceof Request ? input : null;
   const url = request ? request.url : String(input);
   if (url.startsWith('casberi-engine:')) return pageFetch(input, init);
@@ -37,7 +37,7 @@ async function engineFetch(input, init = {}) {
   if (init.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   let reply;
   try {
-    reply = await globalThis.webkit.messageHandlers.engineNet.postMessage({ url, method, headers, body });
+    reply = await globalThis.webkit.messageHandlers.engineNet.postMessage({ url, method, headers, body, ...extra });
   } catch (refusal) {
     // The app refused the host, or the request never got an answer: the
     // browser's own wording for a network failure, so viem retries as usual.
@@ -51,3 +51,11 @@ async function engineFetch(input, init = {}) {
 }
 
 globalThis.fetch = engineFetch;
+
+// A fetch that says what it is for (prd §1825): the Wallet's holdings check
+// passes `purpose: 'holdings'`, so the app files its requests under that
+// service, and `isolate` (one wallet's address) on the requests that name the
+// wallet, so they ride that wallet's own Tor circuit and no other's.
+export function engineFetchVia(extraFor) {
+  return (input, init = {}) => engineFetch(input, init, extraFor(input instanceof Request ? input.url : String(input)));
+}

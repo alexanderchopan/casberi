@@ -18,7 +18,8 @@
 import { colibri } from '@kohaku-eth/provider/colibri';
 import Colibri, { Strategy, set_wasm_url } from '@corpus-core/colibri-stateless';
 import { MerkleService, ViemRPCInteractor, createEvmKeystoreInteractor, createEvmPoolVaultInteractor } from '@0xbow/privacy-pools-v2-sdk';
-import { decodeFunctionResult, encodeFunctionData } from 'viem';
+import { decodeFunctionResult, encodeFunctionData, formatUnits } from 'viem';
+import { engineFetchVia } from './net.js';
 
 // Colibri's hosts, pinned to the ones `NetworkReach` declares for the
 // engine: its prover, its consensus API and two checkpoint services each.
@@ -114,4 +115,57 @@ export async function checkTrees(n, { notes, hash, say, now }) {
   const inTree = new Set(stateLeaves.map(leafKey));
   const missing = notes.filter((c) => !inTree.has(leafKey(c))).length;
   return { checked: trees.state.known && trees.keystore.known && missing === 0, trees, notes: notes.length, notesMissing: missing };
+}
+
+// The Wallet's holdings, checked against Ethereum itself (prd §1825).
+//
+// The same verified provider in Colibri's HYBRID mode: the prover hands over
+// only the block's proof, and the balance and the token's storage come from
+// the node the Wallet already reads this wallet through, checked here against
+// that block. Measured 2026-11-16 (Ethereum, Node): the prover was sent no
+// address in hybrid mode and two of three requests named it in remote mode,
+// so remote is never used here. A verified balance took about 1 s, a token's
+// 0.4 to 0.8 s.
+//
+// The node's requests name the wallet, so they carry `isolate` and ride its
+// own circuit; the prover's, the consensus API's and the checkpoints' name no
+// one and go as any request does. One wallet a call: two wallets never share
+// a provider, and so never a circuit.
+const BALANCE_OF = [{ type: 'function', name: 'balanceOf', stateMutability: 'view',
+  inputs: [{ name: 'owner', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }];
+const DECIMALS = [{ type: 'function', name: 'decimals', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint8' }] }];
+const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+export async function verifyHoldings({ chainId, rpcUrl, owner, tokens }, { say, now }) {
+  const id = Number(chainId);
+  if (!CHAINS[id]) throw Object.assign(new Error(`no verified provider for chain ${id}`), { name: 'NotServed' });
+  if (!ADDRESS.test(owner ?? '')) throw Object.assign(new Error('owner is not an address'), { name: 'BadOwner' });
+  await start();
+  const node = new URL(rpcUrl).host;
+  const p = await bounded(colibri({ chainId: id, rpcs: [rpcUrl], ...CHAINS[id], prover_mode: 'hybrid',
+    proofStrategy: Strategy.VerifiedOnly,
+    fetch: engineFetchVia((url) => ({ purpose: 'holdings', ...(new URL(url).host === node ? { isolate: owner } : {}) })),
+    warningHandler: async (req, message) => say(`${req.method}: ${message}`) }), 'light client');
+  const out = [];
+  for (const contract of tokens ?? []) {
+    const t = now();
+    try {
+      let raw, decimals;
+      if (contract == null) {
+        raw = BigInt(await bounded(p.request({ method: 'eth_getBalance', params: [owner, 'latest'] }), 'balance'));
+        decimals = 18;
+      } else {
+        if (!ADDRESS.test(contract)) throw Object.assign(new Error('not a contract address'), { name: 'BadToken' });
+        raw = decodeFunctionResult({ abi: BALANCE_OF, functionName: 'balanceOf', data: await bounded(p.request({ method: 'eth_call',
+          params: [{ to: contract, data: encodeFunctionData({ abi: BALANCE_OF, functionName: 'balanceOf', args: [owner] }) }, 'latest'] }), 'balanceOf') });
+        decimals = Number(decodeFunctionResult({ abi: DECIMALS, functionName: 'decimals', data: await bounded(p.request({ method: 'eth_call',
+          params: [{ to: contract, data: encodeFunctionData({ abi: DECIMALS, functionName: 'decimals' }) }, 'latest'] }), 'decimals') }));
+      }
+      out.push({ contract: contract ?? null, amount: formatUnits(raw, decimals), ms: Math.round(now() - t) });
+    } catch (error) {
+      // A token that could not be proven is unknown, never a mismatch.
+      out.push({ contract: contract ?? null, error: String(error?.name ?? 'Error'), ms: Math.round(now() - t) });
+    }
+  }
+  return out;
 }

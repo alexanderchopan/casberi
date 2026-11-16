@@ -48,8 +48,9 @@ echo "private-money self-test"
 use() { grep -qF -- "$2" "$1" || { echo "✗ $3"; exit 1; } }
 use "$STORE" 'let url = PrivateMoney.statusURL(aspUrl: network.aspUrl, labelHash: note.labelHash),' "the store no longer asks the note's own network's ASP by the label's hash"
 use "$MOVE" 'labelHash: deposit.labelHash' "a deposit is no longer kept with the engine's label hash"
-use "$ENGINE" 'let routed = network.logsUrl.map { PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl, logsUrl: $0) } ?? url' "the engine's door no longer routes log reads"
-use "$ENGINE" 'await Self.send(request, to: routed, fallback: url, relayerUrl: network.relayerUrl)' "the engine's door no longer sends the routed request"
+# A holdings check (prd §1825) keeps its own node; every other read is routed.
+use "$ENGINE" '? network.logsUrl.map { PrivacyEngineWire.routed(url, body: text, rpcUrl: network.rpcUrl, logsUrl: $0) } ?? url' "the engine's door no longer routes log reads"
+use "$ENGINE" 'await Self.send(request, to: routed, fallback: url, relayerUrl: network.relayerUrl, service: service)' "the engine's door no longer sends the routed request"
 use "$WIRE" 'fromBlock: 10_932_354)' "Sepolia's first block is no longer the keystore's (10,932,354)"
 use "$ENGJS" 'labelHash: await labelHashOf(r.pendingNote.label),' "the engine no longer returns a deposit's label hash"
 use "$BUNDLE" 'labelHash' "the shipped bundle has no label hash — rebuild with tools/privacy-pools-engine/build.mjs"
@@ -1008,8 +1009,8 @@ mutate "USDC dust hides the ETH beside it (finding 4)" "$FRESH" 's/case \(true, 
 QUEUE="Casberi/Casberi/Model/PrivacyEngineQueue.swift"
 [[ -f "$QUEUE" ]] || { echo "✗ $QUEUE not found"; exit 1; }
 use "$ENGINE" 'guard Self.accountFree.contains(method) || PrivacyEngineQueue.holding else {' "the engine serves an account-bound call outside PrivacyEngine.exclusive"
-# `.check` is account-free since prd §1569b: it reads no open account.
-use "$ENGINE" 'static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check]' "the engine lets an account-bound method run outside the queue"
+# `.check` (prd §1569b) and `.verifyHoldings` (§1825) read no open account.
+use "$ENGINE" 'static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check, .verifyHoldings]' "the engine lets an account-bound method run outside the queue"
 use "$ENGJS" 'prepared.set(h, { ...value, acct: account });' "a prepared handle no longer remembers the account it was made under"
 use "$ENGJS" 'const s = await session(p.kind, p.acct);' "a relay goes through whichever account is open, not its own"
 use "$ENGJS" 'const tx = await p.acct.relayer.relayWithdrawal(p.relayer, p.result.relayParams);' "a yield withdrawal is relayed through whichever account is open"

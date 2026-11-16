@@ -53,7 +53,14 @@ struct WalletTokenRowLabel: View {
                 Text(position.symbol)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
-                if let line = position.networksLine {
+                // A holding Ethereum itself disagreed with twice in a row
+                // (prd §1825) says so where its networks stand, in amber,
+                // as a private balance does (§1569a).
+                if HoldingsCheckStore.shared.mismatched(position) {
+                    Text("Doesn't match Ethereum")
+                        .dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                        .lineLimit(1)
+                } else if let line = position.networksLine {
                     Text(verbatim: line)
                         .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)

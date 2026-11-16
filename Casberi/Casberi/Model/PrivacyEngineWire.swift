@@ -17,6 +17,7 @@ enum PrivacyEngineWire {
         case info, open, close, isRegistered, prepareRegister, prepareDeposit
         case discover, check, prepareTransfer, prepareWithdraw, bench, labelHash, relay
         case prepareRagequit, prepareYieldDeposit, prepareBridgedYieldDeposit
+        case verifyHoldings
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -65,6 +66,15 @@ enum PrivacyEngineWire {
     struct Check: Encodable {
         let network: PrivacyNetwork
         let notes: [String]
+    }
+
+    /// One wallet's Ethereum holdings to read through the verified provider
+    /// (prd §1825): nil is the network's own coin.
+    struct VerifyHoldings: Encodable, Equatable {
+        let chainId: Int
+        let rpcUrl: String
+        let owner: String
+        let tokens: [String?]
     }
 
     struct Deposit: Encodable, Equatable {
@@ -224,6 +234,18 @@ enum PrivacyEngineWire {
         let ms: Int
     }
 
+    /// What the verified provider read, token by token: an amount in whole
+    /// tokens (`formatUnits`), or why it could not be proven.
+    struct VerifiedHoldings: Decodable, Equatable {
+        struct Token: Decodable, Equatable {
+            let contract: String?
+            let amount: String?
+            let error: String?
+        }
+        let tokens: [Token]
+        let ms: Int
+    }
+
     struct PreparedSpend: Decodable, Equatable {
         let handle: String
         let ms: Int
@@ -314,6 +336,22 @@ enum PrivacyEngineWire {
     /// the default port, and a host the engine's own `NetworkReach` entries
     /// declare (`declared`), on the label boundary. Everything else the page
     /// asks for is refused before it leaves the phone.
+    /// What a request from the page is for (prd §1825). The page names it;
+    /// the app files the request under that service and checks it against
+    /// that service's hosts. Only the Wallet's holdings check has one.
+    enum Purpose: String {
+        case holdings
+    }
+
+    /// The circuit a request asks for: one wallet's address, or nothing.
+    /// Anything that is not a plain EVM address is ignored, so the page can
+    /// never pick a circuit by another name.
+    static func isolation(_ raw: Any?) -> String? {
+        guard let text = raw as? String,
+              text.range(of: #"^0x[0-9a-fA-F]{40}$"#, options: .regularExpression) != nil else { return nil }
+        return text.lowercased()
+    }
+
     static func allows(_ url: URL, declared: [String]) -> Bool {
         guard url.scheme == "https", url.user == nil, url.password == nil,
               url.port == nil || url.port == 443,

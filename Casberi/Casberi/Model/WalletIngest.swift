@@ -3286,6 +3286,15 @@ enum WalletIngest {
         // last-known reading could not stand in and the page said "Nothing
         // held". nil is never cached and reads as unreached.
         if held.isEmpty, !stuck.isEmpty { return nil }
+        // A live read, so a fresh one to check against Ethereum itself (prd
+        // §1825); a window's hit never comes here, so once a window at most.
+        for (owner, tokens) in Dictionary(grouping: held, by: \.owner) {
+            let picked = HoldingsCheck.pick(network: tokens.map(\.network), contract: tokens.map(\.contract),
+                                            amount: tokens.map(\.amount), usd: tokens.map(\.usd))
+            if !picked.isEmpty {
+                Task { @MainActor in HoldingsCheckStore.shared.consider(owner: owner, held: picked) }
+            }
+        }
         return held
     }
 

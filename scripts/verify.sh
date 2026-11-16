@@ -3016,6 +3016,11 @@ harness "Tor route self-test" "wallets through Tor on their own circuits, refuse
 # exited leaves every request at a dead port. Both look like a slow network.
 harness "Tor health self-test" "the watch keeps asking, a return renews, a new network resets, an ended run runs again, 7 mutations" "scripts/tor-health-selftest.sh" "the tor health self-test failed — run scripts/tor-health-selftest.sh"
 harness "Privacy engine self-test" "the wire, the network door, testnet only, 27 pinned circuits, 6 mutations" "scripts/privacy-engine-selftest.sh" "the privacy engine self-test failed — run scripts/privacy-engine-selftest.sh"
+# The Wallet's Ethereum holdings checked against Ethereum itself through
+# Kohaku's verified provider (prd §1825): what is picked, when two amounts
+# agree, two disagreements in a row before a row says so, and a check starts
+# only off a live read and never in the demo.
+harness "Holdings check self-test" "picked, compared, two in a row, live reads only, 6 mutations" "scripts/holdings-check-selftest.sh" "the holdings check self-test failed — run scripts/holdings-check-selftest.sh"
 # Private money (prd §1554, §1560–§1567): Send privately, fresh receive, Needs
 # you and Take it back, round-ups into private, recovery from the iCloud root,
 # Ethereum with Aave yield. A wrong amount, owner or key here moves real money.

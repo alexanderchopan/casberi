@@ -631,7 +631,7 @@ enum IngestSupport {
         defer { tripLog?.add(MoveClock.Trip(start: began, seconds: Date().timeIntervalSince(began))) }
         // A request naming a wallet goes through Tor (prd §1495, `TorRoute`).
         let way = TorRoute.way(for: request, service: service)
-        let tor: String? = if case .tor(let key) = way { key } else { nil }
+        let tor: String? = if case .tor(let key) = way { torIsolation ?? key } else { nil }
         NetworkLedger.shared.record(request, as: service, throughTor: tor != nil)
         // Alchemy's key is one pool for every install: a 429 there brakes
         // every Alchemy request on this phone, not just the one refused
@@ -679,6 +679,12 @@ enum IngestSupport {
     /// tap on account it says 'reading' for everything and if i navigate to
     /// holdings and then back it shows").
     @TaskLocal static var torWait: TimeInterval?
+
+    /// The circuit a caller names for its requests (prd §1825): one wallet's
+    /// address, for a request whose body names that wallet in a way
+    /// `TorRoute.isolationKey` cannot see (a token call's first address is the
+    /// token's). Only ever narrows: a request that goes direct stays direct.
+    @TaskLocal static var torIsolation: String?
 
     private static func torData(for request: URLRequest,
                                 isolation key: String) async -> (Data, URLResponse)? {

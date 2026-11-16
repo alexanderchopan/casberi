@@ -20,7 +20,7 @@ import {
   ProofService, RelayerInteractor, ViemRPCInteractor, APP_IDENTIFIER, prepareYieldSwapDeposit,
 } from '@0xbow/privacy-pools-v2-sdk';
 import { syntheticInputs } from './synthetic.js';
-import { checkTrees } from './verified.js';
+import { checkTrees, verifyHoldings } from './verified.js';
 import * as snarkjs from 'snarkjs';
 import { getAddress } from 'viem';
 
@@ -401,6 +401,15 @@ const methods = {
     const t = now();
     const r = await checkTrees(network, { notes: notes ?? [], hash: await poseidon(), say: logger('verified').warn, now });
     return { ...r, ms: Math.round(now() - t) };
+  },
+
+  // One wallet's Ethereum holdings, each read through Kohaku's verified
+  // provider (src/verified.js, prd §1825). Account-free: it reads no open
+  // account, takes only the wallet's public address and the tokens to read.
+  async verifyHoldings(params) {
+    const t = now();
+    const tokens = await verifyHoldings(params, { say: logger('holdings').warn, now });
+    return { tokens, ms: Math.round(now() - t) };
   },
 
   // Balance to balance (prd §1567): the recipient's own private account,

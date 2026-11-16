@@ -535,6 +535,20 @@ enum NetworkReach {
                  purpose: "Downloads, once, the public circuit files Privacy Pools proofs are made with (3 to 66 MB each), from public IPFS gateways, and checks each against the fingerprint the app carries before using it.",
                  hosts: ["gateway.pinata.cloud", "ipfs.io"],
                  credentialed: false),
+        // The Wallet's holdings, checked against Ethereum itself (prd §1825):
+        // Kohaku's verified provider in the engine's page, Colibri in hybrid
+        // mode. The prover and the beacon hosts are sent block numbers only,
+        // never an address (measured 2026-11-16); the node, the one the
+        // Wallet already reads Ethereum through, is asked on the wallet's
+        // own Tor circuit (`IngestSupport.torIsolation`).
+        Endpoint(service: "Wallet check",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Checks the Ethereum balances the Wallet shows against Ethereum itself: after a holdings read, ETH and up to eight of the biggest tokens of each account are read again from MEV Blocker's public node and proven against the beacon chain with block proofs from Colibri, which is never told an address. Carries the account's public address to the node only.",
+                 hosts: ["rpc.mevblocker.io",
+                         "mainnet.colibri-proof.tech", "mainnet1.colibri-proof.tech",
+                         "sync-mainnet.beaconcha.in", "mainnet.checkpoint.sigp.io"],
+                 credentialed: false,
+                 throughTor: true),
         // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
         // appears only once a shield has been seen, but the read that
         // discovers one runs for every watched wallet, so declaring it under
