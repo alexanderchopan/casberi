@@ -366,7 +366,8 @@ final class FreshReceive {
     /// node, or reverted, it failed (the note kept for it goes); after, with
     /// no answer, it may still be out: it stays `.sent` for the chain to say.
     /// True when a transaction may be out.
-    private func failed(_ entry: FreshAddress.Entry, amount: String, symbol: String?, out: String?, error: Error, network: PrivacyNetwork) -> Bool {
+    private func failed(_ entry: FreshAddress.Entry, amount: String, symbol: String?, out: String?, error: Error, network: PrivacyNetwork,
+                        step: FreshAddress.SentStep? = nil) -> Bool {
         let notOut: Bool = switch error as? FreshSigner.Failure {
         case .refused, .reverted: true
         default: out == nil
@@ -379,7 +380,8 @@ final class FreshReceive {
             PrivateMoneyStore.shared.remove(commitment: note.commitment)
         }
         set(entry.id, .failed(amount: amount), symbol: symbol)
-        failure = (error as? FreshFailure).map { _ in String(localized: "The move did not match what arrived") } ?? PrivateMove.words(error, network: network)
+        failure = (error as? FreshFailure).map { _ in String(localized: "The move did not match what arrived") }
+            ?? Self.words(error, step: step, network: network)
         NSLog("freshAddress| move failed | %@ | %u | %@", network.name, entry.index, String(describing: error))
         return false
     }
@@ -490,7 +492,7 @@ final class FreshReceive {
             // error after the gas step was kept may mean it was (finding 6).
             if step == .gas, out != nil, error is PrivacyEngineWire.Failure || error is PrivateOnEthereum.Failure {
                 set(entry.id, .failed(amount: held), symbol: symbol)
-                failure = PrivateMove.words(error, network: network)
+                failure = Self.words(error, step: .gas, network: network)
                 NSLog("freshAddress| gas refused | %u | %@", entry.index, String(describing: error))
                 return
             }
@@ -498,8 +500,20 @@ final class FreshReceive {
                 NSLog("freshAddress| gas asked, no answer | %u | %@ | asked again next look", entry.index, String(describing: error))
                 return
             }
-            _ = failed(entry, amount: held, symbol: symbol, out: out, error: error, network: network)
+            _ = failed(entry, amount: held, symbol: symbol, out: out, error: error, network: network, step: step)
         }
+    }
+
+    /// **A TOKEN'S MOVE NAMES ITS STEP (prd §1823; a tester's 1,000 USDC,
+    /// 2026-11-16, read "The private account could not be opened" on every
+    /// look, which says neither what failed nor what would help).** An
+    /// engine failure `PrivateMove.words` has no words of its own for says
+    /// which step stopped: the private ETH paying the gas, or the deposit.
+    static func words(_ error: Error, step: FreshAddress.SentStep?, network: PrivacyNetwork) -> String {
+        let said = PrivateMove.words(error, network: network)
+        guard let step, error is PrivacyEngineWire.Failure, said == PrivateMove.engineFallback else { return said }
+        return step == .gas ? String(localized: "Your private ETH could not pay its gas")
+            : String(localized: "The move into your private balance could not be prepared")
     }
 
     /// **ANY OTHER TOKEN AT A FRESH ADDRESS MOVES INTO RAILGUN (prd §1713
@@ -602,11 +616,11 @@ final class FreshReceive {
         } catch {
             if step == .gas, out != nil, error is PrivacyEngineWire.Failure || error is PrivateOnEthereum.Failure {
                 set(entry.id, .failed(amount: held), symbol: symbol)
-                failure = PrivateMove.words(error, network: network)
+                failure = Self.words(error, step: .gas, network: network)
                 return
             }
             if step == .gas, out != nil { return }
-            _ = failed(entry, amount: held, symbol: symbol, out: out, error: error, network: network)
+            _ = failed(entry, amount: held, symbol: symbol, out: out, error: error, network: network, step: step)
         }
     }
 

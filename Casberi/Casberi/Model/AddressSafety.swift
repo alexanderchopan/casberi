@@ -46,6 +46,31 @@ enum AddressSafety {
         return EIP55.checksum(trimmed).dropFirst(2) == body ? .verified : .failed
     }
 
+    // MARK: - An address read off a picture
+
+    /// **AN ADDRESS COPIED OFF A PICTURE (prd §1823; a tester, 2026-11-16,
+    /// copying Receive's one-time address out of a screenshot to pay its
+    /// gas: "it thinks the zero is the letter O, and the spaces between are
+    /// making it not register").** Receive draws an address in groups of
+    /// five; text read off a picture of it keeps the gaps, and may read a
+    /// zero as the letter O. Hex has no O, so every O is a zero.
+    ///
+    /// The address that text stands for, or nil when it is not one: the
+    /// whitespace out, `Ox` or `0X` read as `0x`, an O in the body read as
+    /// 0. Nil when nothing needed mending (a clean address goes through the
+    /// field as it is) and when the mended string's own EIP-55 checksum
+    /// fails: a misread that checksum catches never becomes a recipient.
+    static func pasted(_ text: String) -> String? {
+        let squeezed = text.filter { !$0.isWhitespace }
+        guard squeezed.count == 42 else { return nil }
+        let head = squeezed.prefix(2)
+        guard ["0x", "0X", "Ox", "OX", "ox", "oX"].contains(String(head)) else { return nil }
+        let body = squeezed.dropFirst(2).map { $0 == "O" || $0 == "o" ? "0" : String($0) }.joined()
+        let mended = "0x" + body
+        guard mended != text, ENS.isHexAddress(mended), checksum(mended) != .failed else { return nil }
+        return mended
+    }
+
     // MARK: - Lookalikes (address poisoning)
 
     /// True for something that IS an address rather than standing for one.

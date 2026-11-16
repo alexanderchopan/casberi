@@ -187645,6 +187645,34 @@
         }
       }
     },
+    "The move into your private balance could not be prepared" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar el paso a tu saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高への移動を準備できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액으로 옮기는 작업을 준비하지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法准备转入你的私密余额"
+          }
+        }
+      }
+    },
     "TLS certificate" : {
       "localizations" : {
         "es" : {
@@ -225226,6 +225254,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的 Privacy 卡片"
+          }
+        }
+      }
+    },
+    "Your private ETH could not pay its gas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu ETH privado no pudo pagar su gas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベートETHでガス代を支払えませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 ETH로 가스비를 내지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的私密 ETH 无法支付其 Gas 费"
           }
         }
       }

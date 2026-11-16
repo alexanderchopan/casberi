@@ -158,6 +158,8 @@ extension FeedScreen {
         let figure = mask ?? usd.map(WalletValue.money) ?? PrivateMoney.figure(amount, decimals: decimals, symbol: symbol)
         return Button {
             DSHaptic.selection()
+            // On its own address, never the newest (prd §1823).
+            chrome.moveFreshEntry = entry.id
             chrome.moveFreshReceive = true
             chrome.moveTray = true
         } label: {

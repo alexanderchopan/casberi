@@ -7551,6 +7551,12 @@ struct MoveSentence: View {
         guard !text.isEmpty else { return }
         // A zk.money request link writes the whole sentence (prd §1748).
         if await takeRequestLink(text) { return }
+        // An address copied off a picture (prd §1823): its gaps out, its
+        // O's zeros, then read again as typed.
+        if let mended = AddressSafety.pasted(text) {
+            to = mended
+            return
+        }
         if text.lowercased().hasPrefix("0x") {
             guard ENS.isHexAddress(text), AddressSafety.checksum(text) != .failed else {
                 // Said once the typing pauses, so it never flickers mid-word.

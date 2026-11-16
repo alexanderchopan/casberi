@@ -126,6 +126,22 @@ expect("a Solana address has no EIP-55 to check",
 expect("a name has no EIP-55 to check", verdict("vitalik.eth"), "unavailable")
 expect("empty input is unavailable", verdict(""), "unavailable")
 
+// AN ADDRESS COPIED OFF A PICTURE (prd §1823): a tester copied Receive's
+// one-time address out of a screenshot, gaps and all, maybe a zero read as O.
+print("Read off a picture:")
+let shot = "0xDa9188D16C757b91A6896545e948Bb7fDF770D58"
+func mend(_ s: String) -> String { AddressSafety.pasted(s) ?? "nil" }
+expect("the gaps come out", mend("0x Da918 8D16C 757b9 1A689 6545e 948Bb 7fDF7 70D58"), shot)
+expect("a line break between the two rows comes out", mend("0x Da918 8D16C 757b9 1A689\n6545e 948Bb 7fDF7 70D58"), shot)
+expect("an O read for a zero is a zero", mend("Ox Da918 8D16C 757b9 1A689 6545e 948Bb 7fDF7 7OD58"), shot)
+expect("a clean address needs no mending", mend(shot), "nil")
+expect("a misread the checksum catches is refused",
+       mend("0x da918 8D16C 757b9 1A689 6545e 948Bb 7fDF7 70D58"), "nil")
+expect("a lowercase address with gaps carries no checksum and is mended",
+       mend("0x da918 8d16c 757b9 1a689 6545e 948bb 7fdf7 70d58"), shot.lowercased())
+expect("a name with a space is not an address", mend("Alex Palmer"), "nil")
+expect("one character short is not an address", mend("0x Da918 8D16C 757b9 1A689 6545e 948Bb 7fDF7 70D5"), "nil")
+
 print("Lookalikes:")
 // THE ATTACK: the last four hex digits match, everything before differs.
 // Both shorten to ...eAed, which is all any screen in the app shows. (These

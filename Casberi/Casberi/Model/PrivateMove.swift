@@ -655,6 +655,10 @@ final class PrivateMove {
     }
     #endif
 
+    /// What `words` says of an engine failure it has no words of its own
+    /// for. A fresh address's move names its step instead (prd §1823).
+    static var engineFallback: String { String(localized: "The private account could not be opened") }
+
     /// A failure in the sentence's words: short, and what to do where there is something.
     static func words(_ error: Error, network: PrivacyNetwork = .sepolia) -> String {
         if let failure = error as? YourAccountChain.Failure { return failure.message }
@@ -674,7 +678,7 @@ final class PrivateMove {
                 || failure.message.localizedCaseInsensitiveContains("insufficient") {
                 return String(localized: "Your approved private balance does not cover it")
             }
-            return String(localized: "The private account could not be opened")
+            return engineFallback
         }
         #if DEBUG
         if let failure = error as? PrivacyTestnetSender.Failure {

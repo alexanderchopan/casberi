@@ -253,7 +253,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2001 of 2075 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2002 of 2076 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1954,7 +1954,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
 - §1565 — Aztec's testnet on V6 final: the phone signs for rollup 679261766, the dead release candidates go, and the computer's… (part superseded by §1688)
 - §1566 — A swap to another network buys any token there, and a crossing sent from another phone is one row, read off chain (bu… (amended by §1675)
-- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572, §1694, §1778, §1779)
+- §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572, §1694, §1778, §1779, §1823)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet… (amended by §1778)
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider… (amended by §1569a)
 - §1569a — The private balance is checked against Ethereum itself through Kohaku's verified provider: each tree's root proven kn… (amended by §1569b)
@@ -2211,8 +2211,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1775 — Save on a transfer asks who the address is: someone you have, or a new name
 - §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 - §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar…
-- §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779)
-- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A…
+- §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
+- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
 - §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size…
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
@@ -2256,6 +2256,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1820 — The way into Aztec is three steps, the act always the next: Add a co-signer, Reach a score of 20, Send through Shield…
 - §1821 — Aztec's directory is deleted: Library's Wallet folder keeps only the Aztec apps you have connected (retires §1700i, §…
 - §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac…
+- §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
 
 ## Dead rulings → what replaced them (generated)
 

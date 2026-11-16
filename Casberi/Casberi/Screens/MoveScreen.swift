@@ -58,7 +58,7 @@ struct MoveTrayPresenter: ViewModifier {
                               YourAccountFirstOpen.walked(yours)
                               chrome.walkClosed += 1
                           }
-                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
+                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveFreshEntry = nil; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)

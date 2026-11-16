@@ -22,16 +22,27 @@ struct MoveFreshSentence<Head: View>: View {
     /// "your private balance" tapped: back to Receive's "on" list.
     var leave: () -> Void = {}
     /// Pay the gas (prd §1779): Send, filled with this address and the ETH
-    /// it is short of.
-    var payGas: (_ address: String, _ eth: String) -> Void = { _, _ in }
+    /// it is short of. Nil where no account of yours can pay (Move with no
+    /// account yet): the row is not drawn, never a dead control (§83).
+    var payGas: ((_ address: String, _ eth: String) -> Void)? = nil
     @ViewBuilder let head: () -> Head
 
     @State private var copied = false
     @State private var reading = false
+    /// A failed token move whose address is short of gas (prd §1823), read
+    /// after each look, never in a body.
+    @State private var shortOfGas = false
     @Environment(\.modelContext) private var context
     @Environment(ShellChrome.self) private var chrome
     private var book: FreshReceive { .shared }
-    private var entry: FreshAddress.Entry? { book.current }
+    /// **THE ADDRESS THE MONEY IS AT (prd §1823).** A waiting row in
+    /// Holdings opens Receive on its own address (`chrome.moveFreshEntry`);
+    /// before, Receive drew the newest, so after New address the one holding
+    /// a tester's 1,000 USDC was on no screen. Otherwise the newest.
+    private var entry: FreshAddress.Entry? {
+        if let pinned = chrome.moveFreshEntry, let held = book.entries.first(where: { $0.id == pinned }) { return held }
+        return book.current
+    }
 
     private var moving: Bool {
         if case .moving = entry?.state { true } else { false }
@@ -62,6 +73,7 @@ struct MoveFreshSentence<Head: View>: View {
                                 DSHaptic.selection()
                                 withAnimation(DS.Motion.standard) {
                                     copied = false
+                                    chrome.moveFreshEntry = nil
                                     book.make()
                                 }
                             } label: { MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise") }
@@ -80,14 +92,16 @@ struct MoveFreshSentence<Head: View>: View {
                     // new account has no private ETH to pay with, so the line was
                     // a dead end. Your account can pay it: one send, yours to
                     // confirm, and the line under it says what that costs you.
-                    if let entry, case .needsGas = entry.state, !DemoMode.isActive {
+                    // A failed token move short of gas takes the same row (prd
+                    // §1823): its private ETH could not pay, your account can.
+                    if let entry, let payGas, waitsForGas(entry), !DemoMode.isActive {
                         DSDoorRow(icon: "fuelpump", title: Text(reading ? "Reading the fee…" : "Pay the gas")) {
                             guard !reading else { return }
                             reading = true
                             Task {
                                 let eth = await book.gasToPay(entry)
                                 reading = false
-                                if let eth { payGas(entry.address, eth) }
+                                if let eth { payGas(entry.address, eth) } else { shortOfGas = false }
                             }
                         }
                         DSFootnote("From your account, in the open. It links this address to you.")
@@ -120,10 +134,12 @@ struct MoveFreshSentence<Head: View>: View {
             // "private now" here as it does in Holdings (the store spaces
             // its asks 20 s).
             await book.check(context: context, force: true)
+            await readShortOfGas()
             await PrivateMoneyStore.shared.refresh(force: true)
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(15))
                 await book.check(context: context)
+                await readShortOfGas()
                 await PrivateMoneyStore.shared.refresh()
             }
         }
@@ -139,6 +155,26 @@ struct MoveFreshSentence<Head: View>: View {
             return PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })?.status == .approved ? 2 : 1
         default: return 1
         }
+    }
+
+    /// Whether Pay the gas stands under the line: a token waiting for gas,
+    /// or a token whose move failed while its address is short (prd §1823).
+    private func waitsForGas(_ entry: FreshAddress.Entry) -> Bool {
+        switch entry.state {
+        case .needsGas: true
+        case .failed: entry.symbol != nil && shortOfGas
+        default: false
+        }
+    }
+
+    /// Reads whether a failed token move's address is short of gas.
+    private func readShortOfGas() async {
+        guard payGas != nil, let entry, case .failed = entry.state, entry.symbol != nil else {
+            shortOfGas = false
+            return
+        }
+        let short = await book.gasToPay(entry) != nil
+        if self.entry?.id == entry.id { shortOfGas = short }
     }
 
     /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1567).
