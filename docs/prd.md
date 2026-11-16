@@ -73275,3 +73275,30 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** The same rows and page on Catalyst.
 
 **Checks.** `zkmoney-selftest.sh`: the page takes only a payment link; nothing keeps or logs it; the address is copied before the page opens; the row is one of the public account's ways in, before the private places. `-zkClaimSample receive|open|<link>` lands on Receive, on the claim page asking, or with a link pasted.
+
+## §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet's biggest tokens, read again after a holdings read through Colibri in hybrid mode, and a holding that disagrees twice in a row says "Doesn't match Ethereum" on its row (amends §1569a) (user, 2026-11-16: "did we extend kohaku?", "i thought we did", "lets extend it") — BUILT
+
+**Why.** §1569a checks the private balance against Ethereum; everything else the Wallet shows came from Zerion or Alchemy on their word. Tor (§1495) hides who asks, not whether the answer is true.
+
+**Measured (2026-11-16, Ethereum mainnet, Node, the pinned Colibri 3.1.1 through Kohaku's adapter, a public wallet).**
+1. Remote mode: the prover was sent the wallet's address in two of three requests. Never used here.
+2. Hybrid mode: the prover and the checkpoint service were sent nothing naming the wallet; the node was (as it already is for every Wallet read). A verified ETH balance about 1 s, a token's balance 0.4–0.8 s, its decimals 0.4 s.
+3. publicnode refuses the older-block proof hybrid asks for ("exceeds maximum proof window"); MEV Blocker, drpc and Alchemy answer. MEV Blocker is used, the node the Wallet already reads Ethereum through.
+4. Colibri proves Ethereum and Gnosis only. Base and the other rollups are "upcoming", so they are not checked.
+
+**What is built.**
+1. `verified.js` `verifyHoldings`: one wallet a call, Kohaku's `colibri()` in hybrid mode with `Strategy.VerifiedOnly`, `eth_getBalance` for ETH and `balanceOf` and `decimals` for a token, each bounded at 45 s. A token that cannot be proven is unknown, never a mismatch. Account-free (`PrivacyEngine.accountFree`), so it never waits on a Move.
+2. The node's requests ride that wallet's own Tor circuit: the page names it (`isolate`), the door accepts only a plain address (`PrivacyEngineWire.isolation`), and the funnel takes it (`IngestSupport.torIsolation`). Without it a token call's circuit was the token's contract, shared by every wallet holding it. Filed under a new `NetworkReach` service, "Wallet check".
+3. `HoldingsCheck` (the rules) and `HoldingsCheckStore` (the runner): after a live holdings read (never a window's hit, never the demo), ETH and tokens worth a dollar or more on Ethereum, biggest first, eight at most; one wallet at a time, once a holdings window (ten minutes); a check that cannot run is tried at the next read. Amounts agree within a part in a million (a provider's decimal-adjusted figure).
+4. Two in a row: one disagreement is a suspicion (a transfer can land between the provider's read and the proof); the next check confirms or clears it. A holding no longer checked says nothing.
+5. The Tokens list and Home's token preview say "Doesn't match Ethereum" in amber where the networks stand.
+
+**Seen.** On the simulator, live, a public wallet: 8 of 8 holdings matched, 20.6 s over Tor. No mismatch has been seen on screen; the amber line is not shown on the simulator.
+
+**What it does not prove.** Dollar values (prices are not on chain), holdings off Ethereum, positions inside protocols, or that Zerion listed every token: a token it left out is not asked about.
+
+**Cost.** The engine's page loads for any wallet with Ethereum holdings, not only for private money: 3.5 MB of script in a hidden web view.
+
+**Mac half (§1402).** The same engine and rows; the Mac has no Tor (§1495), so its node reads go direct, as its Wallet reads already do. Not run on the Mac.
+
+**Checks.** `holdings-check-selftest.sh` (new, in verify): the picking, the agreement, the two-in-a-row ledger, the key a row's part finds; the check starts only off a live read and never in the demo; both rows read the verdict; 6 mutations. `privacy-engine-selftest.sh` guards hybrid mode, fail-closed, the circuit only on the node's requests, and the door's address-only circuit.
