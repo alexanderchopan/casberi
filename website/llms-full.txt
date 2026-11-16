@@ -136,7 +136,7 @@ Two private places. Your private balance is on Ethereum, and you never choose wh
 - Pay someone privately. In Send, pick a token under Private. The sentence reads "from your private balance", and your account appears nowhere on the payment.
 - Get paid privately. In Receive, Private balance gives each payment a fresh address of its own, with New address for the next one. Private account is your Aztec address, the same every time, for payments from Aztec only.
 - See it, and take it back. Holdings is Public and Private. Each private row ends with where it sits — "DAI — Ethereum · Railgun" — and one that isn't spendable yet says "Private in about an hour". Tap a row to take it back to your account.
-- Use private apps. Apps on Aztec open in Casberi from Aztec directory, in Apps, and use your private account.
+- Use private apps. An Aztec app's link opens in Casberi and uses your private account; apps you connect stand in Apps.
 
 Where it sits, and who carries it:
 
@@ -161,7 +161,7 @@ Good to know: what goes in and what comes out is public on its network, as on ev
 
 Apps is where you connect apps and find everything that's yours. It's a card on Home.
 
-It's a search field and folders, one for each category with its apps. Tap an app you have and its page opens; hold it for Open and Settings. Two open a page of their own: Contacts, in Social, and Calendar, in Day, which is your calendars and the ones you subscribe to. The Wallet folder starts with Aztec directory, where apps on Aztec open in Casberi; the ones you've connected stand beside it as tiles, and connect again on their own.
+It's a search field and folders, one for each category with its apps. Tap an app you have and its page opens; hold it for Open and Settings. Two open a page of their own: Contacts, in Social, and Calendar, in Day, which is your calendars and the ones you subscribe to. In the Wallet folder, the Aztec apps you've connected stand as tiles, and connect again on their own.
 
 Contacts is everyone you deal with, one row a person: the cards on your phone, the people you follow and the names in your wallet. A contact with a wallet has Send, and one with a zk.money tag has Pay. When a transfer names an address you don't know, Save asks who it is: someone you have, or a new name. Every transfer with them then reads the name.
 

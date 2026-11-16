@@ -332,14 +332,10 @@ struct SourcesOpenFolder: View {
     /// folder; the apps you write in follow, as in any folder. Nil for
     /// every other folder.
     var notesPage: (() -> Void)? = nil
-    /// **THE WALLET FOLDER LEADS WITH AZTEC'S DIRECTORY (prd §1700m).** Where
-    /// you find Aztec apps, beside the apps you could add; the Wallet's Home
-    /// keeps its door. Nil for every other folder, and while you have no
-    /// Your account (`AztecApps.doorShown`, prd §1700s).
-    var aztecDirectory: (() -> Void)? = nil
-    /// **THE AZTEC APPS YOU HAVE CONNECTED STAND BESIDE IT (prd §1757).**
-    /// Each opens its own site in Casberi's browser in one tap; the
-    /// directory stays the way to find the rest. Nil where the directory is.
+    /// **THE AZTEC APPS YOU HAVE CONNECTED (prd §1757).** Each opens its own
+    /// site in Casberi's browser in one tap. Aztec's directory tile that led
+    /// the folder is deleted (prd §1821). Nil for every other folder, and
+    /// while you have no Your account (`AztecApps.tilesShown`, prd §1700s).
     var aztecApp: ((AztecAppsShape.App) -> Void)? = nil
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
@@ -352,13 +348,10 @@ struct SourcesOpenFolder: View {
         let yours = folder.apps.filter(has)
         let rest = folder.apps.filter { !has($0) }
         return VStack(alignment: .leading, spacing: DS.Space.s4) {
-            if !yours.isEmpty || notesPage != nil || aztecDirectory != nil {
+            if !yours.isEmpty || notesPage != nil || (aztecApp != nil && !AztecAppsStore.shared.apps.isEmpty) {
                 group(String(localized: "Yours")) {
                     if let notesPage {
                         SourcesFolderNotesPage(action: notesPage)
-                    }
-                    if let aztecDirectory {
-                        SourcesFolderAztecDirectory(action: aztecDirectory)
                     }
                     if let aztecApp {
                         ForEach(AztecAppsStore.shared.apps) { app in
@@ -461,37 +454,6 @@ private struct SourcesFolderNotesPage: View {
         .buttonStyle(PressSpring())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Your notes"))
-        .accessibilityAddTraits(.isButton)
-    }
-}
-
-/// Aztec's directory, the Wallet folder's first cell (prd §1700m): Aztec's
-/// mark over its name, opening Aztec's own list in Casberi's browser. Never a
-/// dot or a plus: it is a directory, not an app you add.
-private struct SourcesFolderAztecDirectory: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            DSHaptic.selection()
-            action()
-        } label: {
-            VStack(spacing: DS.Space.s1) {
-                BridgeIcon(name: "Aztec", size: DS.Face.seat + 12)
-                Text("Aztec directory")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Aztec directory"))
         .accessibilityAddTraits(.isButton)
     }
 }

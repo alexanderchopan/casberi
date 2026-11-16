@@ -1710,9 +1710,9 @@
   },
   {
    "covers": [
-    "Screens/SettingsHome.swift:aztecDirectory"
+    "Screens/SettingsHome.swift:aztecLink"
    ],
-   "why": "Library's Aztec directory tile (prd §1700m, the one door since §1700p): the Wallet folder's tile stands only with Your account on an iPhone and never in the demo (§1700s) (`AztecApps.doorShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` the link door opens (seen with `-aztecBrowser`)"
+   "why": "a connected Aztec app's tile in Library's Wallet folder (prd §1757; the directory tile is deleted, §1821): it stands only with Your account on an iPhone and never in the demo (§1700s) (`AztecApps.tilesShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` a saved Aztec link raises"
   },
   {
    "covers": [

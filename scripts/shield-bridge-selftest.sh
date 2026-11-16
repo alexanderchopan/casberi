@@ -298,20 +298,21 @@ fi
 # Sending is on where Aztec's directory opens a page, and nowhere else (prd §1700k, §1700p).
 DOORS=$(grep -rln "sends: true" Casberi/Casberi '--include=*.swift' | sort | tr '\n' ' ')
 # ProbeHooks is DEBUG's door (`-aztecAppEthereum`, prd §1700l), compiled out of every shipped build.
-# SettingsHome is Library's Wallet folder, Aztec's directory (prd §1700m).
+# SettingsHome is Library's Wallet folder, the Aztec apps you connected (prd §1757; no directory, §1821).
 [[ "$DOORS" == "Casberi/Casberi/Screens/SettingsHome.swift Casberi/Casberi/Screens/ThingSheetView.swift Casberi/Casberi/Shell/ProbeHooks.swift " ]] \
   || { echo "✗ sending is on beyond Apps on Aztec's doors: $DOORS"; exit 1; }
-# Since prd §1757 one sheet serves the directory's tile and each connected
-# app's, so the guard holds both halves: the directory raises the sheet, and
-# the sheet offers the account.
-grep -q "aztecDirectory = AztecAppLink(url: AztecApps.directory)" Casberi/Casberi/Screens/SettingsHome.swift \
+# One sheet serves each connected app's tile (prd §1757), so the guard holds
+# both halves: a tile raises the sheet, and the sheet offers the account.
+grep -q "aztecLink = URL(string: app.door).map(AztecAppLink.init(url:))" Casberi/Casberi/Screens/SettingsHome.swift \
   && grep -q "AztecBrowserView(url: link.url, ethereum: true, sends: true)" Casberi/Casberi/Screens/SettingsHome.swift \
-  || { echo "✗ Library's Aztec directory no longer offers your account to an Ethereum app"; exit 1; }
-# The directory is how the Aztec account first gets used, so its tile may not
-# wait for that use (prd §1700s).
+  || { echo "✗ a connected Aztec app's tile no longer offers your account to an Ethereum app"; exit 1; }
+# Aztec's directory is deleted (prd §1821): of its thirteen apps, one worked on a phone.
+! grep -rq 'aztec.network/apps' Casberi/Casberi \
+  || { echo "✗ Aztec's directory is back (prd §1821)"; exit 1; }
+# A tile may not wait for the Aztec account to have been used (prd §1700s).
 grep -q 'YourAccountKey.address != nil && AztecProver.isAvailable && !DemoMode.isActive' Casberi/Casberi/Model/Aztec/AztecApps.swift \
-  && ! awk '/static var doorShown/,/^    }/' Casberi/Casberi/Model/Aztec/AztecApps.swift | grep -q 'isShown' \
-  || { echo "✗ Aztec's directory tile waits for an Aztec account already used, so nobody new reaches it"; exit 1; }
+  && ! awk '/static var tilesShown/,/^    }/' Casberi/Casberi/Model/Aztec/AztecApps.swift | grep -q 'isShown' \
+  || { echo "✗ a connected Aztec app's tile waits for an Aztec account already used"; exit 1; }
 # The account shows once you have it, and a pull never starts the engine cold (prd §1700t).
 grep -q 'shown.used || (YourAccountKey.address != nil && AztecProver.isAvailable)' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
   && grep -q 'guard isShown, shown.used || addressKnown else { return false }' Casberi/Casberi/Model/Aztec/AztecAccountStore.swift \
