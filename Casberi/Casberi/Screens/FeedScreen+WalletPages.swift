@@ -920,17 +920,19 @@ extension FeedScreen {
             let allowed = selectedSeat == nil && !walletOnFollowing
                 && (counts(\.delegations) + counts(\.approvals) > 0 || walletShowsAztecGrants)
             if walletSecurityCounts.flagged == 0 && privacy.isEmpty && !allowed { walletSkeletonRowsSection }
+            // **PERMISSIONS ARE RISKS' (prd §1809, user: "we can finally
+            // combine permissions and risk").** Both answer "is anything
+            // unsafe?". The order is the user's: privacy, then what you
+            // allowed, then what was found ("privacy first then the
+            // permissions stuff then the threat stuff"). An app or
+            // Following picked keeps Permissions as its own door.
+            if selectedSeat == nil, !walletOnFollowing { walletPermissionRows(standsEmpty: false) }
             walletFlaggedSection(.poisoning, anchor: .poisoning,
                                  word: String(localized: "Address poisoning"))
             walletFlaggedSection(.spoofedSymbol, anchor: .fakeTokens,
                                  word: String(localized: "Fake tokens"))
             walletFlaggedSection(.fakeTransfer, anchor: .fakeTransfers,
                                  word: String(localized: "Fake transfers"))
-            // **PERMISSIONS ARE RISKS' (prd §1809, user: "we can finally
-            // combine permissions and risk").** Both answer "is anything
-            // unsafe?": what was found, then what you allowed. An app or
-            // Following picked keeps Permissions as its own door.
-            if selectedSeat == nil, !walletOnFollowing { walletPermissionRows(standsEmpty: false) }
         case .holdingAccounts:
             let following = walletHolderGroups.following
             if following.isEmpty { walletSkeletonRowsSection }

@@ -73145,3 +73145,14 @@ Four changes, one day, all toward fewer things on the screen.
 **Mac half (§1402).** None: the iPad and the Mac keep their category rooms and set no `dsSeen`. Not built there.
 
 **Checks.** None new. **Seen** on the simulator with the demo: a Wallet row opened and closed drew grey with its icon dimmed, every other row white. Not checked: that the stamp survives a relaunch.
+
+## §1817 — Risks reads privacy, then permissions, then threats (amends §1809) (user, 2026-11-15: "on Risks in wallet, permissions should come before the fake tokens and address poisoning. id put privacy first then the permissions stuff then the threat stuff as the order")
+
+**Why.** §1809 put Permissions under the threats ("what was found, then what you allowed"). What you allowed is yours to act on (Revoke) and is there for most people; a poisoning or fake-token row is a stranger's doing and often needs nothing.
+
+1. **The order is Privacy, Permissions, then Address poisoning, Fake tokens, Fake transfers.** One reorder in `walletPageSections`' `.threats` arm; no section changed.
+2. **Unchanged.** An app or Following picked still keeps Permissions as its own door, and the empty rows still stand only while the whole page is empty.
+
+**Mac half (§1402).** The same page, the same order: the arm is shared.
+
+**Checks.** None new.
