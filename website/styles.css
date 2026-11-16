@@ -997,7 +997,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
     transition: transform .45s cubic-bezier(.34,1.56,.64,1), opacity .3s; }
   .m-eyebrow.in span { transform: translateY(0); opacity:1; }
 
-  .m-section, .m-transition { opacity:0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+  /* starts at half light and lands fast: a quick scroll never meets a black section (2026-11-16) */
+  .m-section, .m-transition { opacity:.55; transform: translateY(10px); transition: opacity .3s ease, transform .3s ease; }
   .m-section.in, .m-transition.in { opacity:1; transform: none; }
 
   .cta { transition: transform .15s ease-out; will-change: transform; }
@@ -1287,7 +1288,7 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
    so the composition holds at any window. The base is the one light
    surface: aluminium is what says "a Mac" before the screen does. */
 #get.slab-get { background: none; color: var(--ink); }
-#get h2 .pink { color: #f5458f; }
+#get h2 .pink { color: var(--brand-pink); }
 #get .slab-plat { color: #A1A1A6; }
 #get .cta-ink { box-shadow: 0 0 0 1.5px rgba(255,255,255,.18); }
 .slab-get .slab-plat { margin-top: 18px; font-size: 17px; font-weight: 600; color: #EAF0FF; }
@@ -1916,14 +1917,13 @@ body { overflow-x: clip; }
 @media (max-width: 600px) { .hero-keep { font-size: 12.5px; margin: 10px -8px 0; max-width: none; }
   .hero-keep span { white-space: nowrap; } }   /* one sentence per line on a 390px phone, measured */
 .hero-verbs span { font-size: 13px; font-weight: 650; padding: 9px 15px; }
-.hero-facts { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-.hero-facts span { font-size: 11px; font-weight: 650; color: var(--faint);
-  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
-  border-radius: 999px; padding: 5px 12px; }
+/* plain words, a pink check each: facts, not pills (2026-11-16) */
+.hero-facts { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+.hero-facts span { font-size: 15px; font-weight: 650; color: var(--ink);
+  display: inline-flex; align-items: center; gap: 6px; }
 
 
-/* availability is a fact, not a promise — it reads a shade brighter */
-.hero-facts .plat { color: var(--muted); border-color: rgba(255,255,255,.10); }
+
 
 
 /* hero rhythm: the CTA sits closer to the verbs it follows */
@@ -2184,3 +2184,16 @@ body { overflow-x: clip; }
   letter-spacing: -.015em; color: var(--ink); line-height: 1.15; }
 .what-row span { display: block; font-size: 16px; font-weight: 500; color: #8b93a1; margin-top: 4px; line-height: 1.35; }
 @media (max-width: 700px) { .what-rows { grid-template-columns: 1fr; gap: 20px; } .what-h { margin-bottom: 30px; } }
+
+
+/* ===== the devices between the rows and the apps; the privacy line and its reel above the close (2026-11-16) ===== */
+.devices-sec { padding-top: 40px; }
+.devices-sec .slab-devices { margin-top: 0; }
+.privacy-sec { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 64px; align-items: center; }
+.privacy-sec .what-h { margin: 0; font-size: clamp(34px, 4.4vw, 56px); }
+.privacy-reel video { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 28px; background: #000; }
+@media (max-width: 760px) {
+  .privacy-sec { grid-template-columns: 1fr; gap: 32px; }
+  .privacy-reel { max-width: 340px; margin: 0 auto; width: 100%; }
+}
