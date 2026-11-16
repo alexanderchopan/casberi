@@ -1008,7 +1008,8 @@ mutate "USDC dust hides the ETH beside it (finding 4)" "$FRESH" 's/case \(true, 
 QUEUE="Casberi/Casberi/Model/PrivacyEngineQueue.swift"
 [[ -f "$QUEUE" ]] || { echo "✗ $QUEUE not found"; exit 1; }
 use "$ENGINE" 'guard Self.accountFree.contains(method) || PrivacyEngineQueue.holding else {' "the engine serves an account-bound call outside PrivacyEngine.exclusive"
-use "$ENGINE" 'static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash]' "the engine lets an account-bound method run outside the queue"
+# `.check` is account-free since prd §1569b: it reads no open account.
+use "$ENGINE" 'static let accountFree: Set<Wire.Method> = [.info, .close, .bench, .labelHash, .check]' "the engine lets an account-bound method run outside the queue"
 use "$ENGJS" 'prepared.set(h, { ...value, acct: account });' "a prepared handle no longer remembers the account it was made under"
 use "$ENGJS" 'const s = await session(p.kind, p.acct);' "a relay goes through whichever account is open, not its own"
 use "$ENGJS" 'const tx = await p.acct.relayer.relayWithdrawal(p.relayer, p.result.relayParams);' "a yield withdrawal is relayed through whichever account is open"
