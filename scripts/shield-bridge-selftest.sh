@@ -328,10 +328,14 @@ grep -q 'return reconnecting && coSigner == nil && addCoSigner != nil' Casberi/C
   || { echo "✗ a person with no co-signer is asked the same Connect again after an app refused their account"; exit 1; }
 grep -q 'if case .notChecked = simulated.checked' "Casberi/Casberi/Model/YourAccountChain.swift" \
   || { echo "✗ an app's call may be signed without being run on Ethereum first"; exit 1; }
-# Only the browser that may send says it is a Mac (prd §1700n).
-grep -q 'if ethereum && sends {' Casberi/Casberi/Screens/AztecBrowser.swift \
+# Only the browser that may send, and zk.money's claim page, say they are a Mac (prd §1700n, §1822).
+grep -q 'if ethereum && (sends || desktop) {' Casberi/Casberi/Screens/AztecBrowser.swift \
   && grep -q 'page.customUserAgent = BrowserEthereum.desktopAgent(' Casberi/Casberi/Screens/AztecBrowser.swift \
   || { echo "✗ Apps on Aztec's browser sends the phone's agent: RainbowKit's phone picker drops Casberi (prd §1700n)"; exit 1; }
+# The Mac agent without sending is zk.money's claim page alone, which never sends (prd §1822).
+[[ "$(grep -rl 'desktop: true' Casberi/Casberi --include='*.swift' | tr '\n' ' ')" == "Casberi/Casberi/Screens/ThingSheetView.swift " ]] \
+  && grep -q 'AztecBrowserView(url: link.url, aztec: false, ethereum: true, desktop: true)' Casberi/Casberi/Screens/ThingSheetView.swift \
+  || { echo "✗ a page other than zk.money's claim says it is a Mac without sending, or the claim page may send (prd §1822)"; exit 1; }
 [[ $(grep -c 'customUserAgent' Casberi/Casberi/Screens/AztecBrowser.swift) -eq 1 ]] \
   || { echo "✗ the browser's agent is set more than once (prd §1700n)"; exit 1; }
 # The co-signer's sign-in has its own one-method pairing, never the kept

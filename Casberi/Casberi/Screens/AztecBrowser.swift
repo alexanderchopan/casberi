@@ -119,7 +119,7 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
     @Published var sending: String?
     private var queue: [Request] = []
 
-    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false) {
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false, desktop: Bool = false) {
         start = url
         self.aztec = aztec
         self.ethereum = ethereum
@@ -144,8 +144,10 @@ final class AztecBrowserModel: NSObject, ObservableObject, WKScriptMessageHandle
         config.websiteDataStore = .default()
         page = WKWebView(frame: .zero, configuration: config)
         // Apps on Aztec's browser says it is a Mac, so a RainbowKit picker
-        // (Olla's) draws Casberi under Installed (prd §1700n).
-        if ethereum && sends {
+        // (Olla's) draws Casberi under Installed (prd §1700n). A page that
+        // only needs your address (zk.money's claim, prd §1822) says so too,
+        // and can still send nothing.
+        if ethereum && (sends || desktop) {
             page.customUserAgent = BrowserEthereum.desktopAgent(majorVersion: ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
         }
         // A swipe from the edge goes back a page and forward again: Home's
@@ -828,8 +830,8 @@ struct AztecBrowserView: View {
     /// score (prd §1820); nil for every other page.
     private let above: AnyView?
 
-    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false, above: AnyView? = nil) {
-        _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum, sends: sends))
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false, desktop: Bool = false, above: AnyView? = nil) {
+        _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum, sends: sends, desktop: desktop))
         self.above = above
     }
 

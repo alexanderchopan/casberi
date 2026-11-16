@@ -1710,6 +1710,12 @@
   },
   {
    "covers": [
+    "Screens/ThingSheetView.swift:zkMoneyClaim"
+   ],
+   "why": "zk.money's claim page in Casberi's browser (prd §1822): raised only by Claim to your account on a kept zk.money payment link, whose secret lives in this device's Keychain and is never seeded into the demo, so the sweep's demo launch never has one; the sheet is the same `AztecBrowserView` every Aztec link raises"
+  },
+  {
+   "covers": [
     "Screens/SettingsHome.swift:aztecLink"
    ],
    "why": "a connected Aztec app's tile in Library's Wallet folder (prd §1757; the directory tile is deleted, §1821): it stands only with Your account on an iPhone and never in the demo (§1700s) (`AztecApps.tilesShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` a saved Aztec link raises"

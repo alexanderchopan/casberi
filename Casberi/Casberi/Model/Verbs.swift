@@ -31,6 +31,8 @@ struct Verb: Identifiable {
         /// `.openURL`, because the secret must not sit in a derived verb: it
         /// is read from this device's Keychain on tap (`ZkMoneyClaims`).
         case claimZkMoney
+        /// A zk.money payment link claimed into your account (prd §1822).
+        case claimZkMoneyHere
         /// Pay a saved zk.money request (prd §1745): Move rises with Send
         /// written — the tag, the token, the amount asked plus the fee.
         /// In-app, like `.sendTo`; nothing moves before Face ID there.
@@ -62,7 +64,8 @@ struct Verb: Identifiable {
         case .showInFiles:    return "Files"
         case .openAddress:    return "Wallet"
         case .edit:           return "Edit"
-        case .claimZkMoney:   return "Claim"
+        case .claimZkMoney:   return "zk.money"
+        case .claimZkMoneyHere: return "Claim"
         case .payZkMoney:     return "Pay"
         case .sendTo:         return "Send"
         }
@@ -151,7 +154,14 @@ enum VerbDerivation {
             // §1384): the money's way home leads. The index alone is read
             // here, never the Keychain (prd §628).
             if ZkMoneyClaims.has(thing.id) {
-                out.append(Verb(label: "Claim in zk.money", icon: "arrow.down.circle", action: .claimZkMoney))
+                // With an account here, the money lands in it: zk.money's
+                // own claim page, in Casberi's browser, with your account
+                // offered as the wallet it pays (prd §1822). Claiming into
+                // a zk.money account stays zk.money's, in Safari.
+                if YourAccountDemo.shownAddress != nil {
+                    out.append(Verb(label: String(localized: "Claim to your account"), icon: "arrow.down.circle", action: .claimZkMoneyHere))
+                }
+                out.append(Verb(label: "Claim in zk.money", icon: "arrow.up.forward.app", action: .claimZkMoney))
             }
             // A zk.money request still open, with an account here to pay it
             // from (prd §1745): Pay leads and opens Send already written.

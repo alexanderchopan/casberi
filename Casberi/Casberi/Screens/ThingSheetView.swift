@@ -56,6 +56,8 @@ struct ThingSheetView: View {
     @Environment(\.openURL) private var systemOpenURL
     /// An Aztec app's link, open in Casberi's browser (prd §1700c item 2).
     @State private var aztecApp: AztecAppLink?
+    /// A zk.money payment link opened to claim into your account (prd §1822).
+    @State private var zkMoneyClaim: AztecAppLink?
     @Environment(ShellChrome.self) private var chrome
     /// For the Track tray a repeating charge raises (prd §1181); optional, since a
     /// Catalyst sheet may not carry it (§872), and then Track is not offered.
@@ -1333,6 +1335,12 @@ struct ThingSheetView: View {
         .sheet(isPresented: $paneNoteSharing) { ShareTray(thing: thing) }
         .sheet(item: $aztecApp) { link in
             AztecBrowserView(url: link.url, ethereum: true, sends: true)
+                .presentationDragIndicator(.visible)
+        }
+        // zk.money's own claim page: your account is the wallet it pays,
+        // offered and never sending; no Aztec account (prd §1822).
+        .sheet(item: $zkMoneyClaim) { link in
+            AztecBrowserView(url: link.url, aztec: false, ethereum: true, desktop: true)
                 .presentationDragIndicator(.visible)
         }
         .background {
@@ -5345,6 +5353,16 @@ struct ThingSheetView: View {
                 dismiss()
             } else {
                 verbResult = String(localized: "This request is no longer open.")
+                verbResultIsError = true
+            }
+        case .claimZkMoneyHere:
+            // The whole link, read from this device's Keychain now, in
+            // Casberi's browser: the money lands in your account (prd §1822).
+            if let url = ZkMoneyClaims.link(for: thing.id) {
+                verbResult = nil
+                zkMoneyClaim = AztecAppLink(url: url)
+            } else {
+                verbResult = String(localized: "The claim link is no longer on this device.")
                 verbResultIsError = true
             }
         case .claimZkMoney:

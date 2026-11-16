@@ -253,7 +253,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2000 of 2074 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2001 of 2075 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1773,7 +1773,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
-- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419, §1446, §1745, §1746)
+- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419, §1446, §1745, §1746, §1822)
 - §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links (amended by §1737)
 - §1386 — The seams of the audit week: one More row, one Add, one section gap, a pinned header for the pill, one row in Day, th…
 - §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §13…
@@ -2255,6 +2255,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1819 — Quiet privacy: Wallet rows stay out of system search, the Wallet tile hides on a locked phone, a kept link loses its…
 - §1820 — The way into Aztec is three steps, the act always the next: Add a co-signer, Reach a score of 20, Send through Shield…
 - §1821 — Aztec's directory is deleted: Library's Wallet folder keeps only the Aztec apps you have connected (retires §1700i, §…
+- §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -73230,3 +73230,16 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 4. **Existing users get no notice:** the apps behind the door did not work for them either (user).
 
 **Checks.** `shield-bridge-selftest.sh` fails `aztec.network/apps` anywhere in the app, and holds a connected app's tile to raising the browser that offers your account. `-aztecDoorSample` is deleted; `-aztecAppsSample` alone draws the tiles on a simulator. The website's docs drop the directory. **Mac half (§1402).** None: Aztec's browser and its tiles stand on the iPhone.
+
+## §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your account offered as the wallet it pays (amends §1384's "Claim in zk.money" in Safari, which stays as the second way) (user, 2026-11-15, asked what more Casberi could do with zk.money and whether it could "tap into that balance"; told it cannot read a zk.money balance, and that "we already claim zk payment links" meant a button that opens the link in Safari: "ok lets try it") — BUILT; the page seen loading in Casberi's browser on a simulator with a made-up link; a real claim NOT tried
+
+**Why.** A zk.money balance belongs to an account whose key is a passkey only zk.money's site can use, so Casberi can neither see nor move it. What reaches Casberi is a payment link someone made in zk.money ("Pay anyone"), which Casberi already keeps, its secret on this device (§1384). Its Claim opened the link in Safari, where zk.money asks where the money should go and the person types or connects an address.
+
+1. **"Claim to your account" leads** the kept link's verbs when this phone has Your account (`Verbs.Action.claimZkMoneyHere`). It opens zk.money's own claim page in Casberi's browser (`ThingSheetView.zkMoneyClaim`), where a visitor with no zk.money account can claim to any Ethereum wallet: connected, saved or pasted (zk.money's `ClaimToL1Modal`, read 2026-11-15). The money lands as DAI on Ethereum, or through Across on another chain if the person picks one there.
+2. **Your account is offered as that wallet, and never sends** (`aztec: false, ethereum: true, desktop: true`): the page sees your address, any message it asks you to sign goes through the Signer as every page's does, and no transaction leaves your account. `desktop` makes the page see a Mac, so its RainbowKit picker lists Casberi under Installed as §1700n made Olla's; until §1822 that agent came only with `sends`.
+3. **"Claim in zk.money" stays second** (its tile reads "zk.money"): Safari, for someone claiming into their zk.money account, whose passkey works only there.
+4. **A row's Claim opens the sheet**, which raises the browser; the feed raises no sheet of its own.
+
+**Not measured.** That the visitor claim runs in a WKWebView (it proves in the page), that zk.money's picker lists Casberi, and what a claim costs. The first real claim is the user's, with a small link, on a TestFlight build.
+
+**Checks.** The sheet is registered in `sheet-sweep.json` with why the demo never raises it. **Mac half (§1402).** None: the browser stands on the iPhone.

@@ -190,6 +190,9 @@ extension FeedScreen {
             // The whole link, read from this device's Keychain on tap (prd §1384).
             if let url = ZkMoneyClaims.link(for: thing.id) { UIApplication.shared.open(url) }
             else { chrome.flash(String(localized: "The claim link is no longer on this device."), tone: .failure) }
+        case .claimZkMoneyHere:
+            // Casberi's browser is the sheet's to raise (prd §1822).
+            openThing(thing)
         case .openAddress:
             // An in-app destination the feed cannot present itself opens the
             // sheet that can. The address card is a `FaceTarget` on
