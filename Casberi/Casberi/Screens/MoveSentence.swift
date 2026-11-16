@@ -7322,7 +7322,7 @@ struct MoveSentence: View {
         // The demo's address holds no key: money sent there is lost, so it
         // is never copied (§1475).
         if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
-        UIPasteboard.general.string = receiveAddress
+        DSPasteboard.copy(receiveAddress)
         DSHaptic.tap()
         // Never an address without its networks (prd §1486, §1803).
         if receiveList || receivePublic {
@@ -7752,7 +7752,7 @@ struct MoveSentence: View {
         focus = nil
         DSHaptic.tap()
         if !seller.takesAddress {
-            UIPasteboard.general.string = account
+            DSPasteboard.copy(account)
             say(String(localized: "Address copied. Paste it on \(seller.name)'s page."), seconds: 6)
         }
         #if DEBUG

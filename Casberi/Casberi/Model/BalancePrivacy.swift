@@ -222,6 +222,17 @@ enum WalletValue {
         return BalancePrivacy.mask
     }
 
+    /// What a row says on a notification (prd §1819). A banner is read on a
+    /// locked phone by whoever is beside it, the widget's case exactly, so Hide
+    /// balances holds there as it does on the tile. Only the Wallet's rows are masked: a
+    /// reply count is not a balance.
+    static func notificationWords(_ thing: Thing) -> String {
+        guard BalancePrivacy.shared.hidden,
+              BridgeCatalog.category(forSource: thing.source) == "Wallet"
+        else { return thing.title }
+        return title(thing)
+    }
+
     /// Case 1 — nil whenever the row wasn't stamped as a one-directional
     /// transfer, which is exactly when the caller must fall back to hiding.
     private static func maskedTransferTitle(_ thing: Thing) -> String? {

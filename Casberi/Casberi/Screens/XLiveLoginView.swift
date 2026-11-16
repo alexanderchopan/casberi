@@ -12,7 +12,7 @@ import WebKit
 /// honestly, in a screen that says what it is doing, IS the feature — not a
 /// workaround standing in for one.
 ///
-/// The default, PERSISTENT `WKWebsiteDataStore` (never `.nonPersistent()`):
+/// A PERSISTENT `WKWebsiteDataStore` of this seat's own (`SeatWebStore`, prd §1819) (never `.nonPersistent()`):
 /// an ephemeral store's cookies live only in memory for this presentation and
 /// vanish the moment the view is torn down, before a slow sign-in (2FA, a
 /// security checkpoint) could ever be trusted to have finished writing them.
@@ -48,7 +48,7 @@ private struct XLoginWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         // PERSISTENT on purpose — see the sheet's own header note.
-        config.websiteDataStore = .default()
+        config.websiteDataStore = SeatWebStore.store(.x)   // its own, prd §1819
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator

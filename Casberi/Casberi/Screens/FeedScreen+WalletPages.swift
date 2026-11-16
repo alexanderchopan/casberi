@@ -1382,7 +1382,7 @@ struct WalletYourAccountFigure: View {
     /// One buzz: the success flash carries its own (prd §1587); the Copy
     /// word marks itself for 1.2s (§867).
     private func copy(_ address: String) {
-        UIPasteboard.general.string = address
+        DSPasteboard.copy(address)
         chrome.flash(String(localized: "Address copied"), tone: .success)
         withAnimation(DS.Motion.standard) { copied = true }
         Task {

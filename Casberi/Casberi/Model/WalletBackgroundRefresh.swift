@@ -102,7 +102,7 @@ enum WalletBackgroundRefresh {
     static func runNotifySweep() async {
         guard let context = SharedStore.live?.mainContext else { return }
         guard let things = sweepCorpus(context) else { return }
-        let (plans, photos) = NotifySweep.plans(things: things)
+        let (plans, photos) = NotifySweep.plans(things: things, words: WalletValue.notificationWords)
         // **THE DEVNET SPEAKS HERE TOO (prd §522, §728).** A corpus sweep
         // cannot reach it: the Frames devnet lands no `Thing` at all by
         // design, and a chain being wiped belongs to no row. Merged into the

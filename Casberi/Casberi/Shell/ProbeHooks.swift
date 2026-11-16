@@ -1926,7 +1926,7 @@ enum ProbeHooks {
                 // measures a different thing than the code it reports on is
                 // worse than no probe.
                 let things = WalletBackgroundRefresh.sweepCorpus(context) ?? []
-                let (corpusPlans, photos) = NotifySweep.plans(things: things)
+                let (corpusPlans, photos) = NotifySweep.plans(things: things, words: WalletValue.notificationWords)
                 // The devnet (prd §522), composed the same way production
                 // composes it and reported APART from the corpus count —
                 // `planned=` counting them together would hide the case this

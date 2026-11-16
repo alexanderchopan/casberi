@@ -33,8 +33,13 @@ enum NotifySweep {
     ///
     /// Returns the plans plus the real photo bytes for any plan whose art is a
     /// `.thing` — resolved here because this is where the models are in hand.
-    static func plans(things: [Thing], now: Date = Date()) -> (plans: [NotifyPlan],
-                                                               photos: [String: Data]) {
+    /// `words` is what a row says on a banner, nil for its own title. The
+    /// sender passes `WalletValue.notificationWords`, so Hide balances
+    /// holds on the lock screen too (prd §1819); a parameter, because this
+    /// file is compiled alone by the harnesses and knows no setting.
+    static func plans(things: [Thing], now: Date = Date(),
+                      words: ((Thing) -> String)? = nil) -> (plans: [NotifyPlan],
+                                                             photos: [String: Data]) {
         // Liveness at the boundary (corollary 4): this walks stored properties
         // off every row, and a sweep can run while a bridge heal is deleting.
         let live = things.filter(\.isLive)
@@ -56,7 +61,7 @@ enum NotifySweep {
                 id: "row:" + id,
                 kind: kind,
                 title: headline(kind),
-                body: thing.title,
+                body: words?(thing) ?? thing.title,
                 link: "casberi://thing/\(thing.id.uuidString)",
                 occurredAt: thing.capturedAt,
                 deadline: thing.dueAt,

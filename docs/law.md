@@ -215,6 +215,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 ### 17. Privacy and network reach
 - No server, no analytics. Every host the app reaches is declared in `NetworkReach`, and `network-reach-audit.sh` checks it (§205).
 - Device-side guarantees: device-only keys, the credential tripwire, the receipts ledger, clipboard etiquette (§277).
+- Quiet privacy: Wallet rows are never donated to Spotlight; the Wallet tile's total is `privacySensitive`; a kept link loses its click trackers and share stamps; X, Instagram with Threads, TikTok, Duolingo and Privy each sign in inside their own web store (`SeatWebStore`); a Wallet banner honours Hide balances; every address copy goes through `DSPasteboard` (§1819).
 - "What this app reaches" and "what it reached" are one pushed screen, one row per service, filtered by category (§967).
 - Every hand-off of the corpus to a model passes `AccountReaders` (§639).
 - Every request naming a wallet goes through Tor on iOS, always on, never optional, one circuit per wallet; the Feed's apps never do. Hosts measured refusing every exit (`refusesTor`: Relay, Tenderly, Optimism's and Gnosis's RPCs, thirdweb, GeckoTerminal) are read directly and named on What this app reaches, which counts what went through Tor; no Tor is an outage, never a direct read. Your account says "Tor · On"; a move Relay carries (a round-up's buy, Receive from another network) says "not through Tor" on its foot, a swap no longer does (§1512, §1542); the Mac has no Tor yet and says so (§1495). The row's word is tor's answer of the last five seconds: no circuit is "Connecting", 45s without one "Can't connect"; a return after 30s away renews circuits, a new network or 20s without a circuit (then every two minutes) resets tor's connections, and a tor that exits runs again, three runs a process (§1546). The row's word is tor's answer of the last five seconds: no circuit is "Connecting", 45s without one "Can't connect"; a return after 30s away renews circuits, a new network or 20s without a circuit (then every two minutes) resets tor's connections, and a tor that exits runs again, three runs a process (§1544).
@@ -2251,6 +2252,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1816 — Activity's rows are white until seen (amends §1813, §744)
 - §1817 — Risks reads privacy, then permissions, then threats (amends §1809)
 - §1818 — Activity and Home, polished: a state is said once, one size at a row's right, one line, the tile's name over its mone…
+- §1819 — Quiet privacy: Wallet rows stay out of system search, the Wallet tile hides on a locked phone, a kept link loses its…
 
 ## Dead rulings → what replaced them (generated)
 

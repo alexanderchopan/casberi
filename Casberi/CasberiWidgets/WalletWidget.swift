@@ -105,6 +105,11 @@ struct WalletWidgetView: View {
                                 .monospacedDigit()
                         }
                     }
+                    // A locked phone, the Always-On display and StandBy draw
+                    // the placeholder, not the total (prd §1819). Hide
+                    // balances (§374) is the person's switch; this is the
+                    // system's, and it asks nothing of them.
+                    .privacySensitive()
                     if let stamp = WidgetStamp.text(for: line.asOf, now: entry.date,
                                                     after: WidgetWallet.stampAfter) {
                         Text(stamp)

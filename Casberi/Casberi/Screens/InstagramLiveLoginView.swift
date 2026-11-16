@@ -8,7 +8,7 @@ import WebKit
 /// out of its OWN cookie store the moment the person signs in, which is
 /// precisely the isolation Safari is built to keep.
 ///
-/// The default, PERSISTENT `WKWebsiteDataStore`: Instagram's sign-in routinely
+/// A PERSISTENT `WKWebsiteDataStore` of this seat's own (`SeatWebStore`, prd §1819): Instagram's sign-in routinely
 /// detours through a two-factor prompt or a "confirm it's you" checkpoint, and
 /// an ephemeral store's cookies would be gone before that slow flow could be
 /// trusted to have finished writing them. `isInspectable` is DEBUG-only.
@@ -41,7 +41,7 @@ private struct InstagramLoginWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         // PERSISTENT on purpose — see the sheet's own header note.
-        config.websiteDataStore = .default()
+        config.websiteDataStore = SeatWebStore.store(.meta)   // its own, prd §1819
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator

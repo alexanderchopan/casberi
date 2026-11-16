@@ -227,7 +227,7 @@ struct MoveKeysWalk: View {
         let words = YourAccountDemo.isDemo(account) ? YourAccountDemo.actsLater
             : String(localized: "Copied · only on \(networks.map(\.name).formatted(.list(type: .or)))")
         if !YourAccountDemo.isDemo(account) {
-            UIPasteboard.general.string = account
+            DSPasteboard.copy(account)
             DSHaptic.tap()
         }
         withAnimation(DS.Motion.standard) { said = words }

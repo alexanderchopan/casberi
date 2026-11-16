@@ -36,11 +36,14 @@ enum Capture {
             thing = Thing(kind: .link, title: zk.title, content: zk.content, source: source)
             thing.enrichedText = zk.note
             thing.dueAt = zk.expires
-        } else if let url = detectURL(in: text) {
+        } else if detectURL(in: text) != nil {
+            // The link is kept without the parameters that exist only to say
+            // who shared it and where it was clicked (prd §1819).
+            let kept = withoutTrackers(text)
             thing = Thing(
                 kind: .link,
-                title: linkTitle(url: url, text: text),
-                content: text,
+                title: detectURL(in: kept).map { linkTitle(url: $0, text: kept) } ?? noteTitle(kept),
+                content: kept,
                 source: source
             )
         } else {
@@ -84,6 +87,68 @@ enum Capture {
     static func detectURL(in text: String) -> URL? {
         let range = NSRange(text.startIndex..., in: text)
         return linkDetector?.firstMatch(in: text, range: range)?.url
+    }
+
+    /// Parameters that attribute a click and do nothing else, on any site.
+    ///
+    /// NARROWER than `ThingLinks.trackingParams` on purpose. That set decides
+    /// whether two saves are one page and may over-match; this one rewrites
+    /// what the person kept, so a name that is load-bearing somewhere (`ref`,
+    /// `s`, `t`) is never here. Those come off only on the hosts below, where
+    /// they are measured to be the share stamp.
+    static let clickTrackers: Set<String> = [
+        "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
+        "fbclid", "gclid", "gbraid", "wbraid", "dclid", "msclkid", "twclid", "yclid",
+        "igshid", "igsh", "mc_cid", "mc_eid", "mkt_tok", "_hsenc", "_hsmi",
+        "ref_src", "ref_url", "spm", "_branch_match_id",
+    ]
+
+    /// A share stamp that names the SHARER, by the site that writes it. A
+    /// YouTube `t` is a timestamp and stays; X's `t` is the share's id.
+    static let shareStamps: [(hosts: [String], names: Set<String>)] = [
+        (["youtube.com", "youtu.be", "music.youtube.com", "open.spotify.com"], ["si", "pp"]),
+        (["x.com", "twitter.com"], ["s", "t"]),
+        (["tiktok.com"], ["_r", "_t", "is_from_webapp", "sender_device"]),
+        (["reddit.com"], ["share_id", "rdt"]),
+    ]
+
+    /// One link without its trackers; the same string when it carries none,
+    /// is not http(s), or does not parse. Percent-encoding and the order of
+    /// what stays are untouched, so a signed or ordered query still works.
+    static func withoutTrackers(link raw: String) -> String {
+        guard raw.contains("?"),
+              var comps = URLComponents(string: raw),
+              comps.scheme == "http" || comps.scheme == "https",
+              var host = comps.host?.lowercased(),
+              let items = comps.percentEncodedQueryItems
+        else { return raw }
+        if host.hasPrefix("www.") { host = String(host.dropFirst(4)) }
+        if host.hasPrefix("m.") { host = String(host.dropFirst(2)) }
+        let stamps = shareStamps.first { entry in
+            entry.hosts.contains { host == $0 || host.hasSuffix("." + $0) }
+        }?.names ?? []
+        let kept = items.filter {
+            let name = $0.name.lowercased()
+            return !clickTrackers.contains(name) && !stamps.contains(name)
+        }
+        guard kept.count != items.count else { return raw }
+        comps.percentEncodedQueryItems = kept.isEmpty ? nil : kept
+        return comps.string ?? raw
+    }
+
+    /// `text` with every link in it stripped as above, the words around them
+    /// left alone.
+    static func withoutTrackers(_ text: String) -> String {
+        guard text.contains("?"), let linkDetector else { return text }
+        let whole = text as NSString
+        var out = text as NSString
+        let matches = linkDetector.matches(in: text, range: NSRange(location: 0, length: whole.length))
+        for match in matches.reversed() {
+            let raw = whole.substring(with: match.range)
+            let clean = withoutTrackers(link: raw)
+            if clean != raw { out = out.replacingCharacters(in: match.range, with: clean) as NSString }
+        }
+        return out as String
     }
 
     /// The same text with every URL in it carrying a `.link` attribute, so a

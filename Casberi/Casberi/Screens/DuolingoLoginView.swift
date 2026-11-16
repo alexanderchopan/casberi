@@ -42,7 +42,7 @@ private struct DuolingoLoginWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         // PERSISTENT: an email verification code or a two-step detour outlives
         // an ephemeral jar (§731's reason, measured there).
-        config.websiteDataStore = .default()
+        config.websiteDataStore = SeatWebStore.store(.duolingo)   // its own, prd §1819
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.customUserAgent = DuolingoFeed.desktopUserAgent
         webView.navigationDelegate = context.coordinator

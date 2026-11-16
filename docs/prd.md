@@ -73186,3 +73186,22 @@ Four changes, one day, all toward fewer things on the screen.
 **Mac half (§1402).** Items 1, 2, 5 and 7 are shared views and reach the iPad and the Mac. Items 3 and 4 follow `dsTitleOnly` and Activity's phone list. Not run on the Mac.
 
 **Checks.** None new. **Seen** on the simulator with the demo: Activity (one-line Needs you with "+12", "quillmark-web · …" beside "Regressed", the right edge at one size, an opened look row grey) and Home (names over figures, the scope words, Account's tail).
+
+## §1819 — Quiet privacy: Wallet rows stay out of system search, the Wallet tile hides on a locked phone, a kept link loses its trackers, each cookie app signs in inside its own web store, a banner honours Hide balances, every address copy expires (user, 2026-11-15, of a list of privacy work checked against the code: "ok then lets do all the things") — BUILT IN PART
+
+Six changes nobody has to switch on, and a list of what was asked for and not built.
+
+1. **Wallet rows are not donated to Spotlight.** `SpotlightIndex.index` handed every live thing to the system's search and to the index Siri and Apple Intelligence read, a transfer's amount and counterparty included, outside the app and outside Hide balances. A source in the Wallet category is no longer donated (`SpotlightIndex.indexable(source:)`, asked by category so a new Wallet app is covered the day it joins), and rows an earlier build donated are withdrawn once at the launch reconcile. Apps' own field finds them as before.
+2. **The Wallet tile's total is `privacySensitive`.** A locked phone, the Always-On display and StandBy draw the system's placeholder. Hide balances is unchanged and still withholds the figure everywhere.
+3. **A kept link loses its trackers.** `Capture.thing(from:)` strips `utm_*`, `fbclid`, `gclid` and their kind from every link in a pasted or shared link, and the share stamp that names the sharer on the sites that write one (`si` on YouTube and Spotify, `s` and `t` on X). Narrower than the set that matches duplicates: `ref`, `s` and `t` stay everywhere else, and a YouTube timestamp stays. Encoding and order of what remains are untouched. Links a connected app lands are not rewritten.
+4. **Each cookie app has its own web store.** X, Instagram with Threads, TikTok, Duolingo and Privy signed in inside the app's default web store, shared with the Aztec browser and the agents' pages. Each now signs in inside a persistent store of its own (`SeatWebStore`), and what they left in the default store is removed the first time one of those sign-ins opens. Sessions already kept are in the vault and are unaffected. Not moved: the agents' pages, the web-session apps and Fileverse, whose signed-in page is the session itself.
+5. **A banner honours Hide balances.** A notification's body was the row's title, amount included. With Hide balances on, a Wallet row's banner says what the row says in the app ("Received •••• ETH from …"). Other apps' banners are unchanged.
+6. **Every address copy expires.** Five copies wrote the clipboard directly, with no expiry: Receive's address, the address handed to a seller, the keys walk, an account's page and a new Logos account. They go through `DSPasteboard.copy` like the rest (§277).
+
+**Checked and already true.** A shared picture is re-drawn from pixels, so no location travels with it. Fresh receive addresses (§1560, §1724), Tor for wallet reads, names and the watchlist (§1495), mail drawn as text.
+
+**Asked for and not built.** Encrypting synced fields in iCloud: an existing CloudKit field cannot become an encrypted one, so it is new fields, a backfill and a Production schema deploy. A private path for swaps: sends are account-abstraction operations handed to public bundlers, and no private route for those is measured. Jitter between wallet reads: it costs the speed §1593 and §1732 bought. Verified reads past Privacy Pools, and Tor on the Mac: each its own piece of work. Blocking third-party keyboards: iOS allows it for the whole app only, notes included. Hiding key pages from screen capture: no page shows a secret.
+
+**Mac half (§1402).** Items 1, 3, 4, 5 and 6 are shared code and reach the Mac. Item 2 is the widget's. Not compiled or run for the Mac.
+
+**Checks.** The app builds for the simulator; `notify-selftest.sh`, `defaults-lock-audit.py`, `swiftdata-liveness-audit.py` and `keychain-audit.py` pass. The link rule was run against eleven sample links by hand and has no harness in the pass. Nothing was seen on a simulator.

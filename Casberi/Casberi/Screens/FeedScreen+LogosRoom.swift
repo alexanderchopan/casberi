@@ -159,7 +159,7 @@ extension FeedScreen {
         }
         do {
             let id = try LogosSend.create()
-            UIPasteboard.general.string = id
+            DSPasteboard.copy(id)
             withAnimation(DS.Motion.standard) { chrome.logosScope = id }
             chrome.flash(String(localized: "Account made. Its id is copied — send test tokens to it to fund it."))
             chrome.rain(sources: [LogosRoom.source])

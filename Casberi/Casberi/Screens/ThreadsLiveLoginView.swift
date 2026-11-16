@@ -39,7 +39,7 @@ private struct ThreadsLoginWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         // PERSISTENT: Meta's "confirm it was you" detour outlives an ephemeral jar.
-        config.websiteDataStore = .default()
+        config.websiteDataStore = SeatWebStore.store(.meta)   // its own, prd §1819
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.customUserAgent = ThreadsLiveFeed.desktopUserAgent
         webView.navigationDelegate = context.coordinator

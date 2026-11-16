@@ -40,7 +40,7 @@ private struct TikTokLoginWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         // PERSISTENT: a two-step verification detour outlives an ephemeral jar.
-        config.websiteDataStore = .default()
+        config.websiteDataStore = SeatWebStore.store(.tiktok)   // its own, prd §1819
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.customUserAgent = TikTokLiveFeed.desktopUserAgent
         webView.navigationDelegate = context.coordinator

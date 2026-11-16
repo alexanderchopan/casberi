@@ -54,6 +54,7 @@ enum SpotlightIndex {
     /// main actor, and that is correct. What must be main-isolated is the
     /// function that walks the MAIN context, below.
     static func index(_ things: [Thing]) {
+        let things = things.filter { indexable(source: $0.source) }
         guard !things.isEmpty else { return }
         let items = things.map { thing in
             let attrs = attributeSet(for: thing)
@@ -71,6 +72,39 @@ enum SpotlightIndex {
             )
         }
         CSSearchableIndex.default().indexSearchableItems(items)
+    }
+
+    /// Money stays out of the system's search (prd §1819). This donation
+    /// reaches Spotlight and the semantic index Siri and Apple Intelligence
+    /// ground on, both outside the app and neither behind Hide balances, so a
+    /// Wallet row (a transfer's amount, a counterparty, a card's merchant)
+    /// is never handed over. Apps' own field still finds it in the app.
+    /// Asked by CATEGORY, so a seat that joins the Wallet is covered the day
+    /// it joins.
+    static func indexable(source: String) -> Bool {
+        BridgeCatalog.category(forSource: source) != walletCategory
+    }
+
+    private static let walletCategory = "Wallet"
+    /// Bumped when the rule above widens, so rows donated under the old rule
+    /// are withdrawn once.
+    private static let withdrawnKey = "spotlight.walletWithdrawn.v1"
+
+    /// Withdraw the Wallet rows an earlier build donated. One fetch per
+    /// Wallet source, ids only; the flag is set after the last delete is
+    /// asked, so a pass that never ran runs next launch.
+    @MainActor
+    private static func withdrawWalletRows(context: ModelContext) {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: withdrawnKey) else { return }
+        let sources = Set(BridgeCatalog.offers.map(\.name).filter { !indexable(source: $0) })
+        for source in sources {
+            var descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+            descriptor.propertiesToFetch = [\.id, \.source]
+            let ids = ((try? context.fetch(descriptor)) ?? []).map(\.id)
+            remove(ids: ids)
+        }
+        defaults.set(true, forKey: withdrawnKey)
     }
 
     static func remove(ids: [UUID]) {
@@ -130,6 +164,7 @@ enum SpotlightIndex {
     /// the chunk, immediately before it is read.
     @MainActor
     static func reindexAll(context: ModelContext, chunk: Int = 500) async {
+        withdrawWalletRows(context: context)
         let defaults = UserDefaults.standard
         let watermark = defaults.object(forKey: watermarkKey) as? Date
         var descriptor = FetchDescriptor<Thing>(

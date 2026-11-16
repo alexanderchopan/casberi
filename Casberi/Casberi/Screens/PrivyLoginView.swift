@@ -39,7 +39,7 @@ private struct PrivyLoginWebView: UIViewRepresentable {
         let config = WKWebViewConfiguration()
         // PERSISTENT: the email code is read in another app, and an ephemeral
         // jar does not reliably outlive the switch (§731's reason).
-        config.websiteDataStore = .default()
+        config.websiteDataStore = SeatWebStore.store(.privy)   // its own, prd §1819
         // Privy Home's /login is a landing card whose "Get started" opens the
         // email form; no URL opens the form directly (read from its bundle,
         // 2026-09-17: the button calls the SDK's `login()`). Press it once, so
