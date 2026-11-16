@@ -42,6 +42,10 @@ code "$READ" | grep -F 'let face = TelegramMessages.faceFile(chat)' >/dev/null \
   || { echo "✗ the Telegram read no longer reads a private group's face — it draws its initial (prd §1660)"; exit 1; }
 code "$READ" | grep -F 'TelegramMessages.newestPictureFile(messages)' >/dev/null \
   || { echo "✗ the Telegram read no longer reads the last photo — the bubble says \"Photo\" (prd §1660)"; exit 1; }
+# A landed chat with nothing new still gets its last photo (the backfill).
+code "$READ" | grep -F 'read(newest: newest, wantsPicture: wants)' >/dev/null \
+  && code "$READ" | grep -F 'LiveMessagesLanding.fill(pictures: reading.pictures' >/dev/null \
+  || { echo "✗ the Telegram read no longer backfills a quiet chat's last photo — it says \"Photo\" until a new message (prd §1660)"; exit 1; }
 code "$READ" | grep -F '"@type": "deleteFile"' >/dev/null \
   || { echo "✗ a downloaded file is no longer dropped from TDLib's cache — the files folder grows every read"; exit 1; }
 code "$READ" | grep -F 'guard TelegramClient.signedIn, LiveMessages.reads(.telegram)' >/dev/null \

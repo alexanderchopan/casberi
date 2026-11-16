@@ -128,6 +128,34 @@ enum LiveMessagesLanding {
             .mapValues(\.capturedAt)
     }
 
+    /// The ids (ref minus `refPrefix`) of landed chats whose last line is a
+    /// photo with no picture stored — the read's backfill list (prd §1660).
+    static func missingPictures(source: String, refPrefix: String,
+                                context: ModelContext) -> Set<String> {
+        var out: Set<String> = []
+        for (ref, thing) in landedConversations(source: source, refPrefix: refPrefix, context: context)
+        where thing.isLive && thing.previewImageData == nil && ChatFace.lastPhoto(thing) != nil {
+            out.insert(String(ref.dropFirst(refPrefix.count)))
+        }
+        return out
+    }
+
+    /// Writes backfilled pictures (by id, as `missingPictures` named them)
+    /// onto rows whose last line is still a photo.
+    static func fill(pictures: [String: Data], source: String, refPrefix: String,
+                     context: ModelContext) {
+        guard !pictures.isEmpty else { return }
+        let landed = landedConversations(source: source, refPrefix: refPrefix, context: context)
+        var touched = false
+        for (id, picture) in pictures {
+            guard let thing = landed[refPrefix + id], thing.isLive,
+                  ChatFace.lastPhoto(thing) != nil else { continue }
+            setPicture(picture, on: thing)
+            touched = true
+        }
+        if touched { context.saveHonestly() }
+    }
+
     /// The conversations already here, by ref — scoped by PREFIX, never by
     /// source alone: an archive is thousands of rows and the inbox is twenty.
     private static func landedConversations(source: String, refPrefix: String,

@@ -32,7 +32,12 @@ enum TelegramMessagesRead {
         var chatsListed = 0
         var chatsRead = 0
         var failure: String?
+        /// Last-photo pictures for landed chats with nothing new, by chat id.
+        var pictures: [String: Data] = [:]
     }
+
+    /// Landed chats missing their last photo, backfilled per read at most.
+    static let backfillCap = 8
 
     /// The landing, for the sweep and the account page: how many
     /// conversations are new or grew, nil when the read failed.
@@ -42,8 +47,13 @@ enum TelegramMessagesRead {
         let newest = LiveMessagesLanding.newest(source: "Telegram",
                                                 refPrefix: TelegramMessages.refPrefix,
                                                 context: context)
-        let reading = await read(newest: newest)
+        let wants = LiveMessagesLanding.missingPictures(source: "Telegram",
+                                                        refPrefix: TelegramMessages.refPrefix,
+                                                        context: context)
+        let reading = await read(newest: newest, wantsPicture: wants)
         guard reading.failure == nil else { return nil }
+        LiveMessagesLanding.fill(pictures: reading.pictures, source: "Telegram",
+                                 refPrefix: TelegramMessages.refPrefix, context: context)
         return LiveMessagesLanding.land(reading.conversations, source: "Telegram",
                                         refPrefix: TelegramMessages.refPrefix,
                                         context: context).news
@@ -52,8 +62,10 @@ enum TelegramMessagesRead {
     /// The read itself, off the store: `newest` is each landed row's newest
     /// line by ref. `remember` false (the probe) records nothing, so a probe
     /// never hides a chat from the next real read.
-    static func read(newest: [String: Date], remember: Bool = true, now: Date = .now) async -> Reading {
+    static func read(newest: [String: Date], wantsPicture: Set<String> = [],
+                     remember: Bool = true, now: Date = .now) async -> Reading {
         var reading = Reading()
+        var backfills = 0
         var seen = lastSeen()
         defer {
             if remember, let data = try? JSONEncoder().encode(seen) {
@@ -114,7 +126,21 @@ enum TelegramMessagesRead {
                   let last = TelegramMessages.lastActivity(chat) else { continue }
             let since = newest[TelegramMessages.refPrefix + String(chatID)] ?? floor
             let lastID = TelegramMessages.int64((chat["last_message"] as? [String: Any])?["id"])
-            guard last > since, lastID == nil || seen[String(chatID)] != lastID else { continue }
+            guard last > since, lastID == nil || seen[String(chatID)] != lastID else {
+                // Nothing new, but the row's last line is a photo it never
+                // got (landed before §1660, or its download failed): fetch
+                // the chat's last message's picture alone, a few per read.
+                if wantsPicture.contains(String(chatID)), backfills < backfillCap,
+                   let message = chat["last_message"] as? [String: Any],
+                   let file = TelegramMessages.newestPictureFile([message]) {
+                    backfills += 1
+                    if let bytes = await download(file, client: client),
+                       let picture = await ImportMedia.thumbnail(data: bytes) {
+                        reading.pictures[String(chatID)] = picture
+                    }
+                }
+                continue
+            }
             reading.chatsRead += 1
             seen[String(chatID)] = lastID
 
