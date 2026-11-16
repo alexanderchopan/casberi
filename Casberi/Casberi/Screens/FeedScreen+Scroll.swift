@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 // THE FEED IS ONE SCROLL (prd §1208, §1208a; user: "what if the feed was one
@@ -217,9 +218,40 @@ extension FeedScreen {
 
     /// The Wallet's rows in the Feed's corpus. The scroll draws no Wallet
     /// category (prd §1489); Activity's Needs you and Money read them.
+    ///
+    /// **THEIR OWN FETCH AS WELL (2026-11-15).** The list's window is every
+    /// app's newest things together, so the Wallet's rows could all fall
+    /// outside it; `walletFeedRows` is the Wallet's newest by itself. The
+    /// list's rows lead, so a move that has just landed shows before the
+    /// task reads again.
     func activityMoneyRows(_ visible: [Thing]) -> [Thing] {
-        visible.filter { $0.isLive && Self.scrollCategory(ofSource: $0.source) == CategoryFold.walletRoom }
+        let listed = visible.filter { $0.isLive && Self.scrollCategory(ofSource: $0.source) == CategoryFold.walletRoom }
+        // A pick in the list's own filter (a tag) is the list's alone.
+        guard filter.tag == "All" else { return listed }
+        var seen = Set(listed.map(\.id))
+        return listed + walletFeedRows.live.filter { seen.insert($0.id).inserted }
     }
+
+    /// The Wallet's newest rows, one bounded fetch from the Feed's `.task`,
+    /// never a body (§628). The same rows the list would hand over were its
+    /// window wide enough: Privy's hidden apps stay hidden (prd §803e).
+    @MainActor
+    func loadWalletFeedRows() {
+        let sources = RoomAccounts.roomSources(CategoryFold.walletRoom)
+        var newest = FetchDescriptor<Thing>(
+            predicate: #Predicate { sources.contains($0.source) },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        newest.fetchLimit = Self.walletFeedFetchLimit
+        let rows = ((try? modelContext.fetch(newest)) ?? []).filter { thing in
+            thing.isLive && Self.scrollCategory(ofSource: thing.source) == CategoryFold.walletRoom
+                && (thing.source != PrivyHomeFeed.source || PrivyHomeStore.shared.shows(thing, inRoom: false))
+        }
+        guard rows.map(\.id) != walletFeedRows.map(\.id) else { return }
+        walletFeedRows = rows
+    }
+
+    /// One row per app is drawn; this is room for the asks among them.
+    static let walletFeedFetchLimit = 200
 
     /// **NEEDS YOU LEADS ACTIVITY (prd §1807).** It left Home with the
     /// doors: what your account still wants, and what waits on you in the

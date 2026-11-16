@@ -806,6 +806,12 @@ struct FeedScreen: View {
     /// entry, never reached the section (2026-10-16, user: "my notes in feed
     /// do not show"). Raw model refs, so every reader takes `.live` first.
     @State var notesFeedRows: [Thing] = []
+    /// Activity's money reads its own rows too (2026-11-15, user: "i don't
+    /// see a wallet section", just after a swap): the Feed's list is the
+    /// newest `allRoomFetchLimit` things of every app, and on a phone whose
+    /// other apps fill it no money row is left, so Wallet and Needs you both
+    /// drew nothing. Raw model refs, so every reader takes `.live` first.
+    @State var walletFeedRows: [Thing] = []
     /// The Wallet's Markets tile (prd §1337): Markets' own rows, read in the
     /// tile's `.task` (`loadWalletMarkets`), never in a body (§628). Raw
     /// model refs, so every reader takes `.live` first.
@@ -1551,7 +1557,7 @@ struct FeedScreen: View {
             // §1343, §1347). The Wallet's asks are the shell's, for its tab's
             // dot (prd §1489).
             .task(id: feedSectionsKey) {
-                if source == "All" { loadDayFeedRows(); loadNotesFeedRows() }
+                if source == "All" { loadDayFeedRows(); loadNotesFeedRows(); loadWalletFeedRows() }
             }
             // The renewals under Day's days read the Wallet's own reading,
             // from here, since the Feed may open before the Wallet has (prd
