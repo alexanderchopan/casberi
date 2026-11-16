@@ -42,7 +42,7 @@ struct WalletWhoseSwitch: View {
         let offered = Self.offered
         if offered.count > 1 {
             let lit = WalletWhose.lit(scope: chrome.walletScope, yours: Self.yours, same: WalletWatch.sameAddress)
-            DSRangeChips(ranges: offered, range: lit, label: \.label, slim: true, repicks: true) { picked in
+            DSRangeChips(ranges: offered, range: lit, label: \.label, slim: true, repicks: true, reads: true) { picked in
                 if picked == .yours, Self.noAccountYet {
                     chrome.moveTray = true
                     return

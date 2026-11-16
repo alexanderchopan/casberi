@@ -297,7 +297,7 @@ extension FeedScreen {
                                inFeed: true, leadOpens: { thing in
                                    chrome.activityReturn = WalletSection.needsYou.label
                                    chrome.openAppPage(thing.source)
-                               })
+                               }, greysSeen: false)
                 }
             }
             .environment(\.feedSectionPanelFilled, false)

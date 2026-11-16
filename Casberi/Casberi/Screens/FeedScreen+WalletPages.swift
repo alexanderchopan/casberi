@@ -435,9 +435,13 @@ extension FeedScreen {
                   spacing: DSHomeCardMetrics.gap) {
             DSHomeCard(glyph: WalletSection.yourAccount.glyph,
                        name: WalletSection.yourAccount.label,
+                       // With nothing wanted the card says whose it is (prd
+                       // §1818): the one card whose corner stood empty.
                        figure: yours == nil ? String(localized: "Create")
-                           : pending ? String(localized: "Finish setup") : yourAccountWants,
-                       figureTone: yours == nil ? DS.pickInk : DS.attentionInk,
+                           : pending ? String(localized: "Finish setup")
+                           : yourAccountWants ?? yours.map { AddressTail.short($0) },
+                       figureTone: yours == nil ? DS.pickInk
+                           : pending || yourAccountWants != nil ? DS.attentionInk : DS.textSecondary,
                        height: cardHeight) {
                 if yours == nil {
                     chrome.moveTray = true

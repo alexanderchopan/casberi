@@ -73156,3 +73156,21 @@ Four changes, one day, all toward fewer things on the screen.
 **Mac half (§1402).** The same page, the same order: the arm is shared.
 
 **Checks.** None new.
+
+## §1818 — Activity and Home, polished: a state is said once, one size at a row's right, one line, the tile's name over its money, the scope at the reading size (amends §1816, §1808, §1497, §902) (user, 2026-11-15, of the canvas "Casberi — more polish": "i don't want the activity tile to say 3 new. we want the app faces. you can make the rest of the changes")
+
+**Why.** Read off screenshots of Home and Activity as they stood, each row was right and the rows disagreed: a state stood twice in one row, three sizes shared the right edge, one row wrapped and one carried a line, and the map's figures stood at two heights.
+
+1. **A state is said once.** A bridge leads its title with the state so a clamp cannot cut it ("Regressed · quillmark-web"), and the row draws the same word at its right. Where a whole clause at a ` · ` seam equals the row's status word, the title gives it up (`FeedLook.saidOnce`, on `.status` and `.code`). Display only: the stored title is unchanged.
+2. **One size at a row's right** (amends §902's sizes). Money (`price17`), a state word (`subhead12`) and a clock (`label12`) shared the slot. All three take `fact15`, a new rung: money semibold, a state in its ink, a clock grey.
+3. **One line on Activity** (extends §1497). Needs you's first row wrapped to two lines and now holds one, its fact ("+12") taking its width first. A code row's place ("app #414") stood under its title on Activity alone and is dropped where rows are titles.
+4. **Look rows grey too, and Needs you stays white** (completes §1816). §1816's ink reached `DSFeedRow` only; a status, a code or a mail row drew white after it was opened. They take the same ink. Needs you's app rows greyed against §1816 item 3 and no longer do (`greysSeen`).
+5. **A map tile reads name, then money** (amends §1808's "under the dollars"). "Other" named itself over its figure and a token under, so one row of tiles held figures at two heights. The name stands over the dollars on every tile.
+6. **Yours · Following · All at the reading size.** It stood at `subhead12` under Public · Private at `body17`; on the Wallet it draws at `body17` (`DSRangeChips(reads:)`). Other slim pickers are unchanged.
+7. **Account's card says whose it is.** With nothing wanted its corner stood empty; it draws the account's tail ("...8e01") in grey. Activity's card keeps its three app faces.
+
+**Not built, said plainly.** The canvas also drew the amount leaving a send's, a receive's and a swap's title; those keep the sentence Move wrote (§1805 item 8, §1810), ruled the day before, and the canvas did not say it reversed them. A fade under the Move button: §677 retired the band's scrim, and content scrolls under the glass. Every lead on a tile: the bare marks are art with their own ground, and a fill behind them changed nothing on screen. A Home tile with no name still stands a few points lower than its neighbours.
+
+**Mac half (§1402).** Items 1, 2, 5 and 7 are shared views and reach the iPad and the Mac. Items 3 and 4 follow `dsTitleOnly` and Activity's phone list. Not run on the Mac.
+
+**Checks.** None new. **Seen** on the simulator with the demo: Activity (one-line Needs you with "+12", "quillmark-web · …" beside "Regressed", the right edge at one size, an opened look row grey) and Home (names over figures, the scope words, Account's tail).

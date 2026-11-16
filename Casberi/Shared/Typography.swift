@@ -336,6 +336,10 @@ extension DSTextStyle {
     static let label12 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption1)
     /// A row tile's word (prd §1336): the section titles' weight at a tile's
     /// width, so a row speaks at the page's volume, not a caption's.
+    /// A row's trailing fact (prd §1818): money, a state word and a clock
+    /// share the slot, and drew at 17pt bold, 12pt and 12pt. One size for
+    /// the slot, under the title's and over a caption's.
+    static let fact15 = DSTextStyle(size: 15, weight: .medium, tracking: 0, lineHeight: 20, relative: .subheadline)
     static let tile15 = DSTextStyle(size: 15, weight: .bold, tracking: 0, lineHeight: 19, relative: .subheadline)
     /// The dock tile's caption — the ONE rung under the 12pt caption tier
     /// (prd §662, 2026-09-09), and it is sized by the tile, not the reader.

@@ -105,10 +105,16 @@ struct DSRangeChips<Option: Hashable>: View {
     /// Following stays lit with one followed wallet open, and tapping it
     /// goes back to all of them.
     var repicks = false
+    /// The slim words at the reading size (prd §1818): the Wallet's Yours ·
+    /// Following · All stands under Public · Private, which is `body17`, and
+    /// read as a caption beside it.
+    var reads = false
 
     init(ranges: [Option], range: Option, label: @escaping (Option) -> String,
          slim: Bool = false, tiles: Bool = false, repicks: Bool = false,
+         reads: Bool = false,
          onPick: @escaping (Option) -> Void) {
+        self.reads = reads
         self.ranges = ranges
         self.range = range
         self.label = label
@@ -165,7 +171,7 @@ struct DSRangeChips<Option: Hashable>: View {
                         onPick(r)
                     } label: {
                         Text(label(r))
-                            .dsText(.subhead12)
+                            .dsText(reads ? .body17 : .subhead12)
                             .fontWeight(r == range ? .semibold : .regular)
                             .foregroundStyle(r == range ? DS.textPrimary : DS.textTertiary)
                             // The pick crossfades (prd §966); the weight snaps,

@@ -431,3 +431,23 @@ enum FeedLook: Equatable {
         return s
     }
 }
+
+extension FeedLook {
+    /// **A STATE IS SAID ONCE (prd §1818).** A title that leads or ends with
+    /// the very word the row draws at its right gives that clause up:
+    /// "Regressed · quillmark-web" beside "Regressed" reads "quillmark-web".
+    /// Only a whole clause at a ` · ` seam, matched without case, and never
+    /// the whole title.
+    static func saidOnce(_ title: String, _ word: String?) -> String {
+        guard let word, !word.isEmpty else { return title }
+        let seam = " · "
+        let parts = title.components(separatedBy: seam)
+        guard parts.count > 1 else { return title }
+        func same(_ part: String) -> Bool {
+            part.trimmingCharacters(in: .whitespaces).compare(word, options: .caseInsensitive) == .orderedSame
+        }
+        if let first = parts.first, same(first) { return parts.dropFirst().joined(separator: seam) }
+        if let last = parts.last, same(last) { return parts.dropLast().joined(separator: seam) }
+        return title
+    }
+}

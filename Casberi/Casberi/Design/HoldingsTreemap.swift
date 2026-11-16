@@ -403,6 +403,17 @@ struct HoldingsTreemap: View {
                         Color.clear.frame(width: 0, height: 0)
                     }
                 }
+                // **THE NAME STANDS OVER THE DOLLARS (prd §1818, amending
+                // §1808's "under").** "Other" named itself above its figure
+                // and a token under, so the figures along one row of tiles
+                // stood at two heights. Every tile reads name, then money,
+                // and the money shares the tile's foot.
+                if showsShares, (!small || worth(tile) == nil) && showsShare, !isOther {
+                    Text(verbatim: spoken)
+                        .dsText(.label12)
+                        .foregroundStyle(isLit ? Color.white.opacity(0.85) : DS.textSecondary)
+                        .lineLimit(1)
+                }
                 if showsShares {
                     if let worth = worth(tile) {
                         // One rung on every tile (user, 2026-11-02: "should
@@ -436,12 +447,6 @@ struct HoldingsTreemap: View {
                     // already shows. Under the dollars stands what the tile
                     // is: "ETH", "Private", "Lent". "Other" names itself
                     // above.
-                    if (!small || worth(tile) == nil) && showsShare, !isOther {
-                        Text(verbatim: spoken)
-                            .dsText(.label12)
-                            .foregroundStyle(isLit ? Color.white.opacity(0.85) : DS.textSecondary)
-                            .lineLimit(1)
-                    }
                 }
             }
             .padding(pad)

@@ -980,7 +980,10 @@ extension FeedScreen {
                             inFeed: Bool = false,
                             // A row's icon opens its app's page (prd §1809):
                             // Activity's rows pass it, nothing else does.
-                            leadOpens: ((Thing) -> Void)? = nil) -> some View {
+                            leadOpens: ((Thing) -> Void)? = nil,
+                            // Needs you passes false (prd §1816 item 3): what
+                            // waits on you stays white, opened or not.
+                            greysSeen: Bool = true) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -1088,7 +1091,7 @@ extension FeedScreen {
                                 .overlay(alignment: .topLeading) { leadDoor(thing, leadOpens) }
                                 // White until seen (prd §1816): Activity's
                                 // rows alone, the ones whose icon is a door.
-                                .environment(\.dsSeen, leadOpens != nil && ActivitySeen.shared.has(thing.id))
+                                .environment(\.dsSeen, greysSeen && leadOpens != nil && ActivitySeen.shared.has(thing.id))
                         }
                     }
                 }

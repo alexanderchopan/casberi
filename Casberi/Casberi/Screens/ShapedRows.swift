@@ -614,7 +614,9 @@ struct BandRow: View {
     /// or "your signature is needed" would (prd §1378).
     @Environment(\.dsUnderNeedsYou) private var underNeedsYou
     /// On Activity, where a row is its title alone (prd §1497).
-    @Environment(\.dsTitleOnly) private var titleOnly
+    @Environment(\.dsTitleOnly) var titleOnly
+    /// Opened from Activity (prd §1816): the look rows grey as the feed row does.
+    @Environment(\.dsSeen) var seen
 
     /// A lead that is a picture OF the thing, which under an app header rides
     /// the trailing edge as a thumbnail (prd §1103b). A face, a mark, a site's
@@ -849,20 +851,20 @@ struct BandRow: View {
                     // between your own accounts in the primary ink (§1550),
                     // and what a card paid out (§1810).
                     Text(figure)
-                        .dsText(.price17)
+                        .dsText(.fact15).fontWeight(.semibold)
                         .monospacedDigit()
                         .foregroundStyle(words?.stayed == true || words?.spent == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
                         .lineLimit(1)
                 } else if let money = moneyAmount {
                     Text(money.text)
-                        .dsText(.price17)
+                        .dsText(.fact15).fontWeight(.semibold)
                         .monospacedDigit()
                         .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
                                          ? DS.confirmInk : DS.textPrimary)
                         .lineLimit(1)
                 } else if let figure = titleFigure {
                     Text(figure)
-                        .dsText(.price17)
+                        .dsText(.fact15).fontWeight(.semibold)
                         .monospacedDigit()
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
@@ -873,7 +875,7 @@ struct BandRow: View {
                     // Primary ink at `label12`'s medium weight (prd §900):
                     // blue is for what you can tap, and this is a clock
                     // still ahead of you — the one time a row keeps (§902).
-                    Text(countdown).dsText(.label12).foregroundStyle(DS.textPrimary)
+                    Text(countdown).dsText(.fact15).foregroundStyle(DS.textPrimary)
                 } else if isAlarm {
                     // THE AGE IS GONE (prd §902 — user: "do we even need the
                     // time stamps? … who cares if it already says today").
@@ -893,7 +895,7 @@ struct BandRow: View {
                     // the column, under the title. The trailing slot is where
                     // §902 keeps a clock, in the line's ink and size.
                     Text(eventClock)
-                        .dsText(.label12)
+                        .dsText(.fact15)
                         .monospacedDigit()
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)

@@ -36,6 +36,9 @@ struct DSPushRowLabel<Leading: View>: View {
     /// it takes its width before the words do.
     var factFits = false
     @ViewBuilder let leading: () -> Leading
+    /// Where rows are titles alone (Activity, prd §1497) a name is one line,
+    /// as every row beside it is (§1818).
+    @Environment(\.dsTitleOnly) private var titleOnly
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
@@ -44,7 +47,7 @@ struct DSPushRowLabel<Leading: View>: View {
                 title
                     .dsText(.body17)
                     .foregroundStyle(tint)
-                    .lineLimit(2)
+                    .lineLimit(titleOnly ? 1 : 2)
                 if let subtitle {
                     subtitle
                         .dsText(.subhead12)
@@ -55,7 +58,9 @@ struct DSPushRowLabel<Leading: View>: View {
             .layoutPriority(1)
             Spacer(minLength: DS.Space.s2)
             DSPushRowTrail(fact: fact, factTone: factTone, busy: busy, opens: opens)
-                .fixedSize(horizontal: factFits, vertical: false)
+                // One line of name gives the fact its width first (prd §1818):
+                // "+12" drew as an ellipsis beside a long name.
+                .fixedSize(horizontal: factFits || titleOnly, vertical: false)
         }
         // **NO SHORTER THAN A FINGER (prd §1482):** the feed row's head
         // (`DSFeed.headHeight`), so a row with no line stands as tall as

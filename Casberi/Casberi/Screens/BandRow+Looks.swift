@@ -67,10 +67,14 @@ extension BandRow {
                 } else {
                     leaderView
                         .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .opacity(seen ? 0.5 : 1)
                 }
             }
             lookBody(look)
         }
+        // White until seen (prd §1816): a look's own inks stay, its title
+        // takes the row's.
+        .foregroundStyle(seen ? DS.textSecondary : DS.textPrimary)
         .frame(minHeight: DSFeed.headHeight)
         .accessibilityElement(children: .combine)
     }
@@ -109,13 +113,17 @@ extension BandRow {
             .frame(maxWidth: .infinity, alignment: .leading)
         case let .code(title, place, state):
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title)
+                Text(verbatim: Self.saidOnce(title, state?.word))
                     .dsText(.body17)
                     .lineLimit(1)
-                Text(verbatim: place)
-                    .dsText(.subhead12).monospaced()
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
+                // Activity is titles (prd §1497, §1818): the place stood
+                // under this one row and no other.
+                if !titleOnly {
+                    Text(verbatim: place)
+                        .dsText(.subhead12).monospaced()
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let state { statusWord(state) }
@@ -143,7 +151,7 @@ extension BandRow {
                     .foregroundStyle(DS.textSecondary)
             }
         case let .status(title, status):
-            Text(verbatim: title)
+            Text(verbatim: Self.saidOnce(title, status.word))
                 .dsText(.body17)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -261,9 +269,17 @@ extension BandRow {
     /// green landed, a word with no verdict stays grey.
     private func statusWord(_ status: FeedLook.Status) -> some View {
         Text(verbatim: status.word)
-            .dsText(.subhead12).fontWeight(.semibold)
+            .dsText(.fact15)
             .foregroundStyle(Self.ink(status.tone))
             .lineLimit(1)
+    }
+
+    /// **A STATE IS SAID ONCE (prd §1818).** A bridge leads its title with
+    /// the state so a clamp cannot cut it ("Regressed · quillmark-web"), and
+    /// the row draws the same word at the right. Where the two match, the
+    /// title gives its clause up. Display only: the stored title is unchanged.
+    static func saidOnce(_ title: String, _ word: String?) -> String {
+        FeedLook.saidOnce(title, word)
     }
 
     static func ink(_ tone: FeedLook.Tone) -> Color {
