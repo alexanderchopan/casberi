@@ -1086,6 +1086,9 @@ extension FeedScreen {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i], replies: replies, air: sectionAir(thing, inFeed: inFeed))
                                 .overlay(alignment: .topLeading) { leadDoor(thing, leadOpens) }
+                                // White until seen (prd §1816): Activity's
+                                // rows alone, the ones whose icon is a door.
+                                .environment(\.dsSeen, leadOpens != nil && ActivitySeen.shared.has(thing.id))
                         }
                     }
                 }

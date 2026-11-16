@@ -44,6 +44,7 @@ struct RootShell: View {
     /// comes off inside the sheet is not pulled out from under it.
     private func openFromShell(_ thing: Thing?) {
         guard let thing else { return }
+        if thing.isLive { ActivitySeen.shared.mark(thing.id) }
         if FeedScreen.opensAsPage(thing) {
             chrome.editNote(thing.id, typing: false)
         } else if FeedScreen.opensAsDocPage(thing) {

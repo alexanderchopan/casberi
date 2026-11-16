@@ -490,6 +490,8 @@ extension FeedScreen {
     /// exists (iPhone, an iPad mini in portrait, Slide Over), and the sheet
     /// path below is then exactly the one this app has always taken.
     func openThing(_ thing: Thing) {
+        // Opened is seen (prd §1816), by whichever door below takes it.
+        if thing.isLive { ActivitySeen.shared.mark(thing.id) }
         // A NOTE OF YOURS IS ITS PAGE (prd §1099): it opens where it is
         // written, read until a tap on the words, never on a reading sheet
         // whose Edit then opened the page. A locked note keeps the sheet's

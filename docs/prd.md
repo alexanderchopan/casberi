@@ -73130,3 +73130,18 @@ Four changes, one day, all toward fewer things on the screen.
 **Mac half (§1402).** All five are shared templates and reach the iPad and the Mac; not looked at there.
 
 **Checks.** `wallet-makeover-selftest.sh` (three cases for the day's percent; the tally's case removed). **Seen** on the simulator with the demo: Home with "+0.5% today" and Public · Private over the map, Apps' centred names, GitHub's page with its two rows, Account's rows at the edge.
+
+## §1816 — Activity's rows are white until seen (amends §1813, §744) (user, 2026-11-15, of the canvas "Casberi — elevating the design": "i do like the ink", "if there are new ones there and they all will have one item each, they should be white until seen", "ya that works do it")
+
+**Why.** Activity is one row per app, each app's newest thing, and every title drew in white, so a page you had read and a page full of news looked the same. Tone can say which is which without a word, a count or a dot.
+
+1. **A row you have opened drops to grey.** Its title takes `DS.textSecondary` and its lead half its strength (`\.dsSeen` in `DSFeedRow`); a row not yet opened keeps `DS.textPrimary`. The next thing an app lands is a different row and stands white.
+2. **Seen means opened, never scrolled past.** A page that greys on a scroll is grey whole on its first visit. A thing is marked where it opens (`FeedScreen.openThing`, `RootShell.openFromShell`), by whichever door takes it.
+3. **Activity's category rows and the Wallet's alone.** The ink is set only where a row's icon is a door (`leadOpens`), which is Activity on the phone. Needs you stays white: it waits on you until it is dealt with, opened or not. A finished to-do keeps its strike and `textTertiary`.
+4. **On this device, bounded.** `ActivitySeen` keeps opened ids in `activity.seen.v1`, 400 at most, the oldest dropped first, written through `DefaultsWrite`. It does not sync: it says what these eyes have read.
+
+**Not built.** A "Newest" line over Activity (declined in the same round: one row per app already says it), and stepped ink by day (Activity has no days).
+
+**Mac half (§1402).** None: the iPad and the Mac keep their category rooms and set no `dsSeen`. Not built there.
+
+**Checks.** None new. **Seen** on the simulator with the demo: a Wallet row opened and closed drew grey with its icon dimmed, every other row white. Not checked: that the stamp survives a relaunch.
