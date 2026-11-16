@@ -47,7 +47,17 @@ final class PrivateMoneyStore {
     /// checks again. Kept per root: one root's clean check never clears
     /// another's mismatch.
     private(set) var mismatchedRoots: Set<String> = []
-    var mismatched: Bool { !mismatchedRoots.isEmpty }
+    var mismatched: Bool {
+        #if DEBUG
+        // `-privateMismatchSample YES`: the held rows' amber line on a
+        // simulator, for a capture (2026-11-16).
+        if Self.mismatchSample { return true }
+        #endif
+        return !mismatchedRoots.isEmpty
+    }
+    #if DEBUG
+    private static let mismatchSample = UserDefaults.standard.bool(forKey: "privateMismatchSample")
+    #endif
 
     func recordCheck(_ checked: PrivacyEngineWire.Checked, root: String) {
         if checked.checked { mismatchedRoots.remove(root) } else { mismatchedRoots.insert(root) }

@@ -8,6 +8,9 @@ import Observation
 @Observable
 final class HoldingsCheckStore {
     static let shared = HoldingsCheckStore()
+    #if DEBUG
+    private static let sample = UserDefaults.standard.string(forKey: "holdingsMismatchSample")?.uppercased()
+    #endif
 
     private(set) var ledger = HoldingsCheck.Ledger()
     @ObservationIgnored private var lastRun: [String: Date] = [:]
@@ -17,6 +20,12 @@ final class HoldingsCheckStore {
     /// Whether any wallet's share of this position disagreed with Ethereum
     /// twice in a row.
     func mismatched(_ position: WalletPortfolio.Position) -> Bool {
+        #if DEBUG
+        // `-holdingsMismatchSample <SYMBOL>`: draw that row's amber line on a
+        // simulator, where no real disagreement is ever seen (a reel's
+        // capture, 2026-11-16). Read once, never in the store's ledger.
+        if let sample = Self.sample, sample == position.symbol.uppercased() { return true }
+        #endif
         guard !ledger.mismatched.isEmpty else { return false }
         return position.parts.contains { ledger.mismatched.contains("\($0.holder):\($0.key)".lowercased()) }
     }
