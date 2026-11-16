@@ -213,7 +213,8 @@ def check_money(files: "dict[str, str]") -> "list[str]":
     same transaction in a different grammar.
 
     `price17` is the app's row-money rung and the one the most-drawn surface
-    already used, so the others came to it.
+    already used, so the others came to it. Since §1818 that rung is `fact15`
+    (semibold): one size at a row's right, money, state and clock alike.
     """
     bad = []
     for name, path in MONEY_ROWS.items():
@@ -227,8 +228,8 @@ def check_money(files: "dict[str, str]") -> "list[str]":
             bad.append(f"{name}: not found in {path} — the money-row list is stale")
             continue
         b = strip_comments(b)
-        if ".dsText(.price17)" not in b:
-            bad.append(f"{name}: a signed amount is not at price17 — four activity "
+        if ".dsText(.fact15)" not in b:
+            bad.append(f"{name}: a signed amount is not at fact15 — four activity "
                        f"surfaces state this fact and they share one rung")
         if "monospacedDigit" not in b:
             bad.append(f"{name}: the amount is not tabular")
@@ -326,15 +327,15 @@ def self_test() -> None:
     import tempfile, os
     money = [
         ("a signed amount at the shared rung passes",
-         "struct BandRow: View {\n .dsText(.price17)\n .monospacedDigit()\n}\n", False),
+         "struct BandRow: View {\n .dsText(.fact15)\n .monospacedDigit()\n}\n", False),
         ("an amount off the shared rung is flagged",
          "struct BandRow: View {\n .dsText(.subhead12)\n .monospacedDigit()\n}\n", True),
         ("a non-tabular amount is flagged",
-         "struct BandRow: View {\n .dsText(.price17)\n}\n", True),
+         "struct BandRow: View {\n .dsText(.fact15)\n}\n", True),
         ("a COMMENTED rung does not satisfy it",
-         "struct BandRow: View {\n // .dsText(.price17)\n .monospacedDigit()\n}\n", True),
+         "struct BandRow: View {\n // .dsText(.fact15)\n .monospacedDigit()\n}\n", True),
         ("a renamed money row is flagged, not skipped",
-         "struct BandRowX: View {\n .dsText(.price17)\n .monospacedDigit()\n}\n", True),
+         "struct BandRowX: View {\n .dsText(.fact15)\n .monospacedDigit()\n}\n", True),
     ]
     with tempfile.TemporaryDirectory() as td:
         for label, src, should_fail in money:

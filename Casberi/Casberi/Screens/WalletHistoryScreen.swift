@@ -196,8 +196,9 @@ private struct WalletHistoryRow: View {
                 // in the Wallet room draws it as a signed figure in this slot.
                 // One room, one pushed screen, two grammars for one fact.
                 if let money = moneyAmount {
+                    // `BandRow`'s rung since §1818: one size at a row's right.
                     Text(money.text)
-                        .dsText(.price17)
+                        .dsText(.fact15).fontWeight(.semibold)
                         .foregroundStyle(money.received ? DS.confirmInk : DS.textPrimary)
                         .monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
                 }
