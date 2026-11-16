@@ -824,8 +824,13 @@ struct AztecBrowserView: View {
     /// Optional: a cover need not carry it; without it, no co-signer door.
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
 
-    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false) {
+    /// What stands between the page and its band: Move's live Passport
+    /// score (prd §1820); nil for every other page.
+    private let above: AnyView?
+
+    init(url: URL, aztec: Bool = true, ethereum: Bool = false, sends: Bool = false, above: AnyView? = nil) {
         _model = StateObject(wrappedValue: AztecBrowserModel(url: url, aztec: aztec, ethereum: ethereum, sends: sends))
+        self.above = above
     }
 
     private var band: some View { AztecBrowserBand(model: model) }
@@ -843,6 +848,7 @@ struct AztecBrowserView: View {
             if let failed = model.failed {
                 Text(verbatim: failed).dsText(.subhead12).foregroundStyle(DS.destructiveInk).padding()
             }
+            if let above { above }
             band
         }
         .navigationTitle(Text(verbatim: model.host))

@@ -396,7 +396,7 @@ grep -q 'try await coSend(\["from": coSigner, "to": asset.portal, "data": deposi
 grep -q 'personalSignDigest(message), signer: account' "$APP" \
   || { echo "✗ the co-signer's sign-in is not checked against the message Casberi wrote (prd §1720)"; exit 1; }
 MOVEAZ="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
-awk '/if !standing.eligible, !standing.sanctioned,/{a=NR} /theirs.eligible \{/{b=NR} /viaCoSigner = coSigner/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
+awk '/if !standing.eligible, !standing.sanctioned,/{a=NR} /theirs.eligible \{/{b=NR} /viaCoSigner = found/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
   || { echo "✗ Move deposits from your co-signer other than when your account is not eligible and it is (prd §1720)"; exit 1; }
 # Any amount (prd §1700q): typed, never a list; Send and run() both wait on a clear amount.
 ! grep -q 'usdcSteps\|wethSteps' "$MOVEAZ" \
@@ -414,6 +414,62 @@ grep -q 'if typed.hasPrefix(".") { typed = "0" + typed }' "$MOVEAZ" \
 grep -q 'case moreThanHeld' "$MOVEAZ" && grep -q 'want > have' "$MOVEAZ" \
   || { echo "✗ an amount over what you hold is not said (prd §1700q)"; exit 1; }
 
+# **The way into Aztec, as steps (prd §1820).** Shield takes a deposit only
+# from a wallet with a Human Passport score, and a Safe can hold none, so the
+# score is the co-signer's. Before, Move said "Yours 0" and offered Human
+# Passport to someone with no co-signer, where nothing could raise it. Now
+# the steps are Add a co-signer, Reach the score, Send, and the act is the
+# next one: a Safe never sent to Human Passport, "24", never "24 of 20".
+WAYIN="Casberi/Casberi/Model/Aztec/AztecWayIn.swift"
+mkdir -p "$TMP/wmain"
+cat > "$TMP/wmain/main.swift" <<'SWIFT'
+import Foundation
+var bad = 0
+func check(_ ok: Bool, _ why: String) { if !ok { print("✗ " + why); bad += 1 } }
+let me = "0x0000000000000000000000000000000000002725"
+check(AztecWayIn.next(coSigner: nil, score: nil, threshold: 20) == .coSigner, "no co-signer: the next step is not Add a co-signer")
+check(AztecWayIn.next(coSigner: nil, score: 40, threshold: 20) == .coSigner, "a score with no co-signer skips Add a co-signer (a Safe holds no score)")
+check(AztecWayIn.next(coSigner: me, score: nil, threshold: 20) == .score, "a co-signer Shield has not scored: not the score step")
+check(AztecWayIn.next(coSigner: me, score: 19, threshold: 20) == .score, "19 of 20 is not enough")
+check(AztecWayIn.next(coSigner: me, score: 20, threshold: 20) == .send, "20 of 20 is enough")
+check(AztecWayIn.phase(.coSigner, coSigner: me, score: 12, threshold: 20) == .done, "a co-signer added is not done")
+check(AztecWayIn.phase(.score, coSigner: me, score: 12, threshold: 20) == .next, "the score is not next at 12")
+check(AztecWayIn.phase(.send, coSigner: me, score: 12, threshold: 20) == .later, "Send is not later at 12")
+check(AztecWayIn.phase(.score, coSigner: nil, score: nil, threshold: 20) == .later, "the score is not later with no co-signer")
+check(AztecWayIn.shownScore(coSignerScore: 12, accountScore: 0) == 12, "the step shows your account's score, not the co-signer's")
+check(AztecWayIn.shownScore(coSignerScore: nil, accountScore: 0) == 0, "no co-signer: not your account's score")
+check(AztecWayIn.progress(12, of: 20) == "12 of 20", "progress is not \"12 of 20\"")
+check(AztecWayIn.progress(24, of: 20) == "24", "an enough score reads \"24 of 20\"")
+if bad > 0 { exit(1) }
+print("ok")
+SWIFT
+xcrun swiftc -Onone -o "$TMP/wayin" "$WAYIN" "$TMP/wmain/main.swift" 2>"$TMP/err" || { cat "$TMP/err"; echo "✗ the way in did not compile (prd §1820)"; exit 1; }
+"$TMP/wayin" >/dev/null || { "$TMP/wayin"; echo "✗ the way into Aztec is wrong (prd §1820)"; exit 1; }
+waymutate() { # label, perl expression (the way in's own)
+  sed -e '' "$WAYIN" > "$TMP/wayin.swift"
+  perl -0pi -e "$2" "$TMP/wayin.swift"
+  cmp -s "$WAYIN" "$TMP/wayin.swift" && { echo "✗ mutation '$1' changed nothing (its anchor drifted)"; exit 1; }
+  if xcrun swiftc -Onone -o "$TMP/wmut" "$TMP/wayin.swift" "$TMP/wmain/main.swift" 2>/dev/null && "$TMP/wmut" >/dev/null; then
+    echo "✗ mutation survived: $1"; exit 1
+  fi
+}
+waymutate "a score without a co-signer" 's/guard coSigner != nil else \{ return \.coSigner \}//'
+waymutate "19 is enough" 's/score >= threshold else/score >= threshold - 1 else/'
+waymutate "your account's score shown" 's/coSignerScore \?\? accountScore/accountScore/'
+waymutate "24 of 20" 's/score >= threshold \? "\\\(score\)" : //'
+grep -q 'switch AztecWayIn.next(coSigner: move.coSigner, score: score, threshold: threshold)' "$MOVEAZ" \
+  || { echo "✗ Move's act is not the way in's next step (prd §1820)"; exit 1; }
+awk '/case \.coSigner:/{c=NR} c&&/chrome\.openYourAccount\(at: FeedScreen\.SecurityAnchor\.account\.id\)/{o=NR} END{exit !(c && o && o-c<8)}' "$MOVEAZ" \
+  || { echo "✗ Add a co-signer does not open Your account's keys (prd §1820)"; exit 1; }
+! grep -q 'footButton(String(localized: "Human Passport")' "$MOVEAZ" \
+  || { echo "✗ Human Passport is offered whoever asks, a Safe included (prd §1820)"; exit 1; }
+grep -q 'AztecWayInRows(coSigner: move.coSigner' "$MOVEAZ" \
+  || { echo "✗ Shield's no is not said as the way in's steps (prd §1820)"; exit 1; }
+grep -q 'AnyView(PassportScoreBand(address: address' "$MOVEAZ" \
+  || { echo "✗ Human Passport's page has no score under it (prd §1820)"; exit 1; }
+grep -q 'if let standing = await ShieldBridge.eligibility(address) { score = Int(standing.score) }' "Casberi/Casberi/Screens/AztecWayInRows.swift" \
+  || { echo "✗ the score under Human Passport is not Shield's own read (prd §1820)"; exit 1; }
+
 mutate() { # label, perl expression
   sed -e '' "$WIRE" > "$TMP/wire.swift"
   perl -0pi -e "$2" "$TMP/wire.swift"
@@ -428,4 +484,4 @@ mutate "leaf id without depth" 's/pow\(Decimal\(2\), depth\) \+ l/l/'
 mutate "decimal carry dropped" 's/guard carry == 0 else \{ return nil \}/_ = carry/'
 mutate "any contract's event" 's/\(log\["address"\] as\? String\)\?\.lowercased\(\) == portal\.lowercased\(\),/true,/'
 
-echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, the co-signer's deposit, any amount, 5 + 11 mutations caught)"
+echo "✓ Shield bridge self-test (deposit + withdraw bytes match viem, leaf ids, the deposit event, Passport only, the provider's rules, the browser's Mac agent, a sign-in read, the co-signer's deposit, the way in as steps, any amount, 5 + 4 + 11 mutations caught)"

@@ -60391,6 +60391,34 @@
         }
       }
     },
+    "Back to send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volver a Enviar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金に戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내기로 돌아가기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "返回发送"
+          }
+        }
+      }
+    },
     "Back to the frames" : {
       "localizations" : {
         "es" : {
@@ -70620,6 +70648,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "共同签名人"
+          }
+        }
+      }
+    },
+    "Co-signer added" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cofirmante añadido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を追加済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 추가됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已添加共同签名人"
           }
         }
       }
@@ -111437,6 +111493,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Lightning"
+          }
+        }
+      }
+    },
+    "Like MetaMask" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Como MetaMask"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask など"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask 등"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "例如 MetaMask"
           }
         }
       }
@@ -154180,6 +154264,34 @@
         }
       }
     },
+    "Raise your score" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sube tu puntuación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スコアを上げる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "점수 올리기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提高你的分数"
+          }
+        }
+      }
+    },
     "Raise your score on Human Passport" : {
       "localizations" : {
         "es" : {
@@ -154372,6 +154484,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "原始交易"
+          }
+        }
+      }
+    },
+    "Reach a score of %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega a una puntuación de %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スコア %lld に到達"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "점수 %lld 달성"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "达到 %lld 分"
           }
         }
       }
@@ -169748,6 +169888,34 @@
         }
       }
     },
+    "Score %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puntuación %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スコア %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "점수 %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分数 %lld"
+          }
+        }
+      }
+    },
     "Screening" : {
       "localizations" : {
         "es" : {
@@ -172059,6 +172227,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从此手机的账户发送测试币"
+          }
+        }
+      }
+    },
+    "Send through Shield" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar a través de Shield"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 経由で送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield를 통해 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Shield 发送"
           }
         }
       }
@@ -227108,6 +227304,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人正在登录 Shield…"
+          }
+        }
+      }
+    },
+    "Your co-signer's score" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La puntuación de tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者のスコア"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자의 점수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人的分数"
           }
         }
       }

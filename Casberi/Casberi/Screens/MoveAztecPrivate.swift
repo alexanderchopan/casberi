@@ -95,6 +95,10 @@ final class AztecMove {
     /// Your co-signer, when Shield scores it and not your account: the
     /// deposit is then the co-signer's own (prd §1720).
     private(set) var viaCoSigner: String?
+    /// Your co-signer, eligible or not, and Shield's score for it: the way
+    /// in names them as steps when Shield says no (prd §1820).
+    private(set) var coSigner: String?
+    private(set) var coSignerScore: Int?
 
     // MARK: - In dollars (prd §1700y, as Railgun's §1728)
 
@@ -349,6 +353,21 @@ final class AztecMove {
         stage = .reading
         readingSince = .now
         defer { readingSince = nil }
+        #if DEBUG
+        // `-aztecWayInSample none|<score>`: Shield says no, with no co-signer
+        // or one short of the score, so the steps are seen with nothing
+        // asked of Shield (prd §1820). The address is made up.
+        if mode == .deposit, let sample = UserDefaults.standard.string(forKey: "aztecWayInSample") {
+            holdings = [Holding(symbol: "USDC", units: "25000000")]
+            symbol = "USDC"
+            if amount.isEmpty { amount = "20" }
+            coSigner = sample == "none" ? nil : "0x0000000000000000000000000000000000002725"
+            coSignerScore = Int(sample)
+            stage = .shieldNo(score: coSignerScore ?? 0, threshold: 20, sanctioned: false)
+            NSLog("[Casberi] aztecWayIn| sample | %@", sample)
+            return
+        }
+        #endif
         if DemoMode.isActive {
             holdings = [Holding(symbol: "USDC", units: "25000000")]
             symbol = "USDC"
@@ -377,21 +396,30 @@ final class AztecMove {
             // the deposit is the co-signer's, and what it holds counts too
             // (your account moves it the rest).
             viaCoSigner = nil
+            coSigner = nil
+            coSignerScore = nil
             if !standing.eligible, !standing.sanctioned,
-               let coSigner = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, safe).first,
-               let theirs = await ShieldBridge.eligibility(coSigner), theirs.eligible {
-                viaCoSigner = coSigner
-                standing = theirs
-                for asset in ShieldBridge.assets {
-                    let more = Decimal(string: await Self.balance(of: asset.ethToken, at: coSigner)) ?? 0
-                    held[asset.symbol] = NSDecimalNumber(decimal: (Decimal(string: held[asset.symbol] ?? "0") ?? 0) + more).stringValue
+               let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, safe).first {
+                // Remembered short of the score too: the way in names it (prd §1820).
+                coSigner = found
+                if let theirs = await ShieldBridge.eligibility(found) {
+                    coSignerScore = Int(theirs.score)
+                    if theirs.eligible {
+                        viaCoSigner = found
+                        standing = theirs
+                        for asset in ShieldBridge.assets {
+                            let more = Decimal(string: await Self.balance(of: asset.ethToken, at: found)) ?? 0
+                            held[asset.symbol] = NSDecimalNumber(decimal: (Decimal(string: held[asset.symbol] ?? "0") ?? 0) + more).stringValue
+                        }
+                    }
                 }
             }
             safeHeld = held
             holdings = depositHoldings(held)
             maxUSD = standing.maxUSD
             if standing.sanctioned || !standing.eligible {
-                stage = .shieldNo(score: Int(standing.score), threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
+                stage = .shieldNo(score: AztecWayIn.shownScore(coSignerScore: coSignerScore, accountScore: Int(standing.score)),
+                                  threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
                 return
             }
             // Holding no AZTEC stops nobody: gas is bought with what you move (prd §1700aa).
@@ -618,9 +646,13 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 try? await Task.sleep(for: .seconds(30))
             }
         }
-        // Back from Human Passport, Shield is asked again.
+        // Back from Human Passport, Shield is asked again. While the page is
+        // open the co-signer's score is read under it (prd §1820).
         .sheet(isPresented: $passport, onDismiss: { Task { await move.read() } }) {
-            AztecBrowserView(url: URL(string: "https://app.passport.xyz")!, aztec: false, ethereum: true)
+            AztecBrowserView(url: URL(string: "https://app.passport.xyz")!, aztec: false, ethereum: true,
+                             above: move.coSigner.map { address in
+                                 AnyView(PassportScoreBand(address: address, threshold: shieldThreshold) { passport = false })
+                             })
                 .presentationDragIndicator(.visible)
         }
     }
@@ -769,16 +801,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             Text(verbatim: fundsLine).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .shieldNo(let score, let threshold, let sanctioned):
+            // **THE WAY IN, AS STEPS (prd §1820).** Not "Shield needs 20 ·
+            // Yours 0": what to do, in order, the act always the next one.
             if !sanctioned {
-                VStack(alignment: .leading, spacing: 0) {
-                    fact(String(localized: "Shield needs"), String(localized: "Human Passport score of \(threshold)"), ink: DS.attentionInk)
-                    fact(String(localized: "Yours"), "\(score)", ink: DS.textSecondary)
-                    Button {
-                        Task { await move.read() }
-                        DSHaptic.selection()
-                    } label: { MoveVerbRowLabel(title: String(localized: "Check again"), glyph: "arrow.clockwise") }
-                        .buttonStyle(RowPress())
-                }
+                AztecWayInRows(coSigner: move.coSigner, score: score, threshold: threshold, maxUSD: move.maxUSD)
             }
         case .needsGas:
             VStack(alignment: .leading, spacing: 0) {
@@ -1085,11 +1111,21 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     checkAgain
                     Spacer(minLength: DS.Space.s3)
                     footButton(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true) { copy(address) }
-                case .shieldNo(_, _, let sanctioned):
+                case .shieldNo(let score, let threshold, let sanctioned):
                     Spacer(minLength: 0)
-                    // The only door a Casberi Safe has to a score (prd §1700f).
+                    // The act is the next step (prd §1820): a Safe can hold no
+                    // score, so with no co-signer Human Passport is no door.
                     if !sanctioned {
-                        footButton(String(localized: "Human Passport"), on: true) { passport = true }
+                        switch AztecWayIn.next(coSigner: move.coSigner, score: score, threshold: threshold) {
+                        case .coSigner:
+                            footButton(String(localized: "Add a co-signer"), on: true) {
+                                DSHaptic.selection()
+                                chrome.moveTray = false
+                                chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
+                            }
+                        case .score, .send:
+                            footButton(String(localized: "Raise your score"), on: true) { passport = true }
+                        }
                     }
                 case .needsGas:
                     Spacer(minLength: 0)
@@ -1162,6 +1198,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .lineLimit(1).fixedSize().frame(minHeight: 48)
         }
         .buttonStyle(RowPress())
+    }
+
+    /// Shield's score for the deposit, as Shield said it (20 today).
+    private var shieldThreshold: Int {
+        if case .shieldNo(_, let threshold, _) = move.stage { return threshold }
+        return 20
     }
 
     private var footVerb: String {
