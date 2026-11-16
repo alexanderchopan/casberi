@@ -351,6 +351,25 @@ struct MoveVerbRowLabel: View {
     }
 }
 
+/// **A ROW THAT OPENS A SCREEN (prd §1824).** Its words, and the door's grey
+/// chevron at the trailing edge (§1385: a door is grey with its chevron), so
+/// it reads as tappable beside a pink verb ("Copy") that acts at once.
+struct MoveDoorRowLabel: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: DS.Space.s2)
+            Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+                .accessibilityHidden(true)
+        }
+        .frame(minHeight: MoveChoiceRowLabel.height)
+        .contentShape(Rectangle())
+    }
+}
+
 /// The mark on a menu's current pick (prd §1804): it draws itself in.
 struct MoveMenuCheck: View {
     var ink: Color = DS.pickInk

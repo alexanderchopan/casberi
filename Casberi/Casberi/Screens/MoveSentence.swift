@@ -98,6 +98,8 @@ struct MoveSentence: View {
     @State private var freshReceive = false
     /// Receive to your private balance on Aztec: your Aztec address (prd §1719).
     @State private var aztecReceive = false
+    /// "From a zk.money link" taken (prd §1824): the claim page.
+    @State private var zkClaim = false
     /// Receive's public page, behind "Public account" (prd §1803).
     @State private var receivePublic = false
     /// "From another network" taken: the Network row and its list.
@@ -1490,6 +1492,12 @@ struct MoveSentence: View {
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
+            if zkClaim, privateMode == nil, open != .verb {
+                MoveZkClaim(account: account, inTray: inTray, leave: {
+                    withAnimation(DS.Motion.standard) { zkClaim = false; open = nil }
+                }) { verbWord(title(.receive)) }
+                .transition(.opacity)
+            }
             if aztecMode != nil, privateMode == nil, open != .verb {
                 MoveAztecPrivateSentence(move: aztecMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
@@ -1526,6 +1534,7 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: freshReceive)
         .animation(DS.Motion.standard, value: aztecReceive)
+        .animation(DS.Motion.standard, value: zkClaim)
         .animation(DS.Motion.standard, value: railgunOpen)
         .animation(DS.Motion.standard, value: verb)
     }
@@ -2426,22 +2435,31 @@ struct MoveSentence: View {
 
     @ViewBuilder private var receiveAddresses: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            if receiveNetworks.isEmpty {
-                // Never an address the account cannot follow (§1442k).
-                receivePlace(String(localized: "Public account"), marks: [],
-                             fact: String(localized: "Not on any network from this \(ThisDevice.name) yet"),
-                             factInk: DS.attentionInk, place: "public", open: nil, copy: nil)
-            } else {
-                receivePlace(String(localized: "Public account"), marks: receiveNetworks.compactMap { Self.networkMark($0) },
-                             fact: YourAccount.short(account), place: "public",
-                             open: { receivePublic = true },
-                             copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })
+            // **EACH PLACE SAYS WHERE IT WORKS, AND EVERY WAY IN FROM OUTSIDE
+            // STANDS UNDER THE PLACE IT LANDS (prd §1824).** The public line
+            // names its networks, as Aztec's says "Aztec to Aztec only"
+            // (user: "we need to make that clear"); the three "From" rows
+            // land in the public account, so they stand under it, where under
+            // the Aztec account they read as private.
+            VStack(alignment: .leading, spacing: 0) {
+                if receiveNetworks.isEmpty {
+                    // Never an address the account cannot follow (§1442k).
+                    receivePlace(String(localized: "Public account"), marks: [],
+                                 fact: String(localized: "Not on any network from this \(ThisDevice.name) yet"),
+                                 factInk: DS.attentionInk, place: "public", open: nil, copy: nil)
+                } else {
+                    receivePlace(String(localized: "Public account"), marks: receiveNetworks.compactMap { Self.networkMark($0) },
+                                 fact: Self.onlyOn(receiveNetworks.map(\.name)), factInk: DS.textPrimary, place: "public",
+                                 open: { receivePublic = true },
+                                 copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })
+                }
+                receiveFromRows
             }
             if PrivateMove.freshAvailable {
                 // Its copy opens its page too: only there is the address
                 // watched, and only there is its rule said (prd §1779).
                 receivePlace(String(localized: "Private balance"), marks: [Self.networkMark(chainId: 1)].compactMap { $0 },
-                             fact: String(localized: "A new address each time"), place: "fresh",
+                             fact: String(localized: "Ethereum only · new address each time"), factInk: DS.textPrimary, place: "fresh",
                              open: { goFresh() },
                              copy: {
                                  if !DemoMode.isActive {
@@ -2462,24 +2480,41 @@ struct MoveSentence: View {
                                  markCopied("aztec")
                              })
             }
-            VStack(alignment: .leading, spacing: 0) {
-                // Any other network: a deposit address, by network and token.
-                Button {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) { receiveOther = true }
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(350))
-                        withAnimation(DS.Motion.standard) { open = .elsewhere }
-                    }
-                } label: { MoveVerbRowLabel(title: String(localized: "From another network"), glyph: "globe") }
-                    .buttonStyle(RowPress())
-                // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
-                // elsewhere sends it all here, each send approved there.
-                Button {
-                    ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
-                } label: { MoveVerbRowLabel(title: String(localized: "From another wallet"), glyph: "arrow.down.left") }
-                    .buttonStyle(RowPress())
-            }
+        }
+    }
+
+    /// "Base, Ethereum, Robinhood only": where the public address is good,
+    /// in the order its marks stand (prd §1824).
+    static func onlyOn(_ names: [String]) -> String {
+        String(localized: "\(names.joined(separator: ", ")) only")
+    }
+
+    /// The ways in from outside, each a door with its chevron (prd §1824).
+    private var receiveFromRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Any other network: a deposit address, by network and token.
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { receiveOther = true }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(350))
+                    withAnimation(DS.Motion.standard) { open = .elsewhere }
+                }
+            } label: { MoveDoorRowLabel(title: String(localized: "From another network")) }
+                .buttonStyle(RowPress())
+            // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
+            // elsewhere sends it all here, each send approved there.
+            Button {
+                ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
+            } label: { MoveDoorRowLabel(title: String(localized: "From another wallet")) }
+                .buttonStyle(RowPress())
+            // **FROM A ZK.MONEY LINK (prd §1824):** a "Pay anyone" link
+            // someone sent you, claimed on zk.money's page to this address.
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { open = nil; zkClaim = true }
+            } label: { MoveDoorRowLabel(title: String(localized: "From a zk.money link")) }
+                .buttonStyle(RowPress())
         }
     }
 
@@ -3133,12 +3168,13 @@ struct MoveSentence: View {
             // Receive opens on its three addresses, every time (prd §1803).
             receivePublic = false
             receiveOther = false
-            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen else { return }
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || zkClaim || aztecMode != nil || railgunOpen else { return }
             privateMode = nil
             railgunOpen = false
             aztecMode = nil
             freshReceive = false
             aztecReceive = false
+            zkClaim = false
             verb = v
             receipt = nil
             takeOnlyChoices()
@@ -3445,7 +3481,7 @@ struct MoveSentence: View {
     /// Another sentence is mounted over this page (Lend, a private send,
     /// Receive privately): this one is hidden and takes no touch.
     private var coveredByAnother: Bool {
-        (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
+        (privateMode != nil || freshReceive || aztecReceive || zkClaim || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
     }
 
     /// Whether this row's menu is up; closed by a tap outside it, the list
@@ -3690,7 +3726,7 @@ struct MoveSentence: View {
         guard verb == .send || verb == .swap, open == nil, focus == nil, receipt == nil, stage == nil else { return }
         // Never from under a sentence Move has mounted over this one (a
         // private send, Receive privately, Lend): its menu rose over theirs.
-        guard privateMode == nil, aztecMode == nil, !railgunOpen, !freshReceive, !aztecReceive, chrome.moveLend == nil else { return }
+        guard privateMode == nil, aztecMode == nil, !railgunOpen, !freshReceive, !aztecReceive, !zkClaim, chrome.moveLend == nil else { return }
         let pick = String(localized: "Choose")
         guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
         tapBlank(next == .amount && with == nil ? .with : next)
@@ -8239,7 +8275,8 @@ struct MoveSentence: View {
     #if DEBUG
     /// A launch hook fills the sentence, so the lists are read before it.
     static var drafting: Bool {
-        ["moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
+        ["moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft",
+         "zkClaimSample"]
             .contains { UserDefaults.standard.string(forKey: $0)?.isEmpty == false }
     }
 
@@ -8275,6 +8312,13 @@ struct MoveSentence: View {
         } else if d.string(forKey: "moveSendDraft")?.isEmpty == false {
             verb = .send
             sendDraft()
+        } else if let zk = d.string(forKey: "zkClaimSample"), !zk.isEmpty {
+            // `-zkClaimSample receive|open|<link>` (prd §1824): Receive's
+            // places, the claim page asking for its link, or with one pasted.
+            verb = .receive
+            open = nil
+            if zk != "receive" { zkClaim = true }
+            NSLog("zkClaim| sample %@", zk == "receive" || zk == "open" ? zk : "link")
         } else if let from = d.string(forKey: "moveReceiveFrom"), !from.isEmpty {
             verb = .receive
             receiveDraft(from)

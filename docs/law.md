@@ -253,7 +253,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2002 of 2076 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2003 of 2077 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1894,7 +1894,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
-- §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
+- §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there (amended by §1824)
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
 - §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice (amended by §1613)
 - §1509 — Signing shows its details behind one word, and a warning is one line you can sign past (amended by §1754)
@@ -2236,7 +2236,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
 - §1801 — The private sends take Move's layout (amends §1781, §1755)
 - §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro…
-- §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (…
+- §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824)
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616…
 - §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w…
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
@@ -2255,8 +2255,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1819 — Quiet privacy: Wallet rows stay out of system search, the Wallet tile hides on a locked phone, a kept link loses its…
 - §1820 — The way into Aztec is three steps, the act always the next: Add a co-signer, Reach a score of 20, Send through Shield…
 - §1821 — Aztec's directory is deleted: Library's Wallet folder keeps only the Aztec apps you have connected (retires §1700i, §…
-- §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac…
+- §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac… (amended by §1824)
 - §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
+- §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo…
 
 ## Dead rulings → what replaced them (generated)
 

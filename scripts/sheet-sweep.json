@@ -1710,9 +1710,10 @@
   },
   {
    "covers": [
-    "Screens/ThingSheetView.swift:zkMoneyClaim"
+    "Screens/ThingSheetView.swift:zkMoneyClaim",
+    "Screens/MoveZkClaim.swift:claiming"
    ],
-   "why": "zk.money's claim page in Casberi's browser (prd §1822): raised only by Claim to your account on a kept zk.money payment link, whose secret lives in this device's Keychain and is never seeded into the demo, so the sweep's demo launch never has one; the sheet is the same `AztecBrowserView` every Aztec link raises"
+   "why": "zk.money's claim page in Casberi's browser (prd §1822, §1824): raised only by Claim to your account on a kept zk.money payment link, whose secret lives in this device's Keychain and is never seeded into the demo, or by Claim on Receive's claim page after a real payment link is pasted, which the demo refuses before opening anything (it says the account acts later), so the sweep's demo launch never has one; the sheet is the same `AztecBrowserView` every Aztec link raises"
   },
   {
    "covers": [
