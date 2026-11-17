@@ -440,6 +440,10 @@ extension FeedScreen {
             feedScrollSections(visible,
                                hiding: drawsLead ? Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []) : [],
                                nextEventID: nextEventID)
+            // One gap between every section on Home (prd §1857, user: "the
+            // spacing between sections is not even"): the feed's sections
+            // stand as close as the money's.
+            .environment(\.feedSectionClose, homeHeadShown)
             // **HOME ENDS WHERE THE FEED ENDS (prd §1848, user: "like scrolling
             // your feed and then you hit this slab of the apps").** The panel
             // stands only on a first run, where it is the page; after that

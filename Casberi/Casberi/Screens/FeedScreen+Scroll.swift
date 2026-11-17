@@ -500,7 +500,16 @@ extension FeedScreen {
                         // tapping a transaction could open history").** The
                         // word opens nothing, as every category's; any row
                         // under it opens the Wallet's history.
-                        nextEventID: nextEventID, open: nil, keepsWord: true,
+                        // On Home the word opens every move too, and wears the
+                        // chevron (prd §1857, user: "activity also needs a
+                        // chevron in feed"), as Holdings' does.
+                        nextEventID: nextEventID,
+                        open: homeHeadShown ? {
+                            DSHaptic.selection()
+                            ActivitySeen.shared.leavingForPage()
+                            chrome.openWalletActivity(fromActivity: word)
+                        } : nil,
+                        keepsWord: true,
                         rowOpens: {
             DSHaptic.selection()
             // Under Activity, and back to it (prd §1827, §1840).
@@ -1472,8 +1481,19 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 // A chapter's air stands between panels, never inside one:
                 // the one section gap (prd §1386), less the header's own top.
                 // The section under Home's jump chips takes none (§1843).
-                let tight = (anchor != nil && anchor == leads) || close
-                if !tight {
+                let under = anchor != nil && anchor == leads
+                let tight = under || close
+                // On Home the section under the circles takes a little air of
+                // its own (prd §1857, user: "there could be a little gap
+                // between the app icons and the feed too").
+                if under && close {
+                    Color.clear
+                        .frame(height: DS.Space.s3)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .accessibilityHidden(true)
+                } else if !tight {
                     Color.clear
                         .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
                         .listRowInsets(EdgeInsets())

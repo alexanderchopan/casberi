@@ -137,11 +137,10 @@ extension FeedScreen {
                             .contentTransition(.numericText())
                             .lineLimit(1)
                             .minimumScaleFactor(0.45)
-                        // A door wears a chevron, grey (§1815, §1838).
-                        Image(systemName: "chevron.right")
-                            .dsGlyph(.tick, weight: .bold)
-                            .foregroundStyle(DS.textSecondary)
-                            .accessibilityHidden(true)
+                        // No chevron (prd §1857, user: "do we need the chevron on
+                        // the balance figure if we have it on holdings in
+                        // feed?", "keep the tap"): "Holdings ›" under it is the
+                        // door that says so; the tap stays a shortcut.
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
@@ -326,7 +325,7 @@ extension FeedScreen {
     /// biggest private one, each row's line saying which; the word opens
     /// Holdings, a public row its token. One side empty draws one row;
     /// private money is yours alone, so a followed wallet draws none (§1590).
-    /// The watchlist's line closes it, the one door to the watchlist on the
+    /// The watchlist's line leads it, the one door to the watchlist on the
     /// phone since the Wallet section left (§1851's row, moved).
     @ViewBuilder
     func homeHoldingsSection() -> some View {
@@ -353,6 +352,10 @@ extension FeedScreen {
                     homeOpen(.holdings)
                 })
             } rows: {
+                // The watchlist's line leads (user: "yes do it first"): a
+                // thin line under the word, then the rows, so the section
+                // ends on a full row like every other.
+                homeWatchRow
                 if let pub {
                     walletPreviewRow(pub.symbol, line: String(localized: "Public"),
                                      figure: mask ?? WalletValue.money(pub.usd),
@@ -367,7 +370,6 @@ extension FeedScreen {
                         AssetMark(name: priv.key, size: DS.Mark.badge)
                     }
                 }
-                homeWatchRow
             }
             .environment(\.feedSectionPanelFilled, false)
             .environment(\.dsTitleOnly, true)
@@ -390,7 +392,7 @@ extension FeedScreen {
 
     // MARK: - The lines
 
-    /// **THE WATCHLIST CLOSES HOLDINGS' SECTION (prd §1857, was the Wallet
+    /// **THE WATCHLIST LEADS HOLDINGS' SECTION (prd §1857, was the Wallet
     /// section's under §1851).** Its glyph, its name, the token that moved
     /// most today; empty, the verb. It opens the watchlist.
     @ViewBuilder
