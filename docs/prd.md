@@ -73566,3 +73566,15 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** Items 1–3 reach the Mac's Needs you and day words unchanged. Items 4 and 5 are the phone's Home (`PhoneHome.isOn`); the rail is unchanged.
 
 **Checks.** `needs-you-selftest.sh`: four cases and one mutation for item 1.
+
+## §1845 — Home's head is centred; the band and the feed keep the left edge (amends §1843 items 2, 4 and 5) (user, 2026-11-17, over the canvas "Home head alignment": "i like the idea of the centered head!")
+
+**Why.** The head's lines stood a few points left of the rows' column, so the card, the watchlist and Account read as a misaligned list. Centred, the head reads as one object over the feed, which stays left.
+
+1. **Centred:** the balance and its chevron, the day (and whose money, beside it), Public · Private, the watchlist line, and the Account row (`FeedScreen.homeMoneyCard`, `homeHalves`, `homeWatchlistLine`, `homeAccountLine`).
+2. **Not centred:** the band spans the card; the jump chips, the section names and every row keep the rows' left edge (§763).
+3. **The Account chips are unchanged** (open: the canvas also drew them with your face and with no pill).
+
+**Mac half (§1402).** None: the head is the phone's alone (`PhoneHome.isOn`).
+
+**Checks.** None new.

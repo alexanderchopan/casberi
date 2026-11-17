@@ -67,7 +67,7 @@ extension FeedScreen {
             // Three groups (user: "balance and card; account and watchlist;
             // feed and chips"): the two lines stand close as one row, and
             // the wide gap is above the chips, which belong to the feed.
-            VStack(alignment: .leading, spacing: -DS.Space.s2) {
+            VStack(alignment: .center, spacing: -DS.Space.s2) {
                 homeWatchlistLine
                 homeAccountLine
             }
@@ -83,10 +83,16 @@ extension FeedScreen {
 
     /// Your money on one card: the balance (Holdings' door, §1838), the day
     /// and whose it is, Public · Private, and the band.
+    ///
+    /// **THE HEAD IS CENTRED (user, 2026-11-17: "i like the idea of the
+    /// centered head!", prd §1845):** the balance, the day, Public · Private,
+    /// the watchlist and Account stand on the screen's middle; the band
+    /// spans the card, and the jump chips and the feed under them keep the
+    /// rows' left edge.
     @ViewBuilder
     var homeMoneyCard: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .center, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
                 let cells = HoldingsBand.cells(shown.foldingPrivate(walletPrivateByToken)
                     .sectionWorth(appsApart: walletOnAll))
@@ -110,8 +116,8 @@ extension FeedScreen {
                             .dsGlyph(.tick, weight: .bold)
                             .foregroundStyle(DS.textSecondary)
                             .accessibilityHidden(true)
-                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
@@ -122,9 +128,9 @@ extension FeedScreen {
                     } else if let day {
                         Text(verbatim: day.words).dsText(.body17).foregroundStyle(day.ink).lineLimit(1)
                     }
-                    Spacer(minLength: DS.Space.s2)
                     homeWhoseWord
                 }
+                .frame(maxWidth: .infinity)
                 homeHalves(total: shown.totalUSD, mask: mask)
                 // Each tile opens its own token (`homeOpenTile`); the
                 // balance above is Holdings' door.
@@ -162,8 +168,8 @@ extension FeedScreen {
                 HStack(spacing: DS.Space.s4) {
                     homeHalf(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
                     homeHalf(String(localized: "Private"), mask ?? WalletValue.money(hidden))
-                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -258,9 +264,8 @@ extension FeedScreen {
                         homeWatchMove(token, quotes[token.id]?.change)
                     }
                 }
-                Spacer(minLength: 0)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -322,8 +327,8 @@ extension FeedScreen {
                 }
                 .buttonStyle(PressSpring())
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - The jumps
