@@ -438,8 +438,9 @@ extension FeedScreen {
             // your feed and then you hit this slab of the apps").** The panel
             // stands only on a first run, where it is the page; after that
             // Apps is a chip at Home's head.
-            if quietActivity, starts || !homeHeadShown { activityAppsPanel }
-            jumpRoom
+            let appsPanel = quietActivity && (starts || !homeHeadShown)
+            if appsPanel { activityAppsPanel }
+            jumpRoom(onPanel: appsPanel)
         }
         }
     }

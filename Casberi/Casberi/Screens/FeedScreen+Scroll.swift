@@ -850,13 +850,15 @@ extension FeedScreen {
     static let jumpRoomHeight: CGFloat = 380
 
     @ViewBuilder
-    var jumpRoom: some View {
+    func jumpRoom(onPanel: Bool) -> some View {
         Section {
             Color.clear
                 .frame(height: Self.jumpRoomHeight)
                 .listRowInsets(EdgeInsets())
-                // Apps' panel carries on to the foot of Activity (prd §1839).
-                .listRowBackground(quietActivity ? DS.fillQuiet : Color.clear)
+                // Apps' panel carries on to the foot of Activity (prd §1839),
+                // and only where the panel stands (prd §1848): with no panel
+                // above it the fill was a slab under the last row.
+                .listRowBackground(onPanel ? DS.fillQuiet : Color.clear)
                 .listRowSeparator(.hidden)
                 .accessibilityHidden(true)
         }
