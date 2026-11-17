@@ -73320,3 +73320,11 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** The trail and the title's word are shared, so a page opened from Activity on the Mac reads "Activity · Needs you" and its grey word goes to Activity; the swipe is the phone's. Not looked at on the Mac.
 
 **Checks.** None new: the trail lives on `ShellChrome`, which no harness compiles. NOT built: this session ran on Linux with no Xcode, and the macOS self-tests (`wallet-section-selftest.sh` and the rest) did not run; every `scripts/*-audit.py` passed. To see on the simulator: Activity → Needs you → swipe right lands on Activity at Needs you; Activity → Wallet word → Money → swipe right lands on Activity; Activity's Account row, under Needs you → swipe right lands on Activity; Home → Account → Following → two swipes right reach Home through Account; Home → Holdings → Positions reads "Holdings · Positions".
+
+## §1827 — The money's page is named Wallet, the word Activity opens it by (amends §1812 item 5, §1808 item 4) (user, 2026-11-17, of Activity's "Wallet ›" over the page it opened, titled "Home · Money": "also it says Wallet on activity page and Money on sub page") — BUILT; NOT built, run or seen: the session had no Xcode
+
+**Why.** §1812 item 5 renamed Activity's money word to Wallet, the category's own name in Apps, and kept the page it opens titled Money. A word and the page it opens read as two places.
+
+**What is built.** `WalletSection.activity`'s label is "Wallet". Opened from Activity the page reads "Activity · Wallet" (§1826); from a finished move's receipt, "Home · Wallet". `wallet-section-selftest.sh` pins the word.
+
+**Lost, said plainly.** On the iPad and the Mac the pane's card over the newest moves is titled "Wallet" inside the Wallet room, where it read "Money". Not looked at there.
