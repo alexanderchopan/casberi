@@ -73344,3 +73344,45 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** The same sentence; nothing else drawn.
 
 **Checks.** None new: copy only.
+
+## §1831 — Activity shows what is new: a row on screen when you leave is seen, and the next visit leaves it out (amends §1816, §1826, §1813, §1809) (user, 2026-11-16: "if you have already seen the most recent item, you still have to see it again and again anytime you go into your feed. it should work that only unseen items show", "I have several wallet apps, and so I have this list of wallet activity that I've already seen which gets in the way of me checking the feed", "what would we do if a category has already all been seen, we can't have wallet disappear", "On screen counts")
+
+**Why.** Activity is each app's newest thing (§1807). Seen meant opened (§1816), so a row you had read on Activity without opening it stood there on every visit, greyed only if you tapped it; with several money apps the Wallet's rows filled the screen with news already read.
+
+1. **On screen is seen** (amends §1816 item 2, "never scrolled past"). A row Activity drew (`onAppear`) is stamped seen when you leave Activity: to Home, to another page, or out of the app (`ActivitySeen.endVisit`, from `FeedScreen.leave` and the background notification).
+2. **A visit's list is fixed when it begins** (`ActivitySeen.beginVisit` from `FeedScreen.land`, `hidden`): nothing leaves while you look at it, and a trip into an app's page from a row or a word (`leavingForPage`) comes back to the same list, its rows grey (§1816's ink, now "seen this visit").
+3. **The next visit leaves seen rows out.** An app comes back with the next thing it lands.
+4. **A category with nothing new leaves Activity; the Wallet's and Notes' words stay**, alone, because each opens a page (every move; your notes).
+5. **Day keeps every next thing** (what is coming, not what came) and never greys; **Needs you is untouched**: it stands until it is dealt with.
+
+**Lost, said plainly.** An app whose newest thing you have seen is not on Activity; its page is in Apps, and a money app's moves are behind the Wallet word.
+
+**Mac half (§1402).** None: the iPad and the Mac keep their category rooms; `quietActivity` is the phone's alone.
+
+**Checks.** None new; `-activitySeenForget YES` makes every row new. **Seen** on the simulator with the demo: every row new, Home and back, and the Wallet rows that had been on screen gone while the ones never scrolled to stayed. Not seen: a category emptied to its word, and the stamp on leaving the app.
+
+## §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812) (user, 2026-11-16: "can you also make sure we use money or wallet consistently on one screen it says money and on another it says wallet")
+
+**Why.** Activity's word is Wallet (§1812, the Apps category's own name) and it opened a page titled Money (§1808), so one place had two names: "Wallet ›" then "Home · Activity · Money".
+
+1. `WalletSection.activity.label` is "Wallet": "Home · Activity · Wallet" from Activity, "Home · Wallet" from Home.
+
+**Not changed.** Your own account's moves still stand on Activity as an app named "Wallet" under the Wallet word, and Home's map, Holdings and Spending keep their names.
+
+**Mac half (§1402).** The same label wherever the Mac names the page.
+
+**Checks.** `wallet-section-selftest.sh`'s label assertion reads Wallet. **Seen** on the simulator: "Home · Activity · Wallet".
+
+## §1833 — Nodes: no switch, "Public" in place of "Casberi's list", and a field that says what to paste (amends §1517, §1803) (user, 2026-11-16: "it gives user option of casberi's list (i mean what is that even to someone makes it sound like we have this list, do we?), then if someone goes to switch it on what are they supposed to do to add their own node. i am not sure it is clear", then "Yes, rework it")
+
+**Why.** "Casberi's list" promised a list we keep; there is none, only each network's two public nodes (`YourAccountOp.Network.rpcs`: the network's own and PublicNode, MEV Blocker on Ethereum). And the switch did nothing: on, every row still said "Casberi's list" and nothing said a row opens a field, whose prompt was the same two words.
+
+1. **No switch.** A network with an address reads from it; one without reads its public nodes. `OwnNode.Settings` keeps `nodes` alone; a setting kept with the old switch OFF forgets its addresses on decode, so off still means off.
+2. **"Public"** is the word for a network without your node: the tray's rows, the page, the Security row ("Public" or "N of yours") and the Nodes door. The section's sentence reads "Each network read from its public nodes through Tor, or from a node of your own."
+3. **The field says what to paste:** "Your node's address, https://…". A paste checks itself (`OwnNode.isPaste`); typing waits for Return or Check. "Use public nodes" stands under a network that has an address.
+
+**Not changed.** The check (chain id, then a block), the no-fall-through rule, Tor's footnote.
+
+**Mac half (§1402).** The same tray and words; the Mac has no other door to Nodes.
+
+**Checks.** `own-node-selftest.sh`: routing without a switch, the old switch-off setting decoding empty, a switch-on one kept, a paste checked, a keystroke and a pasted non-address not.

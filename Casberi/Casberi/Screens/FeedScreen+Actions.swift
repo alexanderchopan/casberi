@@ -73,6 +73,8 @@ extension FeedScreen {
 
     func land() {
         freezeBoundary()
+        // Activity fixes what this visit shows (prd §1831).
+        if source == "All" { ActivitySeen.shared.beginVisit() }
         // Replay the shape's entrance ONLY the first time this page is landed
         // (2026-07-30, user: swiping between screens had a tiny lag; "just
         // appear on revisit"). Re-animating every row on every swipe-in was
@@ -107,6 +109,8 @@ extension FeedScreen {
     /// "New since" line is honest, and let the boundary freeze afresh then.
     func leave() {
         stampSeen(source)
+        // What Activity drew is seen now (prd §1831).
+        if source == "All" { ActivitySeen.shared.endVisit() }
         visitFrozen = false
     }
 

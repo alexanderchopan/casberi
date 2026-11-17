@@ -152,12 +152,21 @@ extension FeedScreen {
                 // category: its word opens your notes, as before.
                 let open: (() -> Void)? = category == HomeScope.notesSection ? {
                     chrome.activityReturn = category
+                    ActivitySeen.shared.leavingForPage()
                     openCategory(category)
                 } : nil
+                // **WHAT IS NEW (prd §1831).** An app whose newest thing was
+                // on screen when you last left Activity is left out. Day is
+                // what is coming, not what came, and keeps every next thing;
+                // Notes' word stays, as the Wallet's does, because it opens
+                // a page.
+                let isDay = category == RoomAccounts.dayRoom
                 activitySection(category,
-                                category == RoomAccounts.dayRoom ? Self.nextPerApp(dayFeedRows.live)
-                                    : Self.newestPerApp(rows.filter { !needs.contains($0.source) }),
-                                nextEventID: nextEventID, open: open)
+                                isDay ? Self.nextPerApp(dayFeedRows.live)
+                                    : Self.newestPerApp(rows.filter { !needs.contains($0.source) })
+                                        .filter { !ActivitySeen.shared.isHidden($0.id) },
+                                nextEventID: nextEventID, open: open,
+                                fades: !isDay, keepsWord: category == HomeScope.notesSection)
             } else {
                 scrollSection(category,
                               category == HomeScope.notesSection || category == RoomAccounts.dayRoom
@@ -189,14 +198,17 @@ extension FeedScreen {
     /// Notes' open their own pages).
     @ViewBuilder
     func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
-                         open: (() -> Void)?) -> some View {
+                         open: (() -> Void)?, fades: Bool = true,
+                         keepsWord: Bool = false) -> some View {
         let _ = { memo.sectionCounts[name] = rows.count }()
-        if !rows.isEmpty {
+        // A category with nothing new leaves Activity; a word that opens a
+        // page (the Wallet's, Notes') stays, alone (prd §1831).
+        if !rows.isEmpty || keepsWord {
             SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
                 ActivityWord(name: name, open: open)
             } rows: {
                 ForEach(keyed(rows), id: \.id) { item in
-                    if let thing = item.live { activityAppRow(thing, from: name) }
+                    if let thing = item.live { activityAppRow(thing, from: name, fades: fades) }
                 }
             }
             .environment(\.feedSectionPanelFilled, false)
@@ -214,8 +226,8 @@ extension FeedScreen {
     ///
     /// White until seen (prd §1816): the newest thing is seen once its app's
     /// page has been opened over it, or once it was opened anywhere else.
-    func activityAppRow(_ thing: Thing, from section: String) -> some View {
-        let seen = ActivitySeen.shared.has(thing.id)
+    func activityAppRow(_ thing: Thing, from section: String, fades: Bool = true) -> some View {
+        let seen = fades && ActivitySeen.shared.has(thing.id)
         let words = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return DSPushRow(title: Text(verbatim: BridgeCatalog.seatName(forSource: thing.source)),
                          subtitle: words.isEmpty ? nil : Text(verbatim: words),
@@ -223,6 +235,7 @@ extension FeedScreen {
                          tint: seen ? DS.textSecondary : DS.textPrimary,
                          action: {
                              ActivitySeen.shared.mark(thing.id)
+                             ActivitySeen.shared.leavingForPage()
                              chrome.activityReturn = section
                              chrome.openAppPage(thing.source)
                              // A money app's page is Money narrowed to it, the
@@ -239,6 +252,9 @@ extension FeedScreen {
                 .opacity(seen ? 0.5 : 1)
                 .accessibilityHidden(true)
         }
+        // On screen is seen, once you leave (prd §1831); Day's rows are what
+        // is coming and are never left out.
+        .onAppear { if fades { ActivitySeen.shared.noteShown(thing.id) } }
         .feedRowBackground()
         .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
@@ -404,12 +420,17 @@ extension FeedScreen {
         // shouldn't be the category title it should be wallet like it is in
         // the app library").** Every other word on Activity is its Apps
         // category; this one read "Money".
-        activitySection(String(localized: "Wallet"), moves, nextEventID: nextEventID) {
+        // What is new (prd §1831); the word stays when nothing is: it is
+        // the door to every move.
+        activitySection(String(localized: "Wallet"),
+                        moves.filter { !ActivitySeen.shared.isHidden($0.id) },
+                        nextEventID: nextEventID, open: {
             DSHaptic.selection()
+            ActivitySeen.shared.leavingForPage()
             chrome.openWalletActivity()
             // Under Activity, and back to it (prd §1826).
             chrome.activityReturn = String(localized: "Wallet")
-        }
+        }, keepsWord: true)
     }
 
     /// One category, on one panel (prd §1208d, user: "i think G is

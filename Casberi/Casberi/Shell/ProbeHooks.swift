@@ -399,6 +399,13 @@ enum ProbeHooks {
     }
 
     private static let hooks: [Hook] = [
+        // `-activitySeenForget YES` (prd §1831): every Activity row new again,
+        // so a probe sees the full list before a visit hides what it drew.
+        Hook(key: "activitySeenForget") { value, _ in
+            guard value == "YES" else { return }
+            ActivitySeen.shared.forget()
+            NSLog("[Casberi] activitySeenForget: cleared")
+        },
         // `-secretScanProbe "<text>"|corpus` runs the credential tripwire
         // (prd §277) and reports what it found: the KINDS, and the REDACTED
         // rendering — never the secret itself, which is the point of the
