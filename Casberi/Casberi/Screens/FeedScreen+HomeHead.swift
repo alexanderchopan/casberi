@@ -202,7 +202,11 @@ extension FeedScreen {
     /// day. Tokens only (user: "for holdings there are no long names"): an
     /// app's or a bank account's tile is never one, nor is Other.
     static func homeHoldingItems(_ worth: [String: Double], _ moves: [String: Double]) -> [DSHomeFactRow.Item] {
-        worth.filter { $0.value > 0 && $0.key != HoldingsTreemapLayout.otherID && WalletPortfolio.appCell($0.key) == nil }
+        // Lent and Private are places your tokens sit, not tokens (user:
+        // "why does it say lent in the holdings row").
+        let places: Set<String> = [HoldingsTreemapLayout.otherID, WalletPortfolio.lentSymbol,
+                                    PrivateMoney.walletSymbol, AztecAccountStore.walletSymbol]
+        return worth.filter { $0.value > 0 && !places.contains($0.key) && WalletPortfolio.appCell($0.key) == nil }
             .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
             .prefix(homeHoldingsCap).map { cell in (id: cell.key, usd: cell.value) }.map { cell in
             let name = cell.id
