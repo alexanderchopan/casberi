@@ -73318,3 +73318,17 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: the iPad and the Mac keep their category rooms as the second column; `quietActivity` is the phone's alone.
 
 **Checks.** None new. **Seen** on the simulator with the demo: the app rows, Needs you's rows as things, the Wallet word to "Home · Activity · Money", Plasma One's row to Money narrowed to Plasma One, and the swipe right back to Activity. Not seen: a row greying after its app's page (the demo's rows were opened before this build).
+
+## §1828 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (user, 2026-11-16, of "Home · Activity · Social" with Activity drawn small: "we need to have a way tho that the title stays the same size", "we can't be having that middle word short", "for long apps like 'app store connect' we will just have to truncate it i guess")
+
+**Why.** §1812 put every title on one rung and let a path too long for the row step down "every name at once". It did not: the fallback was each word's own `minimumScaleFactor` inside an `HStack`, so SwiftUI shrank whichever word it squeezed, and the middle word drew smaller than the names either side of it.
+
+1. **One rung, always** (`DSRoomTitleRow.rung`, `heading20`). No title steps down; `ViewThatFits` and every `minimumScaleFactor` in `DSRoomTitleRow` are deleted.
+2. **The names before the last are never cut** (they are the way back): the root and the middle word are fixed at their own width.
+3. **The last name takes what is left and is cut at its tail**: "Home · Activity · App Store Conn…". An app's own page and a plain label are cut the same way.
+
+**Lost, said plainly.** Beside the demo's Exit pill, "Home · Activity ·" fills the row and the app's name is cut to nothing; outside the demo the pill is not there.
+
+**Mac half (§1402).** The same template; the Mac's rows are wider, so a cut is rarer. Not checked on the Mac.
+
+**Checks.** None new. **Seen** on the simulator: App Store Connect's page, "Home · Activity · App Store Conn…" at one size without the demo pill, and "Home · Activity ·" with it.

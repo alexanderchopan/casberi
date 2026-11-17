@@ -65,8 +65,8 @@ struct DSRoomTitleRow: View {
     /// named first and pressable: "Home · Activity · Social". A category's
     /// page read "Activity · Social", so Home was two taps away. **The path is
     /// always whole** (prd §1812, user: "we should have a rule and stick to
-    /// it"): three names, and a path too long for the row steps down a rung,
-    /// every name at once, and never loses one.
+    /// it"): three names at one size; a path too long for the row cuts its
+    /// last name at the tail, never the names before it (prd §1828).
     var root: DSTitleBack? = nil
     @Environment(\.sizeCategory) private var sizeCategory
     /// In a thing sheet the title is the thing's, and wraps (prd §1258).
@@ -105,16 +105,14 @@ struct DSRoomTitleRow: View {
         if let pick, onTitle != nil || onSettings != nil {
             // The category's word presses (prd §1262); the pick after the
             // dot stays a label. Same rung, ink and height as the label row.
-            // THE PAIR STEPS DOWN TOGETHER (prd §1389): beside the demo's
-            // pill the two words share the room, so the whole title takes
-            // the next rung rather than the pick alone shrinking and cutting.
-            // One rung (prd §1812); the second never overflows, for a
-            // name longer than any the catalogue has, or a larger text size.
-            ViewThatFits(in: .horizontal) {
-                pickedTitle(title, pick: pick, rung: Self.rung)
-                pickedTitle(title, pick: pick, rung: Self.rung, fits: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // **ONE SIZE, AND THE LAST NAME IS CUT (prd §1828, user: "we
+            // can't be having that middle word short", "for long apps like
+            // 'app store connect' we will just have to truncate it").** The
+            // fallback that let a row too narrow shrink (§1389, §1812) scaled
+            // each word on its own, so "Activity" drew smaller than the
+            // names either side of it.
+            pickedTitle(title, pick: pick, rung: Self.rung)
+                .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
         } else if pick == nil, let onSettings {
@@ -126,11 +124,8 @@ struct DSRoomTitleRow: View {
                         .dsText(Self.rung)
                         .foregroundStyle(DS.headInk)
                         .lineLimit(1)
-                        // Half, not 0.6: beside the demo's Exit pill, "App
-                        // Store Connect" truncated at 0.6 (prd §1622 item 4). A
-                        // name shrinks before it is ever cut.
-                        .minimumScaleFactor(0.5)
-                        .allowsTightening(true)
+                        // One size; a name too long is cut (prd §1828).
+                        .truncationMode(.tail)
                     settingsDisc
                 }
                 .contentShape(Rectangle())
@@ -143,7 +138,8 @@ struct DSRoomTitleRow: View {
         } else {
             DSScreenHead(title: label, ink: DS.headInk)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                // One size; a name too long is cut (prd §1828).
+                .truncationMode(.tail)
                 // ONE HEIGHT, whatever the name (prd §1136f, user: "the box should
                 // never move down!"): a long pair shrinks to fit, and the row used
                 // to shrink with it, so the box and the tiles under it moved with
@@ -155,10 +151,11 @@ struct DSRoomTitleRow: View {
 
     /// The picked title at one rung: the category's word a grey button, the
     /// pick after the dot in the head ink, and with `onSettings` the pick a
-    /// button too, its sliders disc after it. `fixedSize` so `ViewThatFits`
-    /// measures the pair whole.
+    /// button too, its sliders disc after it. The names before the pick are
+    /// never cut (they are the way back); the pick takes what is left and
+    /// is cut at its tail (prd §1828).
     private func pickedTitle(_ title: String, pick: String,
-                             rung: DSTextStyle, fits: Bool = false) -> some View {
+                             rung: DSTextStyle) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             if let root {
                 Button(action: root.action) {
@@ -167,8 +164,9 @@ struct DSRoomTitleRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
+                .fixedSize()
                 .accessibilityHint(Text("Opens \(root.word)"))
-                Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+                Text(verbatim: " · ").foregroundStyle(DS.textTertiary).fixedSize()
             }
             // The word that goes back is grey, where you stand is the
             // head ink (user, 2026-10-15: "is sources supposed to be
@@ -181,11 +179,12 @@ struct DSRoomTitleRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
+                .fixedSize()
                 .accessibilityHint(Text("Shows everything in \(title)"))
             } else {
-                Text(verbatim: title).foregroundStyle(DS.textTertiary)
+                Text(verbatim: title).foregroundStyle(DS.textTertiary).fixedSize()
             }
-            Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+            Text(verbatim: " · ").foregroundStyle(DS.textTertiary).fixedSize()
             if let onSettings {
                 Button(action: onSettings) {
                     // The pick's own text is the label, so its baseline is the
@@ -193,6 +192,7 @@ struct DSRoomTitleRow: View {
                     // pick below "Wallet ·" (user, 2026-11-02: "axis is messed
                     // up here"). The disc rides an overlay in the space kept.
                     Text(verbatim: pick).foregroundStyle(DS.textPrimary)
+                        .truncationMode(.tail)
                         .padding(.trailing, DS.Face.row + DS.Space.s2)
                         .overlay(alignment: .trailing) { settingsDisc }
                         .contentShape(Rectangle())
@@ -201,12 +201,11 @@ struct DSRoomTitleRow: View {
                 .accessibilityLabel(Text("\(pick) settings"))
             } else {
                 Text(verbatim: pick).foregroundStyle(DS.textPrimary)
+                    .truncationMode(.tail)
             }
         }
         .dsText(rung)
         .lineLimit(1)
-        .minimumScaleFactor(fits ? 0.6 : 1)
-        .fixedSize(horizontal: !fits, vertical: false)
     }
 
     /// The pick's settings door (prd §1444): grey, never the pick's pink
