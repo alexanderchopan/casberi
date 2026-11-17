@@ -256206,6 +256206,34 @@
         }
       }
     },
+    "your exported key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu clave exportada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "書き出したあなたの鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내보낸 내 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你导出的密钥"
+          }
+        }
+      }
+    },
     "your own address" : {
       "localizations" : {
         "es" : {

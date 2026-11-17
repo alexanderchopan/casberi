@@ -28,6 +28,19 @@ BRIDGE="Casberi/Casberi/Model/SafeBridge.swift"
 SIGNER="Casberi/Casberi/Model/SafeSigner.swift"
 ASK="Casberi/Casberi/Model/SafeAsk.swift"
 KIND="Casberi/Casberi/Model/AddressKind.swift"
+
+# A Safe settings change is named by the move, never the moment (prd §1854):
+# the iPhone and the Mac each land it, and a timestamp in the ref kept both,
+# each sheet's History opening the other without end.
+awk '/private static func syncConfig\(/,/^    }/' "$BRIDGE" > "${TMPDIR:-/tmp}/safecfg.$$"
+grep -q '+ changeDigest(old: previous, new: config)' "${TMPDIR:-/tmp}/safecfg.$$" \
+  && ! grep -q 'timeIntervalSince1970' "${TMPDIR:-/tmp}/safecfg.$$" \
+  || { rm -f "${TMPDIR:-/tmp}/safecfg.$$"; echo "✗ a Safe settings change is named by when it was seen, so two devices land it twice"; exit 1; }
+rm -f "${TMPDIR:-/tmp}/safecfg.$$"
+grep -q 'thing.sourceRef?.hasPrefix("wallet:safeconfig:") != true' Casberi/Casberi/Screens/ThingSheetView.swift \
+  || { echo "✗ a Safe settings change lists History again, where its only kin is itself landed twice"; exit 1; }
+grep -q 'if YourAccountExport.isExported(owner, for: safe) { return String(localized: "your exported key") }' "$BRIDGE" \
+  || { echo "✗ a key you exported reads as a stranger's tail in a Safe owner change"; exit 1; }
 SCREEN="Casberi/Casberi/Screens/SafeScreen.swift"
 for f in "$LEDGER" "$GATE" "$BRIDGE" "$SIGNER" "$ASK" "$KIND" "$SCREEN"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }

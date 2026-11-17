@@ -760,7 +760,11 @@ struct ThingSheetView: View {
                                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                                 .padding(.top, DS.Space.s6)
                                 .settleIn(delay: 0.12)
-                        } else if moneyCard == nil, thing.sourceRef?.hasPrefix("wallet:approval:") != true {
+                        // A Safe settings change lists no History (prd §1854): its
+                        // only same-titled kin is the same change landed by
+                        // another device, and each listed the other.
+                        } else if moneyCard == nil, thing.sourceRef?.hasPrefix("wallet:approval:") != true,
+                                  thing.sourceRef?.hasPrefix("wallet:safeconfig:") != true {
                             MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
                                              rows: moneyHistory.keyed,
                                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })

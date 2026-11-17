@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SwiftData
 
@@ -1911,15 +1912,21 @@ enum SafeBridge {
     /// transaction (e.g. `addOwnerWithThreshold` changes owners AND
     /// threshold together), so this always bundles into one landed thing
     /// rather than one per field.
-    private static func configChangeDescriptions(old: SafeConfig, new: SafeConfig) -> [String] {
+    private static func configChangeDescriptions(old: SafeConfig, new: SafeConfig, safe: String) -> [String] {
         var out: [String] = []
         let oldOwners = Set(old.owners), newOwners = Set(new.owners)
+        // A key this device exported from your account is named as yours
+        // (prd §1854 item 3): "...b2b6" read as a stranger taking the Safe.
+        func label(_ owner: String) -> String {
+            if YourAccountExport.isExported(owner, for: safe) { return String(localized: "your exported key") }
+            return WalletIngest.knownLabel(for: owner) ?? WalletStore.shortAddress(owner)
+        }
         for added in newOwners.subtracting(oldOwners).sorted() {
-            let label = WalletIngest.knownLabel(for: added) ?? WalletStore.shortAddress(added)
+            let label = label(added)
             out.append(String(localized: "gained a new owner (\(label))"))
         }
         for removed in oldOwners.subtracting(newOwners).sorted() {
-            let label = WalletIngest.knownLabel(for: removed) ?? WalletStore.shortAddress(removed)
+            let label = label(removed)
             out.append(String(localized: "lost an owner (\(label))"))
         }
         if old.threshold != new.threshold {
@@ -1973,6 +1980,18 @@ enum SafeBridge {
             || (old.implementation != new.implementation && new.implementation != nil)
     }
 
+    /// A change's name: the first 16 hex of SHA-256 over both snapshots'
+    /// fields in a fixed order, so every device that saw the same move
+    /// writes the same `sourceRef` (prd §1854).
+    private static func changeDigest(old: SafeConfig, new: SafeConfig) -> String {
+        func line(_ c: SafeConfig) -> String {
+            [String(c.threshold), c.owners.joined(separator: ","), c.modules.joined(separator: ","),
+             c.guardAddr ?? "", c.fallbackHandler ?? "", c.implementation ?? ""].joined(separator: "|")
+        }
+        let digest = SHA256.hash(data: Data((line(old) + ">" + line(new)).utf8))
+        return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
     private static func configSnapshotKey(_ seg: String, _ address: String) -> String {
         "wallet.safe.config.\(seg).\(address.lowercased())"
     }
@@ -1993,10 +2012,16 @@ enum SafeBridge {
         guard let encoded = try? JSONEncoder().encode(config) else { return false }
         defaults.set(encoded, forKey: key)
         guard !neverChecked, let previous, previous != config else { return false }
-        let phrases = configChangeDescriptions(old: previous, new: config)
+        let phrases = configChangeDescriptions(old: previous, new: config, safe: safeAddress)
         guard !phrases.isEmpty else { return false }
+        // **THE CHANGE NAMES ITSELF, NOT THE MOMENT IT WAS SEEN (prd §1854).**
+        // Each device keeps its own snapshot, so the iPhone and the Mac both
+        // land one change; named by when each noticed it, the two never
+        // collapsed (`SyncReconcile.dedupeBySourceRef`), and each sheet's
+        // History listed the other, a walk with no end. Named by the two
+        // snapshots it moved between, every device names it alike.
         let ref = "wallet:safeconfig:\(chain.seg):\(safeAddress.lowercased()):"
-            + String(Int(Date.now.timeIntervalSince1970))
+            + changeDigest(old: previous, new: config)
         guard !existing.contains(ref) else { return false }
         let title = phrases.count == 1
             ? String(localized: "Your Safe \(phrases[0])")

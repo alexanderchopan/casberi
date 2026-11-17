@@ -73721,3 +73721,18 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The same row leaves the Mac's Receive.
 
 **Checks.** `zkmoney-selftest.sh`: Receive's ways in still stand under the public account, before the private places, and none names zk.money.
+
+## §1854 — A Safe settings change is named by the move, not the moment it was seen, its sheet lists no History, and a key you exported is named as yours (user, 2026-11-17: "there is a bug on the thing sheet that tells me i gained a new signer when i tap the history it goes to a new duplicated screen. and if i do it ten times for example i have to hit back ten times") — BUILT
+
+**What happened.** Every device keeps its own snapshot of a Safe's settings (`wallet.safe.config.<chain>.<safe>`), so the iPhone and the Mac each landed "Your Safe gained a new owner (...b2b6)". Each named its row by the second it noticed (`wallet:safeconfig:<chain>:<safe>:<unix time>`), so `SyncReconcile.dedupeBySourceRef` never collapsed the two. The sheet's History lists same-titled rows of the same source; each listed the other, and each tap pushed one more sheet.
+
+**Ruling.**
+1. **The change names itself**: the ref ends in the first 16 hex of SHA-256 over the two snapshots it moved between (`SafeBridge.changeDigest`), so every device writes the same ref and the sync collapses them.
+2. **A Safe settings change draws no History.** Its only same-titled kin is the same change landed twice; the Safe's own page holds its owners.
+3. **A key you exported is named as yours** (user, the same day: "i just got a notificaiton that my safe gained a new owner ...b2b6. how is that possible?", "oh i tried to export key yesterday"). Export (§1493) adds a fresh plain key as an owner; the change read "gained a new owner (...b2b6)", a stranger's shape. It now reads "gained a new owner (your exported key)" on the device that exported it (`YourAccountExport.isExported`). Measured on chain: owner `...b2b6` added 2026-11-17 00:53 UTC by the account's own operation through its 7579 adapter, the phone's key rotating in the same call; removed by the user's Remove the next morning.
+
+**Not done.** The pair already landed stays two rows (their refs differ); each now opens alone. A removed exported key is forgotten as it goes, so "lost an owner" still names it by its tail; another device, which never exported it, does too.
+
+**Mac half (§1402).** The same on Catalyst, which is one of the two devices.
+
+**Checks.** `safe-gate-selftest.sh`: `syncConfig` names a change by `changeDigest`, never a time; the sheet keeps the safeconfig rows out of History; an owner change asks `YourAccountExport.isExported` before it names a tail.
