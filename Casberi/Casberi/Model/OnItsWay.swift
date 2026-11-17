@@ -52,7 +52,7 @@ enum OnItsWay {
         [String(localized: "Arrived at your private address"),
          String(localized: "Gas for the move"),
          String(localized: "Moving in"),
-         // The same words as `PrivateMoney.beingChecked` (prd §1827); this
+         // The same words as `PrivateMoney.beingChecked` (prd §1841); this
          // file compiles alone in `private-money-selftest.sh`.
          String(localized: "Being checked by Privacy Pools")]
     }
@@ -67,7 +67,7 @@ enum OnItsWay {
 
     /// Moved in, being checked: the last step of the same trip, and nobody
     /// is waiting on you. `commitments` are the notes Take it back returns
-    /// (prd §1576, on this sheet since §1827).
+    /// (prd §1576, on this sheet since §1841).
     static func waitingApproval(id: String, title: String, usd: Double?, commitments: [String] = []) -> Item {
         Item(id: "approval:" + id, trip: .approval, title: title, usd: usd, steps: addressSteps, current: 3, needs: nil,
              commitments: commitments)

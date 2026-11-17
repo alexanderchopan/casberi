@@ -5,7 +5,7 @@ import SwiftUI
 /// state and network off the notes Move to private kept (`PrivateMoney.rows`)
 /// — "ETH" over "1.0% on Aave" where it earns (Ethereum's yield pools, the
 /// rate read live, prd §1563) or its network ("Sepolia", which has no Aave),
-/// "ETH" with a grey clock over "Being checked by Privacy Pools" (§1827), "ETH"
+/// "ETH" with a grey clock over "Being checked by Privacy Pools" (§1841), "ETH"
 /// over "Not approved". The token alone: the head already says private. The Tokens rows above are
 /// public balances only; the box counts approved private money as one
 /// Private block, and the total counts it once (`PrivateMoneyStore.walletHolding`).
@@ -515,13 +515,13 @@ extension FeedScreen {
         case .held where PrivateMoneyStore.shared.mismatched:
             (nil, DS.textSecondary, String(localized: "Doesn't match Ethereum"), DS.attentionInk)
         case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
-        // Nobody waits on you (prd §1827): grey, and it says who it waits on.
+        // Nobody waits on you (prd §1841): grey, and it says who it waits on.
         case .waiting: ("clock", DS.textSecondary, PrivateMoney.beingChecked, DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
         return Button {
             // Being checked: its steps (prd §1787), nothing to send yet, and
-            // Take it back for the notes it sums (§1576, §1827).
+            // Take it back for the notes it sums (§1576, §1841).
             if row.kind == .waiting {
                 let notes = PrivateMoneyStore.shared.notes.filter {
                     $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId
@@ -580,7 +580,7 @@ extension FeedScreen {
 
 extension FeedScreen {
     /// Take it back on a deposit Privacy Pools is still checking (prd §1576,
-    /// from its steps sheet since §1827): each note, one after another, as
+    /// from its steps sheet since §1841): each note, one after another, as
     /// Needs you's row does it; a failure says its words.
     func walletTakeBack(_ commitments: [String]) {
         let wanted = Set(commitments.map { $0.lowercased() })
@@ -603,7 +603,7 @@ extension FeedScreen {
     }
 }
 
-/// **NOT APPROVED, IN NEEDS YOU (prd §1561, narrowed by §1827).** One row
+/// **NOT APPROVED, IN NEEDS YOU (prd §1561, narrowed by §1841).** One row
 /// per deposit 0xBow's ASP refused (or wants a proof of): the red mark,
 /// "0.0001 ETH not approved", and its line is the act, "Take it back": the
 /// ragequit, a public exit to the address the deposit came from

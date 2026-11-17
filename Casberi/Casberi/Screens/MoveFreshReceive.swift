@@ -232,7 +232,7 @@ struct MoveFreshSentence<Head: View>: View {
         case .moved(let amount, _) where railgun != nil:
             return (String(localized: "\(figure(amount)) moving in · private in about an hour"), DS.textSecondary)
         // What arrived, then what went in once 0xBow's fee and the gas were
-        // paid, and who it waits on, in grey: nobody waits on you (prd §1827).
+        // paid, and who it waits on, in grey: nobody waits on you (prd §1841).
         case .moved(let amount, let tx):
             let note = PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })
             let held = note.map { PrivateMoney.Ask(note: $0).figure }

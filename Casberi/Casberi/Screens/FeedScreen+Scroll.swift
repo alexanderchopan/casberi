@@ -216,7 +216,7 @@ extension FeedScreen {
         }
     }
 
-    /// **THE ROW IS THE APP (prd §1826, user: "if you press an app icon you
+    /// **THE ROW IS THE APP (prd §1840, user: "if you press an app icon you
     /// go to the app page, but if you press the row you open the individual
     /// message. this isn't clear to anyone").** Activity is one row per app,
     /// so the row says the app's name, its newest thing under it, and one tap
@@ -239,7 +239,7 @@ extension FeedScreen {
                              chrome.activityReturn = section
                              chrome.openAppPage(thing.source)
                              // A money app's page is Money narrowed to it, the
-                             // Wallet menu's own pick (prd §1826): eleven rows
+                             // Wallet menu's own pick (prd §1840): eleven rows
                              // to one unnarrowed page told the apps apart by
                              // nothing.
                              if BridgeCatalog.category(forSource: thing.source) == CategoryFold.walletCategory,
@@ -334,7 +334,7 @@ extension FeedScreen {
                             chrome.moveWalk = true
                             chrome.moveTray = true
                         } else {
-                            chrome.openWalletPage(.yourAccount)
+                            chrome.openWalletPage(.yourAccount, fromActivity: WalletSection.needsYou.label)
                         }
                     }
                 }
@@ -342,12 +342,12 @@ extension FeedScreen {
                     activityAskRow(glyph: ScopeTileGlyph.wallets,
                                    name: first ?? String(localized: "Wallet"),
                                    word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
-                        chrome.openWalletPage(.needsYou)
+                        chrome.openWalletPage(.needsYou, fromActivity: WalletSection.needsYou.label)
                     }
                 }
                 if !waiting.isEmpty {
                     // What waits on you opens the thing, the whole row (prd
-                    // §1826): the review, the failed run, the reply.
+                    // §1840): the review, the failed run, the reply.
                     daySection("", waiting, nextEventID: nil, dated: false, headed: false, inFeed: true)
                 }
             }
@@ -427,9 +427,8 @@ extension FeedScreen {
                         nextEventID: nextEventID, open: {
             DSHaptic.selection()
             ActivitySeen.shared.leavingForPage()
-            chrome.openWalletActivity()
-            // Under Activity, and back to it (prd §1826).
-            chrome.activityReturn = String(localized: "Wallet")
+            // Under Activity, and back to it (prd §1827, §1840).
+            chrome.openWalletActivity(fromActivity: String(localized: "Wallet"))
         }, keepsWord: true)
     }
 

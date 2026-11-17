@@ -66,7 +66,7 @@ struct DSRoomTitleRow: View {
     /// page read "Activity · Social", so Home was two taps away. **The path is
     /// always whole** (prd §1812, user: "we should have a rule and stick to
     /// it"): three names at one size; a path too long for the row cuts its
-    /// last name at the tail, never the names before it (prd §1828).
+    /// last name at the tail, never the names before it (prd §1842).
     var root: DSTitleBack? = nil
     @Environment(\.sizeCategory) private var sizeCategory
     /// In a thing sheet the title is the thing's, and wraps (prd §1258).
@@ -105,7 +105,7 @@ struct DSRoomTitleRow: View {
         if let pick, onTitle != nil || onSettings != nil {
             // The category's word presses (prd §1262); the pick after the
             // dot stays a label. Same rung, ink and height as the label row.
-            // **ONE SIZE, AND THE LAST NAME IS CUT (prd §1828, user: "we
+            // **ONE SIZE, AND THE LAST NAME IS CUT (prd §1842, user: "we
             // can't be having that middle word short", "for long apps like
             // 'app store connect' we will just have to truncate it").** The
             // fallback that let a row too narrow shrink (§1389, §1812) scaled
@@ -124,7 +124,7 @@ struct DSRoomTitleRow: View {
                         .dsText(Self.rung)
                         .foregroundStyle(DS.headInk)
                         .lineLimit(1)
-                        // One size; a name too long is cut (prd §1828).
+                        // One size; a name too long is cut (prd §1842).
                         .truncationMode(.tail)
                     settingsDisc
                 }
@@ -138,7 +138,7 @@ struct DSRoomTitleRow: View {
         } else {
             DSScreenHead(title: label, ink: DS.headInk)
                 .lineLimit(1)
-                // One size; a name too long is cut (prd §1828).
+                // One size; a name too long is cut (prd §1842).
                 .truncationMode(.tail)
                 // ONE HEIGHT, whatever the name (prd §1136f, user: "the box should
                 // never move down!"): a long pair shrinks to fit, and the row used
@@ -153,7 +153,7 @@ struct DSRoomTitleRow: View {
     /// pick after the dot in the head ink, and with `onSettings` the pick a
     /// button too, its sliders disc after it. The names before the pick are
     /// never cut (they are the way back); the pick takes what is left and
-    /// is cut at its tail (prd §1828).
+    /// is cut at its tail (prd §1842).
     private func pickedTitle(_ title: String, pick: String,
                              rung: DSTextStyle) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {

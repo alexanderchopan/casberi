@@ -49,7 +49,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A deadline is a bar with ticks, never a thumb (§1006).
 
 ### 3. Shell and navigation
-- The rooms tray is deleted (§1714), and Search with it: it is Apps' field (§1715). Library is named Apps (§1741). On the phone the bar is Move alone; Home and Activity stand side by side on the swipe, Apps is a card on Home, and every page swipes right to its parent (§1809, §1814). The Mac's rail is Home · Activity · Apps and Move (§1807, §1402). The rail's face goes to the Feed. Every room draws its own name first (§930).
+- The rooms tray is deleted (§1714), and Search with it: it is Apps' field (§1715). Library is named Apps (§1741). On the phone the bar is Move alone; Home and Activity stand side by side on the swipe, Apps is a card on Home, and every page swipes right to its parent (§1809, §1814), and a Wallet page's parent is where you opened it: Needs you from Activity goes back to Activity (§1827). The Mac's rail is Home · Activity · Apps and Move (§1807, §1402). The rail's face goes to the Feed. Every room draws its own name first (§930).
 - Rooms are reached from Library (a tap on an app of yours goes to its room, §1418) and the Feed's section names (a category's room, §1152). A Library folder's name opens the folder, never a room (§1714).
 - Search's results are unchanged by §1714: typing finds apps, accounts, people, notes and things in groups (§1171, §1185, §1589); Return opens an exact name or hands the words to Find.
 - Notes, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
@@ -254,7 +254,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2011 of 2085 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2015 of 2089 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1869,7 +1869,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model (amended by §1505)
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot… (part superseded by §1501)
-- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504, §1524, §1525, §1526, §1527, §1587, §1700i, §1729)
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498, §1503, §1504, §1524, §1525, §1526, §1527, §1587, §1700i, §1729, §1827)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
@@ -1882,7 +1882,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
 - §1492 — One account with nothing on Home says so (amends §1491) (amended by §1615; part superseded by §1729)
-- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca… (amended by §1700f)
+- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca… (amended by §1700f, §1826)
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546, §1593)
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570, §1661, §1737)
@@ -1949,7 +1949,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amended by §1679)
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567, §1719)
-- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571, §1572, §1576, §1827)
+- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571, §1572, §1576, §1841)
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,… (amended by §1567)
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567, §1568)
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
@@ -1966,7 +1966,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS (amended by §1629)
 - §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157… (amended by §1578, §1690)
 - §1575 — Telegram reads your chats: TDLib, signed in as you, on this device (reverses §57's TDLib refusal; §1244's shape) (amended by §1577)
-- §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week (amended by §1827)
+- §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week (amended by §1841)
 - §1577 — The export doors are deleted from Telegram, X and Instagram; Telegram's sign-in leads its page; the misplaced databas…
 - §1578 — Round-ups save with your sends only, always in USDC: ETH is swapped for a dollar that is short, Save now and the ppET… (amended by §1690)
 - §1579 — The X and Instagram importers are deleted from the model (completes §1577; amends §245, §280, §310, §375, §395, §396)
@@ -1976,7 +1976,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1583 — 0xBow's Privacy Pools v2 is watched weekly: a script compares what we pin with what 0xBow ships, and a Monday task re…
 - §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in (amended by §1619)
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
-- §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th… (amended by §1687, §1827)
+- §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th… (amended by §1687, §1841)
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593, §1752)
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
@@ -2242,13 +2242,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w…
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
 - §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one…
-- §1808 — One wallet, the first fixes: a category's name opens its page, the map names its tiles, the cards take the screen, Mo…
+- §1808 — One wallet, the first fixes: a category's name opens its page, the map names its tiles, the cards take the screen, Mo… (amended by §1828)
 - §1809 — One wallet, the second pass: Activity is a card on Home and the bar is Move alone, Activity is small words over one r…
 - §1810 — Activity's rows: a card says its amount once, every row is one height, a face wears its app (amends §1414, §1386, §73…
 - §1811 — The title is the whole path, and a word that opens wears a chevron (amends §1809, §1262)
-- §1812 — Home and Move share one capsule, the title is the last three levels, every title is one size, and a page under Activi…
+- §1812 — Home and Move share one capsule, the title is the last three levels, every title is one size, and a page under Activi… (amended by §1828)
 - §1813 — A category has no page: it is a word on Activity, an app is one step from it, and what waits on you in your apps stan…
-- §1814 — Every page swipes right to its parent, the bar is Move alone, and a section's name is its name alone at the left edge…
+- §1814 — Every page swipes right to its parent, the bar is Move alone, and a section's name is its name alone at the left edge… (amended by §1827)
 - §1815 — A door wears a chevron, an app's lists are rows, a folder's name is centred with no glyph, and Home says the day as a…
 - §1816 — Activity's rows are white until seen (amends §1813, §744)
 - §1817 — Risks reads privacy, then permissions, then threats (amends §1809)
@@ -2260,13 +2260,17 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
 - §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo…
 - §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet…
-- §1826 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
-- §1827 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
-- §1828 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622)
+- §1826 — Export shows the key once it lands on one network, and says which network and step it is on while it adds the rest
+- §1827 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swip…
+- §1828 — The money's page is named Wallet, the word Activity opens it by
+- §1829 — One move, one row: a Privacy Pools deposit your own private move already says stays out of the Wallet's lists
 - §1830 — Round-ups round up every buy, send and swap, and the switch says so
 - §1831 — Activity shows what is new: a row on screen when you leave is seen, and the next visit leaves it out (amends §1816, §…
-- §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812)
+- §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812; the same ruling as §1828,…
 - §1833 — Nodes: no switch, "Public" in place of "Casberi's list", and a field that says what to paste (amends §1517, §1803)
+- §1840 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
+- §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
+- §1842 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (numbered §182…
 
 ## Dead rulings → what replaced them (generated)
 

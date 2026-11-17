@@ -53,7 +53,7 @@ extension FeedScreen {
         case .activity:
             WalletActivityFigure(moves: Self.walletMoves(visible.live))
         // Home's doors state their own count (prd §1480); Needs you's rows
-        // say what waits, so it draws no box either (prd §1827).
+        // say what waits, so it draws no box either (prd §1841).
         case .permissions, .threats, .needsYou:
             EmptyView()
         case .yourAccount, .following, .recoveryKey, .nodes:

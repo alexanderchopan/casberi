@@ -220,7 +220,7 @@ enum PrivateMoney {
     /// A deposit Wallet › Needs you shows: one 0xBow's ASP did not approve
     /// (or wants a proof of), red, whose act is Take it back — the ragequit,
     /// a public exit to the address it came from. **A deposit still being
-    /// checked asks nothing of you (prd §1827, amends §1561):** it stays in
+    /// checked asks nothing of you (prd §1841, amends §1561):** it stays in
     /// Holdings › Private with its steps, Take it back on its steps sheet
     /// (§1576), and is never an ask.
     struct Ask: Equatable, Identifiable {
@@ -249,7 +249,7 @@ enum PrivateMoney {
     }
 
     /// What a deposit Privacy Pools has not ruled on says, everywhere it is
-    /// drawn (prd §1827): who it waits on, never "approval", which read as
+    /// drawn (prd §1841): who it waits on, never "approval", which read as
     /// something the person had to approve.
     static var beingChecked: String { String(localized: "Being checked by Privacy Pools") }
 

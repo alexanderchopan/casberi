@@ -195,8 +195,8 @@ use "$PAGES" 'let deposits = walletShowsPrivate ? PrivateMoneyStore.shared.asks(
 use "$HOLD" 'return DSPushRow(title: Text(verbatim: ask.title), subtitle: line(ask, stage: stage),' "a deposit's ask is no longer the push row"
 use "$HOLD" 'return Text("Take it back").foregroundStyle(DS.destructiveInk)' "Take it back is no longer a word in the row's line"
 awk '/guard !working else \{ return \}/{getline; print}' "$HOLD" | grep -q 'confirming = ask' || { echo "✗ Take it back opens without the dialog"; exit 1; }
-# A deposit still being checked: Take it back on its steps sheet, behind the dialog (prd §1576, §1827).
-use "Casberi/Casberi/Screens/OnItsWaySheet.swift" 'DSDoorRow(icon: "arrow.uturn.backward", label: "Take it back") {' "a deposit being checked can no longer be taken back (prd §1576, §1827)"
+# A deposit still being checked: Take it back on its steps sheet, behind the dialog (prd §1576, §1841).
+use "Casberi/Casberi/Screens/OnItsWaySheet.swift" 'DSDoorRow(icon: "arrow.uturn.backward", label: "Take it back") {' "a deposit being checked can no longer be taken back (prd §1576, §1841)"
 use "Casberi/Casberi/Screens/OnItsWaySheet.swift" 'if takes { takeBack(notes.map(\.commitment)) }' "Take it back on the steps sheet takes nothing back"
 use "$HOLD" 'commitments: notes.map(\.commitment))' "a waiting row's steps sheet is not handed its notes"
 use "$ENGJS" 'const r = await s.prepareRageQuit({ commitment: note.commitment });' "the engine no longer proves a ragequit"
@@ -464,14 +464,14 @@ check(P.rows([note("z", "0", .approved), note("y", "x", .approved)]).isEmpty, "a
 check(P.anyWaiting(notes) && !P.anyWaiting([note("a", "1", .approved)]), "waiting is asked again, approved is not")
 check(P.anyWaiting([note("p", "1", .needsProof)]) && !P.anyWaiting([note("r", "1", .rejected)]), "poi_required is asked again, rejected is not")
 
-// Needs you (prd §1561, narrowed by §1827): only a deposit refused or
+// Needs you (prd §1561, narrowed by §1841): only a deposit refused or
 // wanting a proof, oldest first; one still being checked asks nothing.
 let now0 = t1.addingTimeInterval(3600)
 let asks = P.asks(notes, now: now0)
 check(asks.map(\.id) == ["e", "d"], "refused only, oldest first (\(asks.map(\.id)))")
 check(asks.map(\.title) == ["0.002 ETH not approved", "0.0005 ETH not approved"],
       "the rows' words (\(asks.map(\.title)))")
-check(P.asks([note("w", "1", .waiting)], now: now0).isEmpty, "a deposit being checked needs you (prd §1827)")
+check(P.asks([note("w", "1", .waiting)], now: now0).isEmpty, "a deposit being checked needs you (prd §1841)")
 check(P.asks([note("a", "1", .approved)], now: now0).isEmpty, "an approved deposit still needs you")
 check(P.asks([note("z", "0", .rejected)], now: now0).isEmpty, "an empty note needs you")
 var utc = Calendar(identifier: .gregorian)
@@ -929,7 +929,7 @@ mutate() {
 mutate "unknown no longer waits" "$PM" 's/case "pending", "unknown": return \.waiting/case "pending": return .waiting/'
 mutate "the ASP is asked by any label" "$PM" 's/guard labelHash\.range\(of: #"\^\[0-9\]\{1,80\}\$"#/guard labelHash.range(of: #".+"#/'
 mutate "a waiting row dates from its newest note" "$PM" 's/min\(had\.since, note\.at\)/max(had.since, note.at)/'
-mutate "a deposit being checked needs you (prd §1827)" "$PM" 's/case \.approved, \.waiting: return nil/case .approved: return nil\n            case .waiting: return Ask(note: note)/'
+mutate "a deposit being checked needs you (prd §1841)" "$PM" 's/case \.approved, \.waiting: return nil/case .approved: return nil\n            case .waiting: return Ask(note: note)/'
 mutate "poi_required leaves Needs you" "$PM" 's/case \.rejected, \.needsProof: return Ask\(note: note\)/case .rejected: return Ask(note: note)\n            case .needsProof: return nil/'
 mutate "an older wait says only its time" "$PM" 's/let shown = calendar\.isDate\(at, inSameDayAs: now\)/let shown = true/'
 mutate "poi_required is never asked again" "$PM" 's/status == \.waiting \|\| status == \.needsProof/status == .waiting/'
