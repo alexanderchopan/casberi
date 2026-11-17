@@ -168,3 +168,10 @@ Built from one canvas (`design/mockups/five-things-to-do.html`, the claude.ai ar
 **A note of yours EDITS (prd §981, moved from CLAUDE.md 2026-10-14).** A note of yours EDITS: its sheet's first disc is `Edit` (Reminders' seat), which reopens the note sheet on the same thing (`ShellChrome.editNote`), and its sheet draws no "That day" shelf (§981).
 
 - `-noteVoice YES` (moved from CLAUDE.md verbatim, 2026-10-23, to keep it under its budget): The band draws `VoiceCapture.levels` in the player's bar anatomy. Held New arms (the plus morphs to the waveform) and lands here recording (`DSScopeTiles.Hold`, `DSHaptic.lift`). Dictation is Apple's keyboard mic over the focused field.
+
+## Index lines this file took over (2026-11-16, the rule sheet's byte budget)
+
+Each read, whole:
+
+- `-followingSheet add|<name>` — with `-openRoom Reading|Media|Work -openSection subscriptions|watch`, raise the tile's Track/Watch tray or one follow's sheet (NSLogs `followingSheet:`). `-readingFollowNow YES` follows `-readingQuery`'s site (prd §1119). Two verbs: Follow for everything you keep up with, Track for subscriptions only (prd §1120, §1121). **What you follow is listed where you read it: Reading and Media have Subscriptions, Work has Watching (`Model/Following.swift`, `following-selftest.sh`); feeds are not addresses; a follow app's page keeps what only it can do** → prd §1118 · §1119 · §1120 · §1121
+- **The note takes a checklist you tick, a scan, a link to anything you keep, a Quick Note and a lock (prd §982).** A tick is the one write the sheet makes (`NoteChecklist.toggled`, `note-checklist-selftest.sh`); a lock SEALS the words into `audio` under a key in iCloud Keychain — the one synchronizable Keychain item, exempt in `keychain-audit.py` — so nothing downstream can show them; the Quick Note is `NoteControl`, `NewNoteIntent` and `casberi://note` → prd §982
