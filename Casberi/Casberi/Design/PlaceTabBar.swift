@@ -171,14 +171,30 @@ struct PlaceTabBar: View {
         Button {
             taps[.move, default: 0] &+= 1
             DSHaptic.tap()
-            open(.move)
+            // The phone's menu rises over the page, and this button puts it
+            // away again (prd §1852).
+            if chrome.moveMenu {
+                MoveMenu.close(chrome)
+            } else if MoveMenu.rises {
+                withAnimation(DS.Motion.standard) { chrome.moveMenu = true }
+            } else {
+                open(.move)
+            }
         } label: {
-            MoveMark(size: size, taps: taps[.move] ?? 0)
-                .frame(width: size, height: size)
-                .dsTapTarget(Circle())
+            Group {
+                if chrome.moveMenu {
+                    Image(systemName: "xmark")
+                        .dsGlyph(.body, weight: .bold)
+                        .foregroundStyle(DS.pickInk)
+                } else {
+                    MoveMark(size: size, taps: taps[.move] ?? 0)
+                }
+            }
+            .frame(width: size, height: size)
+            .dsTapTarget(Circle())
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(verbatim: PlaceTab.move.label))
+        .accessibilityLabel(chrome.moveMenu ? Text("Close") : Text(verbatim: PlaceTab.move.label))
         .accessibilityHint(Text("Swap, send or receive money"))
     }
 }

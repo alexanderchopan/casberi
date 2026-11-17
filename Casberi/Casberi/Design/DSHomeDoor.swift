@@ -117,6 +117,58 @@ struct DSHomeCircleGlyph: View {
     }
 }
 
+/// **A FACT ROW (prd §1851).** Home's Holdings line and the Wallet section's
+/// Watchlist line are one anatomy: the place's glyph, its name in grey, then
+/// each token and its day's move in the day's ink, and the door's chevron.
+/// The row opens its place; it draws no plate and no coin.
+struct DSHomeFactRow: View {
+    struct Item: Identifiable, Equatable {
+        let id: String
+        let name: String
+        /// The day's move, already worded ("+1.8%"); nil while unread.
+        var change: String? = nil
+        var ink: Color = DS.textSecondary
+    }
+
+    let glyph: String
+    let name: String
+    let items: [Item]
+    /// Said in the pick's ink in the items' place, when there are none.
+    var verb: String? = nil
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            Image(systemName: glyph)
+                .dsGlyph(.subhead)
+                .foregroundStyle(DS.brandInk)
+                .accessibilityHidden(true)
+            Text(verbatim: name).foregroundStyle(DS.textSecondary)
+            if items.isEmpty, let verb {
+                Text(verbatim: verb).foregroundStyle(DS.pickInk)
+            }
+            ForEach(items) { item in
+                HStack(spacing: DS.Space.s1) {
+                    Text(verbatim: item.name).foregroundStyle(DS.textPrimary)
+                    if let change = item.change {
+                        Text(verbatim: change).monospacedDigit().foregroundStyle(item.ink)
+                    }
+                }
+            }
+            Image(systemName: "chevron.right")
+                .dsGlyph(.tick, weight: .bold)
+                .foregroundStyle(DS.textSecondary)
+                .accessibilityHidden(true)
+        }
+        .dsText(.fact15)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity, minHeight: DS.Hit.min, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
 /// **THE DAY, ON A PILL (prd §1849).** The balance's day under it, its words
 /// in the day's ink on a wash of the same ink: the one fact on Home's head
 /// that moves, set apart from the two figures under it.

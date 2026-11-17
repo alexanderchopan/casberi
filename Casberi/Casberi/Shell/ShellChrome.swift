@@ -238,6 +238,12 @@ final class ShellChrome {
     var librarySearch = 0
     /// Move, raised as a tray from its tab (prd §1442): an act, not a place.
     var moveTray = false
+    /// Move's verbs stand over the page, above its button (prd §1852): the
+    /// phone's menu, in place of the tray's first page.
+    var moveMenu = false
+    /// The verb the menu asked Move's tray to open on (`MoveMenu.Verb`'s raw
+    /// value). Read once by the tray, cleared when it leaves.
+    var moveAsk: String?
     /// Move's sheet is whole (prd §1681): a word's choices or the keys are
     /// open, or an account is being made. Short at rest.
     var moveTall = false

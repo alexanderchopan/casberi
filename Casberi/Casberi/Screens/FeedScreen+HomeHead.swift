@@ -2,10 +2,10 @@ import SwiftUI
 
 /// **THE PHONE'S HOME IS ONE SCROLL (prd §1843).** What you have, then what
 /// is new: the Wallet stands at the head of the feed's page, on the page's
-/// own black since prd §1850 (the balance, the day, Public · Private, the map
-/// as a band and the watchlist's moves), then its doors as one row of words
-/// (Account, Risks, Apps, the address), and a row of circles that jump to each
-/// section under them. Home's five
+/// own black and its left edge (prd §1851: the balance large, the day with
+/// Public · Private on one row, Holdings as a row), then its doors as one row
+/// of words (Account, Risks, Apps, the address), and a row of circles that
+/// jump to each section under them. Home's five
 /// cards and the separate Activity place are the rail's (iPad, Mac).
 ///
 /// The head is the feed page's (`source == "All"`): that page holds every
@@ -30,21 +30,6 @@ extension FeedScreen {
         DSHaptic.selection()
         ActivitySeen.shared.leavingForPage()
         chrome.openWalletPage(section, fromActivity: nil, keepingScope: true)
-    }
-
-    /// A band tile pressed: a token opens its sheet, as its Holdings row
-    /// does; an app's tile opens Apps; Other, Lent, Private and Aztec open
-    /// Holdings, where their rows are. Never a page every tile shares.
-    func homeOpenTile(_ id: String) {
-        if WalletPortfolio.appCell(id) != nil {
-            homeOpen(.apps)
-        } else if id != HoldingsTreemapLayout.otherID,
-                  let position = portfolioUnhidden?.positions.first(where: { $0.symbol == id }) {
-            DSHaptic.selection()
-            walletOpenToken(position)
-        } else {
-            homeOpen(.holdings)
-        }
     }
 
     /// The head's rows, first on the page.
@@ -109,7 +94,10 @@ extension FeedScreen {
     @ViewBuilder
     var homeMoneyCard: some View {
         if (portfolioShown?.totalUSD ?? 0) > 0 {
-            homeMoneyStack.frame(maxWidth: .infinity, alignment: .leading)
+            // On the rows' own left edge (the row's inset is the well's).
+            homeMoneyStack
+                .padding(.horizontal, DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             homeMoneyStack
                 .padding(DS.Space.s3)
@@ -121,12 +109,12 @@ extension FeedScreen {
     @ViewBuilder
     private var homeMoneyStack: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        VStack(alignment: .center, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
                 let cells = HoldingsBand.cells(shown.foldingPrivate(walletPrivateByToken)
                     .sectionWorth(appsApart: walletOnAll))
                 let moves = walletHoldingMoves
-                let day = HoldingsTreemap.dayCaption(HoldingMoves.dayChange(cells.map {
+                let day = Self.homeDay(HoldingMoves.dayChange(cells.map {
                     (usd: $0.usd, move: $0.id == HoldingsTreemapLayout.otherID ? nil : moves[HoldingMoves.key($0.id)])
                 }))
                 // A last reading says when it was read (§825, §1593).
@@ -134,24 +122,27 @@ extension FeedScreen {
                 Button { homeOpen(.holdings) } label: {
                     HStack(spacing: DS.Space.s2) {
                         Text(verbatim: mask ?? WalletValue.money(shown.totalUSD))
-                            .dsText(.heading52)
+                            .dsText(.price84)
                             .monospacedDigit()
                             .foregroundStyle(DS.textPrimary)
                             .contentTransition(.numericText())
                             .lineLimit(1)
-                            .minimumScaleFactor(0.6)
+                            .minimumScaleFactor(0.45)
                         // A door wears a chevron, grey (§1815, §1838).
                         Image(systemName: "chevron.right")
                             .dsGlyph(.tick, weight: .bold)
                             .foregroundStyle(DS.textSecondary)
                             .accessibilityHidden(true)
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
                 .accessibilityHint(Text("Opens \(WalletSection.holdings.label)"))
-                HStack(spacing: DS.Space.s2) {
+                // **ONE ROW OF FACTS (prd §1851).** The day, then Public and
+                // Private, on the balance's own left edge; a balance too wide
+                // for one row stands the halves under the day.
+                let lead = HStack(spacing: DS.Space.s2) {
                     if shown.asOf != nil, stamp.hasPrefix("as of") {
                         Text(verbatim: stamp).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
                     } else if let day {
@@ -159,12 +150,25 @@ extension FeedScreen {
                     }
                     homeWhoseWord
                 }
-                .frame(maxWidth: .infinity)
-                homeHalves(total: shown.totalUSD, mask: mask)
-                // Each tile opens its own token (`homeOpenTile`); the
-                // balance above is Holdings' door.
-                HoldingsBand(cells: cells, moves: moves) { homeOpenTile($0) }
-                    .padding(.top, DS.Space.s1)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: DS.Space.s4) {
+                        lead
+                        homeHalves(total: shown.totalUSD, mask: mask)
+                    }
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        lead
+                        homeHalves(total: shown.totalUSD, mask: mask)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // **HOLDINGS IS A ROW (prd §1851, over §1850's band).** The
+                // three biggest and each one's day; the row opens Holdings,
+                // where the map is.
+                Button { homeOpen(.holdings) } label: {
+                    DSHomeFactRow(glyph: WalletSection.holdings.glyph, name: WalletSection.holdings.label,
+                                  items: Self.homeHoldingItems(cells, moves))
+                }
+                .buttonStyle(RowPress())
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
                 WalletStartFigure(bare: homeBare).frame(height: homeBare ? nil : Self.homeStartHeight)
@@ -180,9 +184,32 @@ extension FeedScreen {
                 // A scope with nothing read still offers the way back (§1526).
                 HStack { Spacer(minLength: 0); homeWhoseMenu }
             }
-            // **THE WATCHLIST IS THE CARD'S (prd §1849).** Everything about
-            // money stands on the card; what is under it is only acts.
-            if !homeBare { homeWatchlistLine }
+        }
+    }
+
+    /// The day on its pill: the move alone ("+0.9%"), in the day's ink; a
+    /// day that rounds to zero says so in grey (§83).
+    static func homeDay(_ change: Double?) -> (words: String, ink: Color)? {
+        guard let change else { return nil }
+        let day = WatchlistRules.change(change * 100)
+        return (day.words, day.tone == .up ? DS.confirmInk : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
+    }
+
+    /// As many holdings as the row names.
+    static let homeHoldingsCap = 3
+
+    /// The row's holdings: the biggest tiles the band drew, each by its name
+    /// and its day; Other is never one.
+    static func homeHoldingItems(_ cells: [HoldingsBand.Cell], _ moves: [String: Double]) -> [DSHomeFactRow.Item] {
+        cells.filter { $0.id != HoldingsTreemapLayout.otherID }.prefix(homeHoldingsCap).map { cell in
+            let name = WalletPortfolio.appCell(cell.id)?.label ?? cell.id
+            guard let move = moves[HoldingMoves.key(cell.id)] else {
+                return DSHomeFactRow.Item(id: cell.id, name: name)
+            }
+            let day = WatchlistRules.change(move * 100)
+            return DSHomeFactRow.Item(id: cell.id, name: name, change: day.words,
+                                      ink: day.tone == .up ? DS.confirmInk
+                                          : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
         }
     }
 
@@ -209,7 +236,7 @@ extension FeedScreen {
     /// stand right under the watchlist, the foot of the money over them;
     /// the break is above the circles, which are the feed's. Needs you under
     /// the circles takes `s6` (`ActivityWord`'s tight top).
-    static let homeLinesGap: CGFloat = 0
+    static let homeLinesGap: CGFloat = DS.Space.s2
     static let homeChipsGap: CGFloat = DS.Space.s8
 
     /// The card's height while it has no balance to draw.
@@ -226,7 +253,7 @@ extension FeedScreen {
                     homeHalf(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
                     homeHalf(String(localized: "Private"), mask ?? WalletValue.money(hidden))
                 }
-                .frame(maxWidth: .infinity)
+                .fixedSize()
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -236,9 +263,11 @@ extension FeedScreen {
 
     private func homeHalf(_ word: String, _ figure: String) -> some View {
         HStack(spacing: DS.Space.s2) {
-            Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textSecondary)
-            Text(verbatim: figure).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+            Text(verbatim: word).foregroundStyle(DS.textSecondary)
+            Text(verbatim: figure).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
+        .dsText(.heading20)
+        .fontWeight(.bold)
         .lineLimit(1)
     }
 
@@ -294,11 +323,11 @@ extension FeedScreen {
 
     // MARK: - The lines
 
-    /// The watchlist's moves on one line (prd §1843): its glyph, then each
-    /// token and its day in the day's ink; empty, the verb. It opens the
-    /// watchlist.
+    /// **THE WATCHLIST IS THE WALLET SECTION'S (prd §1851, over §1849).** One
+    /// row over the Wallet's newest move: its glyph, its name, the token that
+    /// moved most today; empty, the verb. It opens the watchlist.
     @ViewBuilder
-    var homeWatchlistLine: some View {
+    var homeWatchRow: some View {
         let tokens = Watchlist.shared.tokens
         let quotes = WatchlistPrices.shared.quotes
         Button {
@@ -306,47 +335,31 @@ extension FeedScreen {
                 DSHaptic.selection()
                 feedSheet = .watchToken
             } else {
+                ActivitySeen.shared.leavingForPage()
                 homeOpen(.watchlist)
             }
         } label: {
-            HStack(spacing: DS.Space.s4) {
-                Image(systemName: WalletSection.watchlist.glyph)
-                    .dsGlyph(.body)
-                    .foregroundStyle(DS.brandInk)
-                    .accessibilityHidden(true)
-                if tokens.isEmpty {
-                    Text("Watch a token").dsText(.body17).foregroundStyle(DS.pickInk)
-                } else {
-                    ForEach(tokens.prefix(Self.homeWatchCap)) { token in
-                        homeWatchMove(token, quotes[token.id]?.change)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
-            .contentShape(Rectangle())
+            DSHomeFactRow(glyph: WalletSection.watchlist.glyph, name: WalletSection.watchlist.label,
+                          items: Self.homeWatchItems(tokens, quotes),
+                          verb: String(localized: "Watch a token"))
         }
         .buttonStyle(RowPress())
-        .accessibilityLabel(Text(WalletSection.watchlist.label))
         .task(id: tokens.map(\.id)) { await walletWatchlistRefresh(tokens) }
+        .feedRowBackground()
+        .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
+        .listRowSeparator(.hidden)
     }
 
-    /// As many tokens as one line holds at the reading size.
-    static let homeWatchCap = 3
-
-    private func homeWatchMove(_ token: WatchedToken, _ percent: Double?) -> some View {
-        let change = percent.map(WatchlistRules.change)
-        return HStack(spacing: DS.Space.s1) {
-            Text(verbatim: token.symbol).foregroundStyle(DS.textPrimary)
-            if let change {
-                Text(verbatim: change.words)
-                    .monospacedDigit()
-                    .foregroundStyle(change.tone == .up ? DS.confirmInk
-                        : change.tone == .down ? DS.destructiveInk : DS.textSecondary)
-            }
+    /// The one token the row names: the day's biggest mover, else the first
+    /// on the list (unread, it says its name alone).
+    static func homeWatchItems(_ tokens: [WatchedToken], _ quotes: [String: WatchlistRules.Quote]) -> [DSHomeFactRow.Item] {
+        if let mover = WatchlistRules.biggestMover(tokens, quotes: quotes) {
+            return [DSHomeFactRow.Item(id: mover.symbol, name: mover.symbol, change: mover.change.words,
+                                       ink: mover.change.tone == .up ? DS.confirmInk : DS.destructiveInk)]
         }
-        .dsText(.body17)
-        .lineLimit(1)
-        .fixedSize()
+        guard let first = tokens.first else { return [] }
+        let day = (quotes[first.id]?.change).map(WatchlistRules.change)
+        return [DSHomeFactRow.Item(id: first.id, name: first.symbol, change: day?.words)]
     }
 
     /// **HOME'S DOORS, ONE ROW OF WORDS (prd §1850, over §1849's round
@@ -359,7 +372,7 @@ extension FeedScreen {
         let yours = YourAccountDemo.shownAddress
         let pending = homeSetupPending
         let risks = homeRisksUnseen
-        HStack(alignment: .center, spacing: DS.Space.s6) {
+        HStack(alignment: .center, spacing: DS.Space.s4) {
             if !bare {
                 Button {
                     DSHaptic.selection()
@@ -409,7 +422,7 @@ extension FeedScreen {
                 HomeCopyAction(address: yours)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - The jumps

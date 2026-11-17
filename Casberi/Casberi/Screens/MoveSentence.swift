@@ -1525,10 +1525,7 @@ struct MoveSentence: View {
         // Every sentence Move mounts leads its foot with the way back to
         // the menu (prd §1781): the verb in the sentence no longer opens it.
         .environment(\.moveBack, {
-            withAnimation(DS.Motion.standard) {
-                open = .verb
-                focus = nil
-            }
+            withAnimation(DS.Motion.standard) { backToMenu() }
         })
         .animation(DS.Motion.standard, value: privateMode)
         .animation(DS.Motion.standard, value: aztecMode)
@@ -1563,12 +1560,13 @@ struct MoveSentence: View {
                                 // **THE VERB IS THE TITLE, THE SENTENCE IS
                                 // OVER THE BUTTON (prd §1794).** Where
                                 // "Move" stood on the menu, at its size.
-                                word(title(verb), ink: DS.textPrimary)
+                                word(pageTitle(verb), ink: DS.textPrimary)
                                     .accessibilityAddTraits(.isHeader)
                             } else {
                                 sentence
                                     .onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }
                             }
+                            if open != .verb { verbKindRow }
                         }
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
                         // An open list runs to the tray's bottom edge, under
@@ -1643,6 +1641,12 @@ struct MoveSentence: View {
         // goes on with it, and every other verb is one tap away. Reopening
         // straight onto it hid the menu behind a word nobody knew to tap.
         .onAppear {
+            // The phone's menu already asked which verb (prd §1852).
+            if let raw = chrome.moveAsk, let v = Self.asked(raw) {
+                chrome.moveAsk = nil
+                pickVerb(v)
+                return
+            }
             guard picksUpDraft, receipt == nil, stage == nil else { return }
             if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }
             open = .verb
@@ -3102,7 +3106,9 @@ struct MoveSentence: View {
 
     /// The verbs Move offers here, A–Z in the reader's language (prd §1547).
     private var offeredVerbs: [Verb] {
-        Verb.allCases.filter { ($0 != .buy || buyAvailable) && ($0 != .lend || AaveLend.on) }
+        // Five (prd §1852): gift cards are Buy's and Sweep is Swap's, each
+        // picked on its own page (`verbKinds`).
+        Verb.allCases.filter { $0 != .buy && $0 != .sweep && ($0 != .lend || AaveLend.on) }
             .sorted { title($0).localizedStandardCompare(title($1)) == .orderedAscending }
     }
 
@@ -3190,7 +3196,79 @@ struct MoveSentence: View {
         case .buy: String(localized: "Spend")
         case .sweep: String(localized: "Sweep")
         case .deposit: String(localized: "Buy")
-        case .lend: String(localized: "Lend")
+        case .lend: String(localized: "Earn")
+        }
+    }
+
+    /// The page's name: a verb's two kinds share one (prd §1852).
+    private func pageTitle(_ v: Verb) -> String {
+        switch v {
+        case .buy: title(.deposit)
+        case .sweep: title(.swap)
+        default: title(v)
+        }
+    }
+
+    /// The two kinds a verb's page offers, A–Z, or none.
+    private var verbKinds: [Verb] {
+        switch verb {
+        case .buy, .deposit: buyAvailable ? [.buy, .deposit] : []
+        case .swap, .sweep: [.swap, .sweep]
+        default: []
+        }
+    }
+
+    private func kindWord(_ v: Verb) -> String {
+        switch v {
+        case .buy: String(localized: "Gift cards")
+        case .deposit: String(localized: "Tokens")
+        default: title(v)
+        }
+    }
+
+    /// **A VERB'S TWO KINDS ARE PICKED ON ITS PAGE (prd §1852).** Under the
+    /// page's name: the one you are on white, the other grey, a tap away.
+    @ViewBuilder
+    private var verbKindRow: some View {
+        let kinds = verbKinds
+        if kinds.count == 2, stage == nil, receipt == nil {
+            HStack(spacing: DS.Space.s4) {
+                ForEach(kinds, id: \.self) { v in
+                    Button { pickVerb(v) } label: {
+                        Text(verbatim: kindWord(v))
+                            .dsText(.heading24)
+                            .foregroundStyle(v == verb ? DS.textPrimary : DS.textSecondary)
+                            .frame(minHeight: DS.Hit.min)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityAddTraits(v == verb ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    /// The menu's verb, as the tray's.
+    private static func asked(_ raw: String) -> Verb? {
+        switch MoveMenu.Verb(rawValue: raw) {
+        case .buy: .deposit
+        case .earn: .lend
+        case .receive: .receive
+        case .send: .send
+        case .swap: .swap
+        case nil: nil
+        }
+    }
+
+    /// Back goes to the menu over the page, where the phone's menu is (prd
+    /// §1852); elsewhere the menu is the tray's own first page.
+    private func backToMenu() {
+        if inTray, MoveMenu.rises {
+            chrome.moveTray = false
+            withAnimation(DS.Motion.standard) { chrome.moveMenu = true }
+        } else {
+            open = .verb
+            focus = nil
         }
     }
 
@@ -6352,8 +6430,7 @@ struct MoveSentence: View {
                     open = nil
                     return
                 }
-                open = .verb
-                focus = nil
+                backToMenu()
             }
         }, disabled: stage != nil)
     }

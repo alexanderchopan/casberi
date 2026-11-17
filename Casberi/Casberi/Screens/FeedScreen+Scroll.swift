@@ -204,7 +204,7 @@ extension FeedScreen {
     @ViewBuilder
     func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
                          open: (() -> Void)?, fades: Bool = true,
-                         keepsWord: Bool = false,
+                         keepsWord: Bool = false, lead: AnyView? = nil,
                          rowOpens: (() -> Void)? = nil) -> some View {
         let _ = { memo.sectionCounts[name] = rows.count }()
         // A category with nothing new leaves Activity; a word that opens a
@@ -213,6 +213,9 @@ extension FeedScreen {
             SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
                 ActivityWord(name: name, open: open)
             } rows: {
+                // A row the section itself owns, over its apps' rows (the
+                // Wallet's watchlist, prd §1851).
+                if let lead { lead }
                 ForEach(keyed(rows), id: \.id) { item in
                     if let thing = item.live { activityAppRow(thing, from: name, fades: fades, opens: rowOpens) }
                 }
@@ -487,7 +490,8 @@ extension FeedScreen {
                         // tapping a transaction could open history").** The
                         // word opens nothing, as every category's; any row
                         // under it opens the Wallet's history.
-                        nextEventID: nextEventID, open: nil, keepsWord: true, rowOpens: {
+                        nextEventID: nextEventID, open: nil, keepsWord: true,
+                        lead: homeHeadShown && !homeBare ? AnyView(homeWatchRow) : nil, rowOpens: {
             DSHaptic.selection()
             // Under Activity, and back to it (prd §1827, §1840).
             chrome.openWalletActivity(fromActivity: String(localized: "Wallet"))
@@ -515,6 +519,7 @@ extension FeedScreen {
                 chrome.openWalletActivity(fromActivity: word)
             })
         } rows: {
+            if homeHeadShown && !homeBare { homeWatchRow }
             DSPushRow(title: Text(yours == nil ? "Create an account" : "Your account"),
                       subtitle: yours == nil ? nil : wants.map { Text(verbatim: $0) } ?? Text("No moves yet"),
                       subtitleTone: wants != nil ? DS.attentionInk : DS.textSecondary,
@@ -930,6 +935,8 @@ extension EnvironmentValues {
     /// (prd §1843): it takes no chapter air, since the chips' own gap above
     /// them is that air and the chips belong to the feed they jump through.
     @Entry var feedSectionLeads: String? = nil
+    /// More air over each section, on the phone's Home (prd §1851).
+    @Entry var feedSectionAir: CGFloat = 0
     /// Whether the panel draws its fill: nowhere, since prd §1393 (the
     /// Feed's and the Wallet's since §1382, Library's since §1383). The
     /// shape stays, so rows keep their column and the gaps their height;
@@ -1430,6 +1437,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     @Environment(\.dsRoomBoxPlace) private var place
     @Environment(\.dsPaneBoxRow) private var paneRow
     @Environment(\.feedSectionLeads) private var leads
+    @Environment(\.feedSectionAir) private var air
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
@@ -1454,7 +1462,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 let tight = anchor != nil && anchor == leads
                 if !tight {
                     Color.clear
-                        .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
+                        .frame(height: DSRoomChassis.sectionGap - DS.Space.s4 + air)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)

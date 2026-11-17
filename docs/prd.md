@@ -73664,3 +73664,43 @@ Eleven canvases in one sitting, from glass discs to a floating tab bar, ended on
 **Mac half (§1402).** Items 1 to 5 are the phone's Home (`PhoneHome.isOn`, `quietActivity`). Item 6 reaches the Mac's and the iPad's Holdings map unchanged.
 
 **Checks.** None new.
+
+## §1851 — Home's head is type on the page's left edge: the balance large, one row of facts, Holdings as a row, and the watchlist in the Wallet's section (amends §1850 items 1 and 5, §1849, §1845, §1843 item 1) (user, 2026-11-17: "the problem was before it just looked like a version of the feed sitting above the feed"; "the treemap doesn't deserve so much space"; "the balance also looks good large"; of the render built here: "that is the best so far. that is what we are going to go with")
+
+Some forty mocks in one sitting: cards, a sheet for the feed, a hairline, the map as tiles, beads, a line and bubbles, the head in other apps' manners. What held was the plainest. The head had been small things in strips (a pill, a line of two figures, a band of tiles, a watchlist line, the doors) over a feed of the same weight, so it read as one more feed section. It is type at a different scale now, and the band and the watchlist line are gone from it.
+
+1. **The balance is `price84`, on the rows' left edge** (`homeMoneyStack`), with its chevron: Holdings' door, as before. A new rung, the one figure the head is built round.
+2. **One row of facts under it**: the day on its pill, the move alone ("+0.8%", `homeDay`; a day that rounds to zero is grey, §83), then Public and Private at `heading20`, bold. A balance too wide for one row stands the halves under the day (`ViewThatFits`).
+3. **Holdings is a row** (`DSHomeFactRow`, `homeHoldingItems`), over §1850's band: its glyph, its name in grey, the three biggest holdings each with its day in the day's ink, and a chevron. It opens Holdings, where the map is. Home draws no map.
+4. **The watchlist is the Wallet section's** (`homeWatchRow`, `activitySection(lead:)`), amending §1849's "the watchlist is the card's": one row over the Wallet's newest move, the same anatomy as Holdings, naming the day's biggest mover (else the first on the list); empty, "Watch a token".
+5. **The doors stand on the left edge** in one row (`homeAccountLine`), words and chevrons as §1850 drew them.
+6. **More air between the feed's sections** on the phone's Home (`feedSectionAir`, one `DS.Space.s4` over the section gap).
+7. **All of it on the page's black**: no card, no sheet for the feed, no line.
+
+**Declined on the way, each drawn first.** The head on a card or a darker plate. The feed on a rounded surface, with and without a grabber (a grabber that drags nothing is §83's dead control; a sheet that peeks hides the feed). A thin pink line over the feed (user: "it looks too ai generated"; and nothing draws a line). The doors as pills (they are places, §746). One-colour marks in the circles. Holdings and the watchlist both in the Wallet's section.
+
+**Lost, said plainly.** Home shows no picture of how your money splits; it is one tap away. The row names three holdings and no more. A band tile opened its own token; the row opens Holdings. The day's pill no longer says "today".
+
+**Mac half (§1402).** All seven are the phone's Home (`PhoneHome.isOn`, `quietActivity`). The Mac's and the iPad's Home keep their cards and the map.
+
+**Checks.** None new.
+
+## §1852 — Move's menu is five verbs that rise over the page above its button; Buy and Swap pick their kind on their own page (replaces §1781's whole menu and §1805's size on the phone; amends §1599, §1547) (user, 2026-11-17: "it's a lot of verbs"; "buy and spend are sort of the same thing … swap and sweep are same. lend could be called earn"; "have them on the right and above the fab"; "ok build and ship it")
+
+Seven verbs at one size, four of them starting with S, asked for a read of the whole list on every visit, at the top of a sheet the thumb had to travel to.
+
+1. **Five verbs** (`MoveMenu.Verb`, `offeredVerbs`): Buy, Earn, Receive, Send, Swap, A–Z (§1547's order stands).
+2. **Buy holds gift cards**: Spend left the menu. Buy's page says "Gift cards · Tokens" under its name (`verbKindRow`) and opens on Tokens; the page is named Buy for both. Gift cards are offered only where they were (`buyAvailable`).
+3. **Swap holds Sweep**: Swap's page says "Swap · Sweep" and opens on Swap.
+4. **Lend reads Earn** on the menu (`title(.lend)`). Its sentence keeps its own words ("Lend", "Take back").
+5. **On the phone the menu rises over the page** (`MoveMenuVerbs`, `MoveMenuDim`, `ShellChrome.moveMenu`): the Move button dims the page and stands the five verbs in a right-aligned stack over itself at `heading44`; the button wears a close mark and puts them away, as a tap on the page does. No sheet. A verb picked raises Move's sheet on that verb (`ShellChrome.moveAsk`).
+6. **Back returns to the menu** (`backToMenu`): the sheet leaves and the verbs stand over the page again. Pulling the sheet down lands on the page.
+7. **Before an account of yours exists** the button raises the walk that makes one, as it did (`MoveMenu.rises`).
+
+**Declined on the way, each drawn first.** Four verbs with Lend, Spend and Sweep moved off Move. The pairs on one row, as tiles, and as tiles holding two buttons. Send and Receive under one "Transfer" (the two everyone uses, and opposites). The verbs at the foot of a full sheet.
+
+**Lost, said plainly.** Gift cards and Sweep are one tap further. The menu is no longer whole. On the phone the kept sentence no longer stands over the menu (§1779); it is kept, and its verb's page returns to it.
+
+**Mac half (§1402).** Items 1 to 4 reach the Mac's and the iPad's Move unchanged: the tray's own first page lists the five. Items 5 to 7 are the phone's.
+
+**Checks.** None new.
