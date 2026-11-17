@@ -891,6 +891,18 @@ extension FeedScreen {
             // permissions stuff then the threat stuff"). An app or
             // Following picked keeps Permissions as its own door.
             if selectedSeat == nil, !walletOnFollowing { walletPermissionRows(standsEmpty: false) }
+            // **YOU CAN PUT THEM AWAY, AND IT SAYS SO (prd §1849, user: "i
+            // want a user to be able to know they can dismiss the risks").**
+            // Holding a row was the only way; one row marks every finding
+            // as seen while any is not.
+            let unseenThreats = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }
+            if !unseenThreats.isEmpty {
+                DSDoorRow(icon: "eye", title: Text("Mark all as seen")) {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { ThreatsSeen.shared.markAll(unseenThreats.map(\.id)) }
+                }
+                .walletListRow()
+            }
             walletFlaggedSection(.poisoning, anchor: .poisoning,
                                  word: String(localized: "Address poisoning"))
             walletFlaggedSection(.spoofedSymbol, anchor: .fakeTokens,

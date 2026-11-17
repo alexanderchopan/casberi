@@ -73624,3 +73624,24 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: the head and its panel rule are the phone's (`PhoneHome.isOn`).
 
 **Checks.** None new.
+
+## §1849 — Home's acts are four round buttons, the day stands on a pill, the watchlist is the card's, the Wallet's rows open its history, and Risks says you can put its findings away (amends §1843 items 4, 5 and 6, §1845 items 1 and 3, §1846 items 1 and 5, §1847 items 1 and 4, §1848 items 1, 2 and 4, §1831, §1840, §1587, §583) (user, 2026-11-17, over the canvases "Home head, delightful" and "Home head, improved": "its very functional but not yet delightful", of the day's line behind the balance "do you think the sparkline works?", then of the head without it "mock it"; "do we need a chip for wallet if it is always shown?"; "does wallet need a chevron if everything else doesn't have one? tapping a transaction could open history"; of the buttons' states "i like copied and risks when they are there. i want a user to be able to know they can dismiss the risks too", "that would happen on risk page tho"; "great do it then ship")
+
+**Why.** Under the card stood four chips 26pt tall with 12pt words, under the 44pt floor and four across. The head worked and had no warmth. The Wallet's word was the only category word with a chevron, and its jump chip jumped to the section already first on the page. A finding on Risks could be put away only by holding its row, which nothing said.
+
+1. **Four round buttons** (`DSHomeAction`, `FeedScreen.homeAccountLine`): Account (Create account, or Finish setup in the attention hue), Risks, Apps and Copy, a pink glyph on a 50pt grey disc over one word. Move's face stays the one solid button on Home.
+2. **A button changes only to say something.** Risks takes the attention hue and a count on its corner while a finding is unseen. Copy turns to the confirm hue, a check and "Copied" for 1.2s after a press (§867), and raises no toast. Apps never carries a badge.
+3. **The day stands on a pill** (`DSDayPill`): the day's words in the day's ink on a wash of it, amending §583's bare word for this one fact.
+4. **The watchlist is the card's** (`homeMoneyCard`): its line stands at the card's foot, under the band; what is under the card is only acts.
+5. **No line of the day behind the balance** (declined after it was drawn): the history is sampled every few hours, so a day's curve would be invented, and the band already says the day by its tiles.
+6. **The Wallet takes no jump chip** (`homeChipNames`), as Needs you takes none, and the row is drawn for two categories or more.
+7. **The Wallet's word opens nothing and wears no chevron**, as every category's; **any row under it opens the Wallet's history** (`activitySection(rowOpens:)`), amending §1840's "a money app's page is Money narrowed to it" for the rows on Home.
+8. **Risks says "Mark all as seen"** (`ThreatsSeen.markAll`): one row over the findings while any is unseen. Holding a row still marks one; a seen finding stays on the page in grey (§1587), and the count on Home's button clears.
+
+**Lost, said plainly.** The head is about 40pt taller than the chips' row made it. A money app's row on Home no longer opens that app's own moves. The copy button says "Copy", not which address. Four buttons on a set-up account were not seen on the simulator (the demo has no account of yours); three were, with the count on Risks.
+
+**Not built.** The balance counting up and the band's tiles settling as Home opens. The Risks page keeps its sections by kind; it was not regrouped into New and Seen.
+
+**Mac half (§1402).** Item 8 reaches the Mac's and the iPad's Risks page unchanged. Items 1 to 7 are the phone's Home (`PhoneHome.isOn`, `quietActivity`).
+
+**Checks.** None new.

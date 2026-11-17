@@ -77,10 +77,7 @@ extension FeedScreen {
             // Apps is a chip here once its panel has left the page's foot
             // (prd §1848), so it stands even before the account does.
             if !homeBare || !panel {
-                VStack(alignment: .center, spacing: -DS.Space.s2) {
-                    if !homeBare { homeWatchlistLine }
-                    homeAccountLine(apps: !panel, bare: homeBare)
-                }
+                homeAccountLine(apps: !panel, bare: homeBare)
                 // Air between the groups (user: "there is enough room to have
                 // more padding between and make the sections feel separate",
                 // prd §1846): the lines stand a gap under the card.
@@ -140,7 +137,7 @@ extension FeedScreen {
                     if shown.asOf != nil, stamp.hasPrefix("as of") {
                         Text(verbatim: stamp).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
                     } else if let day {
-                        Text(verbatim: day.words).dsText(.body17).foregroundStyle(day.ink).lineLimit(1)
+                        DSDayPill(words: day.words, ink: day.ink)
                     }
                     homeWhoseWord
                 }
@@ -165,6 +162,9 @@ extension FeedScreen {
                 // A scope with nothing read still offers the way back (§1526).
                 HStack { Spacer(minLength: 0); homeWhoseMenu }
             }
+            // **THE WATCHLIST IS THE CARD'S (prd §1849).** Everything about
+            // money stands on the card; what is under it is only acts.
+            if !homeBare { homeWatchlistLine }
         }
         .padding(DS.Space.s3)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -334,62 +334,50 @@ extension FeedScreen {
         .fixedSize()
     }
 
-    /// Account and its address, two chips (prd §1843): the first opens the
-    /// page (or makes the account, or finishes its setup), the second copies
-    /// the public address.
-    ///
-    /// **FOUR CHIPS (prd §1847, §1848):** Account, Risks, Apps, and the
-    /// address's copy. They stand on one line where they fit and run off the
-    /// trailing edge where they do not, as the jumps do.
+    /// **HOME'S ACTS, FOUR ROUND BUTTONS (prd §1849, over §1843's chips,
+    /// §1847 and §1848):** Account (or the verb that makes or finishes it),
+    /// Risks, Apps, and the address's copy, a glyph on a disc over one word
+    /// (`DSHomeAction`). Risks takes the attention hue and a count while a
+    /// finding is unseen; the copy marks its own disc.
     @ViewBuilder
     func homeAccountLine(apps: Bool, bare: Bool) -> some View {
-        ViewThatFits(in: .horizontal) {
-            homeAccountChips(apps: apps, bare: bare)
-            ScrollView(.horizontal, showsIndicators: false) {
-                homeAccountChips(apps: apps, bare: bare)
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    @ViewBuilder
-    private func homeAccountChips(apps: Bool, bare: Bool) -> some View {
         let yours = YourAccountDemo.shownAddress
-        let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
-        HStack(spacing: DS.Space.s2) {
+        let pending = homeSetupPending
+        let risks = homeRisksUnseen
+        HStack(alignment: .top, spacing: 0) {
             if !bare {
-            Button {
-                DSHaptic.selection()
-                if yours == nil {
-                    chrome.moveTray = true
-                } else if pending {
-                    chrome.moveWalk = true
-                    chrome.moveTray = true
-                } else {
-                    chrome.yourAccountShowsAztec = false
-                    homeOpen(.yourAccount)
-                }
-            } label: {
-                Chip(text: yours == nil ? String(localized: "Create account")
-                        : pending ? String(localized: "Finish setup") : WalletSection.yourAccount.label,
-                     glyph: WalletSection.yourAccount.glyph, selected: true,
-                     ink: pending ? DS.attentionInk : nil)
-            }
-            .buttonStyle(PressSpring())
-            // **RISKS IS ALWAYS HERE (prd §1847, user: "if i dismiss all the
-            // 'needs you' items then i can no longer see my privacy score").**
-            // Its ask in Needs you leaves once seen; the door stays. Grey, a
-            // door's ink; the attention ink while a finding is unseen.
-            if !walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 Button {
-                    ActivitySeen.shared.leavingForPage()
-                    homeOpen(.threats)
+                    DSHaptic.selection()
+                    if yours == nil {
+                        chrome.moveTray = true
+                    } else if pending {
+                        chrome.moveWalk = true
+                        chrome.moveTray = true
+                    } else {
+                        chrome.yourAccountShowsAztec = false
+                        homeOpen(.yourAccount)
+                    }
                 } label: {
-                    Chip(text: WalletSection.threats.label, glyph: WalletSection.threats.glyph, selected: true,
-                         ink: homeRisksUnseen > 0 ? DS.attentionInk : nil)
+                    DSHomeAction(name: yours == nil ? String(localized: "Create account")
+                                    : pending ? String(localized: "Finish setup") : WalletSection.yourAccount.label,
+                                 glyph: WalletSection.yourAccount.glyph,
+                                 tone: pending ? .attention : .rest)
                 }
                 .buttonStyle(PressSpring())
-            }
+                // **RISKS IS ALWAYS HERE (prd §1847, user: "if i dismiss all
+                // the 'needs you' items then i can no longer see my privacy
+                // score").** Its ask in Needs you leaves once seen; the door
+                // stays, and says how many are unseen.
+                if !walletAccountSlots.allSatisfy(\.id.isEmpty) {
+                    Button {
+                        ActivitySeen.shared.leavingForPage()
+                        homeOpen(.threats)
+                    } label: {
+                        DSHomeAction(name: WalletSection.threats.label, glyph: WalletSection.threats.glyph,
+                                     tone: risks > 0 ? .attention : .rest, badge: risks > 0 ? risks : nil)
+                    }
+                    .buttonStyle(PressSpring())
+                }
             }
             // **APPS IS A DOOR AT THE HEAD (prd §1848).** Its panel stood at
             // the foot of the feed, a slab you scrolled into.
@@ -399,21 +387,15 @@ extension FeedScreen {
                     ActivitySeen.shared.leavingForPage()
                     route.present(.apps)
                 } label: {
-                    Chip(text: PlaceTab.library.label, glyph: ScopeTileGlyph.apps, selected: true)
+                    DSHomeAction(name: PlaceTab.library.label, glyph: ScopeTileGlyph.apps)
                 }
                 .buttonStyle(PressSpring())
             }
             if !bare, let yours, !pending {
-                Button {
-                    DSPasteboard.copy(yours)
-                    chrome.flash(String(localized: "Address copied"), tone: .success)
-                } label: {
-                    // "Copy address": four chips on one line (prd §1848).
-                    Chip(text: String(localized: "Copy address"), glyph: "doc.on.doc", ink: DS.pickInk)
-                }
-                .buttonStyle(PressSpring())
+                HomeCopyAction(address: yours)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - The jumps
@@ -491,8 +473,11 @@ extension FeedScreen {
     /// the chips. The Wallet and Apps alone are the whole page: nothing to
     /// jump past, so no row.
     static func homeChipNames(_ jumps: [String]) -> [String] {
-        let names = jumps.filter { $0 != WalletSection.needsYou.label }
-        // Two sections of the feed at least (Apps' panel is not one).
+        // The Wallet takes none either (prd §1849, user: "do we need a chip
+        // for wallet if it is always shown?"): it is always the first
+        // section, or right under Needs you.
+        let names = jumps.filter { $0 != WalletSection.needsYou.label && $0 != homeWalletName }
+        // Two categories of the feed at least (Apps' panel is not one).
         return names.filter { $0 != PlaceTab.library.label }.count > 1 ? names : []
     }
 
@@ -502,5 +487,31 @@ extension FeedScreen {
     static func homeLeadAnchor(_ jumps: [String]) -> String? {
         guard !homeChipNames(jumps).isEmpty, let first = jumps.first else { return nil }
         return scrollAnchor(first)
+    }
+}
+
+/// The address's copy, one of Home's round buttons (prd §1849): pressed, its
+/// disc turns to the confirm hue and a check and its word reads "Copied" for
+/// a moment (§867), in place of a toast.
+private struct HomeCopyAction: View {
+    let address: String
+    @State private var copied = false
+
+    var body: some View {
+        Button {
+            DSPasteboard.copy(address)
+            DSHaptic.selection()
+            copied = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                copied = false
+            }
+        } label: {
+            DSHomeAction(name: copied ? String(localized: "Copied") : String(localized: "Copy"),
+                         glyph: copied ? "checkmark" : "doc.on.doc",
+                         tone: copied ? .done : .rest)
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text("Copy address"))
     }
 }

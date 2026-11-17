@@ -19,6 +19,15 @@ final class ThreatsSeen {
 
     func contains(_ id: UUID) -> Bool { ids.contains(id.uuidString) }
 
+    /// Every finding on the page at once (prd §1849): Risks' "Mark all as
+    /// seen".
+    func markAll(_ all: [UUID]) {
+        let fresh = all.map(\.uuidString).filter { !ids.contains($0) }
+        guard !fresh.isEmpty else { return }
+        ids.formUnion(fresh)
+        if let data = try? JSONEncoder().encode(ids) { DefaultsWrite.set(data, forKey: Self.defaultsKey) }
+    }
+
     func mark(_ id: UUID) {
         guard !ids.contains(id.uuidString) else { return }
         ids.insert(id.uuidString)

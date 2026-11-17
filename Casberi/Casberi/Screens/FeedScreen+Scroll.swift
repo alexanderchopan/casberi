@@ -204,7 +204,8 @@ extension FeedScreen {
     @ViewBuilder
     func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
                          open: (() -> Void)?, fades: Bool = true,
-                         keepsWord: Bool = false) -> some View {
+                         keepsWord: Bool = false,
+                         rowOpens: (() -> Void)? = nil) -> some View {
         let _ = { memo.sectionCounts[name] = rows.count }()
         // A category with nothing new leaves Activity; a word that opens a
         // page (the Wallet's, Notes') stays, alone (prd §1831).
@@ -213,7 +214,7 @@ extension FeedScreen {
                 ActivityWord(name: name, open: open)
             } rows: {
                 ForEach(keyed(rows), id: \.id) { item in
-                    if let thing = item.live { activityAppRow(thing, from: name, fades: fades) }
+                    if let thing = item.live { activityAppRow(thing, from: name, fades: fades, opens: rowOpens) }
                 }
             }
             .environment(\.feedSectionPanelFilled, false)
@@ -231,7 +232,8 @@ extension FeedScreen {
     ///
     /// White until seen (prd §1816): the newest thing is seen once its app's
     /// page has been opened over it, or once it was opened anywhere else.
-    func activityAppRow(_ thing: Thing, from section: String, fades: Bool = true) -> some View {
+    func activityAppRow(_ thing: Thing, from section: String, fades: Bool = true,
+                        opens: (() -> Void)? = nil) -> some View {
         let seen = fades && ActivitySeen.shared.has(thing.id)
         let words = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
         return DSPushRow(title: Text(verbatim: Self.activityAppName(thing.source)),
@@ -241,6 +243,9 @@ extension FeedScreen {
                          action: {
                              ActivitySeen.shared.mark(thing.id)
                              ActivitySeen.shared.leavingForPage()
+                             // A section whose rows share one door (the
+                             // Wallet's history, prd §1849).
+                             if let opens { opens(); return }
                              chrome.activityReturn = section
                              chrome.openAppPage(thing.source)
                              // A money app's page is Money narrowed to it, the
@@ -477,12 +482,16 @@ extension FeedScreen {
         // the door to every move.
         activitySection(String(localized: "Wallet"),
                         fresh.isEmpty ? Array(moves.prefix(1)) : fresh,
-                        nextEventID: nextEventID, open: {
+                        // **THE ROW IS THE DOOR (prd §1849, user: "does wallet
+                        // need a chevron if everything else doesn't have one?
+                        // tapping a transaction could open history").** The
+                        // word opens nothing, as every category's; any row
+                        // under it opens the Wallet's history.
+                        nextEventID: nextEventID, open: nil, keepsWord: true, rowOpens: {
             DSHaptic.selection()
-            ActivitySeen.shared.leavingForPage()
             // Under Activity, and back to it (prd §1827, §1840).
             chrome.openWalletActivity(fromActivity: String(localized: "Wallet"))
-        }, keepsWord: true)
+        })
         }
     }
 
