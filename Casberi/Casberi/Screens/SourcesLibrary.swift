@@ -218,12 +218,30 @@ struct SourcesQuickRow: View {
 /// second door: the Apps tab is the way to every other app. The box keeps
 /// the lead's one size (the top-card rule).
 struct FeedStartBox: View {
+    /// The lead's one size (the Mac's and iPad's box); on the phone's
+    /// Activity it stands under the Wallet at its own height (prd §1839).
+    var fitsLead = true
     let open: (String) -> Void
 
     var body: some View {
+        if fitsLead {
+            words
+                // Under the title's own edge (seen on the simulator: at the box's
+                // usual inset the sentence stood left of "Feed").
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s2)
+                .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
+                       maxHeight: DSRoomChassis.leadHeight, alignment: .topLeading)
+        } else {
+            words.frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var words: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
-            Text("Connect apps and their content shows up here.")
-                .dsText(.heading28).foregroundStyle(DS.textPrimary)
+            // The sentence the panel's design settled (prd §1839).
+            Text("Add your apps and what's new in them shows up here.")
+                .dsText(fitsLead ? .heading28 : .heading24).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             SourcesQuickRow(title: String(localized: "Start with any of these"),
                             apps: LibraryRecents.starts.filter { name in
@@ -232,12 +250,6 @@ struct FeedStartBox: View {
                             adds: true, named: true,
                             needs: { _ in false }, settings: { _ in nil }, open: open)
         }
-        // Under the title's own edge (seen on the simulator: at the box's
-        // usual inset the sentence stood left of "Feed").
-        .padding(.horizontal, DS.Space.s3)
-        .padding(.vertical, DS.Space.s2)
-        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
-               maxHeight: DSRoomChassis.leadHeight, alignment: .topLeading)
     }
 }
 

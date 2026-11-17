@@ -812,6 +812,9 @@ struct FeedScreen: View {
     /// other apps fill it no money row is left, so Wallet and Needs you both
     /// drew nothing. Raw model refs, so every reader takes `.live` first.
     @State var walletFeedRows: [Thing] = []
+    /// The Apps folder sprung open from Activity's panel (prd §1839),
+    /// drawn over the whole page, never inside the list row.
+    @State var activityFolder: String?
     /// The Wallet's Markets tile (prd §1337): Markets' own rows, read in the
     /// tile's `.task` (`loadWalletMarkets`), never in a body (§628). Raw
     /// model refs, so every reader takes `.live` first.
@@ -1019,6 +1022,11 @@ struct FeedScreen: View {
         // because it accumulates unconditionally and has no gate of its own.
         let _ = SwipeClock.mark("body", detail: "src=\(source)")
         return perfAccum("feedList[\(source)]") { feedList }
+            // Apps' folder over Activity (prd §1839): the panel's own
+            // spring, at the page's size.
+            .overlay {
+                if quietActivity { SettingsHome(mode: .folder, sharedFolder: $activityFolder) }
+            }
             // Re-tapping the active chip pops this surface's own pushed
             // screens and sheets back to root (the old per-tab pop habit).
             .onChange(of: chrome.popHome) {

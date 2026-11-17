@@ -1661,7 +1661,8 @@
   },
   {
    "covers": [
-    "Screens/SettingsHome.swift:trackPick"
+    "Screens/SettingsHome.swift:trackPick",
+    "Screens/SettingsHome.swift:trackPick@2"
    ],
    "why": "NOT WALKED since Library's box was deleted (2026-10-30): the Track tray rises when a folder's app that needs only a name is not yet yours, or a door names one (route.openOffer); the walk that reached it went through the box's Follow something. Needs a demo app that is not added"
   },
@@ -1717,7 +1718,8 @@
   },
   {
    "covers": [
-    "Screens/SettingsHome.swift:aztecLink"
+    "Screens/SettingsHome.swift:aztecLink",
+    "Screens/SettingsHome.swift:aztecLink@2"
    ],
    "why": "a connected Aztec app's tile in Library's Wallet folder (prd §1757; the directory tile is deleted, §1821): it stands only with Your account on an iPhone and never in the demo (§1700s) (`AztecApps.tilesShown`), so the sweep's demo launch never draws it; the sheet is the same `AztecBrowserView` a saved Aztec link raises"
   },

@@ -203,6 +203,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A fresh install pours the furnished demo at once, under a cover with no controls. Any tap or drag lifts it (§620). The demo is marked once: a floating blue pill on every screen, All included (§946, §919).
 - Every demo picture is its own drawn asset (§890). The demo is one person's life in Berlin, and their app is Quillmark, never Casberi (§1026).
 - The cover says "An inbox and a wallet for all your accounts. Kept private." and begins no demo; it lifts into your own empty Feed, one sentence and six apps (Calendar, Files, Photos, Spotify, Telegram, X); the demo is `-demoEnter` only (§1741). The demo's Exit lands on the catalogue (§863).
+- On the phone Activity is two halves: its sections on the page, Apps (heading, search, folders) on a panel under them; the Wallet leads from the first run over your account's row, the start's six apps stand under it until something is added, Notes is its folder's, and a followed wallet's row reads "Your account" or "Accounts", never "Wallet" (§1839).
 - Every surface the app can draw over a populated corpus also draws over the demo (§617).
 
 ### 16. Agents and the composer
@@ -254,7 +255,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2016 of 2090 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2017 of 2091 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2269,6 +2270,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812; the same ruling as §1828,…
 - §1833 — Nodes: no switch, "Public" in place of "Casberi's list", and a field that says what to paste (amends §1517, §1803)
 - §1834 — Every swipe back names where it goes, and a swipe with nowhere to go moves nothing (amends §1814, §1208l, the pager's…
+- §1839 — Activity is two halves on the phone: what came in on the page, Apps on a panel under it; the Wallet leads from the fi…
 - §1840 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
 - §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
 - §1842 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (numbered §182…

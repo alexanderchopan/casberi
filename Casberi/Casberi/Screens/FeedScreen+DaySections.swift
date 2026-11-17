@@ -291,7 +291,9 @@ extension FeedScreen {
         // first run keeps its start box, and a pane or a room keeps its lead.
         // The start box only while there is nothing to list (prd §1809).
         let starts = feedStarts && !visible.contains(where: \.isLive)
-        let drawsLead = !(scroll && source == "All") || starts
+        // On the phone the start stands under the Wallet, not as the box
+        // (prd §1839).
+        let drawsLead = !(scroll && source == "All") || (starts && !quietActivity)
         if drawsLead { homeLead(homeCover, heroShown: heroShown) }
         // THE PANE'S FEED BOX CARRIES THE DAY (prd §1403): under today's
         // cover, the week, the next thing, Needs you and the days ahead —
@@ -414,13 +416,18 @@ extension FeedScreen {
         // in its own frame, stacked, in place of today's category runs.
         if scroll {
             // Needs you, then Money, then each category (prd §1807).
-            if source == "All", !starts {
-                activityNeedsSection(visible)
-                activityMoneySection(visible, nextEventID: nextEventID)
+            // **THE WALLET LEADS FROM THE FIRST RUN (prd §1839):** on the
+            // phone a new person's Activity is the Wallet, then the six apps
+            // to start with, then Apps on its panel.
+            if source == "All" {
+                if !starts { activityNeedsSection(visible) }
+                if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
+                if starts, quietActivity { activityStartSection }
             }
             feedScrollSections(visible,
                                hiding: drawsLead ? Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []) : [],
                                nextEventID: nextEventID)
+            if quietActivity { activityAppsPanel }
             jumpRoom
         }
         }
@@ -486,6 +493,58 @@ extension FeedScreen {
             .task { await FirstRun.shared.refresh(modelContext) }
         }
     }
+
+    /// **THE START, UNDER THE WALLET (prd §1839).** The sentence and the six
+    /// apps the first run's box held, standing under the Wallet's section on
+    /// the phone's Activity, at their own height.
+    var activityStartSection: some View {
+        Section {
+            FeedStartBox(fitsLead: false) { name in
+                DSHaptic.selection()
+                route.openSetup(forOffer: name)
+            }
+            .listRowInsets(.init(top: DS.Space.s6, leading: DSRoomChassis.rowInset,
+                                 bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+        // What a body cannot read (the phone's calendars, the people).
+        .task { await FirstRun.shared.refresh(modelContext) }
+    }
+
+    /// **APPS, ON ITS OWN PANEL UNDER ACTIVITY (prd §1839, user: "i think
+    /// a new user would expect to see the wallet activity already at the
+    /// top, soo somehow we need to bifurcate the screen", "the Apps section
+    /// should always show the folder").** What came in stands on the page;
+    /// what you could add stands on a panel rising from under it, Apps'
+    /// own heading, search and folders (`SettingsHome`'s `.panel`), which
+    /// carries on to the foot of the page (`jumpRoom`).
+    @ViewBuilder
+    var activityAppsPanel: some View {
+        Section {
+            Color.clear.frame(height: DS.Space.s6)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .accessibilityHidden(true)
+            SettingsHome(mode: .panel, sharedFolder: $activityFolder)
+                .listRowInsets(.init(top: DS.Space.s6, leading: DSRoomChassis.rowInset,
+                                     bottom: DS.Space.s6, trailing: DSRoomChassis.rowInset))
+                .listRowBackground(UnevenRoundedRectangle(topLeadingRadius: Self.panelRadius,
+                                                          topTrailingRadius: Self.panelRadius,
+                                                          style: .continuous)
+                    .fill(DS.fillQuiet))
+                .listRowSeparator(.hidden)
+        }
+        // Searching lifts the panel under the title (`feedJump`), so the
+        // results stand above the keyboard, not behind it.
+        .id(Self.sectionID(Self.appsPanelName))
+    }
+
+    /// The panel's top corners.
+    static let panelRadius: CGFloat = 30
+    /// The panel's name for a jump: its search asks for it.
+    static let appsPanelName = "Apps panel"
 
     /// Nothing added yet (`FirstRun`).
     var feedStarts: Bool {

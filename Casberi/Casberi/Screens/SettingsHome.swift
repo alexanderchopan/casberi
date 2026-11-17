@@ -42,8 +42,17 @@ struct SettingsHome: View {
     /// Aztec's directory, raised from the Wallet folder (prd §1700m).
     /// Aztec's directory, or one app you have connected (prd §1757), in Casberi's browser.
     @State private var aztecLink: AztecAppLink?
+    /// **APPS STANDS UNDER ACTIVITY TOO (prd §1839).** The same view in
+    /// three shapes: its own page (`.page`); Activity's panel, its heading,
+    /// field and folders with no title (`.panel`); and the folder that panel
+    /// springs, drawn over Activity's whole page (`.folder`), since a list
+    /// row cannot hold it. The panel and the folder share one binding.
+    enum Mode { case page, panel, folder }
+    var mode: Mode = .page
+    var sharedFolder: Binding<String?>? = nil
     /// The folder sprung open over the page (prd §1316).
     @State private var openFolder: String?
+    private var folder: Binding<String?> { sharedFolder ?? $openFolder }
     /// The apps last opened from Library, for its Recent row (prd §1733);
     /// read when the page appears, never in a body (§628).
     @State private var recents: [String] = []
@@ -52,6 +61,89 @@ struct SettingsHome: View {
     @State private var landCategory: String?
 
     var body: some View {
+        switch mode {
+        case .page:   pageBody
+        case .panel:  panelBody
+        case .folder: risesOnActivity(folderOverlay)
+        }
+    }
+
+    /// Activity's panel (prd §1839): Apps' heading, its one search and its
+    /// folders, as the page draws them. The start row is Activity's own
+    /// above the panel, so it is not drawn twice; Recent stays.
+    private var panelBody: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            Text("Apps")
+                .dsText(.heading24).foregroundStyle(DS.headInk)
+                .accessibilityAddTraits(.isHeader)
+            LibrarySearch(active: $searching)
+            if !searching {
+                SourcesLibrary(folders: libraryFolders, has: isYours, needs: needsYou,
+                               recents: recents.filter(isYours), starts: [],
+                               open: { category in
+                                   withAnimation(DS.Motion.folder) { folder.wrappedValue = category }
+                               },
+                               openApp: { openFromFolder($0) },
+                               settings: { name in yours(name).map { app in { openPage(app) } } })
+                    .padding(.top, DS.Space.s2)
+            }
+        }
+        .onAppear { recents = LibraryRecents.load() }
+        // Searching lifts the panel to the top of Activity (prd §1839), so
+        // what it finds stands above the keyboard.
+        .onChange(of: searching) { _, on in
+            if on { chrome.feedJump = FeedScreen.appsPanelName }
+        }
+        .modifier(RisesOnActivity(aztecLink: $aztecLink, trackPick: $trackPick,
+                                  tray: { AnyView(trackTray($0)) }))
+    }
+
+    /// What an app opened from Activity's panel or its folder raises: a
+    /// connected Aztec app in Casberi's browser (prd §1757) and an app's
+    /// Track tray (prd §1119). Inside Activity's list they only rise; a
+    /// `navigationDestination` belongs to no lazy container.
+    private func risesOnActivity<V: View>(_ content: V) -> some View {
+        content.modifier(RisesOnActivity(aztecLink: $aztecLink, trackPick: $trackPick,
+                                  tray: { AnyView(trackTray($0)) }))
+    }
+
+    private struct RisesOnActivity: ViewModifier {
+        @Binding var aztecLink: AztecAppLink?
+        @Binding var trackPick: TrackPick?
+        let tray: (TrackPick) -> AnyView
+        func body(content: Content) -> some View {
+            content
+                .sheet(item: $aztecLink) { link in
+                    AztecBrowserView(url: link.url, ethereum: true, sends: true)
+                        .presentationDragIndicator(.visible)
+                }
+                .sheet(item: $trackPick) { tray($0) }
+        }
+    }
+
+    /// The open folder, over the page (prd §1316): the page's own overlay,
+    /// and Activity's.
+    @ViewBuilder
+    private var folderOverlay: some View {
+        if let category = folder.wrappedValue,
+           let open = libraryFolders.first(where: { $0.category == category }) {
+            SourcesOpenFolder(folder: open, has: isYours, needs: needsYou,
+                              open: { openFromFolder($0) },
+                              settings: { name in yours(name).map { app in { openPage(app) } } },
+                              close: { withAnimation(DS.Motion.folder) { folder.wrappedValue = nil } },
+                              // The Notes folder leads with the Notes
+                              // page, pushed beside Library (prd §1347).
+                              notesPage: category == BridgeCatalog.notesCategory
+                                  ? { route.push(.notes) } : nil,
+                              // The Aztec apps you have connected; no
+                              // directory (prd §1757, §1821).
+                              aztecApp: category == CategoryFold.walletCategory && AztecApps.tilesShown
+                                  ? { app in aztecLink = URL(string: app.door).map(AztecAppLink.init(url:)) } : nil)
+                .transition(folderSpring)
+        }
+    }
+
+    private var pageBody: some View {
         // THE ROOM'S FRAME (prd §1136f): title, box and tiles as the same
         // three list rows every room draws, so they stand where Home's,
         // Notes' and Markets' do on every screen, by construction.
@@ -100,7 +192,7 @@ struct SettingsHome: View {
                                                BridgeCatalog.offers.contains { $0.name == name }
                                            },
                                        open: { category in
-                                           withAnimation(DS.Motion.folder) { openFolder = category }
+                                           withAnimation(DS.Motion.folder) { folder.wrappedValue = category }
                                        },
                                        openApp: { openFromFolder($0) },
                                        settings: { name in yours(name).map { app in { openPage(app) } } })
@@ -129,29 +221,12 @@ struct SettingsHome: View {
             Task { @MainActor in
                 // After the sheet has risen, so the spring is seen.
                 try? await Task.sleep(for: .milliseconds(550))
-                withAnimation(DS.Motion.folder) { openFolder = category }
+                withAnimation(DS.Motion.folder) { folder.wrappedValue = category }
                 landCategory = nil
             }
         }
         // A folder springs open over the page (prd §1316).
-        .overlay {
-            if let category = openFolder,
-               let folder = libraryFolders.first(where: { $0.category == category }) {
-                SourcesOpenFolder(folder: folder, has: isYours, needs: needsYou,
-                                  open: { openFromFolder($0) },
-                                  settings: { name in yours(name).map { app in { openPage(app) } } },
-                                  close: { withAnimation(DS.Motion.folder) { openFolder = nil } },
-                                  // The Notes folder leads with the Notes
-                                  // page, pushed beside Library (prd §1347).
-                                  notesPage: category == BridgeCatalog.notesCategory
-                                      ? { route.push(.notes) } : nil,
-                                  // The Aztec apps you have connected; no
-                                  // directory (prd §1757, §1821).
-                                  aztecApp: category == CategoryFold.walletCategory && AztecApps.tilesShown
-                                      ? { app in aztecLink = URL(string: app.door).map(AztecAppLink.init(url:)) } : nil)
-                    .transition(folderSpring)
-            }
-        }
+        .overlay { folderOverlay }
         }
         .dsAdaptiveContentWidth(.reading)
         .dsPageBackground()

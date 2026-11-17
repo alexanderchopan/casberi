@@ -132,7 +132,12 @@ extension FeedScreen {
         // row per app on the whole of Activity. Its next-newest thing under
         // its category read as the same row twice (an alarm, then the alarm).
         let needs = quietActivity ? Set(activityNeedThings(visible).map(\.source)) : []
-        ForEach(scrollCategories.map(Self.sectionID), id: \.self) { id in
+        // **NOTES LIVES IN ITS FOLDER (prd §1839, user: "Notes shouldn't be
+        // there. that's just weird", "notes live in the folder").** On the
+        // phone's Activity your notes are the Notes folder's first cell, on
+        // Apps' panel; the word that stood here alone is gone.
+        let categories = quietActivity ? scrollCategories.filter { $0 != HomeScope.notesSection } : scrollCategories
+        ForEach(categories.map(Self.sectionID), id: \.self) { id in
             let category = String(id.dropFirst(Self.sectionPrefix.count))
             // Live again inside the closure: `List` may run it after a heal
             // deleted a row the body's own filter saw alive.
@@ -229,7 +234,7 @@ extension FeedScreen {
     func activityAppRow(_ thing: Thing, from section: String, fades: Bool = true) -> some View {
         let seen = fades && ActivitySeen.shared.has(thing.id)
         let words = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return DSPushRow(title: Text(verbatim: BridgeCatalog.seatName(forSource: thing.source)),
+        return DSPushRow(title: Text(verbatim: Self.activityAppName(thing.source)),
                          subtitle: words.isEmpty ? nil : Text(verbatim: words),
                          subtitleTone: DS.textSecondary,
                          tint: seen ? DS.textSecondary : DS.textPrimary,
@@ -259,6 +264,18 @@ extension FeedScreen {
         .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .listRowSeparator(.hidden)
+    }
+
+    /// **NEVER "WALLET" UNDER "WALLET" (prd §1839, user: "we can't have it
+    /// say 'wallet wallet' twice").** The wallets you follow land under the
+    /// seat named Wallet, the word over them; the row says whose they are:
+    /// "Your account" when the only one is yours, "Accounts" when you follow
+    /// others too. Every other app keeps its seat's name.
+    @MainActor static func activityAppName(_ source: String) -> String {
+        let name = BridgeCatalog.seatName(forSource: source)
+        guard name == CategoryFold.walletRoom else { return name }
+        let onlyYours = WalletStore.shared.addresses.allSatisfy { YourAccountDemo.isYours($0.address) }
+        return onlyYours ? String(localized: "Your account") : String(localized: "Accounts")
     }
 
     /// Each app's newest thing, the newest app first (prd §1807).
@@ -311,7 +328,8 @@ extension FeedScreen {
     /// Wallet, each a row onto its page. Nothing waiting, no section.
     @ViewBuilder
     func activityNeedsSection(_ visible: [Thing]) -> some View {
-        let asks = walletUpcoming(activityMoneyRows(visible))
+        let money = activityMoneyRows(visible)
+        let asks = walletUpcoming(money)
         let needs = walletNeedsCount(upcoming: asks)
         // **THE ROW NAMES WHAT WAITS (prd §1809).** It read "Money · 13"
         // directly over the Money section, two Moneys in a row; it is the
@@ -319,7 +337,11 @@ extension FeedScreen {
         let first = asks.first(where: \.isLive)?.title
         let yours = YourAccountDemo.shownAddress
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
-        let wants = pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
+        // Before anything has moved the Wallet's own row says it (prd
+        // §1839): one row for your account on the whole of Activity.
+        let walletCarries = quietActivity && money.isEmpty
+        let wants = walletCarries ? nil
+            : pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
         // What waits on you in your apps (prd §1813): the lists a category's
         // page led with, Coming up's asks and what is to you, now here.
         let waiting = quietActivity ? activityNeedThings(visible) : []
@@ -416,6 +438,13 @@ extension FeedScreen {
         // you"): a stuck transfer or a dated ask leaves this list.
         let asks = Set(walletUpcoming(money).map(\.id))
         let moves = Self.newestPerApp(Self.walletMoves(money).filter { !asks.contains($0.id) })
+        // **NOTHING HAS MOVED YET: YOUR ACCOUNT STANDS (prd §1839, user:
+        // "wallet activity should be there as a place holder too").** A
+        // Wallet with no move at all draws its word over your account's row,
+        // never the word alone.
+        if quietActivity, money.isEmpty {
+            activityWalletStart
+        } else {
         // **THE WORD IS THE CATEGORY'S OWN (prd §1812, user: "'money'
         // shouldn't be the category title it should be wallet like it is in
         // the app library").** Every other word on Activity is its Apps
@@ -430,6 +459,57 @@ extension FeedScreen {
             // Under Activity, and back to it (prd §1827, §1840).
             chrome.openWalletActivity(fromActivity: String(localized: "Wallet"))
         }, keepsWord: true)
+        }
+    }
+
+    /// The Wallet before anything has moved (prd §1839): its word, then your
+    /// account's row. The row says what it needs next, "Finish setup" in the
+    /// attention ink until the walk is taken (and Needs you leaves that ask
+    /// to it), else "No moves yet"; with no account of yours, the verb that
+    /// makes one, as Home's door says it.
+    @ViewBuilder
+    private var activityWalletStart: some View {
+        let yours = YourAccountDemo.shownAddress
+        let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
+        // What your account still wants, as Needs you would say it.
+        let wants = pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
+        let word = String(localized: "Wallet")
+        SectionPanelGroup(anchor: Self.scrollAnchor(word)) {
+            ActivityWord(name: word, open: {
+                DSHaptic.selection()
+                ActivitySeen.shared.leavingForPage()
+                // Under Activity, and back to it (prd §1827, §1840).
+                chrome.openWalletActivity(fromActivity: word)
+            })
+        } rows: {
+            DSPushRow(title: Text(yours == nil ? "Create an account" : "Your account"),
+                      subtitle: yours == nil ? nil : wants.map { Text(verbatim: $0) } ?? Text("No moves yet"),
+                      subtitleTone: wants != nil ? DS.attentionInk : DS.textSecondary,
+                      action: {
+                          if yours == nil || pending {
+                              chrome.moveWalk = pending
+                              chrome.moveTray = true
+                          } else {
+                              chrome.openWalletPage(.yourAccount, fromActivity: word)
+                          }
+                      }) {
+                Image(systemName: WalletSection.yourAccount.glyph)
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    .accessibilityHidden(true)
+            }
+            .feedRowBackground()
+            .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                 bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+            .listRowSeparator(.hidden)
+            // Your account is made on the first run's Activity, as on the
+            // Wallet's first open (prd §1741, §1839); in a task, never a
+            // body (a Keychain read, prd §628).
+            .task { YourAccountFirstOpen.makeIfFresh() }
+        }
+        .environment(\.feedSectionPanelFilled, false)
+        .environment(\.dsTitleOnly, true)
     }
 
     /// One category, on one panel (prd §1208d, user: "i think G is
@@ -742,7 +822,8 @@ extension FeedScreen {
             Color.clear
                 .frame(height: Self.jumpRoomHeight)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                // Apps' panel carries on to the foot of Activity (prd §1839).
+                .listRowBackground(quietActivity ? DS.fillQuiet : Color.clear)
                 .listRowSeparator(.hidden)
                 .accessibilityHidden(true)
         }
