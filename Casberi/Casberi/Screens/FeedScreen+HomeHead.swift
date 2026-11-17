@@ -48,7 +48,7 @@ extension FeedScreen {
 
     /// The head's rows, first on the page.
     @ViewBuilder
-    func homeHeadSection(_ visible: [Thing], jumps: [String]) -> some View {
+    func homeHeadSection(_ visible: [Thing], jumps: [String], panel: Bool) -> some View {
         Section {
             homeMoneyCard
                 // The card's words stand in the rows' column (§763): its
@@ -74,10 +74,12 @@ extension FeedScreen {
             // **THE FIRST RUN SAYS IT ONCE (prd §1847).** Until your account
             // is set up the card is the Wallet's whole start: no watchlist
             // line and no chips under it.
-            if !homeBare {
+            // Apps is a chip here once its panel has left the page's foot
+            // (prd §1848), so it stands even before the account does.
+            if !homeBare || !panel {
                 VStack(alignment: .center, spacing: -DS.Space.s2) {
-                    homeWatchlistLine
-                    homeAccountLine
+                    if !homeBare { homeWatchlistLine }
+                    homeAccountLine(apps: !panel, bare: homeBare)
                 }
                 // Air between the groups (user: "there is enough room to have
                 // more padding between and make the sections feel separate",
@@ -335,11 +337,27 @@ extension FeedScreen {
     /// Account and its address, two chips (prd §1843): the first opens the
     /// page (or makes the account, or finishes its setup), the second copies
     /// the public address.
+    ///
+    /// **FOUR CHIPS (prd §1847, §1848):** Account, Risks, Apps, and the
+    /// address's copy. They stand on one line where they fit and run off the
+    /// trailing edge where they do not, as the jumps do.
     @ViewBuilder
-    var homeAccountLine: some View {
+    func homeAccountLine(apps: Bool, bare: Bool) -> some View {
+        ViewThatFits(in: .horizontal) {
+            homeAccountChips(apps: apps, bare: bare)
+            ScrollView(.horizontal, showsIndicators: false) {
+                homeAccountChips(apps: apps, bare: bare)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func homeAccountChips(apps: Bool, bare: Bool) -> some View {
         let yours = YourAccountDemo.shownAddress
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         HStack(spacing: DS.Space.s2) {
+            if !bare {
             Button {
                 DSHaptic.selection()
                 if yours == nil {
@@ -372,17 +390,30 @@ extension FeedScreen {
                 }
                 .buttonStyle(PressSpring())
             }
-            if let yours, !pending {
+            }
+            // **APPS IS A DOOR AT THE HEAD (prd §1848).** Its panel stood at
+            // the foot of the feed, a slab you scrolled into.
+            if apps {
+                Button {
+                    DSHaptic.selection()
+                    ActivitySeen.shared.leavingForPage()
+                    route.present(.apps)
+                } label: {
+                    Chip(text: PlaceTab.library.label, glyph: ScopeTileGlyph.apps, selected: true)
+                }
+                .buttonStyle(PressSpring())
+            }
+            if !bare, let yours, !pending {
                 Button {
                     DSPasteboard.copy(yours)
                     chrome.flash(String(localized: "Address copied"), tone: .success)
                 } label: {
-                    Chip(text: String(localized: "Copy public address"), glyph: "doc.on.doc", ink: DS.pickInk)
+                    // "Copy address": four chips on one line (prd §1848).
+                    Chip(text: String(localized: "Copy address"), glyph: "doc.on.doc", ink: DS.pickInk)
                 }
                 .buttonStyle(PressSpring())
             }
         }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - The jumps
@@ -390,7 +421,7 @@ extension FeedScreen {
     /// The sections standing on the page this visit, in their order: Needs
     /// you when anything waits, the Wallet, each category with something
     /// new, then Apps. One read of what the sections themselves draw.
-    func homeJumpNames(_ visible: [Thing]) -> [String] {
+    func homeJumpNames(_ visible: [Thing], panel: Bool) -> [String] {
         var names: [String] = []
         let money = activityMoneyRows(visible)
         let needs = activityNeedThings(visible)
@@ -413,7 +444,8 @@ extension FeedScreen {
                     .contains { !ActivitySeen.shared.isHidden($0.id) }
             if drawn { names.append(category) }
         }
-        names.append(PlaceTab.library.label)
+        // Apps is a jump only while its panel is on the page (prd §1848).
+        if panel { names.append(PlaceTab.library.label) }
         return names
     }
 
@@ -460,7 +492,8 @@ extension FeedScreen {
     /// jump past, so no row.
     static func homeChipNames(_ jumps: [String]) -> [String] {
         let names = jumps.filter { $0 != WalletSection.needsYou.label }
-        return names.count > 2 ? names : []
+        // Two sections of the feed at least (Apps' panel is not one).
+        return names.filter { $0 != PlaceTab.library.label }.count > 1 ? names : []
     }
 
     /// The section standing right under the chips, which takes no chapter

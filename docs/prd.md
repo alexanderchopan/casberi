@@ -73608,3 +73608,19 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** Item 7 and the statement's words (item 5) reach the Mac and the iPad unchanged. Items 1, 3, 5 and 6 are the phone's Home (`PhoneHome.isOn`); the rail's Home keeps its Risks card. Item 2 is the phone's Activity (`quietActivity`).
 
 **Checks.** `plate-audit.py`: one allowance (item 6). `JourneyTests`: the cover's label begins "Keep it moving".
+
+## §1848 — Apps is a chip at Home's head, and Home ends where the feed ends (amends §1839's "the Apps section should always show the folder", §1843 items 5, 6 and 9, §1847 item 1) (user, 2026-11-17: "should we have apps be a chip with account and address and risks", "its weird to be at the bottom of the screen", "like scrolling your feed and then you hit this slab of the apps", then, offered the chip and the panel off Home once there is a feed: "ok you decide and ship")
+
+**Why.** Apps stood on a panel at the foot of Home's scroll (§1839), so reading down the feed ended in a slab of folders, and reaching Apps meant scrolling to the bottom or finding its jump chip.
+
+1. **Apps is a chip in the head's row** (`FeedScreen.homeAccountLine`): Account, Risks, Apps, then the address's copy. It opens Apps as its page ("Home · Apps": search and every folder), and a swipe right comes back to Home.
+2. **The copy chip reads "Copy address"** (was "Copy public address"), so four chips fit one line; where they do not, the row runs off the trailing edge as the jumps do (`ViewThatFits`).
+3. **The panel leaves Home once there is a feed.** It stands only on a first run (nothing added, nothing landed), where it is the page under "Set up your feed" (§1847); the rail's and iPad's Activity keep it.
+4. **Apps leaves the jump row** unless its panel is on the page, and the row is drawn for two feed sections or more.
+5. **Before your account is set up** the row holds the Apps chip alone once the panel has gone, so Apps is never out of reach.
+
+**Lost, said plainly.** Adding an app from Home is two taps where it was a scroll. §1839's ruling that Apps always shows its folders under Activity is reversed on the phone. Four chips on a set-up account were not seen on the simulator (the demo has no account of yours); three were.
+
+**Mac half (§1402).** None: the head and its panel rule are the phone's (`PhoneHome.isOn`).
+
+**Checks.** None new.

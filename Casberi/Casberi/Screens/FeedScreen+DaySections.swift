@@ -422,8 +422,8 @@ extension FeedScreen {
             if source == "All" {
                 // **THE WALLET IS HOME'S HEAD (prd §1843):** the card, the
                 // watchlist, Account and the jumps, before what is new.
-                let jumps = homeHeadShown ? homeJumpNames(visible) : []
-                if homeHeadShown { homeHeadSection(visible, jumps: jumps) }
+                let jumps = homeHeadShown ? homeJumpNames(visible, panel: starts) : []
+                if homeHeadShown { homeHeadSection(visible, jumps: jumps, panel: starts) }
                 Group {
                     if !starts { activityNeedsSection(visible) }
                     if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
@@ -434,7 +434,11 @@ extension FeedScreen {
             feedScrollSections(visible,
                                hiding: drawsLead ? Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []) : [],
                                nextEventID: nextEventID)
-            if quietActivity { activityAppsPanel }
+            // **HOME ENDS WHERE THE FEED ENDS (prd §1848, user: "like scrolling
+            // your feed and then you hit this slab of the apps").** The panel
+            // stands only on a first run, where it is the page; after that
+            // Apps is a chip at Home's head.
+            if quietActivity, starts || !homeHeadShown { activityAppsPanel }
             jumpRoom
         }
         }
