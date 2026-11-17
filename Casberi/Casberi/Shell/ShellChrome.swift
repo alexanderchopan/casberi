@@ -450,7 +450,7 @@ final class ShellChrome {
         case .pick: break
         case .privateHoldings:
             walletScope = nil
-            walletSection = .holdings
+            landWallet(on: .holdings)
             walletScrollRequest = Self.privateAnchor
             // The head takes the request as it appears; where no Private
             // head is drawn (nothing private, a build that cannot move),
@@ -464,7 +464,7 @@ final class ShellChrome {
             walletScope = nil
             // Your account's page where there is one; else the Wallet's Home,
             // whose Needs you holds a watched Safe's queue.
-            walletSection = YourAccountDemo.shownAddress == nil ? .home : .yourAccount
+            landWallet(on: YourAccountDemo.shownAddress == nil ? .home : .yourAccount)
             return
         }
         let id = RoomAccounts.scopeID(seat)
@@ -540,7 +540,139 @@ final class ShellChrome {
     /// several rooms (§356) and a reading survives moving between them, the
     /// same span `walletScope` keeps. `WalletSection.resolve` handles the case
     /// where the remembered scope's content has since gone.
-    var walletSection: WalletSection?
+    var walletSection: WalletSection? {
+        didSet { traceWalletPage(from: oldValue) }
+    }
+
+    /// **A WALLET PAGE GOES BACK TO WHERE YOU OPENED IT (prd §1826, user:
+    /// "if i am on needs you and i swipe right it takes me to home not to
+    /// activity. for all pages").** `WalletSection.parent` is a fixed map
+    /// drawn for §1480's tiles, and since §1807 the pages open from other
+    /// places: Needs you and Money from Activity, Following from Account.
+    /// So the room keeps the pages you walked through: `walletTrail` holds
+    /// the pages under the one on screen, oldest first, and `walletTrailRoot`
+    /// says where the first came from. The title's grey word and the swipe
+    /// right both read `walletBackStep`; the fixed map answers only for a
+    /// page opened from outside the Wallet (`landWallet`: a search hit,
+    /// Move, a link, a hook).
+    enum WalletRoot: Equatable {
+        case home
+        /// Opened from Activity: back lands there, on the named section.
+        case activity(anchor: String?)
+    }
+
+    /// Where the page on screen goes back to.
+    enum WalletBack: Equatable {
+        case page(WalletSection)
+        case activity
+    }
+
+    private(set) var walletTrail: [WalletSection] = []
+    private(set) var walletTrailRoot: WalletRoot = .home
+    /// The Wallet room is the one on screen, so a section change is a step
+    /// inside it. Published by `MainSurface` on every room change.
+    @ObservationIgnored var walletStanding = false
+    /// Set while a section change is not a visit: a step back, or a page
+    /// opened from outside the Wallet.
+    @ObservationIgnored private var walletTraceOff = false
+
+    private func traceWalletPage(from old: WalletSection?) {
+        guard walletSection != old else { return }
+        let home = walletSection == nil || walletSection == .home
+        guard home || !walletTraceOff else { return }
+        guard let new = walletSection, !home, walletStanding, let old else {
+            // Home, or a page opened with the Wallet off screen: a new trail.
+            resetWalletTrail()
+            return
+        }
+        // A door to a page already under this one is the way back to it.
+        if let i = walletTrail.lastIndex(of: new) {
+            walletTrail.removeSubrange(i...)
+        } else {
+            walletTrail.append(old)
+        }
+    }
+
+    private func resetWalletTrail() {
+        if !walletTrail.isEmpty { walletTrail = [] }
+        if walletTrailRoot != .home { walletTrailRoot = .home }
+    }
+
+    /// Open a Wallet page from a door outside the Wallet's own (a search
+    /// hit, Move, a link, a hook): a new trail, whatever room is on screen.
+    func landWallet(on section: WalletSection) {
+        walletTraceOff = true
+        walletSection = section
+        walletTraceOff = false
+        resetWalletTrail()
+    }
+
+    /// Open a Wallet page from Activity: it goes back to Activity, on the
+    /// section `anchor` names.
+    private func landWallet(on section: WalletSection, fromActivity anchor: String?) {
+        landWallet(on: section)
+        walletTrailRoot = .activity(anchor: anchor)
+    }
+
+    /// Where `section` goes back to, `walletSection` being on screen.
+    func walletBackStep(_ section: WalletSection) -> WalletBack {
+        if let under = walletTrail.last { return .page(under) }
+        if case .activity = walletTrailRoot { return .activity }
+        return .page(section.parent ?? .home)
+    }
+
+    /// The word for where the page on screen goes back to: "Home",
+    /// "Activity" or the page's own name.
+    func walletBackWord(_ section: WalletSection) -> String {
+        switch walletBackStep(section) {
+        case .activity: return PlaceTab.feed.label
+        case .page(.home): return PlaceTab.wallet.label
+        case .page(let page): return page.label
+        }
+    }
+
+    /// The Wallet on screen goes back to Activity: a page, or an app's
+    /// pick on Home, that Activity opened, with no page under it.
+    var walletBacksToActivity: Bool {
+        guard walletTrail.isEmpty, case .activity = walletTrailRoot else { return false }
+        return (walletSection ?? .home) != .home || walletScope != nil
+    }
+
+    /// The Wallet is leaving for Activity on its way back: Activity lands on
+    /// the section the page was opened from.
+    func walletNamesActivityReturn() {
+        guard walletBacksToActivity, case .activity(let anchor) = walletTrailRoot,
+              let anchor else { return }
+        activityReturn = anchor
+    }
+
+    /// Landed on Activity from the Wallet. A page or a pick Activity opened
+    /// is done with; on the phone the Wallet stands on Home again, so
+    /// Activity's swipe right lands there and not on the page you left
+    /// (prd §1809). The rail's layouts keep the page you were on.
+    func walletReturned(phone: Bool) {
+        if case .activity = walletTrailRoot {
+            walletScope = nil
+            resetWalletTrail()
+        }
+        if phone, walletSection != .home { landWallet(on: .home) }
+    }
+
+    /// One step back from the Wallet page on screen: the title's grey word
+    /// and the swipe right (prd §1814, §1826).
+    func walletGoBack() {
+        if walletBacksToActivity {
+            walletNamesActivityReturn()
+            sourceRequest = "All"
+            return
+        }
+        guard let section = walletSection, section != .home,
+              case .page(let page) = walletBackStep(section) else { return }
+        if !walletTrail.isEmpty { walletTrail.removeLast() }
+        walletTraceOff = true
+        walletSection = page
+        walletTraceOff = false
+    }
 
     /// Which scopes the wallet room currently HAS something for, published by
     /// that room and read by the shell-mounted switcher (prd §483).
@@ -1169,7 +1301,7 @@ final class ShellChrome {
             switch target {
             case .plan:
                 walletScope = nil
-                walletSection = .subscriptions
+                landWallet(on: .subscriptions)
                 sourceRequest = CategoryFold.walletRoom
             case .list:
                 mergedScope[RoomAccounts.lifeRoom] = nil
@@ -1224,14 +1356,22 @@ final class ShellChrome {
         WalletPerf.openBegan()
         Task { @MainActor in MoveWarm.start() }
         walletScope = nil
-        walletSection = .home
+        landWallet(on: .home)
         sourceRequest = CategoryFold.walletRoom
     }
 
     /// The Wallet's Activity, from a finished move's receipt (prd §1805).
     func openWalletActivity() {
         walletScope = nil
-        walletSection = .activity
+        landWallet(on: .activity)
+        sourceRequest = CategoryFold.walletRoom
+    }
+
+    /// The Wallet's Activity from Activity: it goes back there, on the
+    /// section `anchor` names (prd §1826).
+    func openWalletActivity(fromActivity anchor: String?) {
+        walletScope = nil
+        landWallet(on: .activity, fromActivity: anchor)
         sourceRequest = CategoryFold.walletRoom
     }
 
@@ -1256,7 +1396,8 @@ final class ShellChrome {
     /// category with no `pageRoom`. The Wallet's is its Money page and
     /// Notes' is your notes, as before: neither is a category's page.
     func openCategoryPage(_ category: String) {
-        if category == CategoryFold.walletRoom { openWalletActivity(); return }
+        // Asked for on Activity: Money goes back there (prd §1826).
+        if category == CategoryFold.walletRoom { openWalletActivity(fromActivity: activityReturn); return }
         if category == HomeScope.notesSection { mergedScope[Pinboard.room] = nil; sourceRequest = Pinboard.room; return }
         mergedScope[category] = nil
         resetPageDoors()
@@ -1274,20 +1415,31 @@ final class ShellChrome {
     }
 
     /// Open one app's page: its category's, narrowed to it.
+    /// Its callers stand on Activity (prd §1813), so a Wallet page it opens
+    /// goes back there, to the section `activityReturn` names (prd §1826).
     func openAppPage(_ source: String) {
-        if BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory { openWalletActivity(); return }
+        if BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory {
+            openWalletActivity(fromActivity: activityReturn)
+            return
+        }
         if Pinboard.isWritten(source) || source == Pinboard.room { sourceRequest = source; return }
         guard let host = RoomAccounts.host(ofSource: source) else { sourceRequest = source; return }
+        // An app the Wallet holds lands on Home picked to it, or on the page
+        // that holds its money, and goes back to Activity (prd §1826).
+        let wallet = host.room == CategoryFold.walletRoom
+        if wallet { landWallet(on: .home) }
         pickSeat(host.seat, in: host.room)
+        if wallet { walletTrailRoot = .activity(anchor: activityReturn) }
         resetPageDoors()
         pageRoom = host.room
         sourceRequest = host.room
     }
 
-    /// One of the Wallet's pages, from Activity's rows (prd §1807).
-    func openWalletPage(_ section: WalletSection) {
+    /// One of the Wallet's pages, from Activity's rows (prd §1807): it goes
+    /// back to Activity, on the section `anchor` names (prd §1826).
+    func openWalletPage(_ section: WalletSection, fromActivity anchor: String?) {
         walletScope = nil
-        walletSection = section
+        landWallet(on: section, fromActivity: anchor)
         sourceRequest = CategoryFold.walletRoom
     }
 
@@ -1311,7 +1463,7 @@ final class ShellChrome {
 
     func openYourAccount(at anchor: String) {
         walletScope = nil
-        walletSection = .yourAccount
+        landWallet(on: .yourAccount)
         walletScrollRequest = anchor
         sourceRequest = CategoryFold.walletRoom
     }

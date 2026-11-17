@@ -281,7 +281,7 @@ extension FeedScreen {
                             chrome.moveWalk = true
                             chrome.moveTray = true
                         } else {
-                            chrome.openWalletPage(.yourAccount)
+                            chrome.openWalletPage(.yourAccount, fromActivity: WalletSection.needsYou.label)
                         }
                     }
                 }
@@ -289,7 +289,7 @@ extension FeedScreen {
                     activityAskRow(glyph: ScopeTileGlyph.wallets,
                                    name: first ?? String(localized: "Wallet"),
                                    word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
-                        chrome.openWalletPage(.needsYou)
+                        chrome.openWalletPage(.needsYou, fromActivity: WalletSection.needsYou.label)
                     }
                 }
                 if !waiting.isEmpty {
@@ -371,7 +371,7 @@ extension FeedScreen {
         // category; this one read "Money".
         activitySection(String(localized: "Wallet"), moves, nextEventID: nextEventID) {
             DSHaptic.selection()
-            chrome.openWalletActivity()
+            chrome.openWalletActivity(fromActivity: String(localized: "Wallet"))
         }
     }
 

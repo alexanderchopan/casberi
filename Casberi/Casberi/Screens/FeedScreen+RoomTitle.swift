@@ -219,6 +219,14 @@ extension FeedScreen {
                 withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
             }
         }
+        // A page or an app's pick that Activity opened goes back there, a pick
+        // and all (prd §1826).
+        if walletBacksToActivity {
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { chrome.walletGoBack() }
+            }
+        }
         if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,
            rail.slots.contains(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
@@ -236,11 +244,12 @@ extension FeedScreen {
         }
         if source == CategoryFold.walletRoom, selectedSeat == nil,
            let section = chrome.walletSection, section != .home {
-            // A page goes back to the page it opened from (prd §1480 item 9):
-            // Tokens to Holdings, Places to Spending, Home's doors to Home.
+            // A page goes back to where you opened it (prd §1826, amending
+            // §1480 item 9's fixed map): Needs you to Activity, Following
+            // to Account, Tokens to Holdings (`ShellChrome.walletBackStep`).
             return {
                 DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { chrome.walletSection = section.parent ?? .home }
+                withAnimation(DS.Motion.standard) { chrome.walletGoBack() }
             }
         }
         guard selectedSeat != nil else { return nil }
@@ -266,6 +275,9 @@ extension FeedScreen {
         if pageScope == nil {
             if activityUnderHome { return nil }
             if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) { return nil }
+            // A Wallet page opened from Activity: another place, which the
+            // pager walks to (prd §1826).
+            if walletBacksToActivity { return nil }
         }
         return roomName
     }
@@ -372,6 +384,14 @@ extension FeedScreen {
 
     /// Notes showing one folder or one app's notes.
     var notesNarrowed: Bool { openNotesFolderName != nil || selectedSeat != nil }
+
+    /// The Wallet on the screen goes back to Activity (prd §1826): a page,
+    /// or an app's pick on Home, that Activity opened. The title's word, its
+    /// press and the swipe right all read this one fact.
+    var walletBacksToActivity: Bool {
+        source == CategoryFold.walletRoom && pinnedWalletSection == nil && !inSheet
+            && !walletOnPrivateAccountPage && chrome.walletBacksToActivity
+    }
 
     /// The Wallet's Account page is showing the private account's own page.
     var walletOnPrivateAccountPage: Bool {

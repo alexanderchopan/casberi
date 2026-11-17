@@ -1594,6 +1594,13 @@ struct FeedScreen: View {
         if activityUnderHome { return PlaceTab.wallet.label }
         if Pinboard.isPinnedRoom(source), pageUnderActivity, !notesNarrowed { return PlaceTab.feed.label }
         if HomeScope.contains(source) { return youPlaceName }
+        // A Wallet page names where it goes back to (prd §1826): "Activity ·
+        // Needs you", "Account · Following", "Holdings · Positions".
+        if walletBacksToActivity { return PlaceTab.feed.label }
+        if source == CategoryFold.walletRoom, selectedSeat == nil,
+           let section = chrome.walletSection, section != .home {
+            return chrome.walletBackWord(section)
+        }
         // The Wallet's place is Home (prd §1807): the whole app is the
         // wallet, so its own page takes the place's word.
         if (hostRoom ?? source) == CategoryFold.walletRoom { return PlaceTab.wallet.label }
