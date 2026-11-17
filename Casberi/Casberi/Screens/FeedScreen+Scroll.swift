@@ -845,6 +845,9 @@ extension FeedScreen {
     /// section (measured: one stops short by the rows it had not met).
     static let landingPasses = 4
 
+    /// `feedJump`'s word for the page's top, never a section's name.
+    static let topJump = "\u{1}top"
+
     func settleFeedJump(_ proxy: ScrollViewProxy) {
         // The Feed on screen takes the jump, never one mounted beside it.
         guard source == "All", isActive, let category = chrome.feedJump else { return }
@@ -852,6 +855,18 @@ extension FeedScreen {
         NSLog("[Casberi] feedJump: %@", category)
         #endif
         chrome.feedJump = nil
+        // The page's top: a page left for Home lands there (`topJump`).
+        if category == Self.topJump {
+            Task { @MainActor in
+                var instant = Transaction()
+                instant.disablesAnimations = true
+                for pass in 0..<Self.landingPasses {
+                    try? await Task.sleep(for: .milliseconds(pass == 0 ? 60 : 70))
+                    withTransaction(instant) { proxy.scrollTo(Self.roomTitleAnchor, anchor: .top) }
+                }
+            }
+            return
+        }
         // **ONE LANDING, EVERY TIME (user, 2026-10-10: "it is jarring and
         // inconsistent").** An animated scroll travels to a position the list
         // has only ESTIMATED (rows off screen are not measured yet), and the

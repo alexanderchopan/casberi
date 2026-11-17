@@ -3,9 +3,10 @@ import SwiftUI
 /// **HOME'S MAP IS A BAND (prd §1843).** On the phone's Home the holdings
 /// map is one row: each holding a tile as wide as its share, wearing its
 /// mark and no figure, filled by its day as the map's tiles are (§1837).
-/// The balance over it says how much; the band says what of. It is a
-/// picture and one door (the caller's button): a tile is too narrow to be a
-/// target of its own.
+/// The balance over it says how much; the band says what of. Each tile is
+/// a door of its own (user: "if they are they should open the token page"):
+/// a token opens its sheet, the rest what its map tile opens (`onOpen`). A
+/// tile is never under `minWidth`, 44pt, the size of a tap.
 struct HoldingsBand: View {
     struct Cell: Identifiable, Equatable {
         let id: String
@@ -18,6 +19,8 @@ struct HoldingsBand: View {
     let moves: [String: Double]
     /// SimpleFIN picked (prd §1702): a currency is that bank's cash.
     var pickIsBank = false
+    /// A tile pressed, by its id. Nil draws a picture.
+    var onOpen: ((String) -> Void)? = nil
 
     static let height: CGFloat = 52
     static let gap: CGFloat = 3
@@ -70,15 +73,26 @@ struct HoldingsBand: View {
             let widest = cells.compactMap { move($0.id) }.map(abs).max() ?? 0
             HStack(spacing: Self.gap) {
                 ForEach(Array(cells.enumerated()), id: \.element.id) { index, cell in
-                    mark(cell.id)
+                    let tile = mark(cell.id)
                         .frame(width: index < widths.count ? widths[index] : Self.minWidth, height: Self.height)
                         .background(HoldingsTreemap.dayFill(move: move(cell.id), widest: widest),
                                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    if let onOpen {
+                        Button {
+                            onOpen(cell.id)
+                        } label: {
+                            tile.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(Text(verbatim: cell.id == HoldingsTreemapLayout.otherID
+                            ? String(localized: "Other") : cell.id))
+                    } else {
+                        tile.accessibilityHidden(true)
+                    }
                 }
             }
         }
         .frame(height: Self.height)
-        .accessibilityHidden(true)
     }
 
     /// The tile's mark, as the map's tile wears it.

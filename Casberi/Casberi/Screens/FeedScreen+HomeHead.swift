@@ -31,6 +31,21 @@ extension FeedScreen {
         chrome.openWalletPage(section, fromActivity: nil, keepingScope: true)
     }
 
+    /// A band tile pressed: a token opens its sheet, as its Holdings row
+    /// does; an app's tile opens Apps; Other, Lent, Private and Aztec open
+    /// Holdings, where their rows are. Never a page every tile shares.
+    func homeOpenTile(_ id: String) {
+        if WalletPortfolio.appCell(id) != nil {
+            homeOpen(.apps)
+        } else if id != HoldingsTreemapLayout.otherID,
+                  let position = portfolioUnhidden?.positions.first(where: { $0.symbol == id }) {
+            DSHaptic.selection()
+            walletOpenToken(position)
+        } else {
+            homeOpen(.holdings)
+        }
+    }
+
     /// The head's rows, first on the page.
     @ViewBuilder
     func homeHeadSection(_ visible: [Thing], jumps: [String]) -> some View {
@@ -111,12 +126,10 @@ extension FeedScreen {
                     homeWhoseWord
                 }
                 homeHalves(total: shown.totalUSD, mask: mask)
-                Button { homeOpen(.holdings) } label: {
-                    HoldingsBand(cells: cells, moves: moves)
-                }
-                .buttonStyle(RowPress())
-                .padding(.top, DS.Space.s1)
-                .accessibilityLabel(Text(WalletSection.holdings.label))
+                // Each tile opens its own token (`homeOpenTile`); the
+                // balance above is Holdings' door.
+                HoldingsBand(cells: cells, moves: moves) { homeOpenTile($0) }
+                    .padding(.top, DS.Space.s1)
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
                 WalletStartFigure().frame(height: Self.homeStartHeight)

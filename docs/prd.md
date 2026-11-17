@@ -73552,3 +73552,17 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: `PhoneHome.isOn` is the iPhone's alone; the rail, its Home and its Activity are unchanged.
 
 **Checks.** None new.
+
+## §1844 — Needs you holds what is near and can be marked as seen; a page goes back to the top of Home; each band tile opens its token (amends §1827, §1843 items 2 and 9, §1359) (user, 2026-11-17, over a screenshot of "Home · Needs you" holding "accountless.eth expires Oct 1": "bug. also can't mark it as seen"; "if user swipes right it should go to top of home page"; "remap tokens are tappable but they all go to holdings page so i don't think they should be tappable. if they are they should open the token page")
+
+**Why.** An ENS name renewed to Oct 1 next year stood in Needs you ten months ahead, under a day word without its year, read in November as a date passed, and nothing could put it away. The way back from a page landed on the section it was opened from, not Home's top. Every band tile opened Holdings, so a tile looked like its token's door and was not.
+
+1. **A dated row needs you inside 90 days** (`WalletNeedsYou.dueSoon`, `dueHorizon`, the ENS ladder's horizon). Further out it is not in Needs you; it returns when it is near.
+2. **Mark as seen.** Holding a row on Needs you's page offers it (`NeedsYouSeen`, `dsNeedsYouSeeable`). The key is the row and its due date, so a deadline that moves comes back. On this device only; nothing is written to the row.
+3. **Another year's date says its year**: "Oct 1, 2027" (`FeedScreen.dayWord`, `ENSName.dateWord`), amending §1359's "Sep 15" for dates outside this calendar year.
+4. **Back from a page lands at the top of Home** (amends §1827's "on the section it was opened from"): the swipe right and the title's grey word, through `MainSurface`'s return (`FeedScreen.topJump`).
+5. **Each band tile is its own door** (amends §1843 item 2's "the band opens Holdings"): a token opens its sheet (`walletOpenToken`), an app's tile Apps, Other, Lent, Private and Aztec Holdings (`homeOpenTile`). A tile is at least 44pt wide. The balance stays Holdings' door.
+
+**Mac half (§1402).** Items 1–3 reach the Mac's Needs you and day words unchanged. Items 4 and 5 are the phone's Home (`PhoneHome.isOn`); the rail is unchanged.
+
+**Checks.** `needs-you-selftest.sh`: four cases and one mutation for item 1.

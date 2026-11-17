@@ -1584,7 +1584,7 @@ struct FeedScreen: View {
     /// The id the room's head carries, so a scope change can return to it.
     private static let roomTopAnchor = "roomTop"
     /// The room's title — the true top a scope change returns to.
-    private static let roomTitleAnchor = "roomTitle"
+    static let roomTitleAnchor = "roomTitle"
 
     /// What the room's head says (prd §930): a source room wears its catalog
     /// name, so an aliased seat ("Privacy Pools") reads as the app you
