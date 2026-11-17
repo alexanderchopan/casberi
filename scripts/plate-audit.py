@@ -98,7 +98,8 @@ WELL_ALLOWED = {
     "NoteSheetViews.swift": (1, "a monospaced code block"),
     "DSHomeCard.swift": (1, "Home's six cards, each one button: a control's face, ruled by the user (prd §1807: "
                             "\"we do cards like buttons\"; the lifted ink card lost its bottom edge on the black page)"),
-    "FeedScreen+HomeHead.swift": (1, "the phone's Home lead, your money on one card, ruled by the user (prd §1843: "
+    "FeedScreen+HomeHead.swift": (2, "the phone's Home lead: the start's quiet well, and the head's one grey plate once there is a balance (prd §1855, user: \"do the gray\"); "
+        "before that, your money on one card, ruled by the user (prd §1843: "
                                      "\"it feels like one giant block. maybe it should be on a card\", \"we go with t1\")"),
     "FeedScreen+DaySections.swift": (1, "the first run's \"Set up your feed\", the pair of the money card over it "
                                         "(prd §1847: the wallet's start on a card and the feed's bare read as two "

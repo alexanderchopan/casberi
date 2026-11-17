@@ -429,13 +429,11 @@ extension FeedScreen {
                     if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
                 }
                 .environment(\.feedSectionLeads, Self.homeLeadAnchor(jumps))
-                .environment(\.feedSectionAir, homeHeadShown ? DS.Space.s4 : 0)
                 if starts, quietActivity { activityStartSection }
             }
             feedScrollSections(visible,
                                hiding: drawsLead ? Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []) : [],
                                nextEventID: nextEventID)
-                .environment(\.feedSectionAir, homeHeadShown ? DS.Space.s4 : 0)
             // **HOME ENDS WHERE THE FEED ENDS (prd §1848, user: "like scrolling
             // your feed and then you hit this slab of the apps").** The panel
             // stands only on a first run, where it is the page; after that

@@ -935,8 +935,6 @@ extension EnvironmentValues {
     /// (prd §1843): it takes no chapter air, since the chips' own gap above
     /// them is that air and the chips belong to the feed they jump through.
     @Entry var feedSectionLeads: String? = nil
-    /// More air over each section, on the phone's Home (prd §1851).
-    @Entry var feedSectionAir: CGFloat = 0
     /// Whether the panel draws its fill: nowhere, since prd §1393 (the
     /// Feed's and the Wallet's since §1382, Library's since §1383). The
     /// shape stays, so rows keep their column and the gaps their height;
@@ -1437,7 +1435,6 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     @Environment(\.dsRoomBoxPlace) private var place
     @Environment(\.dsPaneBoxRow) private var paneRow
     @Environment(\.feedSectionLeads) private var leads
-    @Environment(\.feedSectionAir) private var air
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
@@ -1462,7 +1459,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 let tight = anchor != nil && anchor == leads
                 if !tight {
                     Color.clear
-                        .frame(height: DSRoomChassis.sectionGap - DS.Space.s4 + air)
+                        .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)

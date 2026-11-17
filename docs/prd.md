@@ -73736,3 +73736,17 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The same on Catalyst, which is one of the two devices.
 
 **Checks.** `safe-gate-selftest.sh`: `syncConfig` names a change by `changeDigest`, never a time; the sheet keeps the safeconfig rows out of History; an owner change asks `YourAccountExport.isExported` before it names a tail.
+
+## §1855 — Home's head stands on one grey plate, its doors with it, and the feed's sections keep their old gap (amends §1851 items 5, 6 and 7; §1850 item 5) (user, 2026-11-17, of the head on the page: "i just think it doesn't look good as is like it all blends together"; of the section air: "i also think we put too much space between feed sections"; of the mock: "do the gray")
+
+§1851 put the head on the page's black and trusted the type's scale to tell it from the feed. On a phone with real data it did not: the head read as the first of the feed's sections.
+
+1. **The head is one plate** (`homePlated`, `homeMoneyCard`): the balance, the day with Public and Private, Holdings and the doors (Account, Risks, Apps, the address) on one `fillFaint` card, radius 30, once there is a balance to show. The start (no balance) keeps its quiet well, and its doors stand under it as before.
+2. **The feed stays bare** (§749): the circles and every section stand on the page under the plate.
+3. **The feed's sections keep the one section gap** (`DSRoomChassis.sectionGap`), retiring §1851 item 6's extra air.
+
+**Declined.** The darker plate (#121214): the grey reads as one object at a glance, the darker one only up close. A carousel on the plate (the map as a second face): set aside for now.
+
+**Mac half (§1402).** All three are the phone's Home (`PhoneHome.isOn`, `quietActivity`).
+
+**Checks.** None new.

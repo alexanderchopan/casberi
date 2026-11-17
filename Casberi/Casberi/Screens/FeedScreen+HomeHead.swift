@@ -62,7 +62,7 @@ extension FeedScreen {
             // line and no chips under it.
             // Apps is a chip here once its panel has left the page's foot
             // (prd §1848), so it stands even before the account does.
-            if !homeBare || !panel {
+            if (!homeBare || !panel) && !homePlated {
                 homeAccountLine(apps: !panel, bare: homeBare)
                 // Air between the groups (user: "there is enough room to have
                 // more padding between and make the sections feel separate",
@@ -93,11 +93,19 @@ extension FeedScreen {
     /// rows' left edge. Only the start (no balance yet) keeps its well.
     @ViewBuilder
     var homeMoneyCard: some View {
-        if (portfolioShown?.totalUSD ?? 0) > 0 {
-            // On the rows' own left edge (the row's inset is the well's).
-            homeMoneyStack
-                .padding(.horizontal, DS.Space.s3)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        if homePlated {
+            // **THE HEAD IS ONE PLATE (prd §1855, user: "i just think it
+            // doesn't look good as is like it all blends together").** The
+            // money and its doors on one grey card; the feed stays bare.
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                homeMoneyStack
+                homeAccountLine(apps: true, bare: false)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWell(cornerRadius: Self.homePlateRadius)
         } else {
             homeMoneyStack
                 .padding(DS.Space.s3)
@@ -105,6 +113,10 @@ extension FeedScreen {
                 .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
         }
     }
+
+    /// The head stands on its plate once there is a balance to show.
+    var homePlated: Bool { (portfolioShown?.totalUSD ?? 0) > 0 }
+    static let homePlateRadius: CGFloat = 30
 
     @ViewBuilder
     private var homeMoneyStack: some View {
