@@ -7,7 +7,7 @@ import SwiftUI
 /// what it needs on its step, in amber, and the one row under the list is
 /// the way on: the address it is waiting at, where the move is made. A
 /// deposit Privacy Pools is checking offers Take it back there instead
-/// (prd §1576, moved here from Needs you by §1827).
+/// (prd §1576, moved here from Needs you by §1841).
 struct OnItsWaySheet: View {
     let item: OnItsWay.Item
     /// Opens Receive on the private address. Called once the sheet has gone

@@ -73303,48 +73303,49 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 **Checks.** `holdings-check-selftest.sh` (new, in verify): the picking, the agreement, the two-in-a-row ledger, the key a row's part finds; the check starts only off a live read and never in the demo; both rows read the verdict; 6 mutations. `privacy-engine-selftest.sh` guards hybrid mode, fail-closed, the circuit only on the node's requests, and the door's address-only circuit.
 
-## §1826 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813, §1816, §1809) (user, 2026-11-16, of the canvas "Activity row taps": "the problem is on activity if you press an app icon you go to the app page, but if you press the row you open the individual message. this isn't clear to anyone", "one issue with b is tap target size tho isn't it", "yes lets do A", "I don't think the header should say Home / Money b/c it is Activity / Money", "the navigation is confusing people")
+## §1826 — Export shows the key once it lands on one network, and says which network and step it is on while it adds the rest (amends §1493 item 3) (user, 2026-11-17: "private key export is not working. just hangs and never reveals"; "safe. did show faceid and signer. but my friend tried and has issue too and doesn't have co-signer on") — BUILT; NOT built, run or seen: the session had no Xcode
 
-**Why.** Activity is one row per app, and each row held two doors in one 44pt row: the icon to the app's page, the words to the thing. Nothing told them apart. The canvas weighed three fixes: the row is the app (A), the app's name as its own row over the thing (B, which at 44pt + 44pt doubles every app's height), and the thing's sheet naming its app (C, which hides the app's page a level down).
+1. **Why it read as hung.** Create the key added it to Base, Ethereum and Robinhood one after another — Face ID (and the co-signer where it is on), the send, then up to two minutes waiting for it to land, each — and showed the key only after the last. The page said "Revealing…" the whole time: `MoveExportKey.create` dropped `addOutsideKey`'s steps (`stage: { _ in }`). The cause is the measured shape of the code, not a device log; no phone run was read.
+2. **Shown once it opens the account somewhere.** The key appears as soon as one network has it (§1493's "only after it landed" holds: never before one has). The networks after are added under it, one line naming the network and its step ("Ethereum · Confirm with Face ID", `FeedScreen.stageWord`); before the first lands the same line stands under the intro. Remove the key waits for the rest; I saved it closes at any time, the rest go on, and Security reads the chain again when they end.
+3. **A send that may still land keeps its note.** When no network confirmed but one took the send ("sent, not yet seen"), the address stays noted, so a key that lands late is never read as a Signer and asked to co-sign (§1493 item 6). It was forgotten before.
+4. **Mac half (§1402):** the same page; nothing differs.
+5. **Checks.** `your-account-selftest.sh`: shown only after a landing (the first guard), the note kept while a send may land, the step line wired.
 
-1. **The row is the app** (amends §1813 item 2, §1809's icon door). A category's row is the app's name over its newest thing in grey, one line each, and one tap anywhere opens the app's page, where that thing leads (`FeedScreen.activityAppRow`, a `DSPushRow`). The icon door is deleted with the parameter that carried it (`leadOpens`, `leadDoor`).
-2. **Needs you's rows are things.** What waits on you opens the thing, the whole row: the review, the failed run, the reply. Their icon is no longer a door.
-3. **A money app's row opens Money narrowed to it**, the Wallet menu's own pick (`RoomAccounts.host(ofSource:)`): eleven rows to one unnarrowed page told the apps apart by nothing. An app the Wallet has no pick for opens Money whole.
-4. **Money opened from Activity reads "Home · Activity · Money"** (or the app: "Home · Activity · Plasma One"), the path every app page from Activity reads (§1813), and Activity and the swipe right go back to Activity (`FeedScreen.walletUnderActivity`, keyed on `ShellChrome.activityReturn`). Money from Home keeps "Home · Money".
-5. **White until seen, moved** (amends §1816 item 1). A row greys once its newest thing has been opened, from the row (which marks it) or anywhere else; the next thing an app lands is a white row again. `\.dsSeen` is deleted: nothing else set it.
+## §1827 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swipe right to Activity, and a page opened from another page goes back to that page (amends §1814 item 1, §1480 item 9) (user, 2026-11-17: "wallet when you go to a sub page doesn't swipe back to its parent. so if i am on needs you and i swipe right it takes me to home not to activity. for all pages") — BUILT; NOT built, run or seen: the session had no Xcode
 
-**Lost, said plainly.** Reading an app's newest thing from Activity is two taps, not one.
+**Why.** §1814 made the swipe right the title's way back, and on the Wallet the title's way back was `WalletSection.parent`, a fixed map drawn for §1480's tiles: Home's doors to Home, Holdings' to Holdings, Spending's to Spending. Since §1807 the pages open from other places. Needs you and Money open from Activity (its Needs you rows, its Wallet word, a Wallet app's row icon); Following opens from Account. Each went back to Home, or to a page it did not come from, and the title's grey word said "Home" over every page, Positions included, whatever it went back to.
 
-**Mac half (§1402).** None: the iPad and the Mac keep their category rooms as the second column; `quietActivity` is the phone's alone.
+**What is built.**
+1. The Wallet keeps the pages you walked through (`ShellChrome.walletTrail`, the pages under the one on screen, and `walletTrailRoot`, where the first came from: Home or Activity). A door inside the Wallet, taken while it is the room on screen (`walletStanding`, published by `MainSurface`), adds the page you left; a door to a page already under this one is the way back to it and cuts the trail there, so the trail never loops.
+2. A door from outside the Wallet starts a new trail whatever room is on screen (`landWallet(on:)`): Apps' search hits, Move's doors to Account and Settings, a finished move's "See in your activity", a service door, an app with no pick, the `-openSection` hook, the Home tab. Behind such a page the fixed map still answers (`WalletSection.parent`, kept as the fallback).
+3. Activity's doors mark what they open as opened from Activity, with the section to come back to: `openWalletPage(_:fromActivity:)` (Needs you, and Account from Needs you's row), `openWalletActivity(fromActivity:)` (the Wallet word, a Wallet app's row icon, a category asked for) and `openAppPage` for an app the Wallet holds (Home picked to it, or the page that holds its money).
+4. One fact says the Wallet goes back to Activity (`walletBacksToActivity`: a page, or an app's pick on Home, that Activity opened, with no page under it). The title's grey word reads "Activity", its press and the swipe right go there (the pager walks to Activity, as for every page whose parent is another place, §1814 item 1), and Activity lands on the section it was opened from (`activityReturn`). Otherwise one step back is the page under this one (`walletGoBack`, taken on `swipeBack`), and the card under the drag names it.
+5. The title's grey word names where the page goes back to (`walletBackWord`): "Activity · Needs you", "Account · Following", "Holdings · Positions", "Home · Risks".
+6. Back on Activity from a page Activity opened, the pick it made is dropped; on the phone the Wallet stands on Home again, so Activity's swipe right lands on Home and not on the page you left. The iPad and the Mac keep the page you were on.
 
-**Checks.** None new. **Seen** on the simulator with the demo: the app rows, Needs you's rows as things, the Wallet word to "Home · Activity · Money", Plasma One's row to Money narrowed to Plasma One, and the swipe right back to Activity. Not seen: a row greying after its app's page (the demo's rows were opened before this build).
+**Lost, said plainly.** A page's title no longer always starts with "Home": the grey word is the page it goes back to. The one-tap way Home from a deep page is the swipes, as §1814 already said.
 
-## §1827 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checking says "Being checked by Privacy Pools" in grey and leaves Needs you for Holdings, Take it back moves to its steps sheet, and Receive says what arrived and what went in (amends §1561, §1576, §1586) (user, 2026-11-16, of two Privacy Pools deposits under "Held up · 993.366241 USDC + 0.004…": "what is that graphic at top we need to get rid of that", and of "Waiting for approval": "there is no action for user to approve is there?") — BUILT
+**Mac half (§1402).** The trail and the title's word are shared, so a page opened from Activity on the Mac reads "Activity · Needs you" and its grey word goes to Activity; the swipe is the phone's. Not looked at on the Mac.
 
-1. **The page opens on its rows**, as Permissions and Threats do (§1480): each ask already names what it waits on and its amount, so the box said everything twice.
-2. **Deleted with it (§723):** `WalletNeedsHeldFigure`, `NeedsYouHeld` and `walletNeedsHeldParts`, and `needs-you-held-selftest.sh` from the pass. The Home door's count (`walletNeedsCount`) stays.
-3. **A deposit 0xBow has not ruled on says who it waits on: "Being checked by Privacy Pools"**, in grey, never amber, on Receive, Holdings › Private, its steps sheet and Move (`PrivateMoney.beingChecked`). "Waiting for approval" read as something the person had to approve, and nothing did (user, of a tester's screens: "originally the user saw these two screens and got confused"; then "Yes, all three").
-4. **Needs you holds only a deposit refused or wanting a proof** (amends §1561): `PrivateMoney.asks` drops `.waiting`, and `Ask.Kind` and `canTakeBack` go with it (§723). A deposit being checked stands in Holdings › Private with its clock.
-5. **Take it back anytime stays (§1576), on the deposit's steps sheet**: a Holdings row being checked opens `OnItsWaySheet` with the notes it sums, and its "Take it back" row asks the same dialog Needs you's row asks, then returns each note once the sheet has gone (`FeedScreen.walletTakeBack`).
-6. **Receive says both amounts**: "999.999014 USDC arrived · 993.366241 USDC being checked by Privacy Pools" — what reached the one-time address, then the note that went in after 0xBow's fee and the gas. Approved or refused, the line names the note's amount.
+**Checks.** None new: the trail lives on `ShellChrome`, which no harness compiles. NOT built: this session ran on Linux with no Xcode, and the macOS self-tests (`wallet-section-selftest.sh` and the rest) did not run; every `scripts/*-audit.py` passed. To see on the simulator: Activity → Needs you → swipe right lands on Activity at Needs you; Activity → Wallet word → Money → swipe right lands on Activity; Activity's Account row, under Needs you → swipe right lands on Activity; Home → Account → Following → two swipes right reach Home through Account; Home → Holdings → Positions reads "Holdings · Positions".
 
-**Mac half (§1402).** The same pages on the Mac; nothing else.
+## §1828 — The money's page is named Wallet, the word Activity opens it by (amends §1812 item 5, §1808 item 4) (user, 2026-11-17, of Activity's "Wallet ›" over the page it opened, titled "Home · Money": "also it says Wallet on activity page and Money on sub page") — BUILT; NOT built, run or seen: the session had no Xcode
 
-**Checks.** `needs-you-held-selftest.sh` deleted; `private-money-selftest.sh` holds refused-only asks, the steps sheet's Take it back and its notes (81 mutations). Built for the simulator.
+**Why.** §1812 item 5 renamed Activity's money word to Wallet, the category's own name in Apps, and kept the page it opens titled Money. A word and the page it opens read as two places.
 
-## §1828 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (user, 2026-11-16, of "Home · Activity · Social" with Activity drawn small: "we need to have a way tho that the title stays the same size", "we can't be having that middle word short", "for long apps like 'app store connect' we will just have to truncate it i guess")
+**What is built.** `WalletSection.activity`'s label is "Wallet". Opened from Activity the page reads "Activity · Wallet" (§1827); from a finished move's receipt, "Home · Wallet". `wallet-section-selftest.sh` pins the word.
 
-**Why.** §1812 put every title on one rung and let a path too long for the row step down "every name at once". It did not: the fallback was each word's own `minimumScaleFactor` inside an `HStack`, so SwiftUI shrank whichever word it squeezed, and the middle word drew smaller than the names either side of it.
+**Lost, said plainly.** On the iPad and the Mac the pane's card over the newest moves is titled "Wallet" inside the Wallet room, where it read "Money". Not looked at there.
 
-1. **One rung, always** (`DSRoomTitleRow.rung`, `heading20`). No title steps down; `ViewThatFits` and every `minimumScaleFactor` in `DSRoomTitleRow` are deleted.
-2. **The names before the last are never cut** (they are the way back): the root and the middle word are fixed at their own width.
-3. **The last name takes what is left and is cut at its tail**: "Home · Activity · App Store Conn…". An app's own page and a plain label are cut the same way.
+## §1829 — One move, one row: a Privacy Pools deposit your own private move already says stays out of the Wallet's lists (user, 2026-11-17, of the Wallet's page under Yesterday, "0.025 ETH to your private balance" over "Put 0.0250 ETH into Privacy Pools": "also this is a duplicate. both are the same action") — BUILT; NOT built, run or seen: the session had no Xcode
 
-**Lost, said plainly.** Beside the demo's Exit pill, "Home · Activity ·" fills the row and the app's name is cut to nothing; outside the demo the pill is not there.
+**Why.** A move into your private balance lands two rows for one transaction. Your account writes its own (`PrivateActivity.land`, ref `private:<tx hash>`, "0.025 ETH to your private balance") the moment the send lands; the Privacy Pools seat reads the same deposit off the chain on its next read (ref `privacypools:dep:<label>`, "Put 0.0250 ETH into Privacy Pools", its link the same transaction).
 
-**Mac half (§1402).** The same template; the Mac's rows are wider, so a cut is rarer. Not checked on the Mac.
+**What is built.** `MoneyReceipt.privateTwins` finds a Privacy Pools deposit row whose link names the transaction of a `private:` row in the same list, and `FeedScreen.walletMoves`, the one filter behind Activity's Wallet section, the Wallet page, the pane's moves and the history screen, leaves it out. The private row stands: it says the move in the words the private balance is said in everywhere (§1719). The seat's row is kept in the store: Needs you reads its review state, and the Privacy Pools seat reads its labels. Only the two lists' view of it changes.
 
-**Checks.** None new. **Seen** on the simulator: App Store Connect's page, "Home · Activity · App Store Conn…" at one size without the demo pill, and "Home · Activity ·" with it.
+**What it does not do.** A deposit made outside Casberi has no private row, so its Privacy Pools row stands. Spending reads its own moves (`SpendingSource.walletMoves`) and is untouched. A third row for the same transaction from a holdings reader, if one ever lands, is not looked for: none was seen.
+
+**Checks.** `money-receipt-selftest.sh` (in verify): the twin found whatever the hash's case, none without a private row, a link's transaction read with its query left off, an address link refused; and a drift guard that the two ref prefixes `MoneyReceipt` spells are still the bridges' own. Not run: this session had no `swiftc`.
 
 ## §1830 — Round-ups round up every buy, send and swap, and the switch says so (amends §1690's "every send" and its sentence; restates §1561) (user, 2026-11-16, asked whether round-ups apply to swaps: "right. we need to change it to any buys, send, or swap") — BUILT
 
@@ -73358,7 +73359,7 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 **Checks.** None new: copy only.
 
-## §1831 — Activity shows what is new: a row on screen when you leave is seen, and the next visit leaves it out (amends §1816, §1826, §1813, §1809) (user, 2026-11-16: "if you have already seen the most recent item, you still have to see it again and again anytime you go into your feed. it should work that only unseen items show", "I have several wallet apps, and so I have this list of wallet activity that I've already seen which gets in the way of me checking the feed", "what would we do if a category has already all been seen, we can't have wallet disappear", "On screen counts")
+## §1831 — Activity shows what is new: a row on screen when you leave is seen, and the next visit leaves it out (amends §1816, §1840, §1813, §1809) (user, 2026-11-16: "if you have already seen the most recent item, you still have to see it again and again anytime you go into your feed. it should work that only unseen items show", "I have several wallet apps, and so I have this list of wallet activity that I've already seen which gets in the way of me checking the feed", "what would we do if a category has already all been seen, we can't have wallet disappear", "On screen counts")
 
 **Why.** Activity is each app's newest thing (§1807). Seen meant opened (§1816), so a row you had read on Activity without opening it stood there on every visit, greyed only if you tapped it; with several money apps the Wallet's rows filled the screen with news already read.
 
@@ -73374,7 +73375,7 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 **Checks.** None new; `-activitySeenForget YES` makes every row new. **Seen** on the simulator with the demo: every row new, Home and back, and the Wallet rows that had been on screen gone while the ones never scrolled to stayed. Not seen: a category emptied to its word, and the stamp on leaving the app.
 
-## §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812) (user, 2026-11-16: "can you also make sure we use money or wallet consistently on one screen it says money and on another it says wallet")
+## §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812; the same ruling as §1828, made the same day in another copy and merged with it) (user, 2026-11-16: "can you also make sure we use money or wallet consistently on one screen it says money and on another it says wallet")
 
 **Why.** Activity's word is Wallet (§1812, the Apps category's own name) and it opened a page titled Money (§1808), so one place had two names: "Wallet ›" then "Home · Activity · Money".
 
@@ -73412,3 +73413,46 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: the Mac and the iPad walk every room in a row; a pull past the end there no longer moves either.
 
 **Checks.** None new. **Seen** on the simulator: a held swipe right on Risks drew the Wallet mark and "Home"; a held swipe left on Risks left the page where it stood.
+
+## §1840 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813, §1816, §1809; numbered §1826 until merged with another copy's §1826–§1829, its item 4 now carried by §1827) (user, 2026-11-16, of the canvas "Activity row taps": "the problem is on activity if you press an app icon you go to the app page, but if you press the row you open the individual message. this isn't clear to anyone", "one issue with b is tap target size tho isn't it", "yes lets do A", "I don't think the header should say Home / Money b/c it is Activity / Money", "the navigation is confusing people")
+
+**Why.** Activity is one row per app, and each row held two doors in one 44pt row: the icon to the app's page, the words to the thing. Nothing told them apart. The canvas weighed three fixes: the row is the app (A), the app's name as its own row over the thing (B, which at 44pt + 44pt doubles every app's height), and the thing's sheet naming its app (C, which hides the app's page a level down).
+
+1. **The row is the app** (amends §1813 item 2, §1809's icon door). A category's row is the app's name over its newest thing in grey, one line each, and one tap anywhere opens the app's page, where that thing leads (`FeedScreen.activityAppRow`, a `DSPushRow`). The icon door is deleted with the parameter that carried it (`leadOpens`, `leadDoor`).
+2. **Needs you's rows are things.** What waits on you opens the thing, the whole row: the review, the failed run, the reply. Their icon is no longer a door.
+3. **A money app's row opens Money narrowed to it**, the Wallet menu's own pick (`RoomAccounts.host(ofSource:)`): eleven rows to one unnarrowed page told the apps apart by nothing. An app the Wallet has no pick for opens Money whole.
+4. **Money opened from Activity reads "Home · Activity · Money"** (or the app: "Home · Activity · Plasma One"), the path every app page from Activity reads (§1813), and Activity and the swipe right go back to Activity (`FeedScreen.walletUnderActivity`, keyed on `ShellChrome.activityReturn`). Money from Home keeps "Home · Money".
+5. **White until seen, moved** (amends §1816 item 1). A row greys once its newest thing has been opened, from the row (which marks it) or anywhere else; the next thing an app lands is a white row again. `\.dsSeen` is deleted: nothing else set it.
+
+**Lost, said plainly.** Reading an app's newest thing from Activity is two taps, not one.
+
+**Mac half (§1402).** None: the iPad and the Mac keep their category rooms as the second column; `quietActivity` is the phone's alone.
+
+**Checks.** None new. **Seen** on the simulator with the demo: the app rows, Needs you's rows as things, the Wallet word to "Home · Activity · Money", Plasma One's row to Money narrowed to Plasma One, and the swipe right back to Activity. Not seen: a row greying after its app's page (the demo's rows were opened before this build).
+
+## §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checking says "Being checked by Privacy Pools" in grey and leaves Needs you for Holdings, Take it back moves to its steps sheet, and Receive says what arrived and what went in (amends §1561, §1576, §1586) (numbered §1827 until the merge) (user, 2026-11-16, of two Privacy Pools deposits under "Held up · 993.366241 USDC + 0.004…": "what is that graphic at top we need to get rid of that", and of "Waiting for approval": "there is no action for user to approve is there?") — BUILT
+
+1. **The page opens on its rows**, as Permissions and Threats do (§1480): each ask already names what it waits on and its amount, so the box said everything twice.
+2. **Deleted with it (§723):** `WalletNeedsHeldFigure`, `NeedsYouHeld` and `walletNeedsHeldParts`, and `needs-you-held-selftest.sh` from the pass. The Home door's count (`walletNeedsCount`) stays.
+3. **A deposit 0xBow has not ruled on says who it waits on: "Being checked by Privacy Pools"**, in grey, never amber, on Receive, Holdings › Private, its steps sheet and Move (`PrivateMoney.beingChecked`). "Waiting for approval" read as something the person had to approve, and nothing did (user, of a tester's screens: "originally the user saw these two screens and got confused"; then "Yes, all three").
+4. **Needs you holds only a deposit refused or wanting a proof** (amends §1561): `PrivateMoney.asks` drops `.waiting`, and `Ask.Kind` and `canTakeBack` go with it (§723). A deposit being checked stands in Holdings › Private with its clock.
+5. **Take it back anytime stays (§1576), on the deposit's steps sheet**: a Holdings row being checked opens `OnItsWaySheet` with the notes it sums, and its "Take it back" row asks the same dialog Needs you's row asks, then returns each note once the sheet has gone (`FeedScreen.walletTakeBack`).
+6. **Receive says both amounts**: "999.999014 USDC arrived · 993.366241 USDC being checked by Privacy Pools" — what reached the one-time address, then the note that went in after 0xBow's fee and the gas. Approved or refused, the line names the note's amount.
+
+**Mac half (§1402).** The same pages on the Mac; nothing else.
+
+**Checks.** `needs-you-held-selftest.sh` deleted; `private-money-selftest.sh` holds refused-only asks, the steps sheet's Take it back and its notes (81 mutations). Built for the simulator.
+
+## §1842 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (numbered §1828 until the merge) (user, 2026-11-16, of "Home · Activity · Social" with Activity drawn small: "we need to have a way tho that the title stays the same size", "we can't be having that middle word short", "for long apps like 'app store connect' we will just have to truncate it i guess")
+
+**Why.** §1812 put every title on one rung and let a path too long for the row step down "every name at once". It did not: the fallback was each word's own `minimumScaleFactor` inside an `HStack`, so SwiftUI shrank whichever word it squeezed, and the middle word drew smaller than the names either side of it.
+
+1. **One rung, always** (`DSRoomTitleRow.rung`, `heading20`). No title steps down; `ViewThatFits` and every `minimumScaleFactor` in `DSRoomTitleRow` are deleted.
+2. **The names before the last are never cut** (they are the way back): the root and the middle word are fixed at their own width.
+3. **The last name takes what is left and is cut at its tail**: "Home · Activity · App Store Conn…". An app's own page and a plain label are cut the same way.
+
+**Lost, said plainly.** Beside the demo's Exit pill, "Home · Activity ·" fills the row and the app's name is cut to nothing; outside the demo the pill is not there.
+
+**Mac half (§1402).** The same template; the Mac's rows are wider, so a cut is rarer. Not checked on the Mac.
+
+**Checks.** None new. **Seen** on the simulator: App Store Connect's page, "Home · Activity · App Store Conn…" at one size without the demo pill, and "Home · Activity ·" with it.

@@ -317,6 +317,9 @@ fi
 
 # The literals `MoneyReceipt` (Foundation-only, compiled alone) spells for
 # the bridges' own refs and tags must stay the bridges' own.
+grep -q 'static let activityPrefix = "private:"' "Casberi/Casberi/Model/PrivateMoney.swift" \
+  && grep -q 'static let depositPrefix   = "privacypools:dep:"' "Casberi/Casberi/Model/PrivacyPoolsRoom.swift" \
+  || { echo "✗ a private move's or a Privacy Pools deposit's ref prefix moved — MoneyReceipt.privateTwins spells them"; exit 1; }
 grep -q 'static let refPrefix = "privy:app:"' "Casberi/Casberi/Model/PrivyHomeFeed.swift" \
   || { echo "✗ PrivyHomeFeed.refPrefix moved — MoneyReceipt.isState spells it"; exit 1; }
 grep -q 'static let accountPrefix = "splits:account:"' "Casberi/Casberi/Model/SplitsShape.swift" \
@@ -1100,6 +1103,22 @@ do {
     check(!MoneyReceipt.isState(source: "Privy", ref: "privy:tx:zora:0x1:in:eth"), "what moved in it is not")
     check(!MoneyReceipt.isState(source: "Rocket Money", ref: "rocketmoney:1"),
           "a Rocket Money plan stays listed until it has another place")
+
+    // One move, one row (prd §1829): the seat's deposit row is the twin of
+    // your private move's own row on the same transaction.
+    let tx = "0x" + String(repeating: "ab", count: 32)
+    let other = "0x" + String(repeating: "cd", count: 32)
+    let twinRows: [(ref: String?, content: String)] = [
+        ("private:" + tx, "https://sepolia.etherscan.io/tx/" + tx),
+        ("privacypools:dep:42", "https://etherscan.io/tx/" + tx.uppercased().replacingOccurrences(of: "0X", with: "0x")),
+        ("privacypools:dep:43", "https://etherscan.io/tx/" + other),
+        (nil, "https://etherscan.io/tx/" + tx),
+    ]
+    check(MoneyReceipt.privateTwins(twinRows) == [1], "the seat's row on your move's transaction is the twin, whatever its case")
+    check(MoneyReceipt.privateTwins(Array(twinRows.dropFirst())).isEmpty,
+          "with no private row of yours, the seat's row stands")
+    check(MoneyReceipt.txHash(inLink: "https://etherscan.io/tx/" + tx + "?x=1") == tx, "a link's transaction, its query left off")
+    check(MoneyReceipt.txHash(inLink: "https://etherscan.io/address/" + tx) == nil, "an address is no transaction")
 }
 
 if failures > 0 {

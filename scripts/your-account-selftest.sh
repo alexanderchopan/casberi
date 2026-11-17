@@ -396,10 +396,16 @@ grep -qE 'SecItemAdd|kSecValueData' "$EXPORT" "$EXPORTPAGE" && { echo "✗ the e
 grep -qE 'set\(.*hex' "$EXPORT" "$EXPORTPAGE" && { echo "✗ the exported key's hex is stored (prd §1493)"; exit 1; }
 noted=$(grep -n 'YourAccountExport.note(key.address' "$EXPORTPAGE" | cut -d: -f1)
 added=$(grep -n 'YourAccountChain.addOutsideKey(' "$EXPORTPAGE" | cut -d: -f1)
-landed=$(grep -n 'guard !on.isEmpty else' "$EXPORTPAGE" | cut -d: -f1)
+landed=$(grep -n 'guard !on.isEmpty else' "$EXPORTPAGE" | head -1 | cut -d: -f1)
 shown=$(grep -n 'stage = .shown(key, on: on, failed: failed)' "$EXPORTPAGE" | head -1 | cut -d: -f1)
 [[ -n "$noted" && -n "$added" && "$noted" -lt "$added" ]] || { echo "✗ the exported key's address is no longer noted before it goes on — a crash would leave it read as a Signer (prd §1493)"; exit 1; }
 [[ -n "$landed" && -n "$shown" && "$landed" -lt "$shown" ]] || { echo "✗ the export page can show a key that landed nowhere (prd §1493)"; exit 1; }
+# A send that may still land keeps the address noted, or a key that lands late
+# reads as a Signer and is asked to co-sign (prd §1493 item 6).
+grep -q 'if !maybeOn { YourAccountExport.forget(key.address, for: account) }' "$EXPORTPAGE" || { echo "✗ the export page forgets a key whose send may still land — it would read as a Signer (prd §1493)"; exit 1; }
+# The key is shown once it lands on one network, the rest added under it: the
+# page waited on every network in turn and read as hung (prd §1493 item 9).
+grep -q 'adding = String(localized: "\\(net.name) · \\(FeedScreen.stageWord(s))")' "$EXPORTPAGE" || { echo "✗ the export page no longer says which network and step it is on — it reads as hung (prd §1493)"; exit 1; }
 
 # Where the account can be used is read, never assumed (prd §1442k): Move
 # names its networks only through YourAccountReach, and Receive reads it.

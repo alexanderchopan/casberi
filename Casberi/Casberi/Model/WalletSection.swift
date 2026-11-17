@@ -127,10 +127,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     var label: String {
         switch self {
         case .home:            return String(localized: "Home")
-        // **WALLET, THE WORD THAT OPENS IT (prd §1832, user: "make sure we
-        // use money or wallet consistently").** Activity's word is Wallet
-        // (§1812) and opened a page titled Money (§1808): one place, two
-        // names. Every move, the Wallet's own stream.
+        // Wallet, the word Activity names it by (prd §1828, amending §1812
+        // item 5; ruled twice the same day, also §1832): "Money" since §1808
+        // stood under Activity's "Wallet".
         case .activity:        return String(localized: "Wallet")
         case .holdings:        return String(localized: "Holdings")
         case .spending:        return String(localized: "Spending")

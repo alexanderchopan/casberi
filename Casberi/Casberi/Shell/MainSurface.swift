@@ -2082,6 +2082,11 @@ struct MainSurface: View {
         // source that belongs to no catalog category, so this costs a
         // dictionary lookup on every source switch and nothing else.
         .onChange(of: filter.source, initial: true) { old, source in
+            // A section change is a step inside the Wallet only while it is
+            // the room on screen (prd §1827, `ShellChrome.walletTrail`).
+            chrome.walletStanding = source == CategoryFold.walletRoom
+            // Back on Activity from the Wallet (prd §1827).
+            if source == "All", old == CategoryFold.walletRoom { chrome.walletReturned(phone: !isRegular) }
             // A door that wrote Markets straight into the filter (a deep
             // link, a stored order) lands on the Wallet's Markets tile, in
             // place (prd §1337): Markets is no page of its own.
@@ -2717,6 +2722,8 @@ struct MainSurface: View {
         if target == CategoryFold.walletRoom, HomeScope.Place(source: filter.source) != nil {
             chrome.walletSection = .home
         }
+        // A Wallet page goes back to the section of Activity it came from.
+        if target == "All", filter.source == CategoryFold.walletRoom { chrome.walletNamesActivityReturn() }
         // The card leaving is the heaviest thing the dock does, and it felt
         // like a chip tick (2026-09-06, the haptic grammar).
         DSHaptic.fly()
@@ -2796,6 +2803,12 @@ struct MainSurface: View {
             // word does. Home and Activity alone stand side by side.
             if HomeScope.Place(source: filter.source) != nil {
                 return delta < 0 ? CategoryFold.walletRoom : nil
+            }
+            // A Wallet page opened from Activity goes back there (prd §1827):
+            // Needs you, Money, Account from Needs you's row.
+            if filter.source == CategoryFold.walletRoom, chrome.pageBackWord == nil,
+               chrome.walletBacksToActivity {
+                return delta < 0 ? "All" : nil
             }
             if filter.source != "All", chrome.pageBackWord != nil {
                 return delta < 0 ? ShellChrome.backTarget : nil

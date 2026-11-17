@@ -239,7 +239,7 @@ struct RootShell: View {
                 NSLog("[Casberi] openSection: %@", raw)
                 // A verb tile is never a page (prd §1039); the wallet family
                 // has none since §1107 and §1108.
-                if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
+                if let s = WalletSection(rawValue: raw) { chrome.landWallet(on: s) }
                 // `-watchedToken <id>`: which token `watchedToken` shows (prd §1632).
                 if raw == WalletSection.watchedToken.rawValue {
                     chrome.watchedTokenID = UserDefaults.standard.string(forKey: "watchedToken")

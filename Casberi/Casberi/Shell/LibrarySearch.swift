@@ -638,7 +638,7 @@ struct LibrarySearch: View {
                 line: p.holders.prefix(2).map(\.label).joined(separator: " · "),
                 trailing: .money(WalletValue.money(p.usd)), mark: .asset(p.symbol)) {
                 chrome.walletScope = nil
-                chrome.walletSection = .holdings
+                chrome.landWallet(on: .holdings)
                 pick(CategoryFold.walletRoom)
             }
         }
@@ -761,7 +761,7 @@ struct LibrarySearch: View {
                         name: entry.label.isEmpty ? short : entry.label, given: .exact,
                         line: entry.label.isEmpty ? nil : short, mark: .face(.wallet(entry.address))) {
                 chrome.walletScope = entry.address
-                chrome.walletSection = .home
+                chrome.landWallet(on: .home)
                 pick(CategoryFold.walletRoom)
             }]
         }
@@ -1367,7 +1367,7 @@ struct LibrarySearch: View {
                            address: addr.address) {
                     chrome.walletScope = addr.address
                     // On Home, as the Wallet tab lands (prd §1589).
-                    chrome.walletSection = .home
+                    chrome.landWallet(on: .home)
                     pick(CategoryFold.walletRoom)
                 }
             }
@@ -1514,7 +1514,7 @@ struct LibrarySearch: View {
         if let room = mergedRoom(in: category) {
             if room == CategoryFold.walletRoom {
                 chrome.walletScope = nil
-                chrome.walletSection = .home
+                chrome.landWallet(on: .home)
             } else {
                 chrome.mergedScope[room] = nil
             }

@@ -229,15 +229,12 @@ extension FeedScreen {
                 withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
             }
         }
-        // "Activity · Money": Activity goes back to Activity, where you were
-        // in it (prd §1826).
-        if walletUnderActivity {
+        // A page or an app's pick that Activity opened goes back there, a pick
+        // and all (prd §1827).
+        if walletBacksToActivity {
             return {
                 DSHaptic.selection()
-                withAnimation(DS.Motion.standard) {
-                    chrome.walletScope = nil
-                    chrome.sourceRequest = "All"
-                }
+                withAnimation(DS.Motion.standard) { chrome.walletGoBack() }
             }
         }
         if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
@@ -257,11 +254,12 @@ extension FeedScreen {
         }
         if source == CategoryFold.walletRoom, selectedSeat == nil,
            let section = chrome.walletSection, section != .home {
-            // A page goes back to the page it opened from (prd §1480 item 9):
-            // Tokens to Holdings, Places to Spending, Home's doors to Home.
+            // A page goes back to where you opened it (prd §1827, amending
+            // §1480 item 9's fixed map): Needs you to Activity, Following
+            // to Account, Tokens to Holdings (`ShellChrome.walletBackStep`).
             return {
                 DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { chrome.walletSection = section.parent ?? .home }
+                withAnimation(DS.Motion.standard) { chrome.walletGoBack() }
             }
         }
         guard selectedSeat != nil else { return nil }
@@ -287,6 +285,9 @@ extension FeedScreen {
         if pageScope == nil {
             if activityUnderHome { return nil }
             if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) { return nil }
+            // A Wallet page opened from Activity: another place, which the
+            // pager walks to (prd §1827).
+            if walletBacksToActivity { return nil }
         }
         return roomName
     }
@@ -391,21 +392,29 @@ extension FeedScreen {
             && (hostRoom ?? source) != CategoryFold.walletRoom && !HomeScope.isMarkets(source)
     }
 
-    /// **MONEY OPENED FROM ACTIVITY IS UNDER ACTIVITY (prd §1826, user: "I
+    /// **MONEY OPENED FROM ACTIVITY IS UNDER ACTIVITY (prd §1840, user: "I
     /// don't think the header should say Home / Money b/c it is Activity /
     /// Money", "the navigation is confusing people").** Activity's Wallet
     /// word or one of its money rows opens Money; the title reads "Home ·
     /// Activity · Money" (or the app's name), the path every app page from
     /// Activity reads (§1813), and its way back is Activity. Money reached
     /// from Home keeps "Home · Money".
+    /// Since the merge with §1827 it reads that ruling's one fact, the
+    /// Wallet's trail rooted on Activity, not `activityReturn`.
     var walletUnderActivity: Bool {
-        roomSizeClass == .compact && !inSheet && source == CategoryFold.walletRoom
-            && pinnedWalletSection == nil && chrome.activityReturn != nil
-            && chrome.walletSection == .activity
+        roomSizeClass == .compact && walletBacksToActivity && chrome.walletSection == .activity
     }
 
     /// Notes showing one folder or one app's notes.
     var notesNarrowed: Bool { openNotesFolderName != nil || selectedSeat != nil }
+
+    /// The Wallet on the screen goes back to Activity (prd §1827): a page,
+    /// or an app's pick on Home, that Activity opened. The title's word, its
+    /// press and the swipe right all read this one fact.
+    var walletBacksToActivity: Bool {
+        source == CategoryFold.walletRoom && pinnedWalletSection == nil && !inSheet
+            && !walletOnPrivateAccountPage && chrome.walletBacksToActivity
+    }
 
     /// The Wallet's Account page is showing the private account's own page.
     var walletOnPrivateAccountPage: Bool {

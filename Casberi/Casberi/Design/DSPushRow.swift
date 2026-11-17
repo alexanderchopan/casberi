@@ -53,7 +53,7 @@ struct DSPushRowLabel<Leading: View>: View {
                         .dsText(.subhead12)
                         .foregroundStyle(subtitleTone)
                         // One line under a one-line name (Activity's app
-                        // rows, prd §1826).
+                        // rows, prd §1840).
                         .lineLimit(titleOnly ? 1 : nil)
                         .fixedSize(horizontal: false, vertical: !titleOnly)
                 }
