@@ -2,7 +2,7 @@
 # Your own node (prd §1517, Phase 5 of docs/specs/signing-safety-spec.md) —
 # `OwnNode`: the address rule (http or https, a host, nothing else), the
 # check's verdict (the chain id must be the network's and a block must
-# answer, a wrong chain is never kept), its words, and the switch; then the
+# answer, a wrong chain is never kept), its words, and the kept setting (no switch, §1833); then the
 # wiring: a network with your node reads from it and from NOTHING else (no
 # fall-through to the list), only a checked address is saved, and the
 # requests name their service to the ledger.
@@ -42,13 +42,22 @@ check(ok.ok && ok.text.hasPrefix("Chain 8453 · block 31") && ok.text.hasSuffix(
 let wrong = N.words(.wrongChain(1), network: "Base", expected: 8453)
 check(!wrong.ok && wrong.text == "Answers for chain 1, not Base's 8453", "a wrong chain is not said")
 
-// The switch: off, no network reads from a node, whatever is kept.
-var s = N.Settings(on: false, nodes: ["8453": "http://192.168.1.20:8545"])
-check(s.address(for: 8453) == nil, "your node is used with the switch off")
-s.on = true
-check(s.address(for: 8453) == "http://192.168.1.20:8545" && s.address(for: 1) == nil, "the switch on did not route one network alone")
+// No switch (prd §1833): a network with an address reads from it, one
+// without reads the public nodes; a setting kept with the old switch OFF
+// forgets its addresses, so off still means off.
+let s = N.Settings(nodes: ["8453": "http://192.168.1.20:8545"])
+check(s.address(for: 8453) == "http://192.168.1.20:8545" && s.address(for: 1) == nil, "one network's node did not route that network alone")
 let round = try! JSONDecoder().decode(N.Settings.self, from: JSONEncoder().encode(s))
 check(round == s, "the settings do not survive being kept")
+let wasOff = #"{"on":false,"nodes":{"8453":"http://192.168.1.20:8545"}}"#.data(using: .utf8)!
+check(try! JSONDecoder().decode(N.Settings.self, from: wasOff).nodes.isEmpty, "a node kept with the switch off is used")
+let wasOn = #"{"on":true,"nodes":{"8453":"http://192.168.1.20:8545"}}"#.data(using: .utf8)!
+check(try! JSONDecoder().decode(N.Settings.self, from: wasOn) == s, "a node kept with the switch on was lost")
+
+// A paste checks itself; a keystroke does not.
+check(N.isPaste(from: "", to: "http://192.168.1.20:8545"), "a pasted address was not checked")
+check(!N.isPaste(from: "http://192.168.1.20:854", to: "http://192.168.1.20:8545"), "a keystroke started a check")
+check(!N.isPaste(from: "", to: "my node here"), "a pasted non-address was checked")
 
 print(bad == 0 ? "own-node self-test: \(ran) checks ok" : "own-node self-test: \(bad) of \(ran) failed")
 exit(bad == 0 ? 0 : 1)
@@ -61,7 +70,7 @@ awk '/static func rpc\(_ net: Network/,/^    }$/' "$CHAIN" > "$TMP/rpc.swift"
 grep -q 'if let own = OwnNodeStore.settings.address(for: net.chainId) {' "$TMP/rpc.swift" \
   || { echo "✗ the account's reads no longer ask your node first (prd §1517)"; exit 1; }
 awk '/if let own = OwnNodeStore/,/^        }$/' "$TMP/rpc.swift" | grep -q 'throw Failure' \
-  || { echo "✗ a network with your node falls through to Casberi's list — your address would go where you said not to"; exit 1; }
+  || { echo "✗ a network with your node falls through to the public nodes — your address would go where you said not to"; exit 1; }
 grep -q 'as: OwnNodeStore.service' "$TMP/rpc.swift" || { echo "✗ requests to your node no longer name their service to the ledger"; exit 1; }
 grep -q 'if case .answers = verdict, let url {' "$PAGE" || { echo "✗ an address is saved without answering its check"; exit 1; }
 grep -q 'service: "Your own node"' "$REACH" || { echo "✗ NetworkReach no longer declares your own node's family"; exit 1; }

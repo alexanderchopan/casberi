@@ -1200,7 +1200,7 @@
      "tap": "button:^Nodes"
     }
    ],
-   "anchor": "switch:=Your own node"
+   "anchor": "button:^Ethereum"
   },
   {
    "id": "wallet-aztec-gas",

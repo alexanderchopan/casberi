@@ -219,7 +219,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .fees:            return String(localized: "No fees")
         case .roundUps:        return String(localized: "No round-ups")
         case .recoveryKey:     return String(localized: "Not checked yet")
-        case .nodes:           return String(localized: "Casberi's list")
+        case .nodes:           return OwnNode.publicWord
         }
     }
 
@@ -270,7 +270,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .recoveryKey:
             return String(localized: "Your recovery key, checked once a month with Face ID: no fee, nothing sent.")
         case .nodes:
-            return String(localized: "Each network read from Casberi's list through Tor, or from a node of your own.")
+            return String(localized: "Each network read from its public nodes through Tor, or from a node of your own.")
         }
     }
 

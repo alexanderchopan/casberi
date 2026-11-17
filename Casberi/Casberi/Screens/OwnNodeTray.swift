@@ -1,12 +1,14 @@
 import SwiftUI
 
 /// **NODES IN A TRAY (prd §1803, user: "a sheet like Round-ups, its row under
-/// Connection").** The switch; on, a row per network under its mark, saying
-/// your node's address or "Casberi's list"; a tap opens that network's field
-/// and its check in place. The one sentence says what Tor no longer covers.
+/// Connection"; no switch since §1833).** A row per network under its mark,
+/// saying "Public" or your node's host; a tap opens that network's field, a
+/// paste checks it in place. The one sentence says what Tor no longer covers.
 struct OwnNodeTray: View {
     @Bindable var model = OwnNodeModel.shared
     @State private var editing: Int?
+    /// A row opened is a field focused: the keyboard comes with it.
+    @FocusState private var focused: Int?
 
     private struct Line: Identifiable {
         let id: Int
@@ -34,15 +36,9 @@ struct OwnNodeTray: View {
         DSTray(title: String(localized: "Nodes"), height: 560) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    DSToggleRow(title: Text("Your own node"),
-                                isOn: Binding(get: { model.settings.on },
-                                              set: { on in withAnimation(DS.Motion.standard) { model.setOn(on) } }))
-                        .frame(minHeight: 52)
-                    if model.settings.on {
-                        ForEach(lines) { line in
-                            row(line)
-                            if editing == line.id { field(line) }
-                        }
+                    ForEach(lines) { line in
+                        row(line)
+                        if editing == line.id { field(line) }
                     }
                     DSFootnote("Your node sees your address. Tor doesn't hide it from your own node.")
                         .padding(.top, DS.Space.s4)
@@ -62,12 +58,13 @@ struct OwnNodeTray: View {
         return Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { editing = editing == line.id ? nil : line.id }
+            focused = editing
         } label: {
             HStack(spacing: DS.Space.s2) {
                 if let mark = line.mark { MoveRowMark(network: mark) }
                 Text(verbatim: line.name).dsText(.body17).foregroundStyle(DS.textSecondary)
                 Spacer(minLength: DS.Space.s2)
-                Text(verbatim: address.map(Self.host) ?? String(localized: "Casberi's list"))
+                Text(verbatim: address.map(Self.host) ?? OwnNode.publicWord)
                     .dsText(.heading20)
                     .foregroundStyle(address == nil ? DS.textSecondary : DS.textPrimary)
                     .lineLimit(1)
@@ -87,8 +84,9 @@ struct OwnNodeTray: View {
     /// One network's field and what its check said, under its row.
     @ViewBuilder private func field(_ line: Line) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            TextField(String(localized: "Casberi's list"),
-                      text: Binding(get: { model.typed[line.id] ?? "" }, set: { model.typed[line.id] = $0 }))
+            TextField(OwnNode.fieldPrompt,
+                      text: Binding(get: { model.typed[line.id] ?? "" },
+                                    set: { model.type($0, key: line.id, check: line.check) }))
                 .dsText(.mono17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.pickInk)
@@ -96,6 +94,7 @@ struct OwnNodeTray: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.done)
+                .focused($focused, equals: line.id)
                 .onSubmit { Task { await line.check() } }
                 .frame(minHeight: 44)
             if model.checking.contains(line.id) {
@@ -109,14 +108,14 @@ struct OwnNodeTray: View {
                     .foregroundStyle(said.ok ? DS.confirmInk : DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if !(model.typed[line.id] ?? "").isEmpty {
+            if !(model.typed[line.id] ?? "").isEmpty || model.settings.nodes[String(line.id)] != nil {
                 HStack(spacing: DS.Space.s6) {
                     Button { Task { await line.check() } } label: {
                         Text("Check").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
                     Button { line.useList(); withAnimation(DS.Motion.standard) { editing = nil } } label: {
-                        Text("Use Casberi's list").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
+                        Text(OwnNode.usePublic).dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
                 }

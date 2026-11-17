@@ -1080,7 +1080,7 @@ struct RootShell: View {
             // leads to the Wallet, and its own screen opens only once connected.
             // `-ownNode "<chainId>|<url>"|clear` (prd §1517): check an address
             // as the Nodes page does and keep it only if it answers for that
-            // chain; `clear` turns your own node off and forgets every address.
+            // chain; `clear` forgets every address.
             if let spec = UserDefaults.standard.string(forKey: "ownNode"), !spec.isEmpty {
                 if spec == "clear" {
                     OwnNodeStore.save(OwnNode.Settings())
@@ -1091,7 +1091,7 @@ struct RootShell: View {
                         Task {
                             let (verdict, url) = await OwnNodeStore.check(parts[1], chainId: chain)
                             var s = OwnNodeStore.settings
-                            if case .answers = verdict, let url { s.on = true; s.nodes[String(chain)] = url; OwnNodeStore.save(s) }
+                            if case .answers = verdict, let url { s.nodes[String(chain)] = url; OwnNodeStore.save(s) }
                             NSLog("[Casberi] ownNode: %@ → %@", parts[1], OwnNode.words(verdict, network: String(chain), expected: chain).text)
                         }
                     }

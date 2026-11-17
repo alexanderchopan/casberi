@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// **NODES, UNDER YOUR ACCOUNT (prd §1509 item 5, §1517, canvas figure 14).**
-/// A switch, "Your own node"; on, each network takes an address or keeps
-/// Casberi's list, and an address is checked against the network's chain id
-/// before it is used. One sentence says what Tor no longer covers.
+/// Each network takes an address or reads its public nodes (no switch since
+/// §1833), and an address is checked against the network's chain id before
+/// it is used; a paste checks itself. One sentence says what Tor no longer
+/// covers.
 @MainActor @Observable
 final class OwnNodeModel {
     static let shared = OwnNodeModel()
@@ -25,9 +26,11 @@ final class OwnNodeModel {
         for (id, address) in settings.nodes { typed[Int(id) ?? 0] = typed[Int(id) ?? 0] ?? address }
     }
 
-    func setOn(_ on: Bool) {
-        settings.on = on
-        if !demo { OwnNodeStore.save(settings) }
+    /// What the field types; a paste is checked at once (prd §1833).
+    func type(_ text: String, key: Int, check: @escaping () async -> Void) {
+        let old = typed[key] ?? ""
+        typed[key] = text
+        if OwnNode.isPaste(from: old, to: text) { Task { await check() } }
     }
 
     /// Check the typed address; kept only when it answers for this network.
@@ -52,7 +55,7 @@ final class OwnNodeModel {
         #endif
     }
 
-    /// Back to Casberi's list for this network.
+    /// Back to the public nodes for this network.
     func useList(_ net: YourAccountOp.Network) { useList(key: net.chainId) }
 
     func useList(key: Int) {
@@ -88,35 +91,29 @@ struct OwnNodeFigure: View {
     let model = OwnNodeModel.shared
 
     var body: some View {
-        let n = model.settings.on ? model.settings.nodes.count : 0
+        let n = model.settings.nodes.count
         DSFigureReading(number: "\(n)",
-                        caption: n == 0 ? String(localized: "networks read from Casberi's list")
+                        caption: n == 0 ? String(localized: "networks read from your node")
                                         : n == 1 ? String(localized: "network reads from your node")
                                                  : String(localized: "networks read from your node"))
             .task { model.load() }
     }
 }
 
-/// The switch, a block per network, and the one sentence.
+/// A block per network, and the one sentence.
 struct OwnNodeRows: View {
     @Bindable var model = OwnNodeModel.shared
 
     var body: some View {
         Section {
-            DSToggleRow(title: Text("Your own node"),
-                        isOn: Binding(get: { model.settings.on }, set: { model.setOn($0) }))
-                .walletRowPitch()
-                .walletListRow()
-            if model.settings.on {
-                ForEach(YourAccountOp.networks) { net in
-                    network(net).walletListRow()
-                }
-                // Your Aztec account reads Aztec (prd §1700f item 3).
-                if AztecAccountStore.shared.isShown {
-                    block(name: String(localized: "Aztec"), key: OwnNodeStore.aztecKey,
-                          check: { await model.checkAztec() }, useList: { model.useList(key: OwnNodeStore.aztecKey) })
-                        .walletListRow()
-                }
+            ForEach(YourAccountOp.networks) { net in
+                network(net).walletListRow()
+            }
+            // Your Aztec account reads Aztec (prd §1700f item 3).
+            if AztecAccountStore.shared.isShown {
+                block(name: String(localized: "Aztec"), key: OwnNodeStore.aztecKey,
+                      check: { await model.checkAztec() }, useList: { model.useList(key: OwnNodeStore.aztecKey) })
+                    .walletListRow()
             }
             DSFootnote("Your node sees your address. Tor doesn't hide it from your own node.")
                 .walletListRow()
@@ -132,8 +129,8 @@ struct OwnNodeRows: View {
                                     useList: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textPrimary)
-            TextField(String(localized: "Casberi's list"),
-                      text: Binding(get: { model.typed[key] ?? "" }, set: { model.typed[key] = $0 }))
+            TextField(OwnNode.fieldPrompt,
+                      text: Binding(get: { model.typed[key] ?? "" }, set: { model.type($0, key: key, check: check) }))
                 .dsText(.mono17)
                 .foregroundStyle(DS.textPrimary)
                 .tint(DS.pickInk)
@@ -157,14 +154,14 @@ struct OwnNodeRows: View {
                         .multilineTextAlignment(.trailing)
                 }
             }
-            if !(model.typed[key] ?? "").isEmpty {
+            if !(model.typed[key] ?? "").isEmpty || model.settings.nodes[String(key)] != nil {
                 HStack(spacing: DS.Space.s6) {
                     Button { Task { await check() } } label: {
                         Text("Check").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
                     Button { useList() } label: {
-                        Text("Use Casberi's list").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
+                        Text(OwnNode.usePublic).dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
                 }

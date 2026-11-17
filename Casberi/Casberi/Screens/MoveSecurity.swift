@@ -244,8 +244,8 @@ struct MoveSecurity: View {
     }
 
     private func nodesRow(_ open: @escaping () -> Void) -> some View {
-        let mine = OwnNodeModel.shared.settings.on ? OwnNodeModel.shared.settings.nodes.count : 0
-        let word = mine == 0 ? String(localized: "Casberi's list")
+        let mine = OwnNodeModel.shared.settings.nodes.count
+        let word = mine == 0 ? OwnNode.publicWord
             : mine == 1 ? String(localized: "1 of yours") : String(localized: "\(mine) of yours")
         return Button { DSHaptic.selection(); open() } label: {
             HStack(spacing: DS.Space.s3) {
