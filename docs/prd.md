@@ -73671,7 +73671,7 @@ Some forty mocks in one sitting: cards, a sheet for the feed, a hairline, the ma
 
 1. **The balance is `price84`, on the rows' left edge** (`homeMoneyStack`), with its chevron: Holdings' door, as before. A new rung, the one figure the head is built round.
 2. **One row of facts under it**: the day on its pill, the move alone ("+0.8%", `homeDay`; a day that rounds to zero is grey, §83), then Public and Private at `heading20`, bold. A balance too wide for one row stands the halves under the day (`ViewThatFits`).
-3. **Holdings is a row** (`DSHomeFactRow`, `homeHoldingItems`), over §1850's band: its glyph, its name in grey, the three biggest holdings each with its day in the day's ink, and a chevron. It opens Holdings, where the map is. Home draws no map.
+3. **Holdings is a row** (`DSHomeFactRow`, `homeHoldingItems`), over §1850's band: its glyph, its name in grey, the three biggest tokens (never an account or an app: user, "for holdings there are no long names") each with its day in the day's ink, and a chevron. A row too wide drops its last token until the rest stand whole; no name is cut. It opens Holdings, where the map is. Home draws no map.
 4. **The watchlist is the Wallet section's** (`homeWatchRow`, `activitySection(lead:)`), amending §1849's "the watchlist is the card's": one row over the Wallet's newest move, the same anatomy as Holdings, naming the day's biggest mover (else the first on the list); empty, "Watch a token".
 5. **The doors stand on the left edge** in one row (`homeAccountLine`), words and chevrons as §1850 drew them.
 6. **More air between the feed's sections** on the phone's Home (`feedSectionAir`, one `DS.Space.s4` over the section gap).

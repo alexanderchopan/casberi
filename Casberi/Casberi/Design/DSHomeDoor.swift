@@ -137,35 +137,47 @@ struct DSHomeFactRow: View {
     var verb: String? = nil
 
     var body: some View {
+        // **A NAME IS NEVER CUT TO FIT (prd §1851).** The row drops its last
+        // item until what is left stands whole; only a single item too wide
+        // for the row is cut.
+        ViewThatFits(in: .horizontal) {
+            line(items, whole: true)
+            if items.count > 2 { line(Array(items.prefix(2)), whole: true) }
+            if items.count > 1 { line(Array(items.prefix(1)), whole: true) }
+            line(Array(items.prefix(1)), whole: false)
+        }
+        .dsText(.fact15)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, minHeight: DS.Hit.min, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private func line(_ shown: [Item], whole: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: glyph)
                 .dsGlyph(.subhead)
                 .foregroundStyle(DS.brandInk)
                 .accessibilityHidden(true)
-            Text(verbatim: name).foregroundStyle(DS.textSecondary)
-            if items.isEmpty, let verb {
+            Text(verbatim: name).foregroundStyle(DS.textSecondary).fixedSize()
+            if shown.isEmpty, let verb {
                 Text(verbatim: verb).foregroundStyle(DS.pickInk)
             }
-            ForEach(items) { item in
+            ForEach(shown) { item in
                 HStack(spacing: DS.Space.s1) {
                     Text(verbatim: item.name).foregroundStyle(DS.textPrimary)
                     if let change = item.change {
-                        Text(verbatim: change).monospacedDigit().foregroundStyle(item.ink)
+                        Text(verbatim: change).monospacedDigit().foregroundStyle(item.ink).fixedSize()
                     }
                 }
+                .fixedSize(horizontal: whole, vertical: false)
             }
             Image(systemName: "chevron.right")
                 .dsGlyph(.tick, weight: .bold)
                 .foregroundStyle(DS.textSecondary)
                 .accessibilityHidden(true)
         }
-        .dsText(.fact15)
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)
-        .frame(maxWidth: .infinity, minHeight: DS.Hit.min, alignment: .leading)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
     }
 }
 

@@ -111,8 +111,8 @@ extension FeedScreen {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
-                let cells = HoldingsBand.cells(shown.foldingPrivate(walletPrivateByToken)
-                    .sectionWorth(appsApart: walletOnAll))
+                let worth = shown.foldingPrivate(walletPrivateByToken).sectionWorth(appsApart: walletOnAll)
+                let cells = HoldingsBand.cells(worth)
                 let moves = walletHoldingMoves
                 let day = Self.homeDay(HoldingMoves.dayChange(cells.map {
                     (usd: $0.usd, move: $0.id == HoldingsTreemapLayout.otherID ? nil : moves[HoldingMoves.key($0.id)])
@@ -166,7 +166,7 @@ extension FeedScreen {
                 // where the map is.
                 Button { homeOpen(.holdings) } label: {
                     DSHomeFactRow(glyph: WalletSection.holdings.glyph, name: WalletSection.holdings.label,
-                                  items: Self.homeHoldingItems(cells, moves))
+                                  items: Self.homeHoldingItems(worth, moves))
                 }
                 .buttonStyle(RowPress())
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
@@ -198,11 +198,14 @@ extension FeedScreen {
     /// As many holdings as the row names.
     static let homeHoldingsCap = 3
 
-    /// The row's holdings: the biggest tiles the band drew, each by its name
-    /// and its day; Other is never one.
-    static func homeHoldingItems(_ cells: [HoldingsBand.Cell], _ moves: [String: Double]) -> [DSHomeFactRow.Item] {
-        cells.filter { $0.id != HoldingsTreemapLayout.otherID }.prefix(homeHoldingsCap).map { cell in
-            let name = WalletPortfolio.appCell(cell.id)?.label ?? cell.id
+    /// The row's holdings: the biggest tokens, each by its symbol and its
+    /// day. Tokens only (user: "for holdings there are no long names"): an
+    /// app's or a bank account's tile is never one, nor is Other.
+    static func homeHoldingItems(_ worth: [String: Double], _ moves: [String: Double]) -> [DSHomeFactRow.Item] {
+        worth.filter { $0.value > 0 && $0.key != HoldingsTreemapLayout.otherID && WalletPortfolio.appCell($0.key) == nil }
+            .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .prefix(homeHoldingsCap).map { cell in (id: cell.key, usd: cell.value) }.map { cell in
+            let name = cell.id
             guard let move = moves[HoldingMoves.key(cell.id)] else {
                 return DSHomeFactRow.Item(id: cell.id, name: name)
             }
