@@ -130,7 +130,7 @@ struct MoveFreshSentence<Head: View>: View {
             #endif
             // Opened, every address is looked at at once (a failed move is
             // tried again); then every 15 s while the sentence shows.
-            // The ASP is asked too, so "Waiting for approval" turns to
+            // The ASP is asked too, so "being checked" turns to
             // "private now" here as it does in Holdings (the store spaces
             // its asks 20 s).
             await book.check(context: context, force: true)
@@ -231,11 +231,19 @@ struct MoveFreshSentence<Head: View>: View {
         // Railgun's screening lists a shield in about an hour (§1713 item 5).
         case .moved(let amount, _) where railgun != nil:
             return (String(localized: "\(figure(amount)) moving in · private in about an hour"), DS.textSecondary)
+        // What arrived, then what went in once 0xBow's fee and the gas were
+        // paid, and who it waits on, in grey: nobody waits on you (prd §1827).
         case .moved(let amount, let tx):
-            switch PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })?.status {
-            case .approved: return (String(localized: "\(figure(amount)) private now"), DS.confirmInk)
-            case .rejected: return (String(localized: "\(figure(amount)) not approved"), DS.destructiveInk)
-            default: return (String(localized: "\(figure(amount)) moving in · Waiting for approval"), DS.attentionInk)
+            let note = PrivateMoneyStore.shared.notes.first(where: { $0.tx == tx })
+            let held = note.map { PrivateMoney.Ask(note: $0).figure }
+            switch note?.status {
+            case .approved: return (String(localized: "\(held ?? figure(amount)) private now"), DS.confirmInk)
+            case .rejected: return (String(localized: "\(held ?? figure(amount)) not approved"), DS.destructiveInk)
+            default:
+                if let held, held != figure(amount) {
+                    return (String(localized: "\(figure(amount)) arrived · \(held) being checked by Privacy Pools"), DS.textSecondary)
+                }
+                return (String(localized: "\(figure(amount)) being checked by Privacy Pools"), DS.textSecondary)
             }
         case .tooLittle(let amount):
             return (String(localized: "\(figure(amount)) arrived, too little to move"), DS.textSecondary)

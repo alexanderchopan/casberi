@@ -217,18 +217,14 @@ enum PrivateMoney {
 
     // MARK: - Needs you (prd §1561)
 
-    /// A deposit Wallet › Needs you shows: waiting for 0xBow's approval (the
-    /// amber clock, "Since 2:14 PM"), or not approved (red), whose act is Take
-    /// it back — the ragequit, a public exit to the address it came from.
-    /// **TAKE IT BACK ANYTIME (prd §1576, user: "yes we want it for take back
-    /// anytime!"):** a waiting deposit offers it from the start — the chain
-    /// lets your account ragequit whatever 0xBow says. An approved note asks
-    /// nothing: it leaves.
+    /// A deposit Wallet › Needs you shows: one 0xBow's ASP did not approve
+    /// (or wants a proof of), red, whose act is Take it back — the ragequit,
+    /// a public exit to the address it came from. **A deposit still being
+    /// checked asks nothing of you (prd §1827, amends §1561):** it stays in
+    /// Holdings › Private with its steps, Take it back on its steps sheet
+    /// (§1576), and is never an ask.
     struct Ask: Equatable, Identifiable {
-        enum Kind: Equatable { case waiting, refused }
         let note: Note
-        let kind: Kind
-        let canTakeBack: Bool
         var id: String { note.commitment }
         /// In the token: a yield note's shares at the share's own decimals
         /// (USDC's 18 shown as USDC), never more than it is worth.
@@ -237,29 +233,25 @@ enum PrivateMoney {
             return PrivateMoney.figure(w.amount, decimals: w.decimals, symbol: note.symbol)
         }
 
-        var title: String {
-            switch kind {
-            case .waiting: String(localized: "\(figure) waiting for approval")
-            case .refused: String(localized: "\(figure) not approved")
-            }
-        }
+        var title: String { String(localized: "\(figure) not approved") }
     }
 
-    /// One ask per note the ASP has not approved, refused first, then the
-    /// oldest first.
+    /// One ask per note the ASP refused or wants a proof of, oldest first.
     static func asks(_ notes: [Note], now: Date) -> [Ask] {
         notes.compactMap { note -> Ask? in
             guard let units = Decimal(string: note.amount), units > 0 else { return nil }
             switch note.status {
-            case .approved: return nil
-            case .waiting:
-                return Ask(note: note, kind: .waiting, canTakeBack: true)
-            case .rejected, .needsProof:
-                return Ask(note: note, kind: .refused, canTakeBack: true)
+            case .approved, .waiting: return nil
+            case .rejected, .needsProof: return Ask(note: note)
             }
         }
-        .sorted { ($0.kind == .refused ? 0 : 1, $0.note.at) < ($1.kind == .refused ? 0 : 1, $1.note.at) }
+        .sorted { $0.note.at < $1.note.at }
     }
+
+    /// What a deposit Privacy Pools has not ruled on says, everywhere it is
+    /// drawn (prd §1827): who it waits on, never "approval", which read as
+    /// something the person had to approve.
+    static var beingChecked: String { String(localized: "Being checked by Privacy Pools") }
 
     /// "Since 2:14 PM" today, "Since Oct 19" before.
     static func since(_ at: Date, now: Date, calendar: Calendar = .current, locale: Locale = .current) -> String {

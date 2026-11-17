@@ -5,8 +5,8 @@ import SwiftUI
 /// state and network off the notes Move to private kept (`PrivateMoney.rows`)
 /// — "ETH" over "1.0% on Aave" where it earns (Ethereum's yield pools, the
 /// rate read live, prd §1563) or its network ("Sepolia", which has no Aave),
-/// "ETH" with the amber clock over "Waiting for approval", "ETH" over "Not
-/// approved". The token alone: the head already says private. The Tokens rows above are
+/// "ETH" with a grey clock over "Being checked by Privacy Pools" (§1827), "ETH"
+/// over "Not approved". The token alone: the head already says private. The Tokens rows above are
 /// public balances only; the box counts approved private money as one
 /// Private block, and the total counts it once (`PrivateMoneyStore.walletHolding`).
 /// No verb here: the acts are Send's (`MovePrivateSentence`). The header
@@ -515,14 +515,20 @@ extension FeedScreen {
         case .held where PrivateMoneyStore.shared.mismatched:
             (nil, DS.textSecondary, String(localized: "Doesn't match Ethereum"), DS.attentionInk)
         case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
-        case .waiting: ("clock", DS.attention, String(localized: "Waiting for approval"), DS.attentionInk)
+        // Nobody waits on you (prd §1827): grey, and it says who it waits on.
+        case .waiting: ("clock", DS.textSecondary, PrivateMoney.beingChecked, DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
         return Button {
-            // Waiting for approval: its steps (prd §1787), nothing to send yet.
+            // Being checked: its steps (prd §1787), nothing to send yet, and
+            // Take it back for the notes it sums (§1576, §1827).
             if row.kind == .waiting {
+                let notes = PrivateMoneyStore.shared.notes.filter {
+                    $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId
+                }
                 let item = OnItsWay.waitingApproval(id: row.id, title: PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol),
-                                                    usd: PrivateMoney.rowUSD(row, prices: prices))
+                                                    usd: PrivateMoney.rowUSD(row, prices: prices),
+                                                    commitments: notes.map(\.commitment))
                 DSHaptic.selection()
                 feedSheet = .onItsWay(item)
             } else {
@@ -572,19 +578,42 @@ extension FeedScreen {
     }
 }
 
-/// **WAITING FOR APPROVAL, IN NEEDS YOU (prd §1561).** One row per deposit
-/// 0xBow's ASP has not approved, as the board drew it: the amber clock,
-/// "0.0001 ETH waiting for approval", "Since 2:14 PM"; it leaves when
-/// approved. Refused (or `poi_required`), the row turns red — "0.0001 ETH not
-/// approved" — and its line is the act, "Take it back": the ragequit, a public
-/// exit to the address the deposit came from (`PrivateTakeBack`), proved,
-/// run against the chain, then signed. A deposit that has waited past a week
-/// offers it too, after its date. The verb is a word, never a pill; nothing
-/// explains it but the dialog that names where the money goes.
+extension FeedScreen {
+    /// Take it back on a deposit Privacy Pools is still checking (prd §1576,
+    /// from its steps sheet since §1827): each note, one after another, as
+    /// Needs you's row does it; a failure says its words.
+    func walletTakeBack(_ commitments: [String]) {
+        let wanted = Set(commitments.map { $0.lowercased() })
+        let notes = PrivateMoneyStore.shared.notes.filter { wanted.contains($0.commitment.lowercased()) }
+        guard !notes.isEmpty else { return }
+        Task {
+            for note in notes {
+                let figure = PrivateMoney.Ask(note: note).figure
+                if let hash = await PrivateTakeBack.shared.run(note, context: modelContext) {
+                    DSHaptic.success()
+                    chrome.flash(PrivateMoney.takenBackTitle(figure: figure, to: WalletPrivateAsks.owner), tone: .success)
+                    NSLog("privateTakeBack| steps | %@", hash)
+                } else {
+                    if case .failed(let why) = PrivateTakeBack.shared.stage(note) { chrome.flash(why) }
+                    break
+                }
+            }
+            chrome.refreshRooms()
+        }
+    }
+}
+
+/// **NOT APPROVED, IN NEEDS YOU (prd §1561, narrowed by §1827).** One row
+/// per deposit 0xBow's ASP refused (or wants a proof of): the red mark,
+/// "0.0001 ETH not approved", and its line is the act, "Take it back": the
+/// ragequit, a public exit to the address the deposit came from
+/// (`PrivateTakeBack`), proved, run against the chain, then signed. A deposit
+/// still being checked is not here: it asks nothing of you. The verb is a
+/// word, never a pill; nothing explains it but the dialog that names where
+/// the money goes.
 struct WalletPrivateAsks: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var context
-    @Environment(\.openURL) private var openURL
     @State private var confirming: PrivateMoney.Ask?
 
     private var store: PrivateMoneyStore { .shared }
@@ -621,7 +650,7 @@ struct WalletPrivateAsks: View {
     }
 
     /// Where a ragequit pays: the account's owner, by its tail.
-    private static var owner: String {
+    static var owner: String {
         #if DEBUG
         PrivacyTestnetSender.address.map(YourAccount.short) ?? String(localized: "the address it came from")
         #else
@@ -635,26 +664,21 @@ struct WalletPrivateAsks: View {
         return DSPushRow(title: Text(verbatim: ask.title), subtitle: line(ask, stage: stage),
                          subtitleTone: DS.textSecondary, busy: working, opens: false) {
             guard !working else { return }
-            if ask.canTakeBack {
-                confirming = ask
-            } else if !ask.note.tx.isEmpty, let link = URL(string: PrivateMoney.explorerTx(ask.note.tx, chainId: ask.note.chainId)) {
-                openURL(link)
-            }
+            confirming = ask
         } leading: {
             ZStack {
                 Color.clear.frame(width: DS.Face.row, height: DS.Face.row)
-                Image(systemName: ask.kind == .refused ? "xmark.circle" : "clock")
+                Image(systemName: "xmark.circle")
                     .dsGlyph(.body, weight: .semibold)
-                    .foregroundStyle(ask.kind == .refused ? DS.destructive : DS.attention)
+                    .foregroundStyle(DS.destructive)
                     .accessibilityHidden(true)
             }
         }
-        .accessibilityHint(ask.canTakeBack ? Text("Returns it to the address it came from") : Text(verbatim: ""))
+        .accessibilityHint(Text("Returns it to the address it came from"))
         .walletListRow()
     }
 
-    /// The line: where the take-back stands, else the date it has waited
-    /// since and, where it is offered, the act.
+    /// The line: where the take-back stands, else the act.
     private func line(_ ask: PrivateMoney.Ask, stage: PrivateTakeBack.Stage?) -> Text {
         if let stage {
             if case .failed = stage {
@@ -662,12 +686,7 @@ struct WalletPrivateAsks: View {
             }
             return Text(verbatim: PrivateTakeBack.words(stage))
         }
-        let act = Text("Take it back").foregroundStyle(ask.kind == .refused ? DS.destructiveInk : DS.pickInk)
-        switch (ask.kind, ask.canTakeBack) {
-        case (.refused, _): return act
-        case (.waiting, true): return Text(verbatim: PrivateMoney.since(ask.note.at, now: .now) + " · ") + act
-        case (.waiting, false): return Text(verbatim: PrivateMoney.since(ask.note.at, now: .now))
-        }
+        return Text("Take it back").foregroundStyle(DS.destructiveInk)
     }
 
     private func takeBack(_ ask: PrivateMoney.Ask) {

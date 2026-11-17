@@ -5,19 +5,32 @@ import SwiftUI
 /// in order. A step that is done wears the confirm check, the one under way
 /// a clock, the ones ahead an empty circle. A trip that waits on you says
 /// what it needs on its step, in amber, and the one row under the list is
-/// the way on: the address it is waiting at, where the move is made.
+/// the way on: the address it is waiting at, where the move is made. A
+/// deposit Privacy Pools is checking offers Take it back there instead
+/// (prd §1576, moved here from Needs you by §1827).
 struct OnItsWaySheet: View {
     let item: OnItsWay.Item
     /// Opens Receive on the private address. Called once the sheet has gone
     /// (a sheet that raises Move while it closes is re-rendered without the
     /// shell's environment: prd §1767).
     var openAddress: () -> Void = {}
+    /// Takes back the notes named, once the sheet has gone (as above).
+    var takeBack: ([String]) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var opens = false
+    @State private var confirming = false
+    @State private var takes = false
+
+    /// The notes Take it back would return, still kept and still checked.
+    private var takeable: [PrivateMoney.Note] {
+        let wanted = Set(item.commitments.map { $0.lowercased() })
+        return PrivateMoneyStore.shared.notes.filter { wanted.contains($0.commitment.lowercased()) && $0.status == .waiting }
+    }
 
     var body: some View {
-        DSTray(title: item.title, height: CGFloat(200 + item.steps.count * 44 + (item.trip == .address ? 56 : 0))) {
+        let notes = item.trip == .approval ? takeable : []
+        DSTray(title: item.title, height: CGFloat(200 + item.steps.count * 44 + (item.trip == .address || !notes.isEmpty ? 56 : 0))) {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(item.steps.indices, id: \.self) { n in
                     row(n)
@@ -29,9 +42,30 @@ struct OnItsWaySheet: View {
                     }
                     .padding(.top, DS.Space.s2)
                 }
+                if !notes.isEmpty {
+                    DSDoorRow(icon: "arrow.uturn.backward", label: "Take it back") {
+                        confirming = true
+                    }
+                    .padding(.top, DS.Space.s2)
+                }
             }
         }
-        .onDisappear { if opens { openAddress() } }
+        .confirmationDialog(Text("Take back \(item.title)?"), isPresented: $confirming, titleVisibility: .visible) {
+            Button(String(localized: "Take it back")) {
+                takes = true
+                dismiss()
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            // Where it goes, on the network it is on, and what it gives up.
+            Text(notes.first?.chainId == PrivacyNetwork.ethereum.chainId
+                 ? String(localized: "It goes back to your account on Ethereum, in public. This deposit won't be private.")
+                 : String(localized: "It goes back to \(WalletPrivateAsks.owner) on Sepolia, in public."))
+        }
+        .onDisappear {
+            if opens { openAddress() }
+            if takes { takeBack(notes.map(\.commitment)) }
+        }
     }
 
     private enum Phase { case done, now, ahead }

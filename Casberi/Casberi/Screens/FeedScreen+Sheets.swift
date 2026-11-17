@@ -324,10 +324,10 @@ extension FeedScreen {
         case .aztecGas:
             AztecGasTray()
         case .onItsWay(let item):
-            OnItsWaySheet(item: item) {
+            OnItsWaySheet(item: item, openAddress: {
                 chrome.moveFreshReceive = true
                 chrome.moveTray = true
-            }
+            }, takeBack: walletTakeBack)
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).

@@ -16,7 +16,7 @@ enum OnItsWay {
     enum Trip: String, Equatable {
         /// Paid to a one-time private address, on its way into Privacy Pools.
         case address
-        /// In Privacy Pools, waiting for approval.
+        /// In Privacy Pools, being checked by its ASP.
         case approval
         /// In Railgun, inside its hour.
         case railgun
@@ -37,6 +37,8 @@ enum OnItsWay {
         let current: Int
         /// What it needs before it goes on, when it will not by itself.
         let needs: String?
+        /// The Privacy Pools notes Take it back returns (`.approval` only).
+        var commitments: [String] = []
 
         /// "Waiting for gas · step 2 of 4".
         var line: String {
@@ -50,7 +52,9 @@ enum OnItsWay {
         [String(localized: "Arrived at your private address"),
          String(localized: "Gas for the move"),
          String(localized: "Moving in"),
-         String(localized: "Waiting for approval")]
+         // The same words as `PrivateMoney.beingChecked` (prd §1827); this
+         // file compiles alone in `private-money-selftest.sh`.
+         String(localized: "Being checked by Privacy Pools")]
     }
 
     /// Paid to a one-time address and not moved in: short of gas, or a move
@@ -61,10 +65,12 @@ enum OnItsWay {
              needs: needsGas ? String(localized: "Waiting for gas") : String(localized: "Not moved yet"))
     }
 
-    /// Moved in, waiting for approval: the last step of the same trip, and
-    /// nobody is waiting on you.
-    static func waitingApproval(id: String, title: String, usd: Double?) -> Item {
-        Item(id: "approval:" + id, trip: .approval, title: title, usd: usd, steps: addressSteps, current: 3, needs: nil)
+    /// Moved in, being checked: the last step of the same trip, and nobody
+    /// is waiting on you. `commitments` are the notes Take it back returns
+    /// (prd §1576, on this sheet since §1827).
+    static func waitingApproval(id: String, title: String, usd: Double?, commitments: [String] = []) -> Item {
+        Item(id: "approval:" + id, trip: .approval, title: title, usd: usd, steps: addressSteps, current: 3, needs: nil,
+             commitments: commitments)
     }
 
     /// Moved into Railgun: its screening lists it in about an hour.

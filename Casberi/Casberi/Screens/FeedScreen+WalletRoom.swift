@@ -52,10 +52,11 @@ extension FeedScreen {
         // **ACTIVITY'S BOX IS HOW BUSY IT WAS (prd §1480 item 3).**
         case .activity:
             WalletActivityFigure(moves: Self.walletMoves(visible.live))
-        // Home's doors state their own count (prd §1480).
-        case .permissions, .threats:
+        // Home's doors state their own count (prd §1480); Needs you's rows
+        // say what waits, so it draws no box either (prd §1827).
+        case .permissions, .threats, .needsYou:
             EmptyView()
-        case .yourAccount, .following, .needsYou, .recoveryKey, .nodes:
+        case .yourAccount, .following, .recoveryKey, .nodes:
             walletPageFigure(section, upcoming: upcoming)
         // The watchlist's count, and a token's price and chart (prd §1632).
         case .watchlist, .watchedToken:

@@ -359,7 +359,7 @@ struct MovePrivateSentence<Head: View>: View {
         switch note?.status {
         case .approved: String(localized: "Approved, private now")
         case .rejected: String(localized: "Not approved")
-        default: String(localized: "Waiting for approval")
+        default: PrivateMoney.beingChecked
         }
     }
 

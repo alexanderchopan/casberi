@@ -254,7 +254,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2010 of 2084 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2011 of 2085 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1949,7 +1949,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1558 — Move's verbs never scroll and never clip: past the narrowest gap the line shrinks evenly to the width (amended by §1679)
 - §1559 — Swap turns WETH into ETH (and ETH into WETH) one for one, no pool: the ordinary sentence, "Unwraps WETH · no fee" on…
 - §1560 — Receive to a fresh address, on Sepolia: Receive's Private switch shows an address never used before, and what lands t… (amended by §1567, §1719)
-- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571, §1572, §1576)
+- §1561 — Waiting for approval is a Needs you row, and Take it back is the ragequit; round-ups may move into your private balan… (amended by §1567, §1568, §1571, §1572, §1576, §1827)
 - §1562 — Private money survives a lost phone: one root in iCloud Keychain derives the private account and the fresh addresses,… (amended by §1567)
 - §1563 — Private money on Ethereum, earning on Aave: your account sends with Face ID and owns what is private; on for the App… (amended by §1567, §1568)
 - §1564 — The card seat is "Privacy.com", never "Privacy"; NerdWallet's place is Media (supersedes §780c for NerdWallet)
@@ -1966,7 +1966,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1573 — ENSv2: expiry read by labelhash, web3.bio the only resolver, Renew hands off to ENS (amended by §1629)
 - §1574 — Round-ups save from Base and Robinhood: Across carries the dollar into the private pool on the way in (completes §157… (amended by §1578, §1690)
 - §1575 — Telegram reads your chats: TDLib, signed in as you, on this device (reverses §57's TDLib refusal; §1244's shape) (amended by §1577)
-- §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week
+- §1576 — Take it back anytime: a deposit waiting for 0xBow's approval offers it from the start, not after a week (amended by §1827)
 - §1577 — The export doors are deleted from Telegram, X and Instagram; Telegram's sign-in leads its page; the misplaced databas…
 - §1578 — Round-ups save with your sends only, always in USDC: ETH is swapped for a dollar that is short, Save now and the ppET… (amended by §1690)
 - §1579 — The X and Instagram importers are deleted from the model (completes §1577; amends §245, §280, §310, §375, §395, §396)
@@ -1976,7 +1976,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1583 — 0xBow's Privacy Pools v2 is watched weekly: a script compares what we pin with what 0xBow ships, and a Monday task re…
 - §1584 — Notion, Raindrop, Steam and OpenRouter sign in; the key folds under the sign-in (amended by §1619)
 - §1585 — ENSv2's ladder and renewal: an unmigrated name keeps its v1 date and 90 days, a migrated one 28 after its ENSv2 date,…
-- §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th… (amended by §1687)
+- §1586 — Move, smoothed: the tray holds while it signs and keeps your sentence, every refusal is felt and has a way on, and th… (amended by §1687, §1827)
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593, §1752)
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
@@ -2261,6 +2261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo…
 - §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet…
 - §1826 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
+- §1827 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
 - §1828 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622)
 - §1830 — Round-ups round up every buy, send and swap, and the switch says so
 - §1831 — Activity shows what is new: a row on screen when you leave is seen, and the next visit leaves it out (amends §1816, §…

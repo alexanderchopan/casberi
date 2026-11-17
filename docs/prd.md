@@ -73319,6 +73319,19 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 **Checks.** None new. **Seen** on the simulator with the demo: the app rows, Needs you's rows as things, the Wallet word to "Home · Activity · Money", Plasma One's row to Money narrowed to Plasma One, and the swipe right back to Activity. Not seen: a row greying after its app's page (the demo's rows were opened before this build).
 
+## §1827 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checking says "Being checked by Privacy Pools" in grey and leaves Needs you for Holdings, Take it back moves to its steps sheet, and Receive says what arrived and what went in (amends §1561, §1576, §1586) (user, 2026-11-16, of two Privacy Pools deposits under "Held up · 993.366241 USDC + 0.004…": "what is that graphic at top we need to get rid of that", and of "Waiting for approval": "there is no action for user to approve is there?") — BUILT
+
+1. **The page opens on its rows**, as Permissions and Threats do (§1480): each ask already names what it waits on and its amount, so the box said everything twice.
+2. **Deleted with it (§723):** `WalletNeedsHeldFigure`, `NeedsYouHeld` and `walletNeedsHeldParts`, and `needs-you-held-selftest.sh` from the pass. The Home door's count (`walletNeedsCount`) stays.
+3. **A deposit 0xBow has not ruled on says who it waits on: "Being checked by Privacy Pools"**, in grey, never amber, on Receive, Holdings › Private, its steps sheet and Move (`PrivateMoney.beingChecked`). "Waiting for approval" read as something the person had to approve, and nothing did (user, of a tester's screens: "originally the user saw these two screens and got confused"; then "Yes, all three").
+4. **Needs you holds only a deposit refused or wanting a proof** (amends §1561): `PrivateMoney.asks` drops `.waiting`, and `Ask.Kind` and `canTakeBack` go with it (§723). A deposit being checked stands in Holdings › Private with its clock.
+5. **Take it back anytime stays (§1576), on the deposit's steps sheet**: a Holdings row being checked opens `OnItsWaySheet` with the notes it sums, and its "Take it back" row asks the same dialog Needs you's row asks, then returns each note once the sheet has gone (`FeedScreen.walletTakeBack`).
+6. **Receive says both amounts**: "999.999014 USDC arrived · 993.366241 USDC being checked by Privacy Pools" — what reached the one-time address, then the note that went in after 0xBow's fee and the gas. Approved or refused, the line names the note's amount.
+
+**Mac half (§1402).** The same pages on the Mac; nothing else.
+
+**Checks.** `needs-you-held-selftest.sh` deleted; `private-money-selftest.sh` holds refused-only asks, the steps sheet's Take it back and its notes (81 mutations). Built for the simulator.
+
 ## §1828 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (user, 2026-11-16, of "Home · Activity · Social" with Activity drawn small: "we need to have a way tho that the title stays the same size", "we can't be having that middle word short", "for long apps like 'app store connect' we will just have to truncate it i guess")
 
 **Why.** §1812 put every title on one rung and let a path too long for the row step down "every name at once". It did not: the fallback was each word's own `minimumScaleFactor` inside an `HStack`, so SwiftUI shrank whichever word it squeezed, and the middle word drew smaller than the names either side of it.

@@ -207,42 +207,6 @@ extension FeedScreen {
         return rows + walletSignatureWarnings.count + nudges + cards + deposits + orders + exits
     }
 
-    /// The asks Needs you can value (prd §1669): a private deposit waiting
-    /// on 0xBow or refused, in dollars on a network with prices, else its
-    /// quantity. Safe signatures, the rows and the nudges are counted, not
-    /// valued: none carries an amount we read.
-    var walletNeedsHeldParts: [NeedsYouHeld.Part] {
-        guard walletShowsPrivate else { return [] }
-        let store = PrivateMoneyStore.shared
-        let prices = store.shownPrices
-        // A limit order holds what it sells until it fills (prd §1673): its
-        // quantity stands, valued by no price this page reads.
-        let orders = YourAccountOrders.open.map { order in
-            NeedsYouHeld.Part(id: order.uid, label: String(localized: "Waiting for \(order.priceWords)"),
-                              figure: BalancePrivacy.shared.amount(YourAccountOp.spoken(order.sellUnits, decimals: order.sellDecimals), unit: order.sellSymbol),
-                              usd: nil, since: order.placedAt, refused: false)
-        }
-        // An exit out of Aztec holds its amount until it is finished (prd §1700e).
-        let aztec = AztecAccountStore.shared
-        let exits = aztec.pendingExits.map { exit in
-            NeedsYouHeld.Part(id: exit.id, label: String(localized: "On its way out of Aztec"),
-                              figure: BalancePrivacy.shared.amount(AztecAccountStore.figure(exit), unit: exit.symbol),
-                              usd: aztec.usd(exit), since: exit.at, refused: false)
-        }
-        return orders + exits + store.asks().map { ask in
-            let note = ask.note
-            let worth = PrivateMoney.worth(note, rates: store.rates)
-            let units = Double(worth.amount).map { $0 / pow(10, Double(worth.decimals)) }
-            let usd = PrivateMoney.testnets.contains(note.chainId) ? nil
-                : prices[note.symbol.lowercased()].flatMap { price in units.map { $0 * price } }
-            return NeedsYouHeld.Part(
-                id: ask.id,
-                label: ask.kind == .refused ? String(localized: "Not approved") : String(localized: "Waiting for approval"),
-                figure: BalancePrivacy.shared.amount(ask.figure, unit: note.symbol),
-                usd: usd, since: note.at, refused: ask.kind == .refused)
-        }
-    }
-
     /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
     /// tiles, five doors: Your account, Following, Needs you, Permissions,
     /// Threats (Markets is a tile, §1498). Needs you, Permissions and Threats
@@ -1161,11 +1125,6 @@ extension FeedScreen {
             let slots = walletFollowingSlots
             DSFigureReading(number: "\(slots.count)",
                             caption: slots.isEmpty ? String(localized: "Nothing followed") : followingLine(slots))
-        // **WHAT IT HOLDS UP (prd §1669)**, the count when nothing does.
-        case .needsYou:
-            let n = walletNeedsCount(upcoming: upcoming)
-            let parts = walletNeedsHeldParts
-            WalletNeedsHeldFigure(reading: NeedsYouHeld.read(parts, others: n - parts.count), count: n)
         // **YOUR BALANCE, REACHED (prd §1710)**: the disc is what the
         // wallets hold, the delegates and modules the Delegations list holds
         // (§1677) reach their accounts', the grants sit inside at their dollars.
