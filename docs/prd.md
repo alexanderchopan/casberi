@@ -73332,3 +73332,15 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** The same template; the Mac's rows are wider, so a cut is rarer. Not checked on the Mac.
 
 **Checks.** None new. **Seen** on the simulator: App Store Connect's page, "Home · Activity · App Store Conn…" at one size without the demo pill, and "Home · Activity ·" with it.
+
+## §1830 — Round-ups round up every buy, send and swap, and the switch says so (amends §1690's "every send" and its sentence; restates §1561) (user, 2026-11-16, asked whether round-ups apply to swaps: "right. we need to change it to any buys, send, or swap") — BUILT
+
+**What was true already.** §1561 made a swap round up what it sells and a Buy round up its price; the code has done so since (`MoveSentence.roundUpStep`: `.send`, `.swap`, `.buy`). §1690 and the switch's sentence still said "every send", so the law and the one sentence that explains the feature described a send-only rule the app does not have.
+
+**The rule.** Every buy, send and swap rounds up to the next $1 or $5. Unchanged: a swap rounds up the dollars it sells, on the network it leaves; no round-up for an unpriced token, a wrap, a limit order (§1673), the swap that pays for a Bitrefill buy, or a test network. Where the change goes is unchanged too: a send, or a swap selling the dollar, sets it aside in its own transaction (`RoundUps.carriesBuy`); a buy's change is owed to the next one that can, so "with your next send" on a receipt stays true.
+
+**The sentence.** Security and the keys walk: "Round up every buy, send and swap. The change goes to Round-ups and earns interest. At $10, it moves to your private balance, where it keeps earning."
+
+**Mac half (§1402).** The same sentence; nothing else drawn.
+
+**Checks.** None new: copy only.
