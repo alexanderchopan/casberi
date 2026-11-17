@@ -237,10 +237,10 @@ extension DSTextStyle {
     /// is WITHIN a surface, and you never see two crowns at once, so a second
     /// room having its own flattens nothing while a second on the SAME surface
     /// is the real defect.
-    /// Home's balance on the phone (prd §1851): the one figure the head is
-    /// built round, a size above every other number in the app.
-    static let price84 = DSTextStyle(size: 84, weight: .heavy, tracking: 0, lineHeight: 84, relative: .largeTitle)
     static let price64 = DSTextStyle(size: 64, weight: .heavy, tracking: 0, lineHeight: 64, relative: .largeTitle)
+    /// Home's balance on the phone (prd §1857, was `price84` under §1851):
+    /// the page's first line, sized as a title so the feed starts high.
+    static let price52 = DSTextStyle(size: 52, weight: .heavy, tracking: 0, lineHeight: 56, relative: .largeTitle)
 
     // ====================================================== 52 · 44 · SENTENCE
     /// **MOVE'S SENTENCE (prd §1479, §1501).** The sentence you fill in —

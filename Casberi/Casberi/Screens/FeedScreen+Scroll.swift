@@ -356,7 +356,14 @@ extension FeedScreen {
         // **RISKS FOUND ARE AN ASK (prd §1843).** Home's Risks card left
         // with the cards; what it counted and you have not seen stands here,
         // one row onto Risks.
-        let risks = homeRisksUnseen
+        // On Home risks are never an ask (prd §1857): Risks' door counts them.
+        let risks = homeHeadShown ? 0 : homeRisksUnseen
+        // **HOME'S NEEDS YOU IS ONE ROW (prd §1857, user: "only one item in
+        // needs you (not risks)").** Your account's ask, else the Wallet's
+        // first, else the newest an app asks; the rest wait on their pages.
+        let one = homeHeadShown
+        let showsNeeds = needs > 0 && !(one && wants != nil)
+        let shownWaiting = one ? (wants == nil && needs == 0 ? Array(waiting.prefix(1)) : []) : waiting
         if needs > 0 || wants != nil || !waiting.isEmpty || risks > 0 {
             SectionPanelGroup(anchor: Self.scrollAnchor(WalletSection.needsYou.label)) {
                 ActivityWord(name: WalletSection.needsYou.label, open: nil)
@@ -372,7 +379,7 @@ extension FeedScreen {
                         }
                     }
                 }
-                if needs > 0 {
+                if showsNeeds {
                     activityAskRow(glyph: ScopeTileGlyph.wallets,
                                    name: first ?? String(localized: "Wallet"),
                                    word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
@@ -387,10 +394,10 @@ extension FeedScreen {
                                               keepingScope: true)
                     }
                 }
-                if !waiting.isEmpty {
+                if !shownWaiting.isEmpty {
                     // What waits on you opens the thing, the whole row (prd
                     // §1840): the review, the failed run, the reply.
-                    daySection("", waiting, nextEventID: nil, dated: false, headed: false, inFeed: true)
+                    daySection("", shownWaiting, nextEventID: nil, dated: false, headed: false, inFeed: true)
                 }
             }
             .environment(\.feedSectionPanelFilled, false)
@@ -483,18 +490,21 @@ extension FeedScreen {
         // category; this one read "Money".
         // What is new (prd §1831); the word stays when nothing is: it is
         // the door to every move.
-        activitySection(String(localized: "Wallet"),
-                        fresh.isEmpty ? Array(moves.prefix(1)) : fresh,
+        // **ON HOME IT IS ACTIVITY, ONE ROW (prd §1857):** the newest move,
+        // the watchlist gone to Holdings' section.
+        let word = homeHeadShown ? Self.homeWalletName : String(localized: "Wallet")
+        let shown = fresh.isEmpty ? Array(moves.prefix(1)) : fresh
+        activitySection(word, homeHeadShown ? Array(shown.prefix(1)) : shown,
                         // **THE ROW IS THE DOOR (prd §1849, user: "does wallet
                         // need a chevron if everything else doesn't have one?
                         // tapping a transaction could open history").** The
                         // word opens nothing, as every category's; any row
                         // under it opens the Wallet's history.
                         nextEventID: nextEventID, open: nil, keepsWord: true,
-                        lead: homeHeadShown && !homeBare ? AnyView(homeWatchRow) : nil, rowOpens: {
+                        rowOpens: {
             DSHaptic.selection()
             // Under Activity, and back to it (prd §1827, §1840).
-            chrome.openWalletActivity(fromActivity: String(localized: "Wallet"))
+            chrome.openWalletActivity(fromActivity: word)
         })
         }
     }
@@ -510,7 +520,7 @@ extension FeedScreen {
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         // What your account still wants, as Needs you would say it.
         let wants = pending ? String(localized: "Finish setup") : (yours != nil ? yourAccountWants : nil)
-        let word = String(localized: "Wallet")
+        let word = homeHeadShown ? Self.homeWalletName : String(localized: "Wallet")
         SectionPanelGroup(anchor: Self.scrollAnchor(word)) {
             ActivityWord(name: word, open: {
                 DSHaptic.selection()
@@ -519,7 +529,6 @@ extension FeedScreen {
                 chrome.openWalletActivity(fromActivity: word)
             })
         } rows: {
-            if homeHeadShown && !homeBare { homeWatchRow }
             DSPushRow(title: Text(yours == nil ? "Create an account" : "Your account"),
                       subtitle: yours == nil ? nil : wants.map { Text(verbatim: $0) } ?? Text("No moves yet"),
                       subtitleTone: wants != nil ? DS.attentionInk : DS.textSecondary,
@@ -912,6 +921,7 @@ extension FeedScreen {
                 // Needs you and the Wallet carry their word's anchor, not a
                 // category's id (prd §1843: Home's chips jump to them too).
                 let target = category == WalletSection.needsYou.label || category == Self.homeWalletName
+                    || category == WalletSection.holdings.label
                     ? Self.scrollAnchor(category) : Self.sectionID(category)
                 withTransaction(instant) { proxy.scrollTo(target, anchor: .top) }
             }
@@ -935,6 +945,11 @@ extension EnvironmentValues {
     /// (prd §1843): it takes no chapter air, since the chips' own gap above
     /// them is that air and the chips belong to the feed they jump through.
     @Entry var feedSectionLeads: String? = nil
+    /// Home's money sections (Needs you, Activity, Holdings) stand close:
+    /// no section gap over them and a short top on their word (prd §1857,
+    /// user: "spacing isn't good", "you can't see the first app on there
+    /// above the fold"). The feed's sections keep the one gap.
+    @Entry var feedSectionClose: Bool = false
     /// Whether the panel draws its fill: nowhere, since prd §1393 (the
     /// Feed's and the Wallet's since §1382, Library's since §1383). The
     /// shape stays, so rows keep their column and the gaps their height;
@@ -1435,6 +1450,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     @Environment(\.dsRoomBoxPlace) private var place
     @Environment(\.dsPaneBoxRow) private var paneRow
     @Environment(\.feedSectionLeads) private var leads
+    @Environment(\.feedSectionClose) private var close
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
@@ -1456,7 +1472,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 // A chapter's air stands between panels, never inside one:
                 // the one section gap (prd §1386), less the header's own top.
                 // The section under Home's jump chips takes none (§1843).
-                let tight = anchor != nil && anchor == leads
+                let tight = (anchor != nil && anchor == leads) || close
                 if !tight {
                     Color.clear
                         .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
@@ -1622,6 +1638,7 @@ struct PinnedHeaderPushed: ViewModifier {
 struct ActivityWord: View {
     let name: String
     let open: (() -> Void)?
+    @Environment(\.feedSectionClose) private var close
 
     var body: some View {
         Group {
@@ -1667,7 +1684,7 @@ struct ActivityWord: View {
             .padding(.trailing, DS.Space.s4)
             // Under Home's chips the header keeps this air and drops only
             // the section gap above it (`SectionPanelGroup`, prd §1846).
-            .padding(.top, DS.Space.s6)
+            .padding(.top, close ? DS.Space.s4 : DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
             .contentShape(Rectangle())
     }

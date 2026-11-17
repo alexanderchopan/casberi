@@ -422,13 +422,19 @@ extension FeedScreen {
             if source == "All" {
                 // **THE WALLET IS HOME'S HEAD (prd §1843):** the card, the
                 // watchlist, Account and the jumps, before what is new.
-                let jumps = homeHeadShown ? homeJumpNames(visible, panel: starts) : []
-                if homeHeadShown { homeHeadSection(visible, jumps: jumps, panel: starts) }
+                // **NO APPS PANEL ON HOME (prd §1857, user: "remove it from
+                // home").** Someone who never builds a feed keeps a quiet
+                // wallet; Apps is the door at the head, and "Set up your feed"
+                // closes for good (user: "can it be dismissable?").
+                let jumps = homeHeadShown ? homeJumpNames(visible, panel: false) : []
+                if homeHeadShown { homeHeadSection(visible, jumps: jumps, panel: false) }
                 Group {
-                    if !starts { activityNeedsSection(visible) }
+                    if !starts || homeHeadShown { activityNeedsSection(visible) }
                     if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
+                    if homeHeadShown { homeHoldingsSection() }
                 }
                 .environment(\.feedSectionLeads, Self.homeLeadAnchor(jumps))
+                .environment(\.feedSectionClose, homeHeadShown)
                 if starts, quietActivity { activityStartSection }
             }
             feedScrollSections(visible,
@@ -438,7 +444,7 @@ extension FeedScreen {
             // your feed and then you hit this slab of the apps").** The panel
             // stands only on a first run, where it is the page; after that
             // Apps is a chip at Home's head.
-            let appsPanel = quietActivity && (starts || !homeHeadShown)
+            let appsPanel = quietActivity && !homeHeadShown
             if appsPanel { activityAppsPanel }
             jumpRoom(onPanel: appsPanel)
         }
@@ -511,19 +517,10 @@ extension FeedScreen {
     /// the phone's Activity, at their own height.
     var activityStartSection: some View {
         Section {
-            FeedStartBox(fitsLead: false) { name in
+            FeedStartRow(closes: homeHeadShown) { name in
                 DSHaptic.selection()
                 route.openSetup(forOffer: name)
             }
-            // On the card the Wallet's start stands on, so the two read as a
-            // pair (prd §1847): "Set up your wallet", "Set up your feed".
-            .padding(DS.Space.s3)
-            .padding(.vertical, DS.Space.s2)
-            .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
-            .listRowInsets(.init(top: DS.Space.s3, leading: DSRoomChassis.rowInset - DS.Space.s3,
-                                 bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset - DS.Space.s3))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
         }
         // What a body cannot read (the phone's calendars, the people).
         .task { await FirstRun.shared.refresh(modelContext) }
@@ -1396,5 +1393,35 @@ extension FeedScreen {
                              bottom: Self.rowAir,
                              trailing: DSRoomChassis.rowInset))
         .listRowSeparator(.hidden)
+    }
+}
+
+
+/// "Set up your feed" under the Wallet (prd §1839, §1847). On the phone's
+/// Home it closes for good (prd §1857, user: "for the set up your feed thing
+/// on new user they can dismiss it"); Apps stays the door at the head.
+private struct FeedStartRow: View {
+    let closes: Bool
+    let open: (String) -> Void
+    @AppStorage(FeedStartRow.closedKey) private var closed = false
+
+    static let closedKey = "home.feedStartClosed"
+
+    var body: some View {
+        if !(closes && closed) {
+            FeedStartBox(fitsLead: false, dismiss: closes ? {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { closed = true }
+            } : nil, open: open)
+            // On the card the Wallet's start stands on, so the two read as a
+            // pair (prd §1847): "Set up your wallet", "Set up your feed".
+            .padding(DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
+            .listRowInsets(.init(top: DS.Space.s3, leading: DSRoomChassis.rowInset - DS.Space.s3,
+                                 bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset - DS.Space.s3))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
     }
 }

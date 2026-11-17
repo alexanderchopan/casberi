@@ -81,29 +81,14 @@ struct DSHomeCircle<Face: View>: View {
 }
 
 enum DSHomeCircleMetrics {
-    /// The circle, and the column its word may fill.
-    static let face: CGFloat = DS.Mark.hero
-    static let column: CGFloat = 68
+    /// The circle, and the column its word may fill. A seat's face since
+    /// prd §1857 (was `hero`, 60pt): five apps fit across a phone.
+    static let face: CGFloat = DS.Face.seat
+    static let column: CGFloat = 60
 }
 
-/// How many wait, on the attention wash: Needs you's face.
-struct DSHomeCircleCount: View {
-    let count: Int
-
-    var body: some View {
-        ZStack {
-            Circle().fill(DS.attention.opacity(0.22))
-            Text(verbatim: "\(count)")
-                .dsText(.heading24)
-                .monospacedDigit()
-                .foregroundStyle(DS.attentionInk)
-                .contentTransition(.numericText())
-        }
-    }
-}
-
-/// A glyph on the quiet wash: the Wallet's face, and a category's while no
-/// app of it has a mark to show.
+/// A glyph on the quiet wash: a category's face while no app of it has a
+/// mark to show.
 struct DSHomeCircleGlyph: View {
     let glyph: String
 

@@ -94,17 +94,16 @@ extension FeedScreen {
     @ViewBuilder
     var homeMoneyCard: some View {
         if homePlated {
-            // **THE HEAD IS ONE PLATE (prd §1855, user: "i just think it
-            // doesn't look good as is like it all blends together").** The
-            // money and its doors on one grey card; the feed stays bare.
-            // The doors stand under it on the page since the plate ends in
-            // the map (prd §1856): the foot is the plate's last edge.
+            // **THE BALANCE IS THE PAGE'S FIRST LINE (prd §1857, over §1855's
+            // plate and §1856's foot; user, of the mock: "this is probably
+            // the smartest option").** No plate: the balance, the day with
+            // Public and Private, then the doors, on the page's black in the
+            // rows' column, so the feed starts high. Holdings is a section
+            // under Activity (`homeHoldingsSection`).
             homeMoneyStack
-                .padding(.horizontal, Self.homePlateInset)
-                .padding(.top, DS.Space.s6)
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.top, DS.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .dsWell(cornerRadius: Self.homePlateRadius)
-                .clipShape(RoundedRectangle(cornerRadius: Self.homePlateRadius, style: .continuous))
         } else {
             homeMoneyStack
                 .padding(DS.Space.s3)
@@ -113,11 +112,9 @@ extension FeedScreen {
         }
     }
 
-    /// The head stands on its plate once there is a balance to show.
+    /// There is a balance to show: the head is the balance's lines, and the
+    /// doors and Holdings stand under it.
     var homePlated: Bool { (portfolioShown?.totalUSD ?? 0) > 0 }
-    static let homePlateRadius: CGFloat = 30
-    /// The plate's side padding, which the foot undoes to reach its edges.
-    static let homePlateInset: CGFloat = DS.Space.s4
 
     @ViewBuilder
     private var homeMoneyStack: some View {
@@ -134,7 +131,7 @@ extension FeedScreen {
                 Button { homeOpen(.holdings) } label: {
                     HStack(spacing: DS.Space.s2) {
                         Text(verbatim: mask ?? WalletValue.money(shown.totalUSD))
-                            .dsText(.price84)
+                            .dsText(.price52)
                             .monospacedDigit()
                             .foregroundStyle(DS.textPrimary)
                             .contentTransition(.numericText())
@@ -173,18 +170,6 @@ extension FeedScreen {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // **THE PLATE ENDS IN THE MAP (prd §1856, over §1851's
-                // Holdings row).** Three tokens and Other, edge to edge: the
-                // plate's own padding is undone so its corners cut the outer
-                // tiles. The foot opens Holdings, as the row did.
-                Button { homeOpen(.holdings) } label: {
-                    HoldingsBand(cells: HoldingsBand.cells(worth, isToken: Self.homeIsToken),
-                                 moves: moves, masked: mask != nil)
-                }
-                .buttonStyle(RowPress())
-                .accessibilityLabel(Text(WalletSection.holdings.label))
-                .padding(.top, DS.Space.s3)
-                .padding(.horizontal, -Self.homePlateInset)
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
                 WalletStartFigure(bare: homeBare).frame(height: homeBare ? nil : Self.homeStartHeight)
@@ -209,16 +194,6 @@ extension FeedScreen {
         guard let change else { return nil }
         let day = WatchlistRules.change(change * 100)
         return (day.words, day.tone == .up ? DS.confirmInk : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
-    }
-
-    /// What the foot may name: tokens only (user: "for holdings there are no
-    /// long names"). An app's or a bank account's tile is never one, and
-    /// Lent and Private are places your tokens sit (user: "why does it say
-    /// lent in the holdings row"); they count in Other.
-    static func homeIsToken(_ id: String) -> Bool {
-        let places: Set<String> = [HoldingsTreemapLayout.otherID, WalletPortfolio.lentSymbol,
-                                    PrivateMoney.walletSymbol, AztecAccountStore.walletSymbol]
-        return !places.contains(id) && WalletPortfolio.appCell(id) == nil
     }
 
     /// The day pill reads the map's five biggest and the rest as Other, as
@@ -283,7 +258,8 @@ extension FeedScreen {
             Text(verbatim: word).foregroundStyle(DS.textSecondary)
             Text(verbatim: figure).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
-        .dsText(.heading20)
+        // A size under the 52pt balance (prd §1857; `heading20` under the 84).
+        .dsText(.heading17)
         .fontWeight(.bold)
         .lineLimit(1)
     }
@@ -338,11 +314,85 @@ extension FeedScreen {
         }
     }
 
+    // MARK: - Holdings
+
+    /// Holdings stands on Home once there is a balance to show, never on a
+    /// first run's start.
+    var homeHoldingsShown: Bool { homeHeadShown && !homeBare && homePlated }
+
+    /// **HOLDINGS IS A SECTION, ONE ROW EACH (prd §1857, user: "maybe the
+    /// holdings just shows the top 1 in each category to be like the feeds
+    /// sort of are").** Under Activity: your biggest public token and your
+    /// biggest private one, each row's line saying which; the word opens
+    /// Holdings, a public row its token. One side empty draws one row;
+    /// private money is yours alone, so a followed wallet draws none (§1590).
+    /// The watchlist's line closes it, the one door to the watchlist on the
+    /// phone since the Wallet section left (§1851's row, moved).
+    @ViewBuilder
+    func homeHoldingsSection() -> some View {
+        if homeHoldingsShown {
+            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+            // Each row only while its half of the line above has money, by
+            // the line's own sum (`homeHalves`), so the section never shows a
+            // public token beside "Public $0".
+            let total = portfolioShown?.totalUSD ?? 0
+            let hidden = min(total, walletPrivateUSD)
+            let pub = total - hidden < 0.01 ? nil
+                : (portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? [])
+                    .filter { $0.usd > 0 }
+                    .max { $0.usd != $1.usd ? $0.usd < $1.usd : $0.symbol > $1.symbol }
+            let priv = walletShowsPrivatePlaces && hidden >= 0.01
+                ? homePrivateByToken.filter { $0.value > 0 }
+                    .max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }
+                : nil
+            let word = WalletSection.holdings.label
+            SectionPanelGroup(anchor: Self.scrollAnchor(word)) {
+                ActivityWord(name: word, open: {
+                    DSHaptic.selection()
+                    ActivitySeen.shared.leavingForPage()
+                    homeOpen(.holdings)
+                })
+            } rows: {
+                if let pub {
+                    walletPreviewRow(pub.symbol, line: String(localized: "Public"),
+                                     figure: mask ?? WalletValue.money(pub.usd),
+                                     act: { walletOpenToken(pub) }) {
+                        AssetMark(name: pub.symbol, size: DS.Mark.badge)
+                    }
+                }
+                if let priv {
+                    walletPreviewRow(priv.key, line: String(localized: "Private"),
+                                     figure: mask ?? WalletValue.money(priv.value),
+                                     act: { homeOpen(.holdings) }) {
+                        AssetMark(name: priv.key, size: DS.Mark.badge)
+                    }
+                }
+                homeWatchRow
+            }
+            .environment(\.feedSectionPanelFilled, false)
+            .environment(\.dsTitleOnly, true)
+        }
+    }
+
+    /// Your private balance by token, with your Aztec account's private
+    /// tokens beside Privacy Pools' and Railgun's: every part of the
+    /// "Private" figure on the line above (`walletPrivateUSD`).
+    var homePrivateByToken: [String: Double] {
+        var out = walletPrivateByToken
+        let aztec = AztecAccountStore.shared
+        if aztec.isShown {
+            for held in aztec.privateHeld {
+                if let usd = aztec.usd(held, units: held.privateUnits) { out[held.name.uppercased(), default: 0] += usd }
+            }
+        }
+        return out
+    }
+
     // MARK: - The lines
 
-    /// **THE WATCHLIST IS THE WALLET SECTION'S (prd §1851, over §1849).** One
-    /// row over the Wallet's newest move: its glyph, its name, the token that
-    /// moved most today; empty, the verb. It opens the watchlist.
+    /// **THE WATCHLIST CLOSES HOLDINGS' SECTION (prd §1857, was the Wallet
+    /// section's under §1851).** Its glyph, its name, the token that moved
+    /// most today; empty, the verb. It opens the watchlist.
     @ViewBuilder
     var homeWatchRow: some View {
         let tokens = Watchlist.shared.tokens
@@ -454,13 +504,15 @@ extension FeedScreen {
         let yours = YourAccountDemo.shownAddress
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         let wants = money.isEmpty ? nil : pending ? "" : (yours != nil ? yourAccountWants : nil)
-        if walletNeedsCount(upcoming: walletUpcoming(money)) > 0 || wants != nil || !needs.isEmpty
-            || homeRisksUnseen > 0 {
+        // Risks are never Home's ask (prd §1857, user: "risk is subjective
+        // user can go there if they want to look"): its door says the count.
+        if walletNeedsCount(upcoming: walletUpcoming(money)) > 0 || wants != nil || !needs.isEmpty {
             names.append(WalletSection.needsYou.label)
         }
         // The first run draws no Wallet section to jump to (prd §1847).
         // (a bank's rows still draw one, and keep the jump).
         if !(homeBare && Self.walletMoves(money).isEmpty) { names.append(Self.homeWalletName) }
+        if homeHoldingsShown { names.append(WalletSection.holdings.label) }
         let byCategory = feedSectionRows(visible, hiding: [])
         let asked = Set(needs.map(\.source))
         for category in scrollCategories where category != HomeScope.notesSection {
@@ -475,8 +527,10 @@ extension FeedScreen {
         return names
     }
 
-    /// The Wallet's word on the page, as its section says it (§1812).
-    static var homeWalletName: String { String(localized: "Wallet") }
+    /// The Wallet's moves on Home, as their section says it: Activity
+    /// (prd §1857, was "Wallet" under §1812). The rail's Activity page keeps
+    /// "Wallet", where Activity is the page itself.
+    static var homeWalletName: String { String(localized: "Activity") }
 
     /// The risks found and not yet seen: Home's ask (prd §1843), the count
     /// Home's Risks card wore.
@@ -498,7 +552,6 @@ extension FeedScreen {
         if !names.isEmpty {
             let byCategory = feedSectionRows(visible, hiding: [])
             let asked = Set(activityNeedThings(visible).map(\.source))
-            let waiting = homeNeedsCount(visible)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: DS.Space.s2) {
                     ForEach(names, id: \.self) { name in
@@ -506,14 +559,10 @@ extension FeedScreen {
                             DSHaptic.selection()
                             chrome.feedJump = name
                         } label: {
-                            if name == WalletSection.needsYou.label {
-                                DSHomeCircle(name: name, tone: .attention) { DSHomeCircleCount(count: waiting) }
-                            } else if name == Self.homeWalletName {
-                                DSHomeCircle(name: name) { DSHomeCircleGlyph(glyph: ScopeTileGlyph.wallets) }
-                            } else if let app = homeCircleApp(name, byCategory, asked: asked),
+                            if let app = homeCircleApp(name, byCategory, asked: asked),
                                       BridgeIcon.hasMark(app) {
                                 DSHomeCircle(name: name) {
-                                    BridgeIcon(name: app, size: DS.Mark.hero, circular: true)
+                                    BridgeIcon(name: app, size: DS.Face.seat, circular: true)
                                 }
                             } else {
                                 DSHomeCircle(name: name) { DSHomeCircleGlyph(glyph: CategoryFold.glyph(for: name)) }
@@ -539,26 +588,19 @@ extension FeedScreen {
             .first { !ActivitySeen.shared.isHidden($0.id) }?.source
     }
 
-    /// How many things wait in Needs you, as its section counts its rows:
-    /// your account's ask, the Wallet's asks, the unseen risks, and what the
-    /// apps ask.
-    func homeNeedsCount(_ visible: [Thing]) -> Int {
-        let money = activityMoneyRows(visible)
-        let yours = YourAccountDemo.shownAddress
-        let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
-        let wants = money.isEmpty ? nil : pending ? "" : (yours != nil ? yourAccountWants : nil)
-        return (wants == nil ? 0 : 1) + walletNeedsCount(upcoming: walletUpcoming(money))
-            + homeRisksUnseen + activityNeedThings(visible).count
-    }
-
     /// The circles drawn for the page's sections: every section standing on
     /// it, once the feed has a category to jump to. The Wallet alone (with
     /// or without Needs you) is the whole page: nothing to jump past, so no
     /// row. Apps' panel takes none (it is a door at the head, §1848).
     static func homeCircleNames(_ jumps: [String]) -> [String] {
-        let names = jumps.filter { $0 != PlaceTab.library.label }
-        let categories = names.filter { $0 != WalletSection.needsYou.label && $0 != homeWalletName }
-        return categories.isEmpty ? [] : names
+        // **THE CIRCLES ARE THE FEED'S APPS (prd §1857, user: "we no longer
+        // need the needs you and wallet circles do we? bc they are always at
+        // the top").** Needs you, Activity and Holdings stand right under the
+        // circles, so a jump to them goes nowhere.
+        jumps.filter {
+            $0 != PlaceTab.library.label && $0 != WalletSection.needsYou.label && $0 != homeWalletName
+                && $0 != WalletSection.holdings.label
+        }
     }
 
     /// The section standing right under the circles, which takes no chapter

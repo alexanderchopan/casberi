@@ -221,6 +221,9 @@ struct FeedStartBox: View {
     /// The lead's one size (the Mac's and iPad's box); on the phone's
     /// Activity it stands under the Wallet at its own height (prd §1839).
     var fitsLead = true
+    /// Closes the box for good, drawn as a cross beside the sentence (prd
+    /// §1857); nil draws none.
+    var dismiss: (() -> Void)? = nil
     let open: (String) -> Void
 
     var body: some View {
@@ -243,9 +246,23 @@ struct FeedStartBox: View {
             // On the phone's first run it answers the card over it, "Set up
             // your wallet" (prd §1847, user: "for apps it could say set up
             // your feed").
-            (fitsLead ? Text("Add your apps and what's new in them shows up here.") : Text("Set up your feed"))
-                .dsText(fitsLead ? .heading28 : .heading24).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                (fitsLead ? Text("Add your apps and what's new in them shows up here.") : Text("Set up your feed"))
+                    .dsText(fitsLead ? .heading28 : .heading24).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let dismiss {
+                    Spacer(minLength: 0)
+                    Button(action: dismiss) {
+                        Image(systemName: "xmark")
+                            .dsGlyph(.subhead, weight: .bold)
+                            .foregroundStyle(DS.textSecondary)
+                            .frame(minWidth: DS.Hit.min, minHeight: DS.Hit.min)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityLabel(Text("Close"))
+                }
+            }
             SourcesQuickRow(title: String(localized: "Start with any of these"),
                             apps: LibraryRecents.starts.filter { name in
                                 BridgeCatalog.offers.contains { $0.name == name }

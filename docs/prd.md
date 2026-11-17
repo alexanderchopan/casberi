@@ -73767,3 +73767,20 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The phone's Home only (`PhoneHome.isOn`); the rail's Home keeps its map.
 
 **Checks.** None new.
+
+## §1857 — Home's head is the balance's lines: no plate and no foot; the doors, the feed's app circles at a tile's size, then Needs you (one row, never risks), Activity (the newest move) and Holdings (the biggest public token and the biggest private one); no Apps panel on Home, and "Set up your feed" closes (amends §1856, §1855, §1851, §1848, §1847, §1843, §1812 for Home's word) (user, 2026-11-17, of the mocks "Holdings within reach": "balance / public private / account / risks / apps / app circles / needs you / activity / balances / work...", "maybe the holdings just shows the top 1 in each category to be like the feeds sort of are", "we no longer need the needs you and wallet circles do we? bc they are always at the top", "needs you disappears if there isn't a needs you. risk is subjective user can go there if they want to look", "this is probably the smartest option", "48", "i love it"; of the Apps panel: "remove it from home"; of the feed's start: "can it be dismissable?")
+
+**Why.** Most people open Casberi for the Wallet, and Home is to be mostly feed. The plate and its foot took half the screen before the feed began. With the balance as the page's first line and the money's sections standing as feed sections, Work's first row comes above the fold, and someone who never connects an app keeps a quiet wallet.
+
+1. **The head is the balance's lines** (`homeMoneyCard`): no plate (§1855) and no foot (§1856, `HoldingsBand` deleted). The balance at `price52` (was `price84`, which is deleted) with its grey chevron to Holdings; under it the day's pill with Public and Private at `heading17`; then the doors (Account, Risks, Apps, the address and its copy) as before.
+2. **The circles are the feed's apps** (`homeCircleNames`): no Needs you circle and no Wallet circle, since those sections stand right under them. A circle is a seat's face, 46pt (`DSHomeCircleMetrics.face = DS.Face.seat`, was `hero`, 60pt), so five fit across a phone. `DSHomeCircleCount` is deleted.
+3. **Needs you is one row, only when something waits** (`activityNeedsSection` on Home): your account's ask, else the Wallet's first ask, else the newest an app asks. Risks are never Home's ask; the Risks door says the count.
+4. **Activity is the Wallet's newest move, one row** (`homeWalletName`, was "Wallet" on Home). The rail's Activity page keeps "Wallet".
+5. **Holdings is a section** (`homeHoldingsSection`): the biggest public token ("Public" under it; opens the token) and the biggest private one ("Private"; opens Holdings), then the watchlist's line, its one door on the phone. One side empty draws one row; a followed wallet draws no private row (§1590). The word opens Holdings.
+6. **No Apps panel on Home, and "Set up your feed" closes** (amends §1848, §1847; user: "remove it from home", then "for the set up your feed thing on new user they can dismiss it"): Apps is the door at the head. A new person's "Set up your feed" box keeps its six apps and wears a cross; closed, it is gone for good on that phone (`FeedStartRow`, `home.feedStartClosed`). The rail's Activity keeps both, with no cross.
+
+**Declined.** A wallet-only Home with the feed behind Apps ("one single feed is so much better"); Public and Private in two columns; three tokens each with See all; Apps moved into Account › Settings ("leave apps"); the address off Home ("people want to copy it often").
+
+**Mac half (§1402).** The phone's Home only (`homeHeadShown`); the rail's Home and Activity are unchanged.
+
+**Checks.** None new.
