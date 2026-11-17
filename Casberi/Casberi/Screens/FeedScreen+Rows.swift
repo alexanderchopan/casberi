@@ -756,6 +756,7 @@ struct RowVerbMenu: View {
     var onNewFolder: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dsNeedsYouSeeable) private var needsYouSeeable
 
     var body: some View {
         if thing.isLive { menu }
@@ -771,6 +772,15 @@ struct RowVerbMenu: View {
     }
 
     @ViewBuilder private func standardMenu(note: Bool) -> some View {
+        // On Needs you's page a row can be put away (`NeedsYouSeen`): the
+        // row is left as it is, and comes back if its date moves.
+        if needsYouSeeable {
+            Button {
+                let id = thing.id, due = thing.dueAt
+                withAnimation(DS.Motion.standard) { NeedsYouSeen.shared.mark(id, due: due) }
+                DSHaptic.selection()
+            } label: { Label("Mark as seen", systemImage: "eye") }
+        }
         let verbs = note ? [] : perfAccum("rowVerbs[\(room)]") {
             VerbDerivation.verbs(for: thing)
         }

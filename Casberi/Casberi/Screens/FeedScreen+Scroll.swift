@@ -845,6 +845,9 @@ extension FeedScreen {
     /// section (measured: one stops short by the rows it had not met).
     static let landingPasses = 4
 
+    /// `feedJump`'s word for the page's top, never a section's name.
+    static let topJump = "\u{1}top"
+
     func settleFeedJump(_ proxy: ScrollViewProxy) {
         // The Feed on screen takes the jump, never one mounted beside it.
         guard source == "All", isActive, let category = chrome.feedJump else { return }
@@ -852,6 +855,18 @@ extension FeedScreen {
         NSLog("[Casberi] feedJump: %@", category)
         #endif
         chrome.feedJump = nil
+        // The page's top: a page left for Home lands there (`topJump`).
+        if category == Self.topJump {
+            Task { @MainActor in
+                var instant = Transaction()
+                instant.disablesAnimations = true
+                for pass in 0..<Self.landingPasses {
+                    try? await Task.sleep(for: .milliseconds(pass == 0 ? 60 : 70))
+                    withTransaction(instant) { proxy.scrollTo(Self.roomTitleAnchor, anchor: .top) }
+                }
+            }
+            return
+        }
         // **ONE LANDING, EVERY TIME (user, 2026-10-10: "it is jarring and
         // inconsistent").** An animated scroll travels to a position the list
         // has only ESTIMATED (rows off screen are not measured yet), and the
@@ -892,8 +907,6 @@ extension EnvironmentValues {
     /// (prd §1843): it takes no chapter air, since the chips' own gap above
     /// them is that air and the chips belong to the feed they jump through.
     @Entry var feedSectionLeads: String? = nil
-    /// Set on that section's header, which then stands close under the chips.
-    @Entry var feedSectionHeaderTight = false
     /// Whether the panel draws its fill: nowhere, since prd §1393 (the
     /// Feed's and the Wallet's since §1382, Library's since §1383). The
     /// shape stays, so rows keep their column and the gaps their height;
@@ -1425,7 +1438,6 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                         .accessibilityHidden(true)
                 }
                 header
-                    .environment(\.feedSectionHeaderTight, tight)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(SectionPanel(part: .top, lit: lit, inset: panelInset, filled: panelFilled))
@@ -1582,7 +1594,6 @@ struct PinnedHeaderPushed: ViewModifier {
 struct ActivityWord: View {
     let name: String
     let open: (() -> Void)?
-    @Environment(\.feedSectionHeaderTight) private var tight
 
     var body: some View {
         Group {
@@ -1626,7 +1637,9 @@ struct ActivityWord: View {
         }
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.trailing, DS.Space.s4)
-            .padding(.top, tight ? DS.Space.s2 : DS.Space.s6)
+            // Under Home's chips the header keeps this air and drops only
+            // the section gap above it (`SectionPanelGroup`, prd §1846).
+            .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
             .contentShape(Rectangle())
     }

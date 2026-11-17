@@ -73552,3 +73552,41 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: `PhoneHome.isOn` is the iPhone's alone; the rail, its Home and its Activity are unchanged.
 
 **Checks.** None new.
+
+## §1844 — Needs you holds what is near and can be marked as seen; a page goes back to the top of Home; each band tile opens its token (amends §1827, §1843 items 2 and 9, §1359) (user, 2026-11-17, over a screenshot of "Home · Needs you" holding "accountless.eth expires Oct 1": "bug. also can't mark it as seen"; "if user swipes right it should go to top of home page"; "remap tokens are tappable but they all go to holdings page so i don't think they should be tappable. if they are they should open the token page")
+
+**Why.** An ENS name renewed to Oct 1 next year stood in Needs you ten months ahead, under a day word without its year, read in November as a date passed, and nothing could put it away. The way back from a page landed on the section it was opened from, not Home's top. Every band tile opened Holdings, so a tile looked like its token's door and was not.
+
+1. **A dated row needs you inside 90 days** (`WalletNeedsYou.dueSoon`, `dueHorizon`, the ENS ladder's horizon). Further out it is not in Needs you; it returns when it is near.
+2. **Mark as seen.** Holding a row on Needs you's page offers it (`NeedsYouSeen`, `dsNeedsYouSeeable`). The key is the row and its due date, so a deadline that moves comes back. On this device only; nothing is written to the row.
+3. **Another year's date says its year**: "Oct 1, 2027" (`FeedScreen.dayWord`, `ENSName.dateWord`), amending §1359's "Sep 15" for dates outside this calendar year.
+4. **Back from a page lands at the top of Home** (amends §1827's "on the section it was opened from"): the swipe right and the title's grey word, through `MainSurface`'s return (`FeedScreen.topJump`).
+5. **Each band tile is its own door** (amends §1843 item 2's "the band opens Holdings"): a token opens its sheet (`walletOpenToken`), an app's tile Apps, Other, Lent, Private and Aztec Holdings (`homeOpenTile`). A tile is at least 44pt wide. The balance stays Holdings' door.
+
+**Mac half (§1402).** Items 1–3 reach the Mac's Needs you and day words unchanged. Items 4 and 5 are the phone's Home (`PhoneHome.isOn`); the rail is unchanged.
+
+**Checks.** `needs-you-selftest.sh`: four cases and one mutation for item 1.
+
+## §1845 — Home's head is centred; the band and the feed keep the left edge (amends §1843 items 2, 4 and 5) (user, 2026-11-17, over the canvas "Home head alignment": "i like the idea of the centered head!")
+
+**Why.** The head's lines stood a few points left of the rows' column, so the card, the watchlist and Account read as a misaligned list. Centred, the head reads as one object over the feed, which stays left.
+
+1. **Centred:** the balance and its chevron, the day (and whose money, beside it), Public · Private, the watchlist line, and the Account row (`FeedScreen.homeMoneyCard`, `homeHalves`, `homeWatchlistLine`, `homeAccountLine`).
+2. **Not centred:** the band spans the card; the jump chips, the section names and every row keep the rows' left edge (§763).
+3. **Account stays a grey pill with its glyph** (user: "we definitely need a pill for account or it doesn't look tappable"). The face stays Move's alone (§1809): one face, one place. Centring sets Account's row apart from the jump chips, which stand left in the feed's group.
+
+**Mac half (§1402).** None: the head is the phone's alone (`PhoneHome.isOn`).
+
+**Checks.** None new.
+
+## §1846 — Home's head breathes: its three groups stand apart; the Wallet section stays when empty (amends §1843 item 6) (user, 2026-11-17: "jump chips and needs you could come down a bit and so could the watchlist and account stuff. there is enough room to have more padding between and make the sections feel separate"; "definitely use the same spacing"; "we can't remove wallet when it has no rows b/c someone will want to see their transaction history"; of the jump chips "i don't mind them")
+
+1. **The watchlist and Account stand `s6` under the card** (was `s1`, `FeedScreen.homeLinesGap`).
+2. **The jump chips stand a section gap and `s2` under Account** (was the gap less `s2`, `homeChipsGap`).
+3. **Needs you under the chips takes `s6` above its name** (was `s2`). It still drops the section gap the chips' own air replaces; `feedSectionHeaderTight` is deleted, the header's top is one value.
+4. **One gap between sections stays `DSRoomChassis.sectionGap`** (§1386); measured on the screenshot, Risks → Wallet and Wallet → Media were that gap. The Wallet's word with no new move under it is what read as uneven, and it stays: it is the door to every move (§1831).
+5. **The jump chips stay** (declining a proposal to draw them only on a long page).
+
+**Mac half (§1402).** None: the head is the phone's alone.
+
+**Checks.** None new.

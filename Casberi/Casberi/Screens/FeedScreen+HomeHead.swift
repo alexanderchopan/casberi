@@ -31,6 +31,21 @@ extension FeedScreen {
         chrome.openWalletPage(section, fromActivity: nil, keepingScope: true)
     }
 
+    /// A band tile pressed: a token opens its sheet, as its Holdings row
+    /// does; an app's tile opens Apps; Other, Lent, Private and Aztec open
+    /// Holdings, where their rows are. Never a page every tile shares.
+    func homeOpenTile(_ id: String) {
+        if WalletPortfolio.appCell(id) != nil {
+            homeOpen(.apps)
+        } else if id != HoldingsTreemapLayout.otherID,
+                  let position = portfolioUnhidden?.positions.first(where: { $0.symbol == id }) {
+            DSHaptic.selection()
+            walletOpenToken(position)
+        } else {
+            homeOpen(.holdings)
+        }
+    }
+
     /// The head's rows, first on the page.
     @ViewBuilder
     func homeHeadSection(_ visible: [Thing], jumps: [String]) -> some View {
@@ -52,11 +67,14 @@ extension FeedScreen {
             // Three groups (user: "balance and card; account and watchlist;
             // feed and chips"): the two lines stand close as one row, and
             // the wide gap is above the chips, which belong to the feed.
-            VStack(alignment: .leading, spacing: -DS.Space.s2) {
+            VStack(alignment: .center, spacing: -DS.Space.s2) {
                 homeWatchlistLine
                 homeAccountLine
             }
-            .listRowInsets(.init(top: DS.Space.s1, leading: DSRoomChassis.rowInset,
+            // Air between the groups (user: "there is enough room to have
+            // more padding between and make the sections feel separate",
+            // prd §1846): the lines stand a gap under the card.
+            .listRowInsets(.init(top: Self.homeLinesGap, leading: DSRoomChassis.rowInset,
                                  bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
@@ -68,10 +86,16 @@ extension FeedScreen {
 
     /// Your money on one card: the balance (Holdings' door, §1838), the day
     /// and whose it is, Public · Private, and the band.
+    ///
+    /// **THE HEAD IS CENTRED (user, 2026-11-17: "i like the idea of the
+    /// centered head!", prd §1845):** the balance, the day, Public · Private,
+    /// the watchlist and Account stand on the screen's middle; the band
+    /// spans the card, and the jump chips and the feed under them keep the
+    /// rows' left edge.
     @ViewBuilder
     var homeMoneyCard: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .center, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
                 let cells = HoldingsBand.cells(shown.foldingPrivate(walletPrivateByToken)
                     .sectionWorth(appsApart: walletOnAll))
@@ -95,8 +119,8 @@ extension FeedScreen {
                             .dsGlyph(.tick, weight: .bold)
                             .foregroundStyle(DS.textSecondary)
                             .accessibilityHidden(true)
-                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
@@ -107,16 +131,14 @@ extension FeedScreen {
                     } else if let day {
                         Text(verbatim: day.words).dsText(.body17).foregroundStyle(day.ink).lineLimit(1)
                     }
-                    Spacer(minLength: DS.Space.s2)
                     homeWhoseWord
                 }
+                .frame(maxWidth: .infinity)
                 homeHalves(total: shown.totalUSD, mask: mask)
-                Button { homeOpen(.holdings) } label: {
-                    HoldingsBand(cells: cells, moves: moves)
-                }
-                .buttonStyle(RowPress())
-                .padding(.top, DS.Space.s1)
-                .accessibilityLabel(Text(WalletSection.holdings.label))
+                // Each tile opens its own token (`homeOpenTile`); the
+                // balance above is Holdings' door.
+                HoldingsBand(cells: cells, moves: moves) { homeOpenTile($0) }
+                    .padding(.top, DS.Space.s1)
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
                 WalletStartFigure().frame(height: Self.homeStartHeight)
@@ -136,6 +158,13 @@ extension FeedScreen {
         .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
     }
 
+    /// **THE HEAD'S THREE GROUPS STAND APART (prd §1846).** The watchlist
+    /// and Account a gap under the card (was 4pt), the jump chips a section
+    /// gap and more under Account (was 24pt); Needs you under the chips
+    /// takes `s6` (`ActivityWord`'s tight top, was `s2`).
+    static let homeLinesGap: CGFloat = DS.Space.s6
+    static let homeChipsGap: CGFloat = DSRoomChassis.sectionGap + DS.Space.s2
+
     /// The card's height while it has no balance to draw.
     static let homeStartHeight: CGFloat = 200
 
@@ -149,8 +178,8 @@ extension FeedScreen {
                 HStack(spacing: DS.Space.s4) {
                     homeHalf(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
                     homeHalf(String(localized: "Private"), mask ?? WalletValue.money(hidden))
-                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -245,9 +274,8 @@ extension FeedScreen {
                         homeWatchMove(token, quotes[token.id]?.change)
                     }
                 }
-                Spacer(minLength: 0)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -309,8 +337,8 @@ extension FeedScreen {
                 }
                 .buttonStyle(PressSpring())
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - The jumps
@@ -374,7 +402,7 @@ extension FeedScreen {
                 }
                 .padding(.horizontal, DSRoomChassis.rowInset)
             }
-            .listRowInsets(.init(top: DSRoomChassis.sectionGap - DS.Space.s2, leading: 0, bottom: 0, trailing: 0))
+            .listRowInsets(.init(top: Self.homeChipsGap, leading: 0, bottom: 0, trailing: 0))
             .feedRowBackground()
             .listRowSeparator(.hidden)
         }

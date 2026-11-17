@@ -989,6 +989,7 @@ extension FeedScreen {
         if !needs.isEmpty {
             walletDaySections([(Self.needsYouGroup, needs)], boundary: nil,
                               named: [Self.needsYouGroup], headless: true, nextEventID: nextEventID)
+                .environment(\.dsNeedsYouSeeable, true)
         }
         if !cards.isEmpty {
             walletCard(String(localized: "Cards"), glyph: ScopeTileGlyph.cards) {
@@ -1010,6 +1011,7 @@ extension FeedScreen {
         }
         if !dated.isEmpty {
             walletDaySections(dated, boundary: nil, nextEventID: nextEventID)
+                .environment(\.dsNeedsYouSeeable, true)
         }
     }
 

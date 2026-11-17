@@ -2127,10 +2127,13 @@ struct MainSurface: View {
             // Home and Activity are the places; a page stood only while its
             // room did (prd §1809).
             if source == "All" || source == CategoryFold.walletRoom { chrome.pageRoom = nil }
-            // Back in Activity from a page: the category you left from.
-            if source == "All", let back = chrome.activityReturn {
+            // **BACK ON HOME FROM A PAGE LANDS AT ITS TOP (user: "if user
+            // swipes right it should go to top of home page"),** retiring
+            // §1827's landing on the section you left from. The swipe and
+            // the title's grey word both come through here.
+            if source == "All", chrome.activityReturn != nil {
                 chrome.activityReturn = nil
-                chrome.feedJump = back
+                chrome.feedJump = FeedScreen.topJump
             }
             // On the phone a category is a section of the Feed (prd §1208),
             // whichever door wrote the filter, unless it was asked for as a

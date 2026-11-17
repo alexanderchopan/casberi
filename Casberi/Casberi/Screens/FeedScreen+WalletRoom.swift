@@ -1222,7 +1222,9 @@ extension FeedScreen {
     /// two lists can never disagree.
     func walletUpcoming(_ visible: [Thing]) -> [Thing] {
         let now = Date.now
-        let live = visible.live
+        // A row you marked as seen leaves, until its date moves (`NeedsYouSeen`).
+        let seen = NeedsYouSeen.shared
+        let live = visible.live.filter { !seen.contains($0.id, due: $0.dueAt) }
         let safe = walletSafePending
         let zfi = walletLive.zfiOrders
         let pending = live.filter { thing in
@@ -1231,8 +1233,9 @@ extension FeedScreen {
         }
         .sorted { $0.capturedAt > $1.capturedAt }
         // A bill that repeats is Subscriptions' (prd §1105), never two tiles'.
+        // A date months out is not waiting on you (`WalletNeedsYou.dueHorizon`).
         let dated = live
-            .filter { ($0.dueAt ?? .distantPast) > now && !SubscriptionsSource.isBill($0, now: now) }
+            .filter { WalletNeedsYou.dueSoon($0.dueAt, now: now) && !SubscriptionsSource.isBill($0, now: now) }
             .sorted { ($0.dueAt ?? .distantFuture) < ($1.dueAt ?? .distantFuture) }
         return pending + dated
     }
@@ -1990,8 +1993,19 @@ extension EnvironmentValues {
         get { self[DSUnderNeedsYouKey.self] }
         set { self[DSUnderNeedsYouKey.self] = newValue }
     }
+
+    /// Whether a row stands on Needs you's page, where its long press
+    /// offers Mark as seen (`NeedsYouSeen`).
+    var dsNeedsYouSeeable: Bool {
+        get { self[DSNeedsYouSeeableKey.self] }
+        set { self[DSNeedsYouSeeableKey.self] = newValue }
+    }
 }
 
 private struct DSUnderNeedsYouKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+private struct DSNeedsYouSeeableKey: EnvironmentKey {
     static let defaultValue = false
 }

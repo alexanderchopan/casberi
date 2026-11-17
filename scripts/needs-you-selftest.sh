@@ -237,6 +237,12 @@ check(waits("Wallet", ref: "aztec:upgrade:0xe37a:future"), "an Aztec upgrade sti
 check(!waits("Wallet", ref: "aztec:upgrade:0xe37a:past"), "one that can already execute does not")
 check(WalletNeedsYou.readsBook(ref: "zfi:reclaim:b:1") && !WalletNeedsYou.readsBook(ref: "wise:transfer:1"),
       "the zFi book is read for reclaim rows only")
+// A dated row needs you inside 90 days, never months out (an ENS name
+// renewed to next October stood in Needs you under "Oct 1").
+check(WalletNeedsYou.dueSoon(now.addingTimeInterval(30 * 86_400), now: now), "a date a month out needs you")
+check(!WalletNeedsYou.dueSoon(now.addingTimeInterval(318 * 86_400), now: now), "a date ten months out does not")
+check(!WalletNeedsYou.dueSoon(now.addingTimeInterval(-86_400), now: now), "a date passed does not")
+check(!WalletNeedsYou.dueSoon(nil, now: now), "no date is not a dated ask")
 
 if failures > 0 { print("✗ needs you: \(failures) failing"); exit(1) }
 print("✓ needs you self-test passed")
@@ -286,6 +292,8 @@ mutate "an Aztec upgrade never waits" "$WALLET" \
   'if ref.hasPrefix("aztec:upgrade:") { return AztecStakeWire.upgradeWaiting(ref: ref, now: now) }|||' || mfail=1
 mutate "a Safe transaction waiting on others still waits on you" "$WALLET" \
   'safePending.contains(ref) && tags.contains("Your turn")|||safePending.contains(ref)' || mfail=1
+mutate "a date months out still needs you" "$WALLET" \
+  'return due.timeIntervalSince(now) <= dueHorizon|||return true' || mfail=1
 
 # The stays-deleted guard (prd §1344, §1413), over a copy of the watched
 # files: a deleted file brought back, and a watched file naming the page, the

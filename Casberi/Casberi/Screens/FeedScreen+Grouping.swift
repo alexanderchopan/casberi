@@ -638,6 +638,12 @@ extension FeedScreen {
             [.day], from: Self.groupingCalendar.startOfDay(for: .now),
             to: Self.groupingCalendar.startOfDay(for: date)).day ?? 0
         if abs(days) < 7 { return date.formatted(.dateTime.weekday(.wide)) }
+        // Another year says so, "Oct 1, 2027", as Apple's own lists do: a
+        // day ahead next year read as a day passed this year.
+        if Self.groupingCalendar.component(.year, from: date)
+            != Self.groupingCalendar.component(.year, from: .now) {
+            return date.formatted(.dateTime.month(.abbreviated).day().year())
+        }
         return date.formatted(.dateTime.month(.abbreviated).day())
     }
 }
