@@ -73573,7 +73573,7 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 1. **Centred:** the balance and its chevron, the day (and whose money, beside it), Public · Private, the watchlist line, and the Account row (`FeedScreen.homeMoneyCard`, `homeHalves`, `homeWatchlistLine`, `homeAccountLine`).
 2. **Not centred:** the band spans the card; the jump chips, the section names and every row keep the rows' left edge (§763).
-3. **The Account chips are unchanged** (open: the canvas also drew them with your face and with no pill).
+3. **Account stays a grey pill with its glyph** (user: "we definitely need a pill for account or it doesn't look tappable"). The face stays Move's alone (§1809): one face, one place. Centring sets Account's row apart from the jump chips, which stand left in the feed's group.
 
 **Mac half (§1402).** None: the head is the phone's alone (`PhoneHome.isOn`).
 
