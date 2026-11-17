@@ -429,7 +429,7 @@ struct MoveSecurity: View {
     /// it is turned on: here, the keys walk and Create.
     @MainActor static var roundUpsSentence: String {
         let at = RoundUpsPot.targetWords
-        return String(localized: "Round up your sends. The change goes to Round-ups and earns interest. At \(at), it moves to your private balance, where it keeps earning.")
+        return String(localized: "Round up every buy, send and swap. The change goes to Round-ups and earns interest. At \(at), it moves to your private balance, where it keeps earning.")
     }
 
     /// A worked send, because "the next $1" read as a $1 round-up: what a

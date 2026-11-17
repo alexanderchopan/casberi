@@ -73346,3 +73346,15 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **What it does not do.** A deposit made outside Casberi has no private row, so its Privacy Pools row stands. Spending reads its own moves (`SpendingSource.walletMoves`) and is untouched. A third row for the same transaction from a holdings reader, if one ever lands, is not looked for: none was seen.
 
 **Checks.** `money-receipt-selftest.sh` (in verify): the twin found whatever the hash's case, none without a private row, a link's transaction read with its query left off, an address link refused; and a drift guard that the two ref prefixes `MoneyReceipt` spells are still the bridges' own. Not run: this session had no `swiftc`.
+
+## §1830 — Round-ups round up every buy, send and swap, and the switch says so (amends §1690's "every send" and its sentence; restates §1561) (user, 2026-11-16, asked whether round-ups apply to swaps: "right. we need to change it to any buys, send, or swap") — BUILT
+
+**What was true already.** §1561 made a swap round up what it sells and a Buy round up its price; the code has done so since (`MoveSentence.roundUpStep`: `.send`, `.swap`, `.buy`). §1690 and the switch's sentence still said "every send", so the law and the one sentence that explains the feature described a send-only rule the app does not have.
+
+**The rule.** Every buy, send and swap rounds up to the next $1 or $5. Unchanged: a swap rounds up the dollars it sells, on the network it leaves; no round-up for an unpriced token, a wrap, a limit order (§1673), the swap that pays for a Bitrefill buy, or a test network. Where the change goes is unchanged too: a send, or a swap selling the dollar, sets it aside in its own transaction (`RoundUps.carriesBuy`); a buy's change is owed to the next one that can, so "with your next send" on a receipt stays true.
+
+**The sentence.** Security and the keys walk: "Round up every buy, send and swap. The change goes to Round-ups and earns interest. At $10, it moves to your private balance, where it keeps earning."
+
+**Mac half (§1402).** The same sentence; nothing else drawn.
+
+**Checks.** None new: copy only.
