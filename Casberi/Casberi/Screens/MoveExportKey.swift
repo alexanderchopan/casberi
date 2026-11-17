@@ -48,6 +48,9 @@ struct MoveExportKey: View {
     @State private var asQR = false
     @State private var copied = false
     @State private var removing = false
+    /// The network the key is going on and its step ("Ethereum · Confirm
+    /// with Face ID"); nil once every network has answered.
+    @State private var adding: String?
 
     init(account: String, networks: [YourAccountOp.Network], stage: Stage = .intro,
          onClose: @escaping @MainActor () -> Void, close: @escaping @MainActor () -> Void,
@@ -121,6 +124,11 @@ struct MoveExportKey: View {
             Text(verbatim: which == .aztec ? String(localized: "Aztec") : networks.map(\.name).formatted(.list(type: .and)))
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
         }
+        if stage == .creating, let adding {
+            Text(verbatim: adding)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .contentTransition(.opacity)
+        }
         if case let .refused(words) = stage {
             Text(verbatim: words)
                 .dsText(.body17).foregroundStyle(DS.attentionInk)
@@ -157,6 +165,11 @@ struct MoveExportKey: View {
             Text(verbatim: failed.joined(separator: " · "))
                 .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        if let adding {
+            Text(verbatim: adding)
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .contentTransition(.opacity)
         }
         keyWell(key)
         HStack(spacing: DS.Space.s4) {
@@ -294,7 +307,8 @@ struct MoveExportKey: View {
                         .dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
                 }
                 .buttonStyle(RowPress())
-                .disabled(removing)
+                // Not while the key is still going on the networks after.
+                .disabled(removing || adding != nil)
                 Spacer(minLength: DS.Space.s3)
                 verb(String(localized: "I saved it"), enabled: !removing) { close() }
             } else {
@@ -356,32 +370,51 @@ struct MoveExportKey: View {
         Task {
             var on: [String] = []
             var failed: [String] = []
+            // Sent and not yet seen: it may still land.
+            var maybeOn = false
             for net in networks {
+                adding = String(localized: "\(net.name) · \(FeedScreen.stageWord(.preparing))")
                 do {
                     let sent = try await YourAccountChain.addOutsideKey(
-                        key.address, on: net, reason: String(localized: "Add a private key to your account on \(net.name)")) { _ in }
-                    if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
-                    else { on.append(net.name) }
+                        key.address, on: net, reason: String(localized: "Add a private key to your account on \(net.name)")) { s in
+                        await MainActor.run { adding = String(localized: "\(net.name) · \(FeedScreen.stageWord(s))") }
+                    }
+                    if case .pending = sent.outcome {
+                        maybeOn = true
+                        failed.append(String(localized: "\(net.name): sent, not yet seen"))
+                    } else { on.append(net.name) }
                 } catch let failure as YourAccountChain.Failure {
                     failed.append(MoveRecovery.worded(failure.message, on: net))
                 } catch {
                     failed.append(String(localized: "\(net.name): not sent"))
                 }
+                // **SHOWN ONCE IT OPENS THE ACCOUNT SOMEWHERE (prd §1493
+                // item 3), not after every network.** Each network is a Face
+                // ID, a send and up to two minutes to land, one after another:
+                // the page said "Revealing…" for minutes and read as hung. The
+                // networks after are added under the key, their step said.
+                guard !on.isEmpty else { continue }
+                if case .shown = stage {} else { DSHaptic.success() }
+                withAnimation(DS.Motion.standard) { stage = .shown(key, on: on, failed: failed) }
             }
-            // Nowhere: the key opens nothing, so it is never shown.
+            adding = nil
+            // Nowhere: the key opens nothing, so it is never shown. Its address
+            // stays noted while a send may still land, so a key that lands
+            // late is never read as a Signer (prd §1493 item 6).
             guard !on.isEmpty else {
-                YourAccountExport.forget(key.address, for: account)
+                if !maybeOn { YourAccountExport.forget(key.address, for: account) }
                 withAnimation(DS.Motion.standard) { stage = .refused(failed.joined(separator: " · ")) }
                 return
             }
-            DSHaptic.success()
-            withAnimation(DS.Motion.standard) { stage = .shown(key, on: on, failed: failed) }
+            // "I saved it" may have closed the page before the last network
+            // landed: Security reads the chain again.
+            onClose()
         }
     }
 
     /// Off every network it went on; the page closes once it is.
     private func remove(_ key: YourAccountExport.Key, from on: [String]) {
-        guard !removing else { return }
+        guard !removing, adding == nil else { return }
         removing = true
         Task {
             let failed = await Self.remove(key.address, account: account,

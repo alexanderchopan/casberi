@@ -254,7 +254,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2004 of 2078 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2005 of 2079 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1882,7 +1882,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
 - §1492 — One account with nothing on Home says so (amends §1491) (amended by §1615; part superseded by §1729)
-- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca… (amended by §1700f)
+- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca… (amended by §1700f, §1826)
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named (amended by §1546, §1593)
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499, §1570, §1661, §1737)
@@ -2260,6 +2260,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
 - §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo…
 - §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet…
+- §1826 — Export shows the key once it lands on one network, and says which network and step it is on while it adds the rest
 
 ## Dead rulings → what replaced them (generated)
 
