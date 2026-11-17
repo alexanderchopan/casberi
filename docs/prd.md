@@ -73302,3 +73302,19 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** The same engine and rows; the Mac has no Tor (§1495), so its node reads go direct, as its Wallet reads already do. Not run on the Mac.
 
 **Checks.** `holdings-check-selftest.sh` (new, in verify): the picking, the agreement, the two-in-a-row ledger, the key a row's part finds; the check starts only off a live read and never in the demo; both rows read the verdict; 6 mutations. `privacy-engine-selftest.sh` guards hybrid mode, fail-closed, the circuit only on the node's requests, and the door's address-only circuit.
+
+## §1826 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813, §1816, §1809) (user, 2026-11-16, of the canvas "Activity row taps": "the problem is on activity if you press an app icon you go to the app page, but if you press the row you open the individual message. this isn't clear to anyone", "one issue with b is tap target size tho isn't it", "yes lets do A", "I don't think the header should say Home / Money b/c it is Activity / Money", "the navigation is confusing people")
+
+**Why.** Activity is one row per app, and each row held two doors in one 44pt row: the icon to the app's page, the words to the thing. Nothing told them apart. The canvas weighed three fixes: the row is the app (A), the app's name as its own row over the thing (B, which at 44pt + 44pt doubles every app's height), and the thing's sheet naming its app (C, which hides the app's page a level down).
+
+1. **The row is the app** (amends §1813 item 2, §1809's icon door). A category's row is the app's name over its newest thing in grey, one line each, and one tap anywhere opens the app's page, where that thing leads (`FeedScreen.activityAppRow`, a `DSPushRow`). The icon door is deleted with the parameter that carried it (`leadOpens`, `leadDoor`).
+2. **Needs you's rows are things.** What waits on you opens the thing, the whole row: the review, the failed run, the reply. Their icon is no longer a door.
+3. **A money app's row opens Money narrowed to it**, the Wallet menu's own pick (`RoomAccounts.host(ofSource:)`): eleven rows to one unnarrowed page told the apps apart by nothing. An app the Wallet has no pick for opens Money whole.
+4. **Money opened from Activity reads "Home · Activity · Money"** (or the app: "Home · Activity · Plasma One"), the path every app page from Activity reads (§1813), and Activity and the swipe right go back to Activity (`FeedScreen.walletUnderActivity`, keyed on `ShellChrome.activityReturn`). Money from Home keeps "Home · Money".
+5. **White until seen, moved** (amends §1816 item 1). A row greys once its newest thing has been opened, from the row (which marks it) or anywhere else; the next thing an app lands is a white row again. `\.dsSeen` is deleted: nothing else set it.
+
+**Lost, said plainly.** Reading an app's newest thing from Activity is two taps, not one.
+
+**Mac half (§1402).** None: the iPad and the Mac keep their category rooms as the second column; `quietActivity` is the phone's alone.
+
+**Checks.** None new. **Seen** on the simulator with the demo: the app rows, Needs you's rows as things, the Wallet word to "Home · Activity · Money", Plasma One's row to Money narrowed to Plasma One, and the swipe right back to Activity. Not seen: a row greying after its app's page (the demo's rows were opened before this build).

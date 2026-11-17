@@ -615,8 +615,6 @@ struct BandRow: View {
     @Environment(\.dsUnderNeedsYou) private var underNeedsYou
     /// On Activity, where a row is its title alone (prd §1497).
     @Environment(\.dsTitleOnly) var titleOnly
-    /// Opened from Activity (prd §1816): the look rows grey as the feed row does.
-    @Environment(\.dsSeen) var seen
 
     /// A lead that is a picture OF the thing, which under an app header rides
     /// the trailing edge as a thumbnail (prd §1103b). A face, a mark, a site's

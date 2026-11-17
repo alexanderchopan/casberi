@@ -977,13 +977,7 @@ extension FeedScreen {
                             places: [UUID: String] = [:],
                             // Under a category's heading on the Feed (prd §1734):
                             // the day is a quiet label and a row takes `rowAir`.
-                            inFeed: Bool = false,
-                            // A row's icon opens its app's page (prd §1809):
-                            // Activity's rows pass it, nothing else does.
-                            leadOpens: ((Thing) -> Void)? = nil,
-                            // Needs you passes false (prd §1816 item 3): what
-                            // waits on you stays white, opened or not.
-                            greysSeen: Bool = true) -> some View {
+                            inFeed: Bool = false) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -1088,10 +1082,6 @@ extension FeedScreen {
                         } else {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i], replies: replies, air: sectionAir(thing, inFeed: inFeed))
-                                .overlay(alignment: .topLeading) { leadDoor(thing, leadOpens) }
-                                // White until seen (prd §1816): Activity's
-                                // rows alone, the ones whose icon is a door.
-                                .environment(\.dsSeen, greysSeen && leadOpens != nil && ActivitySeen.shared.has(thing.id))
                         }
                     }
                 }
@@ -1116,24 +1106,6 @@ extension FeedScreen {
     /// The caller's gates stand (§264, §482, §486): the line is still a claim
     /// about the list on screen, so a scope with no rows draws nothing.
     /// Takes the render's `visible` (the Feed-freeze rule) for that reason.
-    /// **THE ICON OPENS THE APP, THE ROW OPENS THE THING (prd §1809).** A
-    /// clear control over the row's lead, the size of its head, so the
-    /// stream you came to read (X, a feed) is one tap from Activity.
-    @ViewBuilder
-    func leadDoor(_ thing: Thing, _ open: ((Thing) -> Void)?) -> some View {
-        if let open {
-            Button {
-                DSHaptic.selection()
-                open(thing)
-            } label: {
-                Color.clear.contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .frame(width: DS.Mark.row + DS.Space.s3, height: 44)
-            .accessibilityLabel(Text("Open \(BridgeCatalog.seatName(forSource: thing.source))"))
-        }
-    }
-
     @ViewBuilder
     func caughtUpFooter(_ rows: [Thing]) -> some View {
         if reachedFetchCeiling {

@@ -67,14 +67,11 @@ extension BandRow {
                 } else {
                     leaderView
                         .frame(width: DS.Mark.row, height: DS.Mark.row)
-                        .opacity(seen ? 0.5 : 1)
                 }
             }
             lookBody(look)
         }
-        // White until seen (prd §1816): a look's own inks stay, its title
-        // takes the row's.
-        .foregroundStyle(seen ? DS.textSecondary : DS.textPrimary)
+        .foregroundStyle(DS.textPrimary)
         .frame(minHeight: DSFeed.headHeight)
         .accessibilityElement(children: .combine)
     }

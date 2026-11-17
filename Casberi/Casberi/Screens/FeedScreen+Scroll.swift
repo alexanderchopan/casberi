@@ -184,10 +184,9 @@ extension FeedScreen {
             .filter { seen.insert($0.source).inserted }
     }
 
-    /// One category of Activity: its word, then its rows, no day label, no
-    /// More row. The word is a label (prd §1813; the Wallet's and Notes'
-    /// open their own pages); a row's icon opens the app's; the row opens
-    /// the thing.
+    /// One category of Activity: its word, then one row per app, no day
+    /// label, no More row. The word is a label (prd §1813; the Wallet's and
+    /// Notes' open their own pages).
     @ViewBuilder
     func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
                          open: (() -> Void)?) -> some View {
@@ -196,16 +195,54 @@ extension FeedScreen {
             SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
                 ActivityWord(name: name, open: open)
             } rows: {
-                daySection("", rows, nextEventID: nextEventID, dated: false, headed: false,
-                           inFeed: true, leadOpens: { thing in
-                               chrome.activityReturn = name
-                               chrome.openAppPage(thing.source)
-                           })
+                ForEach(keyed(rows), id: \.id) { item in
+                    if let thing = item.live { activityAppRow(thing, from: name) }
+                }
             }
             .environment(\.feedSectionPanelFilled, false)
-            // The title and the app's icon, no line under it (prd §1497).
             .environment(\.dsTitleOnly, true)
         }
+    }
+
+    /// **THE ROW IS THE APP (prd §1826, user: "if you press an app icon you
+    /// go to the app page, but if you press the row you open the individual
+    /// message. this isn't clear to anyone").** Activity is one row per app,
+    /// so the row says the app's name, its newest thing under it, and one tap
+    /// anywhere opens the app's page, where that thing leads. It had two
+    /// targets in one 44pt row, the icon to the app and the words to the
+    /// thing, and nothing told them apart.
+    ///
+    /// White until seen (prd §1816): the newest thing is seen once its app's
+    /// page has been opened over it, or once it was opened anywhere else.
+    func activityAppRow(_ thing: Thing, from section: String) -> some View {
+        let seen = ActivitySeen.shared.has(thing.id)
+        let words = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return DSPushRow(title: Text(verbatim: BridgeCatalog.seatName(forSource: thing.source)),
+                         subtitle: words.isEmpty ? nil : Text(verbatim: words),
+                         subtitleTone: DS.textSecondary,
+                         tint: seen ? DS.textSecondary : DS.textPrimary,
+                         action: {
+                             ActivitySeen.shared.mark(thing.id)
+                             chrome.activityReturn = section
+                             chrome.openAppPage(thing.source)
+                             // A money app's page is Money narrowed to it, the
+                             // Wallet menu's own pick (prd §1826): eleven rows
+                             // to one unnarrowed page told the apps apart by
+                             // nothing.
+                             if BridgeCatalog.category(forSource: thing.source) == CategoryFold.walletCategory,
+                                let host = RoomAccounts.host(ofSource: thing.source),
+                                host.room == CategoryFold.walletRoom {
+                                 chrome.walletScope = RoomAccounts.scopeID(host.seat)
+                             }
+                         }) {
+            BridgeIcon(name: thing.source, size: DS.Mark.row)
+                .opacity(seen ? 0.5 : 1)
+                .accessibilityHidden(true)
+        }
+        .feedRowBackground()
+        .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                             bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .listRowSeparator(.hidden)
     }
 
     /// Each app's newest thing, the newest app first (prd §1807).
@@ -293,11 +330,9 @@ extension FeedScreen {
                     }
                 }
                 if !waiting.isEmpty {
-                    daySection("", waiting, nextEventID: nil, dated: false, headed: false,
-                               inFeed: true, leadOpens: { thing in
-                                   chrome.activityReturn = WalletSection.needsYou.label
-                                   chrome.openAppPage(thing.source)
-                               }, greysSeen: false)
+                    // What waits on you opens the thing, the whole row (prd
+                    // §1826): the review, the failed run, the reply.
+                    daySection("", waiting, nextEventID: nil, dated: false, headed: false, inFeed: true)
                 }
             }
             .environment(\.feedSectionPanelFilled, false)
@@ -372,6 +407,8 @@ extension FeedScreen {
         activitySection(String(localized: "Wallet"), moves, nextEventID: nextEventID) {
             DSHaptic.selection()
             chrome.openWalletActivity()
+            // Under Activity, and back to it (prd §1826).
+            chrome.activityReturn = String(localized: "Wallet")
         }
     }
 

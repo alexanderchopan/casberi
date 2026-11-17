@@ -99,9 +99,6 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// (prd §1497, user: "it should just be the title and the app icons so
     /// it is cleaner"): the line is dropped wherever this is set.
     @Environment(\.dsTitleOnly) private var titleOnly
-    /// A row on Activity you have opened (prd §1816): its title and lead step
-    /// down to grey. Nothing else sets it.
-    @Environment(\.dsSeen) private var seen
 
     /// The line this row draws, nil on the Feed (prd §1497).
     private var shownLine: Text? { titleOnly ? nil : line }
@@ -115,7 +112,6 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 if groupedSource == nil {
                     lead
                         .frame(width: Self.leadSize, height: Self.leadSize)
-                        .opacity(seen ? 0.5 : 1)
                 }
                 if trailingBesideLine {
                     HStack(alignment: .center, spacing: DS.Space.s2) {
@@ -175,7 +171,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                 .dsText(.body17)
                 .environment(\.dsYourWords, yourWords)
                 .fontWeight(emphasized ? .medium : .regular)
-                .foregroundStyle(done ? DS.textTertiary : seen ? DS.textSecondary : DS.textPrimary)
+                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
                 .strikethrough(done, color: DS.textTertiary)
                 .lineLimit(1)
                 .contentTransition(.opacity)
@@ -231,8 +227,6 @@ extension EnvironmentValues {
     /// Rows in this subtree draw their title and lead only, no line under
     /// the title (the Feed, prd §1497).
     @Entry var dsTitleOnly = false
-    /// This row has been opened from Activity (prd §1816).
-    @Entry var dsSeen = false
 }
 
 /// The feed row's plain helpers, outside the generic so a call site names no

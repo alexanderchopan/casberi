@@ -149,6 +149,16 @@ extension FeedScreen {
     /// Each grey name goes to its page. Nil on Home's own pages and on
     /// Activity, which already lead with Home.
     var titleRoot: DSTitleBack? {
+        if walletUnderActivity {
+            return DSTitleBack(word: PlaceTab.wallet.label) {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    chrome.activityReturn = nil
+                    chrome.walletScope = nil
+                    chrome.openWallet()
+                }
+            }
+        }
         guard pageUnderActivity, roomPick != nil, clearRoomPick != nil else { return nil }
         let room = hostRoom ?? source
         // The middle name is Activity: the root is Home.
@@ -217,6 +227,17 @@ extension FeedScreen {
             return {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
+            }
+        }
+        // "Activity · Money": Activity goes back to Activity, where you were
+        // in it (prd §1826).
+        if walletUnderActivity {
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) {
+                    chrome.walletScope = nil
+                    chrome.sourceRequest = "All"
+                }
             }
         }
         if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
@@ -368,6 +389,19 @@ extension FeedScreen {
     var pageUnderActivity: Bool {
         roomSizeClass == .compact && !inSheet && source != "All"
             && (hostRoom ?? source) != CategoryFold.walletRoom && !HomeScope.isMarkets(source)
+    }
+
+    /// **MONEY OPENED FROM ACTIVITY IS UNDER ACTIVITY (prd §1826, user: "I
+    /// don't think the header should say Home / Money b/c it is Activity /
+    /// Money", "the navigation is confusing people").** Activity's Wallet
+    /// word or one of its money rows opens Money; the title reads "Home ·
+    /// Activity · Money" (or the app's name), the path every app page from
+    /// Activity reads (§1813), and its way back is Activity. Money reached
+    /// from Home keeps "Home · Money".
+    var walletUnderActivity: Bool {
+        roomSizeClass == .compact && !inSheet && source == CategoryFold.walletRoom
+            && pinnedWalletSection == nil && chrome.activityReturn != nil
+            && chrome.walletSection == .activity
     }
 
     /// Notes showing one folder or one app's notes.
