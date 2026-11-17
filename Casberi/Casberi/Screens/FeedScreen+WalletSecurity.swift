@@ -94,7 +94,7 @@ extension FeedScreen {
                 // Keys, Connection and Spending name themselves (prd §1786):
                 // no "Your account" over them, the page already says Account.
                 Section {
-                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal }, openNodes: { feedSheet = .ownNodes })
+                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal })
                         .walletStackRow()
                         // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
                         .task(id: chrome.walletScrollRequest) {
@@ -111,7 +111,14 @@ extension FeedScreen {
             // moves each without a signature is Permissions').
             if !walletOnPrivateAccount {
             WalletUnsignedSection(part: .safes, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
-            // Nodes is a row under Connection now, with its tray (prd §1803).
+            // Nodes is a Settings row now, with its tray (prd §1835).
+            }
+            // **RISKS' WAY IN WHEN NOTHING IS NEW (prd §1843).** Home's Risks
+            // card left with the cards; a finding you have not seen is an ask
+            // on Home, and the page is always here.
+            if !walletOnPrivateAccount, roomSizeClass == .compact, PhoneHome.isOn {
+                let unseen = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }.count
+                walletDoor(.threats, word: unseen > 0 ? "\(unseen)" : nil, wordTone: DS.attentionInk)
             }
             // ACCOUNT AND SETTINGS ARE ONE PAGE (prd §1807, user: "account
             // and settings together … as one"): Casberi's own settings close
@@ -129,7 +136,7 @@ extension FeedScreen {
                             .accessibilityHidden(true)
                     }
                     .walletListRow()
-                    SettingsRows(style: .rows)
+                    SettingsRows(style: .rows, openNodes: { feedSheet = .ownNodes })
                         .walletStackRow()
                 }
             }

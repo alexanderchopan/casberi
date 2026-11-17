@@ -442,8 +442,16 @@ struct WalletPortfolio: Equatable, Codable {
     /// says what its row says. The tail still folds into one Other.
     func sectionCells(appsApart: Bool) -> [String] {
         let tokens = tokensOnly(appsApart: appsApart).positions
-        var bySymbol = Dictionary(tokens.map { ($0.symbol, $0.usd) }, uniquingKeysWith: +)
         let routes = Dictionary(tokens.compactMap { p in p.route.map { (p.symbol, $0) } }, uniquingKeysWith: { a, _ in a })
+        return WalletIngest.treemapCells(bySymbol: sectionWorth(appsApart: appsApart), routes: routes)
+    }
+
+    /// What each of the map's cells is worth, by its id (prd §1843): the
+    /// values `sectionCells` sizes, for a drawing that is not a document
+    /// (the phone's Home band).
+    func sectionWorth(appsApart: Bool) -> [String: Double] {
+        let tokens = tokensOnly(appsApart: appsApart).positions
+        var bySymbol = Dictionary(tokens.map { ($0.symbol, $0.usd) }, uniquingKeysWith: +)
         // Private and Lent, by their holders (never a symbol another file
         // owns: this file compiles alone in `wallet-viz-selftest.sh`).
         for p in positions {
@@ -456,7 +464,7 @@ struct WalletPortfolio: Equatable, Codable {
                 bySymbol[Self.appCellID(app)] = app.usd
             }
         }
-        return WalletIngest.treemapCells(bySymbol: bySymbol, routes: routes)
+        return bySymbol
     }
 
     var treemapCells: [String] {

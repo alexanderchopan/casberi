@@ -1336,6 +1336,23 @@ struct MainSurface: View {
     /// mounted after a settled moment (prd §1208l); nil keeps the cover.
     @State private var warmNeighbour: String?
 
+    /// The Wallet's Home standing where the phone's Home is the feed's page
+    /// (prd §1843): Yours, Following and All are Home's own choices; an app
+    /// or one account picked is a page of its own and stays.
+    private var walletHomeIsFeed: Bool {
+        guard !isRegular, PhoneHome.isOn, filter.source == CategoryFold.walletRoom,
+              (chrome.walletSection ?? .home) == .home else { return false }
+        guard let scope = chrome.walletScope else { return true }
+        if RoomAccounts.isSeat(scope) { return false }
+        if WalletWhose.isFollowing(scope) { return true }
+        return WalletWhoseSwitch.yours.map { WalletWatch.sameAddress(scope, $0) } ?? false
+    }
+
+    private func homeIsFeedRedirect() {
+        guard walletHomeIsFeed else { return }
+        withAnimation(DS.Motion.standard) { filter.source = "All" }
+    }
+
     private var walkNeighbour: String? {
         guard !isRegular else { return nil }
         let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
@@ -2081,12 +2098,25 @@ struct MainSurface: View {
         // never passes through `go`. `CategoryFold.remember` is a no-op for a
         // source that belongs to no catalog category, so this costs a
         // dictionary lookup on every source switch and nothing else.
+        // **THE PHONE'S HOME IS THE FEED'S PAGE (prd §1843).** The Wallet's
+        // own Home is never the page on the phone: a door, a way back or a
+        // launch that lands there lands on Home.
+        .onChange(of: chrome.walletSection) { _, _ in homeIsFeedRedirect() }
+        .onChange(of: chrome.walletScope) { _, _ in homeIsFeedRedirect() }
         .onChange(of: filter.source, initial: true) { old, source in
+            if walletHomeIsFeed {
+                filter.source = "All"
+                return
+            }
             // A section change is a step inside the Wallet only while it is
             // the room on screen (prd §1827, `ShellChrome.walletTrail`).
             chrome.walletStanding = source == CategoryFold.walletRoom
             // Back on Activity from the Wallet (prd §1827).
-            if source == "All", old == CategoryFold.walletRoom { chrome.walletReturned(phone: !isRegular) }
+            if source == "All", old == CategoryFold.walletRoom {
+                chrome.walletReturned(phone: !isRegular)
+                // Home's card reads the choice Holdings holds (prd §1843).
+                if PhoneHome.isOn { WalletWhoseSwitch.settleHome(chrome) }
+            }
             // A door that wrote Markets straight into the filter (a deep
             // link, a stored order) lands on the Wallet's Markets tile, in
             // place (prd §1337): Markets is no page of its own.
@@ -2802,7 +2832,7 @@ struct MainSurface: View {
             // list, a Notes folder) goes to it, the way its title's grey
             // word does. Home and Activity alone stand side by side.
             if HomeScope.Place(source: filter.source) != nil {
-                return delta < 0 ? CategoryFold.walletRoom : nil
+                return delta < 0 ? (PhoneHome.isOn ? "All" : CategoryFold.walletRoom) : nil
             }
             // A Wallet page opened from Activity goes back there (prd §1827):
             // Needs you, Money, Account from Needs you's row.
@@ -2820,6 +2850,13 @@ struct MainSurface: View {
                 return delta < 0 ? "All" : nil
             }
             let here = PlaceTab.current(filter.source)?.source ?? HomeScope.walkStop(filter.source)
+            // **NO SWIPE FORWARD (prd §1836, user: "make the activity change
+            // re swipe").** Home is the root: its Activity card is the one
+            // way in, as every card's page is, and a pull left on Home moves
+            // nothing (§1834). Activity still swipes right to Home, its
+            // parent, so the whole app is one rule: a tap goes in, a swipe
+            // right goes back.
+            if here == CategoryFold.walletRoom, delta > 0 { return nil }
             guard let i = walk.firstIndex(of: here) else { return delta < 0 ? "All" : nil }
             return walk.indices.contains(i + delta) ? walk[i + delta] : nil
         }
@@ -3752,7 +3789,7 @@ private struct PagerCover: View {
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
                          : HomeScope.Place(source: label) == .settings ? String(localized: "Apps")
                          : HomeScope.Place(source: label) == .move ? String(localized: "Move")
-                         : PlaceTab.feed.label)
+                         : PhoneHome.isOn ? PlaceTab.wallet.label : PlaceTab.feed.label)
                         .dsText(.heading40).foregroundStyle(DS.headInk)
                 } else {
                     // Bare, as the dock draws it — no rim, no disc (user:

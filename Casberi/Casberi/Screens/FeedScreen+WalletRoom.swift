@@ -282,6 +282,8 @@ extension FeedScreen {
                                     // balance they split, over the map (§1815).
                                     holdingsBlockSection
                                         .environment(\.holdingsUnderReading, walletPublicPrivateSlot)
+                                        // The balance is Holdings' door (§1838).
+                                        .environment(\.holdingsOpenTotal, { chrome.walletSection = .holdings })
                                     if WalletWhoseSwitch.shows(chrome) { WalletWhoseSwitch() }
                                 }
                             } else {

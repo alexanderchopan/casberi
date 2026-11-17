@@ -302,7 +302,7 @@ extension FeedScreen {
     /// feed it clears rather than holding a stale read — the tiles are gone
     /// from the screen anyway, and stale state would flash on return.
     func loadWalletLive() {
-        guard source == "Wallet" else {
+        guard walletReadsHere else {
             if walletLive != WalletLiveState() { walletLive = WalletLiveState() }
             return
         }
@@ -368,8 +368,9 @@ extension FeedScreen {
     }
 
     func streamBlock() {
-        BridgeRefresh.walletShown = source == "Wallet"
-        guard source == "Wallet" else {
+        // The phone's Home wears the Wallet at its head (prd §1843).
+        BridgeRefresh.walletShown = walletReadsHere
+        guard walletReadsHere else {
             if !blockStream.els.isEmpty { blockStream.paint([]) }
             if portfolio != nil { portfolio = nil }
             return

@@ -387,10 +387,6 @@ extension FeedScreen {
         let mover = WatchlistRules.biggestMover(tokens, quotes: WatchlistPrices.shared.quotes)
         // The apps you have connected, never the catalogue's size.
         let apps = bridges.connectedCount
-        let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
-        let week = (selectedWallet.map { wallet.valueSamples(forAddress: $0) }
-            ?? wallet.combinedValueSamples(only: walletFollowingOnly))
-            .filter { $0.at >= weekAgo }.map(\.usd)
         // The phone's cards share the screen's height (prd §1808); beside a
         // pane they keep the standard one.
         let cardHeight = roomSizeClass == .compact
@@ -439,17 +435,8 @@ extension FeedScreen {
                        height: cardHeight) {
                 PlaceTab.open(.library, chrome: chrome, route: route)
             }
-            // Holdings wears its week as a line (user: "honestly holdings
-            // tile could even have a sparkline"): the page behind it leads
-            // with the same line at full size. Two samples or none.
-            DSHomeCard(glyph: WalletSection.holdings.glyph, name: WalletSection.holdings.label,
-                       trailing: week.count >= 2
-                           ? AnyView(Sparkline(closes: week, up: (week.last ?? 0) >= (week.first ?? 0))
-                               .frame(width: 56, height: 22))
-                           : nil,
-                       height: cardHeight) {
-                chrome.walletSection = .holdings
-            }
+            // Holdings has no card (prd §1838): the balance over the map is
+            // its door.
             DSHomeCard(glyph: WalletSection.threats.glyph, name: WalletSection.threats.label,
                        figure: riskWord,
                        figureTone: unseen > 0 ? DS.attentionInk : DS.textSecondary,
@@ -651,6 +638,8 @@ extension FeedScreen {
             walletPrivateRows
             // Your Aztec account's holdings, after 0xBow's (prd §1700 item 4).
             walletAztecRows
+            // What the private balances add up to against your goal (§1835).
+            walletSavingsGoalRow(mask: mask)
             // The section's one verb, last (prd §1776).
             walletAddMoneyRow
             if positions > 0 {

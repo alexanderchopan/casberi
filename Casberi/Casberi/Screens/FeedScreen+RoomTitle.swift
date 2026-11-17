@@ -55,9 +55,19 @@ extension FeedScreen {
     /// the walk's arms went with it.
     var roomTitle: some View {
         HStack(spacing: DS.Space.s3) {
+            if homeHeadShown {
+                // **HOME SAYS NO NAME (prd §1843, user: "i'm not sure we need
+                // the word 'home' anymore either").** The balance leads the
+                // page; the row stays only to carry the demo's way out.
+                Color.clear
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 1)
+                    .demoTagOnTitle()
+            } else {
             DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick,
                            onSettings: appSettings, root: titleRoot)
                 .demoTagOnTitle()
+            }
             // THE ACCOUNTS ARE A MENU ON THE TITLE where the rail stands (prd
             // §1405): the strip that floated over the rows in the band is
             // gone, and the Mac has no tray to pick from (§1402).
@@ -149,6 +159,9 @@ extension FeedScreen {
     /// Each grey name goes to its page. Nil on Home's own pages and on
     /// Activity, which already lead with Home.
     var titleRoot: DSTitleBack? {
+        // The phone's Home is the root every page already names (prd
+        // §1843): "Home · Holdings", "Home · X", with no word before it.
+        if roomSizeClass == .compact, PhoneHome.isOn, pageScope == nil { return nil }
         if walletUnderActivity {
             return DSTitleBack(word: PlaceTab.wallet.label) {
                 DSHaptic.selection()
@@ -176,7 +189,7 @@ extension FeedScreen {
         // The middle name is an app (a door taken on its page) or Notes (a
         // folder): the root is Activity.
         let scope = pageScope
-        return DSTitleBack(word: PlaceTab.feed.label) {
+        return DSTitleBack(word: feedBackLabel) {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) {
                 scope?.clear()

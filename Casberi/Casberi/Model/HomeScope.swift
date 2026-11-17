@@ -81,7 +81,7 @@ enum HomeScope {
     @MainActor static func phoneWalk(chips: [String]) -> [String] {
         // Home and Activity, one swipe apart (prd §1807): Apps is a card on
         // Home and no longer a page of the swipe; Move is no place.
-        PlaceTabBar.places.compactMap(\.source)
+        PlaceTabBar.walk.compactMap(\.source)
     }
 
     /// The categories the Feed stacks (prd §1208 item 2): every one with a

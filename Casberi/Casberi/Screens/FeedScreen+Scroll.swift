@@ -345,7 +345,11 @@ extension FeedScreen {
         // What waits on you in your apps (prd §1813): the lists a category's
         // page led with, Coming up's asks and what is to you, now here.
         let waiting = quietActivity ? activityNeedThings(visible) : []
-        if needs > 0 || wants != nil || !waiting.isEmpty {
+        // **RISKS FOUND ARE AN ASK (prd §1843).** Home's Risks card left
+        // with the cards; what it counted and you have not seen stands here,
+        // one row onto Risks.
+        let risks = homeRisksUnseen
+        if needs > 0 || wants != nil || !waiting.isEmpty || risks > 0 {
             SectionPanelGroup(anchor: Self.scrollAnchor(WalletSection.needsYou.label)) {
                 ActivityWord(name: WalletSection.needsYou.label, open: nil)
             } rows: {
@@ -365,6 +369,14 @@ extension FeedScreen {
                                    name: first ?? String(localized: "Wallet"),
                                    word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
                         chrome.openWalletPage(.needsYou, fromActivity: WalletSection.needsYou.label)
+                    }
+                }
+                if risks > 0 {
+                    activityAskRow(glyph: WalletSection.threats.glyph,
+                                   name: WalletSection.threats.label, word: "\(risks)") {
+                        ActivitySeen.shared.leavingForPage()
+                        chrome.openWalletPage(.threats, fromActivity: WalletSection.needsYou.label,
+                                              keepingScope: true)
                     }
                 }
                 if !waiting.isEmpty {
@@ -854,7 +866,11 @@ extension FeedScreen {
             // measures the rows it lands among, so a few settle it exactly.
             for pass in 0..<Self.landingPasses {
                 try? await Task.sleep(for: .milliseconds(pass == 0 ? 60 : 70))
-                withTransaction(instant) { proxy.scrollTo(Self.sectionID(category), anchor: .top) }
+                // Needs you and the Wallet carry their word's anchor, not a
+                // category's id (prd §1843: Home's chips jump to them too).
+                let target = category == WalletSection.needsYou.label || category == Self.homeWalletName
+                    ? Self.scrollAnchor(category) : Self.sectionID(category)
+                withTransaction(instant) { proxy.scrollTo(target, anchor: .top) }
             }
             // LANDING (prd §1208l): the section you arrived at brightens once,
             // so the eye finds where it landed.
@@ -872,6 +888,12 @@ extension FeedScreen {
 extension EnvironmentValues {
     /// `SectionPanel`'s distance from the list's edge (prd §1320).
     @Entry var feedSectionPanelInset: CGFloat = DS.Space.s2
+    /// The anchor of the section standing right under Home's jump chips
+    /// (prd §1843): it takes no chapter air, since the chips' own gap above
+    /// them is that air and the chips belong to the feed they jump through.
+    @Entry var feedSectionLeads: String? = nil
+    /// Set on that section's header, which then stands close under the chips.
+    @Entry var feedSectionHeaderTight = false
     /// Whether the panel draws its fill: nowhere, since prd §1393 (the
     /// Feed's and the Wallet's since §1382, Library's since §1383). The
     /// shape stays, so rows keep their column and the gaps their height;
@@ -1371,6 +1393,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     @Environment(\.feedSectionPanelFilled) private var panelFilled
     @Environment(\.dsRoomBoxPlace) private var place
     @Environment(\.dsPaneBoxRow) private var paneRow
+    @Environment(\.feedSectionLeads) private var leads
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
@@ -1391,13 +1414,18 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
             ForEach([anchor ?? ""], id: \.self) { _ in
                 // A chapter's air stands between panels, never inside one:
                 // the one section gap (prd §1386), less the header's own top.
-                Color.clear
-                    .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .accessibilityHidden(true)
+                // The section under Home's jump chips takes none (§1843).
+                let tight = anchor != nil && anchor == leads
+                if !tight {
+                    Color.clear
+                        .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .accessibilityHidden(true)
+                }
                 header
+                    .environment(\.feedSectionHeaderTight, tight)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(SectionPanel(part: .top, lit: lit, inset: panelInset, filled: panelFilled))
@@ -1554,6 +1582,7 @@ struct PinnedHeaderPushed: ViewModifier {
 struct ActivityWord: View {
     let name: String
     let open: (() -> Void)?
+    @Environment(\.feedSectionHeaderTight) private var tight
 
     var body: some View {
         Group {
@@ -1597,7 +1626,7 @@ struct ActivityWord: View {
         }
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.trailing, DS.Space.s4)
-            .padding(.top, DS.Space.s6)
+            .padding(.top, tight ? DS.Space.s2 : DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
             .contentShape(Rectangle())
     }

@@ -420,8 +420,15 @@ extension FeedScreen {
             // phone a new person's Activity is the Wallet, then the six apps
             // to start with, then Apps on its panel.
             if source == "All" {
-                if !starts { activityNeedsSection(visible) }
-                if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
+                // **THE WALLET IS HOME'S HEAD (prd §1843):** the card, the
+                // watchlist, Account and the jumps, before what is new.
+                let jumps = homeHeadShown ? homeJumpNames(visible) : []
+                if homeHeadShown { homeHeadSection(visible, jumps: jumps) }
+                Group {
+                    if !starts { activityNeedsSection(visible) }
+                    if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
+                }
+                .environment(\.feedSectionLeads, Self.homeLeadAnchor(jumps))
                 if starts, quietActivity { activityStartSection }
             }
             feedScrollSections(visible,

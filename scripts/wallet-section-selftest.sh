@@ -183,7 +183,9 @@ build() {
   # so this file was proven equivalent run-for-run by
   # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 1.4x faster).
   # Re-probe before trusting it again after adding mutations.
-  swiftc -Onone -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1
+  # `OwnNode.swift` rides along: the Nodes page's empty word is its
+  # `publicWord` (prd §1833), and it is Foundation-only as this file is.
+  swiftc -Onone -o "$work/run" "$1" "Casberi/Casberi/Model/OwnNode.swift" "$work/main.swift" 2>"$work/err" || return 1
 }
 
 cp "$SRC" "$work/WalletSection.swift"

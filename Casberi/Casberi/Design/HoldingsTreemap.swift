@@ -157,6 +157,8 @@ extension EnvironmentValues {
     /// True on the Wallet's SimpleFIN pick (prd §1702): a currency tile is
     /// that bank's cash and wears the bank's mark (`PickBankMark`).
     @Entry var holdingsPickIsBank: Bool = false
+    /// Home's balance opens Holdings (prd §1838); nil everywhere else.
+    @Entry var holdingsOpenTotal: (() -> Void)? = nil
 }
 
 struct HoldingsTreemap: View {
@@ -186,6 +188,10 @@ struct HoldingsTreemap: View {
     @Environment(\.holdingsDayMoves) private var dayMoves
     @Environment(\.holdingsPickIsBank) private var pickIsBank
     @Environment(\.holdingsUnderReading) private var underReading
+    /// **THE BALANCE IS HOLDINGS' DOOR (prd §1838).** Set on Home: the
+    /// resting balance and the line under it open Holdings, a chevron after
+    /// the figure. A pressed tile's reading is that tile's, never a door.
+    @Environment(\.holdingsOpenTotal) private var onOpenTotal
 
     static let gap: CGFloat = 4
     static let minSide: CGFloat = 44
@@ -194,9 +200,21 @@ struct HoldingsTreemap: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            reading
-            // What the balance splits into, under it (prd §1815).
-            if let underReading { underReading }
+            if let onOpenTotal, lit == nil {
+                Button { DSHaptic.selection(); onOpenTotal() } label: {
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        reading
+                        if let underReading { underReading }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Opens \(WalletSection.holdings.label)"))
+            } else {
+                reading
+                // What the balance splits into, under it (prd §1815).
+                if let underReading { underReading }
+            }
             GeometryReader { geo in
                 let tiles = HoldingsTreemapLayout.layout(
                     holdings.map { (id: $0.id, share: sum > 0 ? $0.usd / sum : 0) },
@@ -236,9 +254,9 @@ struct HoldingsTreemap: View {
             // and red means down (§936); a balance is neither, so the colour
             // goes on the line that says which way the day went, and only
             // when it went one way.
-            DSFigureReading(number: total, caption: today, captionInk: todayInk)
+            DSFigureReading(number: total, caption: today, captionInk: todayInk, opens: onOpenTotal != nil)
         } else {
-            DSFigureReading(number: total, caption: caption)
+            DSFigureReading(number: total, caption: caption, opens: onOpenTotal != nil)
         }
     }
 
@@ -274,12 +292,33 @@ struct HoldingsTreemap: View {
     /// flat or unread move keeps the plain fill (§83).
     private func fill(_ id: String, lit isLit: Bool, widest: Double) -> Color {
         if isLit { return DS.tint }
-        // THE MAP IS NOT PAINTED (prd §1389), AND NOT OUTLINED (prd §1731):
-        // every tile stands on the plain fill; the day's direction is one
-        // small glyph in the tile's corner (`moveGlyph`), where a green or
-        // red wash and edge made the box the one coloured chart in the
-        // Wallet.
-        return DS.fillFaint
+        // **THE MAP WEARS THE DAY (prd §1837, retiring §1389's "not painted";
+        // user, of the canvas "Stupid simple", the map filled by the day:
+        // "i like A").** A tile that moved is filled in its direction's hue,
+        // its strength the move's against the board's biggest (Markets'
+        // rule, §1081): the biggest mover at full strength, a small one
+        // faint. Flat (under 0.05%) or unread keeps the plain fill (§83),
+        // so dollars and cash stay grey. The corner glyph stays, the cue
+        // that is not colour.
+        return Self.dayFill(move: move(id), widest: widest)
+    }
+
+    /// A tile's fill by its day (prd §1837), shared with Home's band (§1843).
+    static func dayFill(move: Double?, widest: Double) -> Color {
+        guard let m = move, abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
+        let strength = min(1, abs(m) / widest)
+        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.14 + 0.22 * strength)
+    }
+
+    /// The day as words and their ink (prd §1815): "+0.5% today" in the
+    /// gain's ink, "Flat today" in grey; nil with no move read.
+    static func dayCaption(_ change: Double?) -> (words: String, ink: Color)? {
+        guard let change else { return nil }
+        let tenths = (abs(change) * 1000).rounded() / 10
+        guard tenths > 0 else { return (String(localized: "Flat today"), DS.textSecondary) }
+        let figure = tenths.formatted(.number.precision(.fractionLength(1)))
+        return change > 0 ? (String(localized: "+\(figure)% today"), DS.confirmInk)
+            : (String(localized: "-\(figure)% today"), DS.destructiveInk)
     }
 
     /// The day's direction for a tile, as a glyph and its hue (a glyph keeps

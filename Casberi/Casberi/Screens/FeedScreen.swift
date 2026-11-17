@@ -1600,11 +1600,11 @@ struct FeedScreen: View {
         // **ACTIVITY IS HOME'S (prd §1809)**: "Home · Activity" on the
         // phone, Home pressable back, as every page of the Wallet reads.
         if activityUnderHome { return PlaceTab.wallet.label }
-        if Pinboard.isPinnedRoom(source), pageUnderActivity, !notesNarrowed { return PlaceTab.feed.label }
+        if Pinboard.isPinnedRoom(source), pageUnderActivity, !notesNarrowed { return feedBackLabel }
         if HomeScope.contains(source) { return youPlaceName }
         // A Wallet page names where it goes back to (prd §1827): "Activity ·
         // Needs you", "Account · Following", "Holdings · Positions".
-        if walletBacksToActivity { return PlaceTab.feed.label }
+        if walletBacksToActivity { return feedBackLabel }
         if source == CategoryFold.walletRoom, selectedSeat == nil,
            let section = chrome.walletSection, section != .home {
             return chrome.walletBackWord(section)
@@ -1617,7 +1617,7 @@ struct FeedScreen: View {
         if pageScope != nil { return selectedSeat?.name ?? BridgeCatalog.seatName(forSource: source) }
         // An app's page stands at Activity's place (§1809), one step from
         // it (prd §1813): "Home · Activity · App Store Connect".
-        if pageUnderActivity { return PlaceTab.feed.label }
+        if pageUnderActivity { return feedBackLabel }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 

@@ -49,7 +49,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A deadline is a bar with ticks, never a thumb (§1006).
 
 ### 3. Shell and navigation
-- The rooms tray is deleted (§1714), and Search with it: it is Apps' field (§1715). Library is named Apps (§1741). On the phone the bar is Move alone; Home and Activity stand side by side on the swipe, Apps is a card on Home, and every page swipes right to its parent (§1809, §1814), and a Wallet page's parent is where you opened it: Needs you from Activity goes back to Activity (§1827). The Mac's rail is Home · Activity · Apps and Move (§1807, §1402). The rail's face goes to the Feed. Every room draws its own name first (§930).
+- The rooms tray is deleted (§1714), and Search with it: it is Apps' field (§1715). Library is named Apps (§1741). On the phone the bar is Move alone and Home is the one root: the feed's page with the Wallet at its head, no swipe between places, Apps at the foot of its scroll (§1843, §1836, §1839); every page swipes right to its parent (§1814), and a Wallet page's parent is where you opened it (§1827). The Mac's rail is Home · Activity · Apps and Move (§1807, §1402). The rail's face goes to the Feed. Every room draws its own name first (§930).
 - Rooms are reached from Library (a tap on an app of yours goes to its room, §1418) and the Feed's section names (a category's room, §1152). A Library folder's name opens the folder, never a room (§1714).
 - Search's results are unchanged by §1714: typing finds apps, accounts, people, notes and things in groups (§1171, §1185, §1589); Return opens an exact name or hands the words to Find.
 - Notes, Apps, Addresses and Settings are places in You, not in the walk: the swipe is You, then the categories. A pick cuts in place, never pushes; the title reads "You · <place>"; a swipe from any walks from Home's place (§1127, §1129, §1133).
@@ -166,6 +166,10 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Round-ups round to the next $1 or $5, picked in the walk and the tray; the walk says "Save your change, earn interest, privately." (§1741). Round-ups are set aside as you go (§1690, amending §1572, §1574, §1578): every buy, send and swap rounds up (§1830; a swap the dollars it sells, a buy its price, §1561; never a limit order, an unpriced token or a wrap), and the change to the next dollar goes to Round-ups — a buy's is owed to the next send — (USDC on Aave on Base, the account's own; from Ethereum or Robinhood through Across, change under ~$0.50 owed to the next send), shown in Holdings as a lent row is worded, never offered as lent; once Round-ups holds $10 (or 0xBow's minimum) the next send moves it into the private balance, on another network as a second operation on Base under the tap's Face ID (§1687).
 - WETH and ETH swap one for one on their network, no pool and no new verb (§1559): ETH for WETH is WETH's `deposit()`; WETH for ETH goes to the pinned SwapRouter02 and its `unwrapWETH9` pays the account in full (WETH's own `withdraw` pays 2,300 gas, which a Safe refuses); checked and simulated as every swap; the foot "Unwraps WETH · no fee", no ≈; Face ID only.
 - Face ID is asked the moment Send or Swap is tapped, beside preparing's reads (§1687): the operation's first signature takes the context it passed, a later one asks again; turned down, the reads stop and it says "Not sent"; once passed the foot never asks for Face ID. Nothing is signed before the bytes are built and the module agrees on them.
+- Account's settings hold Nodes ("Public" or "N of yours"), A–Z; Connection keeps Networks and Tor. Name and photo are one row whose tap asks which. Holdings states the savings goal under Private, a fact, before Add money; it is set on Account (§1835).
+- The holdings map wears the day: a tile that moved is filled in its direction's hue, by its move against the board's biggest; flat, unread, dollars and Other stay grey; the corner glyph stays (§1837, retiring §1389's unpainted map).
+- Home's balance, its day line and Public · Private are Holdings' door, a grey chevron after the figure; Holdings has no card on Home (§1838).
+- On the phone Home is one scroll (§1843): your money on one card (the balance at Move's rung as Holdings' door, the day, Public · Private, the map as a band of marks filled by the day), Yours · Following · All as one word, the watchlist as a line, Account and Copy public address as chips, a row of chips that jump to each section, then what is new (§1831, §1839). Home draws no name; every other page reads "Home · X"; Risks found are a Needs you row and the page is a row on Account. The iPad and the Mac keep the Wallet's Home and Activity.
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
@@ -255,7 +259,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2017 of 2091 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2022 of 2096 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2270,10 +2274,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1832 — The Wallet's every-move page is named Wallet, the word that opens it (amends §1808, §1812; the same ruling as §1828,…
 - §1833 — Nodes: no switch, "Public" in place of "Casberi's list", and a field that says what to paste (amends §1517, §1803)
 - §1834 — Every swipe back names where it goes, and a swipe with nowhere to go moves nothing (amends §1814, §1208l, the pager's…
+- §1835 — Account: Nodes is a setting, the name and the photo are one row; Holdings states the savings goal under Private (amen…
+- §1836 — Home never swipes forward: Activity is its card's page, and a swipe right is the only swipe (amends §1809 item 1, §18…
+- §1837 — The holdings map wears the day: a tile that moved is filled in its direction's hue, by its strength against the board…
+- §1838 — The balance is Holdings' door: Home's resting balance and the line under it open Holdings, a chevron after the figure…
 - §1839 — Activity is two halves on the phone: what came in on the page, Apps on a panel under it; the Wallet leads from the fi…
 - §1840 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
 - §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
 - §1842 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (numbered §182…
+- §1843 — The phone's Home is one scroll: your money on one card, the watchlist as a line, Account and its address as chips, ch…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -24,9 +24,13 @@ struct DSFigureReading: View {
     /// The caption's ink: a line that says up or down wears the gain's or
     /// the loss's (prd §1809); every other caption is secondary.
     var captionInk: Color = DS.textSecondary
+    /// The number is a door (prd §1838): a grey chevron stands after it, as
+    /// every door wears one (§1815). The caller makes the reading a button.
+    var opens = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
             // A number takes `price40` (prd §766's rung for a number in a
             // lead); `stat24` beside a `body17` caption read as the same size.
             Text(number)
@@ -39,6 +43,13 @@ struct DSFigureReading: View {
                 .animation(reduceMotion ? nil : ChartEntrance.roll, value: number)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+            if opens {
+                Image(systemName: "chevron.right")
+                    .dsGlyph(.tick, weight: .bold)
+                    .foregroundStyle(DS.textSecondary)
+                    .accessibilityHidden(true)
+            }
+            }
             // The caption at the move line's rung (`body17`, secondary), so
             // every tile's second line matches the Home crown's.
             // No caption draws no line (user, 2026-09-26: "$26K" alone —

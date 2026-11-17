@@ -38,6 +38,8 @@ struct SettingsRows: View {
     /// or only the colophon under that box.
     var style: Style = .rows
     enum Style { case rows, box, colophon, tiles }
+    /// Raises the Nodes tray; set on the Account page alone (prd §1835).
+    var openNodes: (() -> Void)? = nil
 
     /// What the Notifications row says without being opened (prd §1237):
     /// which of the two switches are on.
@@ -49,7 +51,7 @@ struct SettingsRows: View {
         return ListFormatter.localizedString(byJoining: on)
     }
     @State private var avatarPickerOpen = false
-    @State private var avatarDialogOpen = false
+    @State private var profileDialogOpen = false
     @State private var avatarSelection: PhotosPickerItem?
     @State private var nameEditorOpen = false
     @State private var nameDraft = ""
@@ -95,7 +97,7 @@ struct SettingsRows: View {
                 colophon
             }
         }
-            .onAppear { readCounts(); markMilestone() }
+            .onAppear { readCounts(); markMilestone(); if openNodes != nil { OwnNodeModel.shared.load() } }
             // The count is re-read when the app comes back to this screen —
             // a sweep may have landed things while it was away — and never
             // in between: one COUNT per return, not one per bridge landing.
@@ -111,11 +113,20 @@ struct SettingsRows: View {
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
             // can be undone.
-            .confirmationDialog("Your photo", isPresented: $avatarDialogOpen) {
-                Button("Change photo") { avatarPickerOpen = true }
-                Button("Remove photo", role: .destructive) {
-                    DSHaptic.tap()
-                    withAnimation(DS.Motion.standard) { ProfileStore.shared.avatar = nil }
+            // The one row's one question (prd §1835): the name or the photo.
+            .confirmationDialog("Name", isPresented: $profileDialogOpen, titleVisibility: .hidden) {
+                Button(ProfileStore.shared.name == nil ? "Add name" : "Change name") {
+                    // The draft opens on what's stored, so Save on an
+                    // untouched field is a no-op rather than a wipe.
+                    nameDraft = ProfileStore.shared.name ?? ""
+                    nameEditorOpen = true
+                }
+                Button(ProfileStore.shared.avatar == nil ? "Add photo" : "Change photo") { avatarPickerOpen = true }
+                if ProfileStore.shared.avatar != nil {
+                    Button("Remove photo", role: .destructive) {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { ProfileStore.shared.avatar = nil }
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             }
@@ -279,31 +290,16 @@ struct SettingsRows: View {
     /// Group one — your things and their state. A–Z.
     private var primaryRows: [RowSpec] {
         [
-            RowSpec(title: "Avatar",
-                    // Set, the photo IS the fact — no words needed. It is
-                    // also the dock's face (§700), the door to this screen
-                    // (§796).
-                    value: "",
-                    avatar: ProfileStore.shared.avatar,
-                    avatarSeat: true,
-                    action: {
-                        if ProfileStore.shared.avatar == nil { avatarPickerOpen = true }
-                        else { avatarDialogOpen = true }
-                    }),
-            // Your name (2026-08-29) — the greeting's second half. Sits beside
-            // the photo rather than inside it: the A–Z field is one fact per
-            // row, and "who am I to you" is two facts, a face and a name.
-            // Unset, the value is empty (prd §784): the row itself is the door,
-            // and no name is a complete state ("Good afternoon" is a whole sentence).
+            // NAME AND PHOTO ARE ONE ROW (prd §1835, user: "avatar and name
+            // tho can be combined"): the photo is the row's lead (it is also
+            // Move's face, §1741), the name its fact, and one tap asks which
+            // to change. Unset, the value is empty (prd §784): no name is a
+            // complete state. Never two doors in one row (§1826).
             RowSpec(title: "Name",
                     value: ProfileStore.shared.name ?? "",
-                    badge: ("signature", DS.textPrimary),
-                    action: {
-                        // The draft opens on what's stored, so Save on an
-                        // untouched field is a no-op rather than a wipe.
-                        nameDraft = ProfileStore.shared.name ?? ""
-                        nameEditorOpen = true
-                    }),
+                    avatar: ProfileStore.shared.avatar,
+                    avatarSeat: true,
+                    action: { profileDialogOpen = true }),
             // "Data" (user ruling 2026-08-24, reversing the 2026-07-24 ruling
             // that made it "Privacy") — still the ONE home for all of it: where
             // your things live (on device / iCloud + ADP), what leaves this
@@ -379,6 +375,7 @@ struct SettingsRows: View {
                     value: LanguageStore.shared.summary,
                     badge: ("globe", DS.textPrimary),
                     action: { open(.language) { languageOpen = true } }),
+        ] + nodesRows + [
             // "YOUR KEY" IS GONE FROM THIS SCREEN (prd §871, user: "we have a
             // setting in settings for 'your key'. why do we really need it
             // there? For every other thing, the user goes and connects on the
@@ -427,13 +424,28 @@ struct SettingsRows: View {
         ]
         // Diagnostics left Settings (user, 2026-10-10: "doesn't seem we need
         // it anymore") and was deleted on 2026-10-21 (user: "remove diagnostics").
-        return rows.sorted { $0.title < $1.title }
+        // The phone's Home is one page (prd §1843): nothing to open on.
+        return rows.filter { !(PhoneHome.isOn && $0.title == "Open on") }.sorted { $0.title < $1.title }
     }
 
     /// **SEE THE DEMO IS DELETED FROM SETTINGS (prd §1236, user: "i think we
     /// remove it less is more").** The row stood only for an install with
     /// nothing connected; the demo stays a mode the first run leads into.
     /// Every row in one A–Z field — the You/App groups are retired.
+    /// NODES IS A SETTING (prd §1835, user: "i do agree nodes moves to
+    /// settings"): only someone with a node of their own ever changes it, so
+    /// it left the account's Connection section for the rows that close the
+    /// page. Drawn only where the page can raise its tray (`openNodes`).
+    private var nodesRows: [RowSpec] {
+        guard let openNodes else { return [] }
+        let mine = OwnNodeModel.shared.settings.nodes.count
+        return [RowSpec(title: "Nodes",
+                        value: mine == 0 ? OwnNode.publicWord
+                            : mine == 1 ? String(localized: "1 of yours") : String(localized: "\(mine) of yours"),
+                        badge: ("server.rack", DS.textPrimary),
+                        action: { DSHaptic.selection(); openNodes() })]
+    }
+
     private var allRows: [RowSpec] {
         (primaryRows + secondaryRows).sorted { $0.title < $1.title }
     }
@@ -565,8 +577,7 @@ struct SettingsRows: View {
         // The tile wears the place it opens on, so a tap shows its answer.
         case "Open on": row.badge?.0 ?? ScopeTileGlyph.wallets
         case "Apps": "square.grid.2x2"
-        case "Avatar": "person.crop.circle"
-        case "Name": "signature"
+        case "Name": "person.crop.circle"
         case "Data": "externaldrive"
         case "Feed order": "arrow.up.arrow.down"
         case "Theme": "circle.lefthalf.filled"
@@ -574,6 +585,7 @@ struct SettingsRows: View {
         case "Language": "globe"
         case "Support": "questionmark.circle"
         case "Licenses": "doc.text"
+        case "Nodes": "server.rack"
         default: "sparkles"
         }
     }

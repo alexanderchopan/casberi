@@ -345,6 +345,50 @@ extension FeedScreen {
         }
     }
 
+    /// **THE SAVINGS GOAL'S STATUS, IN HOLDINGS (prd §1835, user: "agree
+    /// roundups and savings goal move there. not the settings, just the
+    /// status").** The goal counts both private balances (`savedNow`), so its
+    /// row stands under Private, as Round-ups' stands in Public: "Savings
+    /// goal" over "$300 of $1,000", the percent trailing. A fact, not a
+    /// door: the goal is set on Account. Your own account only, and only
+    /// once a goal is set; under Hide balances the line goes and the
+    /// percent stays.
+    @ViewBuilder
+    func walletSavingsGoalRow(mask: String?) -> some View {
+        if selectedSeat == nil, !walletOnFollowing,
+           selectedWallet.map(YourAccountDemo.isYours) ?? true,
+           let goal = SavingsGoalStore.shared.shown {
+            let saved = SavingsGoal.savedNow()
+            let line = mask == nil ? String(localized: "\(WalletValue.money(saved)) of \(WalletValue.money(goal.dollars))") : nil
+            let percent = SavingsGoal.percent(saved: saved, goal: goal)
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                Image(systemName: "target")
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Savings goal")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                    if let line {
+                        Text(verbatim: line)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(percent, tone: DS.textPrimary)
+            }
+            .walletRowPitch()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: [String(localized: "Savings goal"), line, percent].compactMap { $0 }.joined(separator: ". ")))
+            .walletListRow()
+        }
+    }
+
     /// Whether Send offers your private balance on Aztec: its To list's own
     /// rule, so the door never promises a row the list will not draw.
     static var aztecTakesMoney: Bool {

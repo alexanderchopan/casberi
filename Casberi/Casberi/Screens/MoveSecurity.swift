@@ -15,8 +15,6 @@ struct MoveSecurity: View {
     let account: String
     /// Raises the savings goal's tray; nil where there is none to raise.
     var openGoal: (() -> Void)? = nil
-    /// Raises the Nodes tray (prd §1803); nil where there is none to raise.
-    var openNodes: (() -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
 
     typealias Op = YourAccountOp
@@ -134,9 +132,8 @@ struct MoveSecurity: View {
             // its state where a setting's value stands, no line.
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
-            // Where each network is read from (prd §1517), a row here and a
-            // tray behind it (prd §1803, user: "its row under Connection").
-            if let openNodes { nodesRow(openNodes) }
+            // Nodes left for Settings (prd §1835): only someone with a node
+            // of their own changes it.
             }
             // "Saving", not "Spending" (prd §1803): round-ups and the goal
             // they fill put money away; the Wallet's Spending tile is what
@@ -243,25 +240,6 @@ struct MoveSecurity: View {
         return nil
     }
 
-    private func nodesRow(_ open: @escaping () -> Void) -> some View {
-        let mine = OwnNodeModel.shared.settings.nodes.count
-        let word = mine == 0 ? OwnNode.publicWord
-            : mine == 1 ? String(localized: "1 of yours") : String(localized: "\(mine) of yours")
-        return Button { DSHaptic.selection(); open() } label: {
-            HStack(spacing: DS.Space.s3) {
-                Text("Nodes").dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: DS.Space.s2)
-                // A row is its own door (prd §1272): no chevron.
-                Text(verbatim: word).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-            }
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .walletRowPitch()
-        .accessibilityLabel(Text("Nodes, \(word)"))
-        .task { OwnNodeModel.shared.load() }
-    }
 
     private func backUpPrivate() {
         #if DEBUG

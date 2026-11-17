@@ -43,17 +43,22 @@ struct WalletWhoseSwitch: View {
         if offered.count > 1 {
             let lit = WalletWhose.lit(scope: chrome.walletScope, yours: Self.yours, same: WalletWatch.sameAddress)
             DSRangeChips(ranges: offered, range: lit, label: \.label, slim: true, repicks: true, reads: true) { picked in
-                if picked == .yours, Self.noAccountYet {
-                    chrome.moveTray = true
-                    return
-                }
-                DefaultsWrite.set(Data(picked.rawValue.utf8), forKey: WalletWhose.defaultsKey)
-                withAnimation(DS.Motion.standard) { chrome.walletScope = picked.scope(yours: Self.yours) }
+                Self.pick(picked, chrome)
             }
             .fixedSize(horizontal: true, vertical: false)
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text("Whose money"))
         }
+    }
+
+    /// One pick, from the switch or Home's one word (prd §1843).
+    @MainActor static func pick(_ picked: WalletWhose, _ chrome: ShellChrome) {
+        if picked == .yours, noAccountYet {
+            chrome.moveTray = true
+            return
+        }
+        DefaultsWrite.set(Data(picked.rawValue.utf8), forKey: WalletWhose.defaultsKey)
+        withAnimation(DS.Motion.standard) { chrome.walletScope = picked.scope(yours: yours) }
     }
 
     /// With nothing followed there is no switch, so a Yours or Following
@@ -71,13 +76,27 @@ struct WalletWhoseSwitch: View {
     @MainActor static func applyLaunchChoice(_ chrome: ShellChrome) {
         guard !applied else { return }
         applied = true
+        chrome.walletScope = rememberedScope(over: chrome.walletScope)
+    }
+
+    /// The scope the remembered choice names, unless `current` already
+    /// holds a pick.
+    @MainActor private static func rememberedScope(over current: String?) -> String? {
         let remembered = UserDefaults.standard.data(forKey: WalletWhose.defaultsKey)
             .flatMap { String(data: $0, encoding: .utf8) }.flatMap(WalletWhose.init(rawValue:))
         // Following with nothing followed any more opens on All.
         let start = remembered == .following && followed.isEmpty ? .everything : remembered
-        chrome.walletScope = WalletWhose.launchScope(current: chrome.walletScope,
-                                                     yours: yours,
-                                                     remembered: start,
-                                                     hasFollowing: !followed.isEmpty)
+        return WalletWhose.launchScope(current: current, yours: yours, remembered: start,
+                                       hasFollowing: !followed.isEmpty)
+    }
+
+    /// **HOME SHOWS THE CHOICE YOU MADE ON HOLDINGS (prd §1843).** Back on
+    /// the phone's Home from a Wallet page, the card reads the remembered
+    /// Yours · Following · All, whatever the page left: a way back cleared
+    /// the scope (seen: Home went from Yours to All by opening Account and
+    /// swiping back), and one wallet's or one app's pick is that page's.
+    @MainActor static func settleHome(_ chrome: ShellChrome) {
+        let scope = rememberedScope(over: nil)
+        if chrome.walletScope != scope { chrome.walletScope = scope }
     }
 }

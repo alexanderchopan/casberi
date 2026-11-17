@@ -21,13 +21,29 @@ enum GestureGate {
 
     static var busy: Bool { scrolling || dock || swipe }
 
-    static func set(scrolling on: Bool) { transition(&scrolling, on, .scroll) }
-    static func set(dock on: Bool)      { transition(&dock, on, .dock) }
-    static func set(swipe on: Bool)     { transition(&swipe, on, .swipe) }
+    // **NO FLAG IS HELD WHILE THE METER RUNS (2026-11-16, a crash on a swipe
+    // back).** These took the flag `inout` and called the meter inside that
+    // access; a view mounted in the same turn starts its `.task` at once,
+    // `idle()` reads `busy`, and Swift aborts on the overlapping access
+    // ("simultaneous accesses", SIGABRT in `GestureGate.busy.getter`). Each
+    // writes its flag and lets go before the meter hears of it.
+    static func set(scrolling on: Bool) {
+        guard scrolling != on else { return }
+        scrolling = on
+        meter(on, .scroll)
+    }
+    static func set(dock on: Bool) {
+        guard dock != on else { return }
+        dock = on
+        meter(on, .dock)
+    }
+    static func set(swipe on: Bool) {
+        guard swipe != on else { return }
+        swipe = on
+        meter(on, .swipe)
+    }
 
-    private static func transition(_ flag: inout Bool, _ on: Bool, _ kind: HitchMeter.Kind) {
-        guard flag != on else { return }
-        flag = on
+    private static func meter(_ on: Bool, _ kind: HitchMeter.Kind) {
         if on { HitchMeter.shared.begin(kind) } else { HitchMeter.shared.end(kind) }
     }
 

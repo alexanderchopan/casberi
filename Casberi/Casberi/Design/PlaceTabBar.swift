@@ -134,10 +134,15 @@ struct PlaceTabBar: View {
     /// have, then what happened. Apps left the swipe and the title row for a
     /// card on Home.
     static let places: [PlaceTab] = [.wallet, .feed]
+
+    /// The places a swipe walks: none on the phone, whose Home is the one
+    /// root (§1836, §1843).
+    static var walk: [PlaceTab] { PhoneHome.isOn ? [.feed] : places }
     var body: some View {
         // Home is the one place and Activity is a card on it (prd §1809), so
-        // the capsule that named two places is gone. Home and Activity are
-        // still side by side on the swipe (`places`).
+        // the capsule that named two places is gone. Home and Activity
+        // stand side by side (`places`) so Activity's swipe right lands on a
+        // live Home; Home never swipes forward to it (prd §1836).
         HStack(spacing: DS.Space.s2) {
             Spacer(minLength: 0)
             // **MOVE ALONE (prd §1814, retiring §1812's Home seat; user: "now
@@ -220,3 +225,26 @@ struct FeedTabFrame: View {
     }
 }
 
+/// **THE PHONE'S HOME IS THE FEED'S PAGE (prd §1843).** The Wallet stands at
+/// its head and what is new under it, in one scroll; the Wallet's own Home
+/// page and the separate Activity place are the rail's (iPad, Mac).
+///
+/// Read off the machine, not `UIDevice`, so the shell's model (not on the
+/// main actor) and the views ask one fact; fixed for the launch.
+enum PhoneHome {
+    static let isOn: Bool = {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
+        if let simulated = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
+            return simulated.hasPrefix("iPhone")
+        }
+        var size = 0
+        sysctlbyname("hw.machine", nil, &size, nil, 0)
+        guard size > 0 else { return false }
+        var machine = [CChar](repeating: 0, count: size)
+        sysctlbyname("hw.machine", &machine, &size, nil, 0)
+        return String(cString: machine).hasPrefix("iPhone")
+        #endif
+    }()
+}

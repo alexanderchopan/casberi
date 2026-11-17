@@ -73475,3 +73475,80 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: the panel is the phone's (`quietActivity`); the iPad and the Mac keep the rail's Apps and their Feed's box, which takes the new sentence.
 
 **Checks.** `sheet-sweep.json` covers the panel's two sheets (`@2`). **Seen** on the simulator on a fresh install: the Wallet with "Your account · Finish setup", the start's six apps, Apps' panel with its folders, Social's folder sprung over Activity and closed by a tap outside, an app's connect page from it, and "sp" lifting the panel with Splits and Spotify above the keyboard. Not seen: a first app connected (its section standing above the panel), and the iPad's box.
+
+## §1835 — Account: Nodes is a setting, the name and the photo are one row; Holdings states the savings goal under Private (amends §1803 item 7, §1833's tray door, §1667, the 2026-08-29 Name row) (user, 2026-11-16, of the canvas "Stupid simple": "i do agree nodes moves to settings", "avatar and name tho can be combined i agree. do it"; of Holdings: "agree roundups and savings goal move there. not the settings, just the status")
+
+**Why.** Account's Connection section held Networks, Tor and Nodes, and only someone running a node of their own ever changes Nodes. The settings drew the photo and the name as two rows for one fact, who you are to the app. And the savings goal's progress was readable only on Account, a page about keys, while the money it counts stands in Holdings.
+
+1. **Nodes is a Settings row** (amends §1803 item 7, "Nodes is a row under Connection"). It stands A–Z among the settings that close Account, "Public" or "N of yours" under its name as every setting's fact stands, and opens the same tray (`SettingsRows(openNodes:)`). Connection keeps Networks and Tor.
+2. **Name and photo are one row.** "Name", the photo as its lead (the Casberi mark before one is set), the name under it. One tap asks which: Add name or Change name, Add photo or Change photo, Remove photo once there is one. Never two doors in one row (§1826). The Avatar row is deleted.
+3. **The savings goal's status stands in Holdings, under Private** (extends §1667): "Savings goal" over "$300 of $1,000", the percent trailing, after the private places and before Add money, because the goal counts both private balances (`SavingsGoal.savedNow`). A fact, not a door: the goal is set on Account, whose Saving rows stay. Your own account only, and only once a goal is set; under Hide balances the line goes and the percent stays (`walletSavingsGoalRow`). Round-ups already stood in Holdings' Public (§1690); unchanged.
+
+**Not done, from the same canvas.** The balance as Holdings' door with the Holdings and Watchlist cards gone from Home (four cards): open, and where the watchlist would stand is undecided. Apps showing your apps first and an audit of amber rows: declined.
+
+**Mac half (§1402).** The same Account page and Holdings on Catalyst.
+
+**Checks.** None new.
+
+## §1836 — Home never swipes forward: Activity is its card's page, and a swipe right is the only swipe (amends §1809 item 1, §1807 item 1, §1814) (user, 2026-11-16, of the canvas "Stupid simple": "do you think activity shouldn't be a swipe and should require user to touch the tile?"; told it is the one place reached by a swipe forward: "ok, make the activity change re swipe")
+
+**Why.** Every page in the app is reached by a tap and left by a swipe right to its parent (§1814), except Activity, which a swipe left from Home also reached. With the balance proposed as Holdings' door, Home would have two downward taps and one sideways swipe; one rule is simpler than two.
+
+1. **A pull left on Home moves nothing** (`MainSurface.neighbour`: no target forward from Home, so §1834's rule holds the page still). Activity's card is the one way in.
+2. **Activity still swipes right to Home**, its parent, under the Wallet mark and "Home" (§1834). Home stays mounted beside Activity (`PlaceTabBar.places`, §1208l) so that swipe lands on a live page.
+
+**Not changed.** The Mac's and the iPad's rail and walk.
+
+**Mac half (§1402).** None: the rail is the Mac's.
+
+**Checks.** None new.
+
+## §1837 — The holdings map wears the day: a tile that moved is filled in its direction's hue, by its strength against the board's biggest move (retires §1389 item 1's "the map is not painted"; amends §1731 for the map's fill, §1809) (user, 2026-11-16, of the canvas "Stupid simple", row "The day on the map", three boards — the map grey, A the tiles filled by the day, B the day as a figure on each tile, B recommended: "i like A")
+
+**Why.** The map said where the money is and, in one corner glyph, which way each tile went; the day you open the app on was a line under the balance and a mark too small to read across the map. Filled, the map answers both at a glance.
+
+1. **A tile that moved is filled in its hue** (`DS.confirm` up, `DS.destructive` down) at 14% to 36% opacity, by the move's size against the board's biggest move (Markets' rule, §1081): the day's biggest mover at full strength, a small move faint (`HoldingsTreemap.fill`).
+2. **Flat or unread keeps the plain fill** (§83): a move under 0.05%, dollars, cash and "Other" stay grey.
+3. **The corner glyph stays**, the cue that is not colour, for anyone who cannot tell the hues apart. The pressed tile keeps the tint. The balance stays white and its line wears the day (§1809).
+
+**Lost, said plainly.** §1389's reason was a design audit's: the map was the one saturated box in the app. It is again, on purpose.
+
+**Mac half (§1402).** The same view on Catalyst.
+
+**Checks.** None new.
+
+## §1838 — The balance is Holdings' door: Home's resting balance and the line under it open Holdings, a chevron after the figure, and the Holdings card is deleted (amends §1807 item 3, §1809 item 2, §1815) (user, 2026-11-16, of the canvas "Stupid simple": "WOW, that's smart to move holdings by tapping the balance"; asked whether the chevron should be pink: grey, as every door's; "Yes, build it"; of the Watchlist: "leave watchlist on home … b/c in another session i just merged activity and apps", agreed)
+
+**Why.** Home's balance and map and its Holdings card said the same thing twice: what you have. The figure people read first is now the way in.
+
+1. **The balance opens Holdings.** On Home, the resting balance, its day line and Public · Private under it are one button (`\.holdingsOpenTotal`, set by Home's map only), a grey chevron after the figure (`DSFigureReading(opens:)`), as every door wears one (§1815). A pressed tile's reading is that tile's and opens nothing; a tile still opens its token (§1672).
+2. **The Holdings card is deleted**, with its week's line. Holdings' own box keeps the line (§1807 item 4).
+3. **Watchlist stays a Home card.** With Activity and Apps one card (another session, 2026-11-16), Home is four: Account, Activity, Risks, Watchlist.
+
+**Not done.** The cards' height still shares the screen among three rows (`DSHomeCardMetrics.height(screen:)`); at four cards it is two rows and should grow, once the Activity and Apps merge lands beside this.
+
+**Mac half (§1402).** The same Home view on Catalyst; the rail keeps Holdings out of it as before.
+
+**Checks.** None new.
+
+## §1843 — The phone's Home is one scroll: your money on one card, the watchlist as a line, Account and its address as chips, chips that jump to each section, then what is new; Home says no name, and Activity is no place of its own (amends §1807, §1809, §1813, §1814, §1836, §1838, §1839, §1840, §1526, §1632, §782; retires the phone's Home cards) (user, 2026-11-16, over the canvases "Home, minimal", "Home, one scroll" and "Home, friendlier": "i really really like the minimalism", "i like the treemap and want it … it could be small", "no matter what we want to keep the fab in the right", "i love what you did with the watchlist", "i'm not sure we need the word 'home' anymore either", "the utility of scrolling is it is already there otherwise it is just another screen with notifications", "you cannot get rid of the private and public", "i like what you did with the treemap", of the category jumps "could feel more tappable perhaps as chips", of scrolling them sideways "ok", "we go with t1", "build t1")
+
+**Why.** Home was the map and cards that were only doors; Activity, the half people open the app for, was a tap away, and every card took a quarter of the screen to say one word. With Activity showing only what is new (§1831) it is short enough to stand on Home, and the doors can be lines.
+
+1. **One page (phone).** Home is the feed's page (`source == "All"`, `quietActivity`) with the Wallet at its head (`FeedScreen.homeHeadSection`, `PhoneHome.isOn`). The Wallet's own Home page is never the page on the phone: a launch, a door or a way back that lands there lands on Home (`MainSurface.walletHomeIsFeed`); an app or one account picked keeps its page. There is no swipe between places (`PlaceTabBar.walk`), and "Open on" leaves the phone's settings.
+2. **Your money is one card** (`homeMoneyCard`, the lead's one well): the balance at Move's rung with its grey chevron (§1838), the day in its ink, Public · Private under it, and the map as a band (`HoldingsBand`): one row of tiles, each as wide as its share, its mark and no figure, filled by its day (§1837), the tail as Other. The balance, the halves and the band open Holdings. A last reading says "as of"; with no balance the card is the start figure (§1809) or the reading figure (§1587).
+3. **Yours · Following · All is Holdings' choice, not Home's** (amends §1526's three words on Home; user: "lets get rid of the yours following all on the home screen and only have it on holdings … too much extra to tap"). Home follows the choice made there, and a balance that is not yours alone says whose in one grey word on the day's line (`homeWhoseWord`), a fact and no control. The choice stands on the card only while a scope has nothing to draw (`homeWhoseMenu`), so that card is never a dead end. A page opened from the head keeps the choice (`openWalletPage(keepingScope:)`).
+4. **The watchlist is a line** (amends §1632's card): its glyph, then up to three tokens, each with its day in the day's ink; it opens the watchlist; empty, it is "Watch a token".
+5. **Account is two chips** (`Chip`): Account (Create account, or Finish setup in the attention ink) and "Copy public address", which copies and says "Address copied". No address is drawn on Home.
+6. **The jumps are chips** in one row that runs off the trailing edge: Wallet, each category with something new, Apps. Needs you takes none (user: "it's jump chip is unnecessary"): it is always the first thing under the chips. A chip lands on its section (`chrome.feedJump`); nothing is lit. **The head is three groups** (user: "balance and card; account and watchlist; feed and chips"): the watchlist and Account stand close as one row, the wide gap is above the chips, and the section right under them takes no chapter air of its own (`feedSectionLeads`).
+7. **Risks is an ask.** Findings you have not seen are one Needs you row onto Risks; with nothing new the page is a row on Account.
+8. **Home says no name.** The title row draws nothing on Home but the demo's way out. Every other page reads "Home · X": the word that said "Activity" says Home on the phone, and no root stands before it.
+9. **The feed under it is §1831's and §1839's**, unchanged: Needs you, the Wallet's word and rows, each category's, the start's six apps on a first run, Apps on its panel.
+
+**Lost, said plainly.** On a busy day the lower half of the first screen is a list. Apps is the foot of the scroll (its chip jumps there). The first run says your account twice, on the card and under the Wallet's word. The Wallet's reads now run when the app opens, since Home shows the balance.
+
+**Not built.** The iPad and the Mac keep the Wallet's Home with its cards and the Activity place.
+
+**Mac half (§1402).** None: `PhoneHome.isOn` is the iPhone's alone; the rail, its Home and its Activity are unchanged.
+
+**Checks.** None new.

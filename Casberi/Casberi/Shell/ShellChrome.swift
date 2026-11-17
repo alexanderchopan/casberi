@@ -625,7 +625,7 @@ final class ShellChrome {
     /// "Activity" or the page's own name.
     func walletBackWord(_ section: WalletSection) -> String {
         switch walletBackStep(section) {
-        case .activity: return PlaceTab.feed.label
+        case .activity: return PhoneHome.isOn ? PlaceTab.wallet.label : PlaceTab.feed.label
         case .page(.home): return PlaceTab.wallet.label
         case .page(let page): return page.label
         }
@@ -1437,8 +1437,9 @@ final class ShellChrome {
 
     /// One of the Wallet's pages, from Activity's rows (prd §1807): it goes
     /// back to Activity, on the section `anchor` names (prd §1827).
-    func openWalletPage(_ section: WalletSection, fromActivity anchor: String?) {
-        walletScope = nil
+    func openWalletPage(_ section: WalletSection, fromActivity anchor: String?, keepingScope: Bool = false) {
+        // From Home's head the page reads whose money Home showed (§1843).
+        if !keepingScope { walletScope = nil }
         landWallet(on: section, fromActivity: anchor)
         sourceRequest = CategoryFold.walletRoom
     }
