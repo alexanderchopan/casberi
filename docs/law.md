@@ -259,7 +259,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2034 of 2108 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2035 of 2109 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2295,6 +2295,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1853 — Receive's "From a zk.money link" is deleted: Casberi cannot tell a link that pays out to Ethereum from one that only…
 - §1854 — A Safe settings change is named by the move, not the moment it was seen, its sheet lists no History, and a key you ex…
 - §1855 — Home's head stands on one grey plate, its doors with it, and the feed's sections keep their old gap (amends §1851 ite…
+- §1856 — The plate ends in the map: the Holdings row becomes the plate's foot, three tokens and Other, each its name over its…
 
 ## Dead rulings → what replaced them (generated)
 

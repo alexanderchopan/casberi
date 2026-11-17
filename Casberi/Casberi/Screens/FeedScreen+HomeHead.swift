@@ -62,8 +62,8 @@ extension FeedScreen {
             // line and no chips under it.
             // Apps is a chip here once its panel has left the page's foot
             // (prd §1848), so it stands even before the account does.
-            if (!homeBare || !panel) && !homePlated {
-                homeAccountLine(apps: !panel, bare: homeBare)
+            if !homeBare || !panel {
+                homeAccountLine(apps: homePlated || !panel, bare: homeBare)
                 // Air between the groups (user: "there is enough room to have
                 // more padding between and make the sections feel separate",
                 // prd §1846): the lines stand a gap under the card.
@@ -97,15 +97,14 @@ extension FeedScreen {
             // **THE HEAD IS ONE PLATE (prd §1855, user: "i just think it
             // doesn't look good as is like it all blends together").** The
             // money and its doors on one grey card; the feed stays bare.
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                homeMoneyStack
-                homeAccountLine(apps: true, bare: false)
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell(cornerRadius: Self.homePlateRadius)
+            // The doors stand under it on the page since the plate ends in
+            // the map (prd §1856): the foot is the plate's last edge.
+            homeMoneyStack
+                .padding(.horizontal, Self.homePlateInset)
+                .padding(.top, DS.Space.s6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .dsWell(cornerRadius: Self.homePlateRadius)
+                .clipShape(RoundedRectangle(cornerRadius: Self.homePlateRadius, style: .continuous))
         } else {
             homeMoneyStack
                 .padding(DS.Space.s3)
@@ -117,6 +116,8 @@ extension FeedScreen {
     /// The head stands on its plate once there is a balance to show.
     var homePlated: Bool { (portfolioShown?.totalUSD ?? 0) > 0 }
     static let homePlateRadius: CGFloat = 30
+    /// The plate's side padding, which the foot undoes to reach its edges.
+    static let homePlateInset: CGFloat = DS.Space.s4
 
     @ViewBuilder
     private var homeMoneyStack: some View {
@@ -124,10 +125,9 @@ extension FeedScreen {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
                 let worth = shown.foldingPrivate(walletPrivateByToken).sectionWorth(appsApart: walletOnAll)
-                let cells = HoldingsBand.cells(worth)
                 let moves = walletHoldingMoves
-                let day = Self.homeDay(HoldingMoves.dayChange(cells.map {
-                    (usd: $0.usd, move: $0.id == HoldingsTreemapLayout.otherID ? nil : moves[HoldingMoves.key($0.id)])
+                let day = Self.homeDay(HoldingMoves.dayChange(Self.homeDayCells(worth).map {
+                    (usd: $0.value, move: $0.key == HoldingsTreemapLayout.otherID ? nil : moves[HoldingMoves.key($0.key)])
                 }))
                 // A last reading says when it was read (§825, §1593).
                 let stamp = WalletIngest.subline(totalUSD: shown.totalUSD, tokenCount: 0, stale: shown.asOf)
@@ -173,14 +173,18 @@ extension FeedScreen {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // **HOLDINGS IS A ROW (prd §1851, over §1850's band).** The
-                // three biggest and each one's day; the row opens Holdings,
-                // where the map is.
+                // **THE PLATE ENDS IN THE MAP (prd §1856, over §1851's
+                // Holdings row).** Three tokens and Other, edge to edge: the
+                // plate's own padding is undone so its corners cut the outer
+                // tiles. The foot opens Holdings, as the row did.
                 Button { homeOpen(.holdings) } label: {
-                    DSHomeFactRow(glyph: WalletSection.holdings.glyph, name: WalletSection.holdings.label,
-                                  items: Self.homeHoldingItems(worth, moves))
+                    HoldingsBand(cells: HoldingsBand.cells(worth, isToken: Self.homeIsToken),
+                                 moves: moves, masked: mask != nil)
                 }
                 .buttonStyle(RowPress())
+                .accessibilityLabel(Text(WalletSection.holdings.label))
+                .padding(.top, DS.Space.s3)
+                .padding(.horizontal, -Self.homePlateInset)
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
                 WalletStartFigure(bare: homeBare).frame(height: homeBare ? nil : Self.homeStartHeight)
@@ -207,29 +211,23 @@ extension FeedScreen {
         return (day.words, day.tone == .up ? DS.confirmInk : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
     }
 
-    /// As many holdings as the row names.
-    static let homeHoldingsCap = 3
-
-    /// The row's holdings: the biggest tokens, each by its symbol and its
-    /// day. Tokens only (user: "for holdings there are no long names"): an
-    /// app's or a bank account's tile is never one, nor is Other.
-    static func homeHoldingItems(_ worth: [String: Double], _ moves: [String: Double]) -> [DSHomeFactRow.Item] {
-        // Lent and Private are places your tokens sit, not tokens (user:
-        // "why does it say lent in the holdings row").
+    /// What the foot may name: tokens only (user: "for holdings there are no
+    /// long names"). An app's or a bank account's tile is never one, and
+    /// Lent and Private are places your tokens sit (user: "why does it say
+    /// lent in the holdings row"); they count in Other.
+    static func homeIsToken(_ id: String) -> Bool {
         let places: Set<String> = [HoldingsTreemapLayout.otherID, WalletPortfolio.lentSymbol,
                                     PrivateMoney.walletSymbol, AztecAccountStore.walletSymbol]
-        return worth.filter { $0.value > 0 && !places.contains($0.key) && WalletPortfolio.appCell($0.key) == nil }
+        return !places.contains(id) && WalletPortfolio.appCell(id) == nil
+    }
+
+    /// The day pill reads the map's five biggest and the rest as Other, as
+    /// it did under the band (§1843).
+    static func homeDayCells(_ worth: [String: Double]) -> [(key: String, value: Double)] {
+        let sorted = worth.filter { $0.value > 0 }
             .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
-            .prefix(homeHoldingsCap).map { cell in (id: cell.key, usd: cell.value) }.map { cell in
-            let name = cell.id
-            guard let move = moves[HoldingMoves.key(cell.id)] else {
-                return DSHomeFactRow.Item(id: cell.id, name: name)
-            }
-            let day = WatchlistRules.change(move * 100)
-            return DSHomeFactRow.Item(id: cell.id, name: name, change: day.words,
-                                      ink: day.tone == .up ? DS.confirmInk
-                                          : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
-        }
+        let rest = sorted.dropFirst(5).reduce(0) { $0 + $1.value }
+        return Array(sorted.prefix(5)) + (rest > 0 ? [(key: HoldingsTreemapLayout.otherID, value: rest)] : [])
     }
 
     /// Your account was made for you and its walk has not been taken.

@@ -1,39 +1,46 @@
 import SwiftUI
 
-/// **HOME'S MAP IS A BAND (prd §1843).** On the phone's Home the holdings
-/// map is one row: each holding a tile as wide as its share, wearing its
-/// mark and no figure, filled by its day as the map's tiles are (§1837).
-/// The balance over it says how much; the band says what of. Each tile is
-/// a door of its own (user: "if they are they should open the token page"):
-/// a token opens its sheet, the rest what its map tile opens (`onOpen`). A
-/// tile is never under `minWidth`, 44pt, the size of a tap.
+/// **THE PLATE ENDS IN THE MAP (prd §1856, over §1851's Holdings row).** On
+/// the phone's Home the holdings map is the plate's foot: one row of square
+/// tiles run edge to edge, the plate's corners cutting the outer two. Each
+/// tile is as wide as its share and says its token's name over its dollars,
+/// no mark (user: "the tokens inside the balance bar don't work as circle
+/// icons bc they compete w/ the app icons"), filled by its day as the map's
+/// tiles are (§1837). Three tokens at most, and a fourth tile only when it is
+/// Other (user: "only show top 3 or 4 if 4 is 'other'"). The whole foot is
+/// Holdings' door, as the row it replaces was.
 struct HoldingsBand: View {
     struct Cell: Identifiable, Equatable {
         let id: String
         let usd: Double
     }
 
-    /// Biggest first, the tail already folded into Other (`cells(_:)`).
+    /// Biggest first, the rest already folded into Other (`cells(_:named:)`).
     let cells: [Cell]
     /// Each holding's day move, by `HoldingMoves.key`.
     let moves: [String: Double]
-    /// SimpleFIN picked (prd §1702): a currency is that bank's cash.
-    var pickIsBank = false
-    /// A tile pressed, by its id. Nil draws a picture.
-    var onOpen: ((String) -> Void)? = nil
+    /// Hide balances: a tile says its share, never its dollars.
+    var masked = false
 
-    static let height: CGFloat = 52
-    static let gap: CGFloat = 3
-    /// A tile never narrower than its mark and its air.
-    static let minWidth: CGFloat = 44
+    static let height: CGFloat = 56
+    static let gap: CGFloat = 2
+    /// A tile never narrower than its name.
+    static let minWidth: CGFloat = 64
+    /// As many tokens as the foot names; the rest is Other.
+    static let named = 3
 
-    /// The top five and the rest as one Other, the map's own fold (§939).
-    static func cells(_ worth: [String: Double]) -> [Cell] {
-        let sorted = worth.filter { $0.value > 0 }
+    /// The three biggest tokens `isToken` admits, then Other: everything
+    /// else, places and apps included, so the tiles' widths add up to the
+    /// balance. No Other when nothing is left.
+    static func cells(_ worth: [String: Double], isToken: (String) -> Bool) -> [Cell] {
+        let held = worth.filter { $0.value > 0 }
+        let tokens = held.filter { isToken($0.key) }
             .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
-        let rest = sorted.dropFirst(5).reduce(0) { $0 + $1.value }
-        return sorted.prefix(5).map { Cell(id: $0.key, usd: $0.value) }
-            + (rest > 0 ? [Cell(id: HoldingsTreemapLayout.otherID, usd: rest)] : [])
+            .prefix(named).map { Cell(id: $0.key, usd: $0.value) }
+        let shown = Set(tokens.map(\.id))
+        let rest = held.filter { !shown.contains($0.key) }.reduce(0) { $0 + $1.value }
+        // A cent of dust is not a tile.
+        return tokens + (rest >= 0.01 ? [Cell(id: HoldingsTreemapLayout.otherID, usd: rest)] : [])
     }
 
     /// Each tile's width: its share of the row, never under `minWidth`; the
@@ -71,49 +78,42 @@ struct HoldingsBand: View {
             let widths = Self.widths(cells, in: geo.size.width)
             // The row's strength is its biggest drawn move (§1081's rule).
             let widest = cells.compactMap { move($0.id) }.map(abs).max() ?? 0
+            let total = cells.reduce(0) { $0 + $1.usd }
             HStack(spacing: Self.gap) {
                 ForEach(Array(cells.enumerated()), id: \.element.id) { index, cell in
-                    let tile = mark(cell.id)
-                        .frame(width: index < widths.count ? widths[index] : Self.minWidth, height: Self.height)
-                        .background(HoldingsTreemap.dayFill(move: move(cell.id), widest: widest),
-                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    if let onOpen {
-                        Button {
-                            onOpen(cell.id)
-                        } label: {
-                            tile.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        }
-                        .buttonStyle(PressSpring())
-                        .accessibilityLabel(Text(verbatim: cell.id == HoldingsTreemapLayout.otherID
-                            ? String(localized: "Other") : cell.id))
-                    } else {
-                        tile.accessibilityHidden(true)
-                    }
+                    tile(cell, total: total)
+                        .frame(width: index < widths.count ? widths[index] : Self.minWidth,
+                               height: Self.height, alignment: .leading)
+                        // Square, named: a bare `.background(style)` takes
+                        // the container's shape, which inside a Button in
+                        // a List is a capsule (seen on iOS 27).
+                        .background(HoldingsTreemap.dayFill(move: move(cell.id), widest: widest), in: Rectangle())
                 }
             }
         }
         .frame(height: Self.height)
+        .accessibilityElement(children: .combine)
     }
 
-    /// The tile's mark, as the map's tile wears it.
-    @ViewBuilder
-    private func mark(_ id: String) -> some View {
-        let size = DS.Mark.badge + 4
-        if id == HoldingsTreemapLayout.otherID {
-            Image(systemName: "ellipsis")
-                .dsGlyph(.body, weight: .semibold)
+    /// The name over the dollars (the share under Hide balances).
+    private func tile(_ cell: Cell, total: Double) -> some View {
+        let other = cell.id == HoldingsTreemapLayout.otherID
+        let figure = masked
+            ? "\(Int((total > 0 ? cell.usd / total * 100 : 0).rounded()))%"
+            : WalletValue.money(cell.usd)
+        return VStack(alignment: .leading, spacing: 1) {
+            Text(verbatim: other ? String(localized: "Other") : cell.id)
+                .dsText(.fact15)
+                .fontWeight(.semibold)
+                .foregroundStyle(DS.textPrimary)
+            Text(verbatim: figure)
+                .dsText(.label12)
+                .monospacedDigit()
                 .foregroundStyle(DS.textSecondary)
-        } else if let app = WalletPortfolio.appCell(id) {
-            // An app's tile wears its Apps row's mark (prd §1698).
-            if let bank = SimpleFINShape.connID(fromHolder: app.address) {
-                BankMark(connID: bank, size: size)
-            } else {
-                BridgeIcon(name: FeedScreen.venueMark(app), size: size)
-            }
-        } else if pickIsBank, Locale.commonISOCurrencyCodes.contains(id) {
-            PickBankMark(currency: id, size: size)
-        } else {
-            AssetMark(name: id, size: size)
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .padding(.leading, DS.Space.s3)
+        .padding(.trailing, DS.Space.s1)
     }
 }

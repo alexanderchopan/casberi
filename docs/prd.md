@@ -73750,3 +73750,20 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** All three are the phone's Home (`PhoneHome.isOn`, `quietActivity`).
 
 **Checks.** None new.
+
+## §1856 — The plate ends in the map: the Holdings row becomes the plate's foot, three tokens and Other, each its name over its dollars, filled by the day; the doors stand under the plate (amends §1851 item 3, §1855 item 1; returns §1843's band in a new shape) (user, 2026-11-17, of the canvas "Holdings within reach": "i think a is the answer but i'm not sold on it", of the foot: "1 is interesting", "the tokens inside the balance bar don't work as circle icons bc they compete w/ the app icons", "Words and dollars", "they should be green and red for up and down … only show top 3 or 4 if 4 is 'other'", "Filled"; "remove the holdines row from the plate and replace w/ the foot you designed")
+
+**Why.** Most people open Casberi for the Wallet, and Home is to be mostly feed. The holdings had to stay in reach without Home opening on them: the Holdings row named three tokens and their day, but not how much of each, so the map was a tap away. §1843's band said what of with marks only and looked like a row of buttons floating in the card.
+
+1. **The plate's foot is the map, one row** (`HoldingsBand`, `homeMoneyStack`): square tiles, 56pt tall, 2pt apart, run edge to edge, the plate's corners cutting the outer two. A tile is as wide as its share, never under 64pt.
+2. **A tile is its name over its dollars**, no mark: a token's circle beside the app circles read as one more app. Under Hide balances a tile says its share.
+3. **Filled by the day** (§1837's `dayFill`): a tile that moved is green or red by its move against the row's biggest; flat, unread and Other stay grey.
+4. **Three tokens, then Other** (`HoldingsBand.cells(_:isToken:)`): the three biggest tokens (`homeIsToken`: never Lent, Private, an app or a bank account), then everything else as one Other, so the widths add up to the balance. Four tokens draw three and Other.
+5. **The foot is Holdings' door**, as the row was; the balance and Public · Private still open it.
+6. **The doors stand under the plate**, on the page (amends §1855 item 1): the foot is the plate's last edge.
+
+**Declined.** A holdings section in the feed (Public, Private, Watchlist, the last move, or Holdings and Activity as two sections): it pushed the first feed item off the first screen. A tray, a balance circle among the app circles, the small up/down mark instead of the fill, marks on the tiles, the band floating inside the plate.
+
+**Mac half (§1402).** The phone's Home only (`PhoneHome.isOn`); the rail's Home keeps its map.
+
+**Checks.** None new.
