@@ -239,7 +239,14 @@ struct RootShell: View {
                 NSLog("[Casberi] openSection: %@", raw)
                 // A verb tile is never a page (prd §1039); the wallet family
                 // has none since §1107 and §1108.
-                if let s = WalletSection(rawValue: raw) { chrome.landWallet(on: s) }
+                if let s = WalletSection(rawValue: raw) {
+                    chrome.landWallet(on: s)
+                    // On the phone the Wallet's Home is the feed's page (prd
+                    // §1843), so `-openRoom Wallet` came to rest there before
+                    // the section was named: ask for the room again, now that
+                    // it has a page to stand on.
+                    if s != .home, room == CategoryFold.walletRoom { chrome.sourceRequest = room }
+                }
                 // `-watchedToken <id>`: which token `watchedToken` shows (prd §1632).
                 if raw == WalletSection.watchedToken.rawValue {
                     chrome.watchedTokenID = UserDefaults.standard.string(forKey: "watchedToken")
