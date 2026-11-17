@@ -73704,3 +73704,20 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** Items 1 to 4 reach the Mac's and the iPad's Move unchanged: the tray's own first page lists the five. Items 5 to 7 are the phone's.
 
 **Checks.** None new.
+
+## §1853 — Receive's "From a zk.money link" is deleted: Casberi cannot tell a link that pays out to Ethereum from one that only signs you up (amends §1824) (user, 2026-11-17, after reading zk.money's code: "should we delete the feature?", "do we delete it or keep the lighter version?", "ok") — BUILT
+
+**Measured (2026-11-17, zk.money's public code at 516d906, read only).**
+1. **A visitor can claim to Ethereum only when the link holds a voucher**, the claim's costs prepaid by the sender on zk.money's fee contract (`PaylinkVisitorScreen`, `paylinkVoucherUses`). Without one, zk.money's page offers only signing up.
+2. **Casberi cannot see the voucher, or the amount, without porting zk.money's link read**: registering the link's escrow in the Aztec engine under the link's own keys, which zk.money does by patching the PXE's key store, plus two of its contract artifacts and its fee rail. About a day, provable only against real unclaimed links.
+3. **A zk.money person can already pay Casberi**: Withdraw takes any pasted Ethereum address, as DAI, USDC, USDT or ETH, or another network through Across.
+4. **0xDAI in Casberi's Aztec account would be stuck**: every move of it needs zk.money's enclave to sign, given the spender's nullifier key. Not accepted, not shown.
+
+**Ruling.**
+1. **"From a zk.money link ›" leaves Receive**, with `MoveZkClaim`, its address band, its strings and `-zkClaimSample`. Its sentence promised Ethereum to links that cannot pay there (§83). Someone sent a link opens it in Safari, picks an Ethereum wallet on zk.money's page and pastes the address Receive copies.
+2. **What §1824 built stays**: each place says where it works, the two ways in stand under the public account, a door is grey with its chevron.
+3. **It may come back** only with the link read (item 2 measured): the amount in the sentence, and a link with no voucher said before the page opens (the 7a mock: "Claim 20 DAI in zk.money, then withdraw to your public account on Ethereum").
+
+**Mac half (§1402).** The same row leaves the Mac's Receive.
+
+**Checks.** `zkmoney-selftest.sh`: Receive's ways in still stand under the public account, before the private places, and none names zk.money.

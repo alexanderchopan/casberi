@@ -705,21 +705,14 @@ awk '/static func depositAddress\(tag: String\) async -> PayAnswer \{/,/^    }/'
 awk '/to: ZkMoneyWire.ensRegistry/{e=NR} /resolver = named/{n=NR} /to: resolver, data: call/{c=NR} /ZkMoneyWire.lookup\(revert: data, from: resolver\)/{l=NR} END{exit !(e && n && c && l && e<n && n<c && c<l)}' "$TMP/deposit.txt" \
   || { echo "✗ paying a tag no longer asks ENS for the resolver first, or reads a lookup from another contract"; exit 1; }
 
-# Receive's "From a zk.money link" (prd §1824): the claim page takes only a
-# payment link, holds it in memory alone (never a default, the Keychain, a
-# row or a log line), copies the PUBLIC address before zk.money's page opens,
-# and its row stands under the public account with the other two ways in.
-CLAIM=Casberi/Casberi/Screens/MoveZkClaim.swift
-grep -q 'guard case .payment? = ZkMoneyLink.link(text), let url = URL(string: text) else {' "$CLAIM" \
-  || { echo "✗ Receive's claim page takes something other than a zk.money payment link"; exit 1; }
-! grep -nE 'UserDefaults\.standard\.set|SecItemAdd|ZkMoneyClaims\.(keep|stage)|modelContext|NSLog\(.*(link|text|url)' "$CLAIM" \
-  || { echo "✗ the pasted claim link is kept or logged somewhere: it is the money's key"; exit 1; }
-awk '/private func claim\(\) \{/,/^    }/' "$CLAIM" | awk '/DSPasteboard.copy\(account\)/{c=NR} /claiming = true/{o=NR} END{exit !(c && o && c<o)}' \
-  || { echo "✗ zk.money's page opens before your public address is copied"; exit 1; }
+# Receive's ways in (prd §1824, the zk.money row deleted by its successor):
+# they stand under the public account, before the private places, and none
+# claims a zk.money link — Casberi cannot tell a link that pays to Ethereum
+# from one that only signs you up.
 awk '/private var receiveFromRows: some View \{/,/^    }/' "$SEND" > "$TMP/from.txt"
-grep -q 'MoveDoorRowLabel(title: String(localized: "From a zk.money link"))' "$TMP/from.txt" \
-  && grep -q 'MoveDoorRowLabel(title: String(localized: "From another network"))' "$TMP/from.txt" \
-  || { echo "✗ the zk.money row is not one of the public account's ways in"; exit 1; }
+grep -q 'MoveDoorRowLabel(title: String(localized: "From another network"))' "$TMP/from.txt" \
+  && ! grep -q 'zk.money' "$TMP/from.txt" \
+  || { echo "✗ Receive's ways in changed, or a zk.money claim came back without reading the link's voucher"; exit 1; }
 awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND" \
   | awk '/String\(localized: "Public account"\), marks: receiveNetworks/{p=NR} /receiveFromRows/{f=NR} /"Private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
   || { echo "✗ the ways in no longer stand under the public account, before the private places"; exit 1; }

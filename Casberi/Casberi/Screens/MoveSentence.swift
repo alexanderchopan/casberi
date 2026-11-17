@@ -98,8 +98,6 @@ struct MoveSentence: View {
     @State private var freshReceive = false
     /// Receive to your private balance on Aztec: your Aztec address (prd §1719).
     @State private var aztecReceive = false
-    /// "From a zk.money link" taken (prd §1824): the claim page.
-    @State private var zkClaim = false
     /// Receive's public page, behind "Public account" (prd §1803).
     @State private var receivePublic = false
     /// "From another network" taken: the Network row and its list.
@@ -1492,12 +1490,6 @@ struct MoveSentence: View {
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
-            if zkClaim, privateMode == nil, open != .verb {
-                MoveZkClaim(account: account, inTray: inTray, leave: {
-                    withAnimation(DS.Motion.standard) { zkClaim = false; open = nil }
-                }) { verbWord(title(.receive)) }
-                .transition(.opacity)
-            }
             if aztecMode != nil, privateMode == nil, open != .verb {
                 MoveAztecPrivateSentence(move: aztecMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
@@ -1531,7 +1523,6 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: freshReceive)
         .animation(DS.Motion.standard, value: aztecReceive)
-        .animation(DS.Motion.standard, value: zkClaim)
         .animation(DS.Motion.standard, value: railgunOpen)
         .animation(DS.Motion.standard, value: verb)
     }
@@ -2442,7 +2433,7 @@ struct MoveSentence: View {
             // **EACH PLACE SAYS WHERE IT WORKS, AND EVERY WAY IN FROM OUTSIDE
             // STANDS UNDER THE PLACE IT LANDS (prd §1824).** The public line
             // names its networks, as Aztec's says "Aztec to Aztec only"
-            // (user: "we need to make that clear"); the three "From" rows
+            // (user: "we need to make that clear"); the two "From" rows
             // land in the public account, so they stand under it, where under
             // the Aztec account they read as private.
             VStack(alignment: .leading, spacing: 0) {
@@ -2511,13 +2502,6 @@ struct MoveSentence: View {
             Button {
                 ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
             } label: { MoveDoorRowLabel(title: String(localized: "From another wallet")) }
-                .buttonStyle(RowPress())
-            // **FROM A ZK.MONEY LINK (prd §1824):** a "Pay anyone" link
-            // someone sent you, claimed on zk.money's page to this address.
-            Button {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { open = nil; zkClaim = true }
-            } label: { MoveDoorRowLabel(title: String(localized: "From a zk.money link")) }
                 .buttonStyle(RowPress())
         }
     }
@@ -3174,13 +3158,12 @@ struct MoveSentence: View {
             // Receive opens on its three addresses, every time (prd §1803).
             receivePublic = false
             receiveOther = false
-            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || zkClaim || aztecMode != nil || railgunOpen else { return }
+            guard v != verb || receipt != nil || privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen else { return }
             privateMode = nil
             railgunOpen = false
             aztecMode = nil
             freshReceive = false
             aztecReceive = false
-            zkClaim = false
             verb = v
             receipt = nil
             takeOnlyChoices()
@@ -3559,7 +3542,7 @@ struct MoveSentence: View {
     /// Another sentence is mounted over this page (Lend, a private send,
     /// Receive privately): this one is hidden and takes no touch.
     private var coveredByAnother: Bool {
-        (privateMode != nil || freshReceive || aztecReceive || zkClaim || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
+        (privateMode != nil || freshReceive || aztecReceive || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
     }
 
     /// Whether this row's menu is up; closed by a tap outside it, the list
@@ -3804,7 +3787,7 @@ struct MoveSentence: View {
         guard verb == .send || verb == .swap, open == nil, focus == nil, receipt == nil, stage == nil else { return }
         // Never from under a sentence Move has mounted over this one (a
         // private send, Receive privately, Lend): its menu rose over theirs.
-        guard privateMode == nil, aztecMode == nil, !railgunOpen, !freshReceive, !aztecReceive, !zkClaim, chrome.moveLend == nil else { return }
+        guard privateMode == nil, aztecMode == nil, !railgunOpen, !freshReceive, !aztecReceive, chrome.moveLend == nil else { return }
         let pick = String(localized: "Choose")
         guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
         tapBlank(next == .amount && with == nil ? .with : next)
@@ -8352,8 +8335,7 @@ struct MoveSentence: View {
     #if DEBUG
     /// A launch hook fills the sentence, so the lists are read before it.
     static var drafting: Bool {
-        ["moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft",
-         "zkClaimSample"]
+        ["moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
             .contains { UserDefaults.standard.string(forKey: $0)?.isEmpty == false }
     }
 
@@ -8389,13 +8371,6 @@ struct MoveSentence: View {
         } else if d.string(forKey: "moveSendDraft")?.isEmpty == false {
             verb = .send
             sendDraft()
-        } else if let zk = d.string(forKey: "zkClaimSample"), !zk.isEmpty {
-            // `-zkClaimSample receive|open|<link>` (prd §1824): Receive's
-            // places, the claim page asking for its link, or with one pasted.
-            verb = .receive
-            open = nil
-            if zk != "receive" { zkClaim = true }
-            NSLog("zkClaim| sample %@", zk == "receive" || zk == "open" ? zk : "link")
         } else if let from = d.string(forKey: "moveReceiveFrom"), !from.isEmpty {
             verb = .receive
             receiveDraft(from)
