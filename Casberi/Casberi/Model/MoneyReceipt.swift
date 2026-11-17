@@ -388,7 +388,7 @@ struct MoneyReceipt: Equatable {
             || ref?.hasPrefix("privy:app:") == true
     }
 
-    /// **ONE MOVE, ONE ROW (prd §1828, user: "this is a duplicate. both are
+    /// **ONE MOVE, ONE ROW (prd §1829, user: "this is a duplicate. both are
     /// the same action").** Your account's move into your private balance
     /// lands its own row (`private:<tx hash>`, "0.025 ETH to your private
     /// balance"), and the Privacy Pools seat reads the same deposit off the

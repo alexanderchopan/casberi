@@ -220,7 +220,7 @@ extension FeedScreen {
             }
         }
         // A page or an app's pick that Activity opened goes back there, a pick
-        // and all (prd §1826).
+        // and all (prd §1827).
         if walletBacksToActivity {
             return {
                 DSHaptic.selection()
@@ -244,7 +244,7 @@ extension FeedScreen {
         }
         if source == CategoryFold.walletRoom, selectedSeat == nil,
            let section = chrome.walletSection, section != .home {
-            // A page goes back to where you opened it (prd §1826, amending
+            // A page goes back to where you opened it (prd §1827, amending
             // §1480 item 9's fixed map): Needs you to Activity, Following
             // to Account, Tokens to Holdings (`ShellChrome.walletBackStep`).
             return {
@@ -276,7 +276,7 @@ extension FeedScreen {
             if activityUnderHome { return nil }
             if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) { return nil }
             // A Wallet page opened from Activity: another place, which the
-            // pager walks to (prd §1826).
+            // pager walks to (prd §1827).
             if walletBacksToActivity { return nil }
         }
         return roomName
@@ -385,7 +385,7 @@ extension FeedScreen {
     /// Notes showing one folder or one app's notes.
     var notesNarrowed: Bool { openNotesFolderName != nil || selectedSeat != nil }
 
-    /// The Wallet on the screen goes back to Activity (prd §1826): a page,
+    /// The Wallet on the screen goes back to Activity (prd §1827): a page,
     /// or an app's pick on Home, that Activity opened. The title's word, its
     /// press and the swipe right all read this one fact.
     var walletBacksToActivity: Bool {

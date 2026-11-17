@@ -1104,7 +1104,7 @@ do {
     check(!MoneyReceipt.isState(source: "Rocket Money", ref: "rocketmoney:1"),
           "a Rocket Money plan stays listed until it has another place")
 
-    // One move, one row (prd §1828): the seat's deposit row is the twin of
+    // One move, one row (prd §1829): the seat's deposit row is the twin of
     // your private move's own row on the same transaction.
     let tx = "0x" + String(repeating: "ab", count: 32)
     let other = "0x" + String(repeating: "cd", count: 32)

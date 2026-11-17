@@ -544,7 +544,7 @@ final class ShellChrome {
         didSet { traceWalletPage(from: oldValue) }
     }
 
-    /// **A WALLET PAGE GOES BACK TO WHERE YOU OPENED IT (prd §1826, user:
+    /// **A WALLET PAGE GOES BACK TO WHERE YOU OPENED IT (prd §1827, user:
     /// "if i am on needs you and i swipe right it takes me to home not to
     /// activity. for all pages").** `WalletSection.parent` is a fixed map
     /// drawn for §1480's tiles, and since §1807 the pages open from other
@@ -659,7 +659,7 @@ final class ShellChrome {
     }
 
     /// One step back from the Wallet page on screen: the title's grey word
-    /// and the swipe right (prd §1814, §1826).
+    /// and the swipe right (prd §1814, §1827).
     func walletGoBack() {
         if walletBacksToActivity {
             walletNamesActivityReturn()
@@ -1368,7 +1368,7 @@ final class ShellChrome {
     }
 
     /// The Wallet's Activity from Activity: it goes back there, on the
-    /// section `anchor` names (prd §1826).
+    /// section `anchor` names (prd §1827).
     func openWalletActivity(fromActivity anchor: String?) {
         walletScope = nil
         landWallet(on: .activity, fromActivity: anchor)
@@ -1396,7 +1396,7 @@ final class ShellChrome {
     /// category with no `pageRoom`. The Wallet's is its Money page and
     /// Notes' is your notes, as before: neither is a category's page.
     func openCategoryPage(_ category: String) {
-        // Asked for on Activity: Money goes back there (prd §1826).
+        // Asked for on Activity: Money goes back there (prd §1827).
         if category == CategoryFold.walletRoom { openWalletActivity(fromActivity: activityReturn); return }
         if category == HomeScope.notesSection { mergedScope[Pinboard.room] = nil; sourceRequest = Pinboard.room; return }
         mergedScope[category] = nil
@@ -1416,7 +1416,7 @@ final class ShellChrome {
 
     /// Open one app's page: its category's, narrowed to it.
     /// Its callers stand on Activity (prd §1813), so a Wallet page it opens
-    /// goes back there, to the section `activityReturn` names (prd §1826).
+    /// goes back there, to the section `activityReturn` names (prd §1827).
     func openAppPage(_ source: String) {
         if BridgeCatalog.category(forSource: source) == CategoryFold.walletCategory {
             openWalletActivity(fromActivity: activityReturn)
@@ -1425,7 +1425,7 @@ final class ShellChrome {
         if Pinboard.isWritten(source) || source == Pinboard.room { sourceRequest = source; return }
         guard let host = RoomAccounts.host(ofSource: source) else { sourceRequest = source; return }
         // An app the Wallet holds lands on Home picked to it, or on the page
-        // that holds its money, and goes back to Activity (prd §1826).
+        // that holds its money, and goes back to Activity (prd §1827).
         let wallet = host.room == CategoryFold.walletRoom
         if wallet { landWallet(on: .home) }
         pickSeat(host.seat, in: host.room)
@@ -1436,7 +1436,7 @@ final class ShellChrome {
     }
 
     /// One of the Wallet's pages, from Activity's rows (prd §1807): it goes
-    /// back to Activity, on the section `anchor` names (prd §1826).
+    /// back to Activity, on the section `anchor` names (prd §1827).
     func openWalletPage(_ section: WalletSection, fromActivity anchor: String?) {
         walletScope = nil
         landWallet(on: section, fromActivity: anchor)

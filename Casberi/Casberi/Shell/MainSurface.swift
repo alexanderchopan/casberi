@@ -2083,9 +2083,9 @@ struct MainSurface: View {
         // dictionary lookup on every source switch and nothing else.
         .onChange(of: filter.source, initial: true) { old, source in
             // A section change is a step inside the Wallet only while it is
-            // the room on screen (prd §1826, `ShellChrome.walletTrail`).
+            // the room on screen (prd §1827, `ShellChrome.walletTrail`).
             chrome.walletStanding = source == CategoryFold.walletRoom
-            // Back on Activity from the Wallet (prd §1826).
+            // Back on Activity from the Wallet (prd §1827).
             if source == "All", old == CategoryFold.walletRoom { chrome.walletReturned(phone: !isRegular) }
             // A door that wrote Markets straight into the filter (a deep
             // link, a stored order) lands on the Wallet's Markets tile, in
@@ -2804,7 +2804,7 @@ struct MainSurface: View {
             if HomeScope.Place(source: filter.source) != nil {
                 return delta < 0 ? CategoryFold.walletRoom : nil
             }
-            // A Wallet page opened from Activity goes back there (prd §1826):
+            // A Wallet page opened from Activity goes back there (prd §1827):
             // Needs you, Money, Account from Needs you's row.
             if filter.source == CategoryFold.walletRoom, chrome.pageBackWord == nil,
                chrome.walletBacksToActivity {

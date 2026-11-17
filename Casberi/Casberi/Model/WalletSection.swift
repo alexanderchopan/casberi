@@ -127,7 +127,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     var label: String {
         switch self {
         case .home:            return String(localized: "Home")
-        // Wallet, the word Activity names it by (prd §1827, amending §1812
+        // Wallet, the word Activity names it by (prd §1828, amending §1812
         // item 5): "Money" since §1808 stood under Activity's "Wallet".
         case .activity:        return String(localized: "Wallet")
         case .holdings:        return String(localized: "Holdings")

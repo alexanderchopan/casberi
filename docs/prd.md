@@ -73303,7 +73303,15 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 **Checks.** `holdings-check-selftest.sh` (new, in verify): the picking, the agreement, the two-in-a-row ledger, the key a row's part finds; the check starts only off a live read and never in the demo; both rows read the verdict; 6 mutations. `privacy-engine-selftest.sh` guards hybrid mode, fail-closed, the circuit only on the node's requests, and the door's address-only circuit.
 
-## §1826 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swipe right to Activity, and a page opened from another page goes back to that page (amends §1814 item 1, §1480 item 9) (user, 2026-11-17: "wallet when you go to a sub page doesn't swipe back to its parent. so if i am on needs you and i swipe right it takes me to home not to activity. for all pages") — BUILT; NOT built, run or seen: the session had no Xcode
+## §1826 — Export shows the key once it lands on one network, and says which network and step it is on while it adds the rest (amends §1493 item 3) (user, 2026-11-17: "private key export is not working. just hangs and never reveals"; "safe. did show faceid and signer. but my friend tried and has issue too and doesn't have co-signer on") — BUILT; NOT built, run or seen: the session had no Xcode
+
+1. **Why it read as hung.** Create the key added it to Base, Ethereum and Robinhood one after another — Face ID (and the co-signer where it is on), the send, then up to two minutes waiting for it to land, each — and showed the key only after the last. The page said "Revealing…" the whole time: `MoveExportKey.create` dropped `addOutsideKey`'s steps (`stage: { _ in }`). The cause is the measured shape of the code, not a device log; no phone run was read.
+2. **Shown once it opens the account somewhere.** The key appears as soon as one network has it (§1493's "only after it landed" holds: never before one has). The networks after are added under it, one line naming the network and its step ("Ethereum · Confirm with Face ID", `FeedScreen.stageWord`); before the first lands the same line stands under the intro. Remove the key waits for the rest; I saved it closes at any time, the rest go on, and Security reads the chain again when they end.
+3. **A send that may still land keeps its note.** When no network confirmed but one took the send ("sent, not yet seen"), the address stays noted, so a key that lands late is never read as a Signer and asked to co-sign (§1493 item 6). It was forgotten before.
+4. **Mac half (§1402):** the same page; nothing differs.
+5. **Checks.** `your-account-selftest.sh`: shown only after a landing (the first guard), the note kept while a send may land, the step line wired.
+
+## §1827 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swipe right to Activity, and a page opened from another page goes back to that page (amends §1814 item 1, §1480 item 9) (user, 2026-11-17: "wallet when you go to a sub page doesn't swipe back to its parent. so if i am on needs you and i swipe right it takes me to home not to activity. for all pages") — BUILT; NOT built, run or seen: the session had no Xcode
 
 **Why.** §1814 made the swipe right the title's way back, and on the Wallet the title's way back was `WalletSection.parent`, a fixed map drawn for §1480's tiles: Home's doors to Home, Holdings' to Holdings, Spending's to Spending. Since §1807 the pages open from other places. Needs you and Money open from Activity (its Needs you rows, its Wallet word, a Wallet app's row icon); Following opens from Account. Each went back to Home, or to a page it did not come from, and the title's grey word said "Home" over every page, Positions included, whatever it went back to.
 
@@ -73321,15 +73329,15 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 
 **Checks.** None new: the trail lives on `ShellChrome`, which no harness compiles. NOT built: this session ran on Linux with no Xcode, and the macOS self-tests (`wallet-section-selftest.sh` and the rest) did not run; every `scripts/*-audit.py` passed. To see on the simulator: Activity → Needs you → swipe right lands on Activity at Needs you; Activity → Wallet word → Money → swipe right lands on Activity; Activity's Account row, under Needs you → swipe right lands on Activity; Home → Account → Following → two swipes right reach Home through Account; Home → Holdings → Positions reads "Holdings · Positions".
 
-## §1827 — The money's page is named Wallet, the word Activity opens it by (amends §1812 item 5, §1808 item 4) (user, 2026-11-17, of Activity's "Wallet ›" over the page it opened, titled "Home · Money": "also it says Wallet on activity page and Money on sub page") — BUILT; NOT built, run or seen: the session had no Xcode
+## §1828 — The money's page is named Wallet, the word Activity opens it by (amends §1812 item 5, §1808 item 4) (user, 2026-11-17, of Activity's "Wallet ›" over the page it opened, titled "Home · Money": "also it says Wallet on activity page and Money on sub page") — BUILT; NOT built, run or seen: the session had no Xcode
 
 **Why.** §1812 item 5 renamed Activity's money word to Wallet, the category's own name in Apps, and kept the page it opens titled Money. A word and the page it opens read as two places.
 
-**What is built.** `WalletSection.activity`'s label is "Wallet". Opened from Activity the page reads "Activity · Wallet" (§1826); from a finished move's receipt, "Home · Wallet". `wallet-section-selftest.sh` pins the word.
+**What is built.** `WalletSection.activity`'s label is "Wallet". Opened from Activity the page reads "Activity · Wallet" (§1827); from a finished move's receipt, "Home · Wallet". `wallet-section-selftest.sh` pins the word.
 
 **Lost, said plainly.** On the iPad and the Mac the pane's card over the newest moves is titled "Wallet" inside the Wallet room, where it read "Money". Not looked at there.
 
-## §1828 — One move, one row: a Privacy Pools deposit your own private move already says stays out of the Wallet's lists (user, 2026-11-17, of the Wallet's page under Yesterday, "0.025 ETH to your private balance" over "Put 0.0250 ETH into Privacy Pools": "also this is a duplicate. both are the same action") — BUILT; NOT built, run or seen: the session had no Xcode
+## §1829 — One move, one row: a Privacy Pools deposit your own private move already says stays out of the Wallet's lists (user, 2026-11-17, of the Wallet's page under Yesterday, "0.025 ETH to your private balance" over "Put 0.0250 ETH into Privacy Pools": "also this is a duplicate. both are the same action") — BUILT; NOT built, run or seen: the session had no Xcode
 
 **Why.** A move into your private balance lands two rows for one transaction. Your account writes its own (`PrivateActivity.land`, ref `private:<tx hash>`, "0.025 ETH to your private balance") the moment the send lands; the Privacy Pools seat reads the same deposit off the chain on its next read (ref `privacypools:dep:<label>`, "Put 0.0250 ETH into Privacy Pools", its link the same transaction).
 
