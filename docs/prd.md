@@ -73399,3 +73399,16 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** The same tray and words; the Mac has no other door to Nodes.
 
 **Checks.** `own-node-selftest.sh`: routing without a switch, the old switch-off setting decoding empty, a switch-on one kept, a paste checked, a keystroke and a pasted non-address not.
+
+## §1834 — Every swipe back names where it goes, and a swipe with nowhere to go moves nothing (amends §1814, §1208l, the pager's 2026-09-05 rubber band) (user, 2026-11-16: "on some screens when I right swipe I see the name of the page I am about to go to like 'home' on others I don't. for example if I am on Apps and right swipe I see it but not if I am on Risks. it should be consistent", "on other screens where there should be no swipe I can still partially left swipe the screen and move the content")
+
+**Why.** On Home's own pages (Risks, Holdings, every Wallet page), Activity stands mounted beside you (§1208l), and the pager drew the name of the page a swipe goes to only when nothing was mounted, so a swipe back to Home showed an empty page. And a pull toward a side with nothing there dragged the page at a third of the finger, which read as a swipe about to happen.
+
+1. **The name stands under every swipe whose target is not the page already mounted** (`PagerCover(except:)`). A swipe back to Home inside the Wallet's pages wears the Wallet mark over "Home", as the swipe from Apps does; any other way back names its word (§1814).
+2. **A pull toward nothing moves nothing** (`dragMove`: `pageDragX` is 0 with no target).
+
+**Not changed.** A pushed screen's swipe back is UIKit's, and shows the screen under it, not a name.
+
+**Mac half (§1402).** None: the Mac and the iPad walk every room in a row; a pull past the end there no longer moves either.
+
+**Checks.** None new. **Seen** on the simulator: a held swipe right on Risks drew the Wallet mark and "Home"; a held swipe left on Risks left the page where it stood.

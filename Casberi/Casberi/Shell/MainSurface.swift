@@ -2877,10 +2877,8 @@ struct MainSurface: View {
 
     /// The finger moved: the room follows, the ring leans (2026-09-05).
     ///
-    /// Against the END of the strip the room still moves, at a third of the
-    /// finger — a pull that meets nothing must still answer the hand, or the
-    /// swipe reads as broken rather than as the last room — and the ring
-    /// stays put, since there is no chip for it to lean toward.
+    /// Against the END of the walk the room stays put (prd §1834): a page
+    /// with nowhere to go on that side does not move under the finger.
     private func dragMove(_ t: CGFloat) {
         // A finger arriving mid-flight lands the pending room as a cut and
         // starts this drag from it (2026-09-08) — see `deal(to:)`.
@@ -2894,7 +2892,12 @@ struct MainSurface: View {
         let target = neighbour(t < 0 ? 1 : -1)
         let free = target != nil
         GestureGate.set(swipe: true)
-        chrome.pageDragX = free ? t : t * 0.3
+        // **NOWHERE TO GO, NOTHING MOVES (prd §1834, user: "on other screens
+        // where there should be no swipe I can still partially left swipe the
+        // screen and move the content").** A pull that met nothing dragged
+        // the page at a third of the finger (2026-09-05) and read as a swipe
+        // about to happen; the page stays put.
+        chrome.pageDragX = free ? t : 0
         chrome.pageDragProgress = free ? min(1, max(-1, -t / Self.dragPitch)) : 0
         if chrome.pageDragTarget != target { chrome.pageDragTarget = target }
     }
@@ -2984,9 +2987,15 @@ struct MainSurface: View {
                         FeedScreen(source: neighbour, isActive: false, nearActive: true)
                             .equatable()
                     }
-                } else {
-                    PagerCover()
                 }
+                // **EVERY SWIPE NAMES WHERE IT GOES (prd §1834, user: "on some
+                // screens when I right swipe I see the name of the page I am
+                // about to go to … not if I am on Risks").** On Home's pages
+                // Activity stands mounted beside you, and the cover was drawn
+                // only when nothing was, so a swipe back to Home drew an
+                // empty page. The cover stands under every swipe whose
+                // target is not the page already mounted.
+                PagerCover(except: readyNeighbour)
                 // THE ROOM FOLLOWS THE FINGER (2026-09-05). `PagerDrag` offsets
                 // the room by `chrome.pageDragX` while a swipe is in progress,
                 // in a body of its own so this surface is not re-evaluated on
@@ -3690,11 +3699,18 @@ private struct PagerNeighbour<Content: View>: View {
 }
 
 private struct PagerCover: View {
+    /// The neighbour mounted under the pager, which draws itself.
+    var except: String? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if let label = chrome.pageDragTarget {
+        // A swipe back to Home inside the Wallet's own pages names Home as
+        // the swipe from Apps does: its mark over its word (prd §1834).
+        let raw = chrome.pageDragTarget
+        let target = raw == ShellChrome.backTarget && chrome.pageBackWord == PlaceTab.wallet.label
+            ? CategoryFold.walletRoom : raw
+        if let label = target, label != except {
             let p = min(1, abs(chrome.pageDragProgress))
             let width = max(chrome.pagerFrame.width, 1)
             // The name comes from the side the finger is pulling from: a
