@@ -254,7 +254,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2006 of 2080 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2007 of 2081 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2262,6 +2262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet…
 - §1826 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swip…
 - §1827 — The money's page is named Wallet, the word Activity opens it by
+- §1828 — One move, one row: a Privacy Pools deposit your own private move already says stays out of the Wallet's lists
 
 ## Dead rulings → what replaced them (generated)
 

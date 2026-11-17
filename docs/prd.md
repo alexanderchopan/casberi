@@ -73328,3 +73328,13 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **What is built.** `WalletSection.activity`'s label is "Wallet". Opened from Activity the page reads "Activity · Wallet" (§1826); from a finished move's receipt, "Home · Wallet". `wallet-section-selftest.sh` pins the word.
 
 **Lost, said plainly.** On the iPad and the Mac the pane's card over the newest moves is titled "Wallet" inside the Wallet room, where it read "Money". Not looked at there.
+
+## §1828 — One move, one row: a Privacy Pools deposit your own private move already says stays out of the Wallet's lists (user, 2026-11-17, of the Wallet's page under Yesterday, "0.025 ETH to your private balance" over "Put 0.0250 ETH into Privacy Pools": "also this is a duplicate. both are the same action") — BUILT; NOT built, run or seen: the session had no Xcode
+
+**Why.** A move into your private balance lands two rows for one transaction. Your account writes its own (`PrivateActivity.land`, ref `private:<tx hash>`, "0.025 ETH to your private balance") the moment the send lands; the Privacy Pools seat reads the same deposit off the chain on its next read (ref `privacypools:dep:<label>`, "Put 0.0250 ETH into Privacy Pools", its link the same transaction).
+
+**What is built.** `MoneyReceipt.privateTwins` finds a Privacy Pools deposit row whose link names the transaction of a `private:` row in the same list, and `FeedScreen.walletMoves`, the one filter behind Activity's Wallet section, the Wallet page, the pane's moves and the history screen, leaves it out. The private row stands: it says the move in the words the private balance is said in everywhere (§1719). The seat's row is kept in the store: Needs you reads its review state, and the Privacy Pools seat reads its labels. Only the two lists' view of it changes.
+
+**What it does not do.** A deposit made outside Casberi has no private row, so its Privacy Pools row stands. Spending reads its own moves (`SpendingSource.walletMoves`) and is untouched. A third row for the same transaction from a holdings reader, if one ever lands, is not looked for: none was seen.
+
+**Checks.** `money-receipt-selftest.sh` (in verify): the twin found whatever the hash's case, none without a private row, a link's transaction read with its query left off, an address link refused; and a drift guard that the two ref prefixes `MoneyReceipt` spells are still the bridges' own. Not run: this session had no `swiftc`.

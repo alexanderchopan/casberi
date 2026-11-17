@@ -14,8 +14,13 @@ extension FeedScreen {
 
     /// What happened, without the states (`MoneyReceipt.isState`): the one
     /// filter Transactions and the history behind its door share (§837).
+    /// A Privacy Pools deposit your own private move already says is left
+    /// out too: one move, one row (`MoneyReceipt.privateTwins`, prd §1828).
     static func walletMoves(_ things: [Thing]) -> [Thing] {
-        things.filter { !MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }
+        let moves = things.filter { !MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }
+        let twins = MoneyReceipt.privateTwins(moves.map { ($0.sourceRef, $0.content) })
+        guard !twins.isEmpty else { return moves }
+        return moves.enumerated().filter { !twins.contains($0.offset) }.map(\.element)
     }
 
     /// Home's lists in order, for the pill (prd §1219, §1232).

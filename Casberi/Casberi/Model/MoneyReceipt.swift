@@ -388,6 +388,44 @@ struct MoneyReceipt: Equatable {
             || ref?.hasPrefix("privy:app:") == true
     }
 
+    /// **ONE MOVE, ONE ROW (prd §1828, user: "this is a duplicate. both are
+    /// the same action").** Your account's move into your private balance
+    /// lands its own row (`private:<tx hash>`, "0.025 ETH to your private
+    /// balance"), and the Privacy Pools seat reads the same deposit off the
+    /// chain ("Put 0.0250 ETH into Privacy Pools", its link the same
+    /// transaction). The private row stands, in the words the private
+    /// balance is said in everywhere (§1719); the seat's row is the twin.
+    /// `rows` are each row's `sourceRef` and `content`, in list order; the
+    /// result is the indices to leave out. The seat keeps its row: its
+    /// review state and its room read it.
+    static func privateTwins(_ rows: [(ref: String?, content: String)]) -> Set<Int> {
+        let ours = Set(rows.compactMap { row -> String? in
+            guard let ref = row.ref, ref.hasPrefix(Self.privatePrefix) else { return nil }
+            return String(ref.dropFirst(Self.privatePrefix.count)).lowercased()
+        })
+        guard !ours.isEmpty else { return [] }
+        var out = Set<Int>()
+        for (i, row) in rows.enumerated() {
+            guard let ref = row.ref, ref.hasPrefix(Self.poolDepositPrefix),
+                  let hash = Self.txHash(inLink: row.content), ours.contains(hash) else { continue }
+            out.insert(i)
+        }
+        return out
+    }
+
+    /// `PrivateMoney.activityPrefix`, spelled here: this file compiles alone.
+    static let privatePrefix = "private:"
+    /// `PrivacyPoolsRoom.depositPrefix`, spelled here for the same reason.
+    static let poolDepositPrefix = "privacypools:dep:"
+
+    /// The transaction an explorer link names ("…/tx/0xAB…" → "0xab…").
+    static func txHash(inLink link: String) -> String? {
+        guard let r = link.range(of: "/tx/") else { return nil }
+        let hash = link[r.upperBound...].prefix { $0.isHexDigit || $0 == "x" || $0 == "X" }
+        guard hash.count == 66, hash.lowercased().hasPrefix("0x") else { return nil }
+        return hash.lowercased()
+    }
+
     // MARK: - Composition
 
     /// The receipt, or nil when this thing isn't one we draw.
