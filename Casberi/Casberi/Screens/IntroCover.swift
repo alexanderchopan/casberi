@@ -338,8 +338,7 @@ struct IntroCover: View {
     /// form drifts from a drawn one. Every piece here is already in the
     /// catalog with all four translations, so composing costs nothing.
     private var coverSpoken: String {
-        [String(localized: "An inbox and a wallet for all your accounts."),
-         String(localized: "Kept private.")]
+        [String(localized: "Keep it moving"), String(localized: "privately.")]
             .joined(separator: " ")
     }
 
@@ -370,7 +369,10 @@ struct IntroCover: View {
                     // orphaned in the top-left corner with the sentence a
                     // long way beneath it; the tiles are the brand moment
                     // here, and the mark is a signature on the copy.
-                    CasberiMark(size: 56)
+                    // The app icon, the logo since §1708 (prd §1847, user: "on
+                    // the cover you don't have the right logo"); the arm
+                    // stood here.
+                    CasberiAppIcon(size: 56)
                         .padding(.bottom, DS.Space.s3)
                         .accessibilityHidden(true)
                     // THE INBOX FRAME (user ruling 2026-09-06, prd §643) —
@@ -388,17 +390,18 @@ struct IntroCover: View {
                     // all your apps", met a wallet, and could not say what the
                     // app was for. "Accounts" covers an app and an address in
                     // one word.
-                    DSProse.text("An inbox and a wallet for all your accounts.")
-                        .dsText(.heading40)
-                        .foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    // The property, as its own beat. The cover lifts into the
-                    // person's own empty app, so nothing here says "demo".
-                    Text("Kept private.", comment: "Second line on the first-launch cover, under the headline: what the app keeps stays on the person's own devices.")
-                        .dsText(.heading24)
-                        .foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s6)
+                    // ONE LINE (prd §1847, user: "the cover cannot say an inbox
+                    // and wallet for all your accounts … or just keep it
+                    // moving privately"). The brand's line and the property
+                    // in one; the screen under it says wallet and feed.
+                    // "privately." on its own row, in the brand's pink (user:
+                    // "put privately on second row in pink").
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Keep it moving").foregroundStyle(DS.textPrimary)
+                        Text("privately.").foregroundStyle(DS.pickInk)
+                    }
+                    .dsText(.heading40)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, DS.Space.s2)
                 }
                 // A fixed seat, not "whatever is above the heap" (spec

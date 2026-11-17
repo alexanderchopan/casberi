@@ -206,7 +206,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 ### 15. Demo
 - A fresh install pours the furnished demo at once, under a cover with no controls. Any tap or drag lifts it (§620). The demo is marked once: a floating blue pill on every screen, All included (§946, §919).
 - Every demo picture is its own drawn asset (§890). The demo is one person's life in Berlin, and their app is Quillmark, never Casberi (§1026).
-- The cover says "An inbox and a wallet for all your accounts. Kept private." and begins no demo; it lifts into your own empty Feed, one sentence and six apps (Calendar, Files, Photos, Spotify, Telegram, X); the demo is `-demoEnter` only (§1741). The demo's Exit lands on the catalogue (§863).
+- The cover says "Keep it moving" over "privately." in pink, under the app icon (§1847), and begins no demo; it lifts into your own first run: "Set up your wallet" over "Create account", "Set up your feed" over six apps (Calendar, Files, Photos, Spotify, Telegram, X), then Apps (§1847); the demo is `-demoEnter` only (§1741). Risks is a chip on the phone's Home and the Wallet's section always shows one thing (§1847). The demo's Exit lands on the catalogue (§863).
 - On the phone Activity is two halves: its sections on the page, Apps (heading, search, folders) on a panel under them; the Wallet leads from the first run over your account's row, the start's six apps stand under it until something is added, Notes is its folder's, and a followed wallet's row reads "Your account" or "Accounts", never "Wallet" (§1839).
 - Every surface the app can draw over a populated corpus also draws over the demo (§617).
 
@@ -259,7 +259,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2025 of 2099 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2026 of 2100 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2286,6 +2286,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1844 — Needs you holds what is near and can be marked as seen; a page goes back to the top of Home; each band tile opens its…
 - §1845 — Home's head is centred; the band and the feed keep the left edge (amends §1843 items 2, 4 and 5)
 - §1846 — Home's head breathes: its three groups stand apart; the Wallet section stays when empty (amends §1843 item 6)
+- §1847 — Risks is always on Home, the Wallet always shows one thing, the first run says each thing once, and the cover is "Kee…
 
 ## Dead rulings → what replaced them (generated)
 

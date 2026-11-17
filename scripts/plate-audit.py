@@ -100,6 +100,9 @@ WELL_ALLOWED = {
                             "\"we do cards like buttons\"; the lifted ink card lost its bottom edge on the black page)"),
     "FeedScreen+HomeHead.swift": (1, "the phone's Home lead, your money on one card, ruled by the user (prd §1843: "
                                      "\"it feels like one giant block. maybe it should be on a card\", \"we go with t1\")"),
+    "FeedScreen+DaySections.swift": (1, "the first run's \"Set up your feed\", the pair of the money card over it "
+                                        "(prd §1847: the wallet's start on a card and the feed's bare read as two "
+                                        "unrelated things)"),
 }
 
 

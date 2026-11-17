@@ -60,6 +60,10 @@ extension FeedScreen {
                 // What the Wallet's own Home asked for as it stood (§1526,
                 // §1561): the launch's scope, the recovery check, the ASP.
                 .task {
+                    // Your account is made on the first run's Home (prd
+                    // §1741, §1839); here since the first run draws no
+                    // Wallet section to make it (prd §1847).
+                    YourAccountFirstOpen.makeIfFresh()
                     WalletWhoseSwitch.applyLaunchChoice(chrome)
                     RecoveryCheckState.shared.refresh()
                     await PrivateMoneyStore.shared.refresh()
@@ -67,17 +71,22 @@ extension FeedScreen {
             // Three groups (user: "balance and card; account and watchlist;
             // feed and chips"): the two lines stand close as one row, and
             // the wide gap is above the chips, which belong to the feed.
-            VStack(alignment: .center, spacing: -DS.Space.s2) {
-                homeWatchlistLine
-                homeAccountLine
+            // **THE FIRST RUN SAYS IT ONCE (prd §1847).** Until your account
+            // is set up the card is the Wallet's whole start: no watchlist
+            // line and no chips under it.
+            if !homeBare {
+                VStack(alignment: .center, spacing: -DS.Space.s2) {
+                    homeWatchlistLine
+                    homeAccountLine
+                }
+                // Air between the groups (user: "there is enough room to have
+                // more padding between and make the sections feel separate",
+                // prd §1846): the lines stand a gap under the card.
+                .listRowInsets(.init(top: Self.homeLinesGap, leading: DSRoomChassis.rowInset,
+                                     bottom: 0, trailing: DSRoomChassis.rowInset))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
             }
-            // Air between the groups (user: "there is enough room to have
-            // more padding between and make the sections feel separate",
-            // prd §1846): the lines stand a gap under the card.
-            .listRowInsets(.init(top: Self.homeLinesGap, leading: DSRoomChassis.rowInset,
-                                 bottom: 0, trailing: DSRoomChassis.rowInset))
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
             homeJumpChips(jumps)
         }
     }
@@ -141,9 +150,11 @@ extension FeedScreen {
                     .padding(.top, DS.Space.s1)
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
-                WalletStartFigure().frame(height: Self.homeStartHeight)
+                WalletStartFigure(bare: homeBare).frame(height: homeBare ? nil : Self.homeStartHeight)
             } else if walletOnlyYourEmptyAccount {
-                WalletStartFigure(made: true).frame(height: Self.homeStartHeight)
+                // Made for you and not yet set up: still the start (§1847).
+                WalletStartFigure(made: !homeSetupPending, walk: homeSetupPending, bare: homeBare)
+                    .frame(height: homeBare ? nil : Self.homeStartHeight)
             } else {
                 // Still reading says so, never "No balance yet" (§1587).
                 WalletScopeEmptyFigure(section: .home, padded: false, reading: holdingsReads > 0)
@@ -156,6 +167,25 @@ extension FeedScreen {
         .padding(DS.Space.s3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
+    }
+
+    /// Your account was made for you and its walk has not been taken.
+    var homeSetupPending: Bool {
+        YourAccountDemo.shownAddress.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
+    }
+
+    /// **THE FIRST RUN (prd §1847).** No account of yours is set up and the
+    /// Wallet holds nobody else's: the card says "Set up your wallet" once,
+    /// and the watchlist line, the chips and the Wallet's section wait for
+    /// the account. Someone who follows an account and made none keeps all
+    /// of them.
+    var homeBare: Bool {
+        guard homeHeadShown else { return false }
+        let yours = YourAccountDemo.shownAddress
+        guard yours == nil || homeSetupPending else { return false }
+        return WalletStore.shared.addresses.allSatisfy { held in
+            yours.map { WalletWatch.sameAddress(held.address, $0) } ?? false
+        }
     }
 
     /// **THE HEAD'S THREE GROUPS STAND APART (prd §1846).** The watchlist
@@ -328,6 +358,20 @@ extension FeedScreen {
                      ink: pending ? DS.attentionInk : nil)
             }
             .buttonStyle(PressSpring())
+            // **RISKS IS ALWAYS HERE (prd §1847, user: "if i dismiss all the
+            // 'needs you' items then i can no longer see my privacy score").**
+            // Its ask in Needs you leaves once seen; the door stays. Grey, a
+            // door's ink; the attention ink while a finding is unseen.
+            if !walletAccountSlots.allSatisfy(\.id.isEmpty) {
+                Button {
+                    ActivitySeen.shared.leavingForPage()
+                    homeOpen(.threats)
+                } label: {
+                    Chip(text: WalletSection.threats.label, glyph: WalletSection.threats.glyph, selected: true,
+                         ink: homeRisksUnseen > 0 ? DS.attentionInk : nil)
+                }
+                .buttonStyle(PressSpring())
+            }
             if let yours, !pending {
                 Button {
                     DSPasteboard.copy(yours)
@@ -357,7 +401,9 @@ extension FeedScreen {
             || homeRisksUnseen > 0 {
             names.append(WalletSection.needsYou.label)
         }
-        names.append(Self.homeWalletName)
+        // The first run draws no Wallet section to jump to (prd §1847).
+        // (a bank's rows still draw one, and keep the jump).
+        if !(homeBare && Self.walletMoves(money).isEmpty) { names.append(Self.homeWalletName) }
         let byCategory = feedSectionRows(visible, hiding: [])
         let asked = Set(needs.map(\.source))
         for category in scrollCategories where category != HomeScope.notesSection {

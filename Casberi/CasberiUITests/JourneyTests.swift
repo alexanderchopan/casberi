@@ -338,7 +338,7 @@ final class JourneyTests: XCTestCase {
     @MainActor private func leaveDemo(_ w: Walk) {
         // The intro cover is one button and lifts by itself after the demo
         // pour; a person who taps it skips the wait.
-        w.maybe(w.el(.button, "label BEGINSWITH %@", "An inbox and a wallet"), within: 8, "intro cover")
+        w.maybe(w.el(.button, "label BEGINSWITH %@", "Keep it moving"), within: 8, "intro cover")
         // The band's "Exit demo" (prd §1322).
         w.maybe(w.el(.button, "label == %@", "Exit demo"), within: 8, "band, Exit demo")
         // On Sources once Exit lands there. Casberi's folder is the test: it

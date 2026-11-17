@@ -510,8 +510,13 @@ extension FeedScreen {
                 DSHaptic.selection()
                 route.openSetup(forOffer: name)
             }
-            .listRowInsets(.init(top: DS.Space.s6, leading: DSRoomChassis.rowInset,
-                                 bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+            // On the card the Wallet's start stands on, so the two read as a
+            // pair (prd §1847): "Set up your wallet", "Set up your feed".
+            .padding(DS.Space.s3)
+            .padding(.vertical, DS.Space.s2)
+            .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
+            .listRowInsets(.init(top: DS.Space.s3, leading: DSRoomChassis.rowInset - DS.Space.s3,
+                                 bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset - DS.Space.s3))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }

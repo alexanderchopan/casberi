@@ -449,13 +449,25 @@ extension FeedScreen {
         // "one of money moves as a transfer that needs attention is needs
         // you"): a stuck transfer or a dated ask leaves this list.
         let asks = Set(walletUpcoming(money).map(\.id))
-        let moves = Self.newestPerApp(Self.walletMoves(money).filter { !asks.contains($0.id) })
+        // **A DATE AHEAD IS AN ASK, NEVER A MOVE (prd §1847, user: "ENS
+        // shows in wallet but it should have been in needs you").** A name's
+        // expiry months out, or one you marked as seen, left Needs you and
+        // landed here as the Wallet's newest move.
+        let now = Date.now
+        let moves = Self.newestPerApp(Self.walletMoves(money).filter {
+            !asks.contains($0.id) && ($0.dueAt ?? .distantPast) <= now
+        })
+        // **THE WALLET ALWAYS SHOWS ONE THING (prd §1847, user: "wallet
+        // should have one transaction").** With nothing new its last move
+        // stands, in the seen ink (`activityAppRow`).
+        let fresh = moves.filter { !ActivitySeen.shared.isHidden($0.id) }
         // **NOTHING HAS MOVED YET: YOUR ACCOUNT STANDS (prd §1839, user:
         // "wallet activity should be there as a place holder too").** A
         // Wallet with no move at all draws its word over your account's row,
         // never the word alone.
-        if quietActivity, money.isEmpty {
-            activityWalletStart
+        if quietActivity, moves.isEmpty {
+            // The first run's card is the Wallet's whole start (prd §1847).
+            if !homeBare { activityWalletStart }
         } else {
         // **THE WORD IS THE CATEGORY'S OWN (prd §1812, user: "'money'
         // shouldn't be the category title it should be wallet like it is in
@@ -464,7 +476,7 @@ extension FeedScreen {
         // What is new (prd §1831); the word stays when nothing is: it is
         // the door to every move.
         activitySection(String(localized: "Wallet"),
-                        moves.filter { !ActivitySeen.shared.isHidden($0.id) },
+                        fresh.isEmpty ? Array(moves.prefix(1)) : fresh,
                         nextEventID: nextEventID, open: {
             DSHaptic.selection()
             ActivitySeen.shared.leavingForPage()

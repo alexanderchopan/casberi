@@ -240,7 +240,10 @@ struct FeedStartBox: View {
     private var words: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             // The sentence the panel's design settled (prd §1839).
-            Text("Add your apps and what's new in them shows up here.")
+            // On the phone's first run it answers the card over it, "Set up
+            // your wallet" (prd §1847, user: "for apps it could say set up
+            // your feed").
+            (fitsLead ? Text("Add your apps and what's new in them shows up here.") : Text("Set up your feed"))
                 .dsText(fitsLead ? .heading28 : .heading24).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             SourcesQuickRow(title: String(localized: "Start with any of these"),

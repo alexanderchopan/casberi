@@ -14,15 +14,45 @@ struct WalletStartFigure: View {
     @Environment(ShellChrome.self) private var chrome
     /// Your account exists and holds nothing yet.
     var made = false
+    /// Your account was made for you and its setup walk has not been taken
+    /// (prd §1847): still the start, and the row opens the walk.
+    var walk = false
+    /// The phone's first run (prd §1847): the statement and its one row,
+    /// at their own height. No field to follow someone else, no Peek and no
+    /// dotted line (user, of all of it on one card: "that looks terrible").
+    var bare = false
 
     var body: some View {
+        if bare {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("Set up your wallet")
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.textPrimary)
+                DSDoorRow(icon: WalletSection.yourAccount.glyph, title: Text("Create account")) {
+                    DSHaptic.selection()
+                    if walk { chrome.moveWalk = true }
+                    chrome.moveTray = true
+                }
+            }
+            .padding(.vertical, DS.Space.s2)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        } else {
+            full
+        }
+    }
+
+    private var full: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text(made ? "Your account is ready" : "Make your account")
+            // "Set up your wallet" (prd §1847, user: "for make your account
+            // it should say set up your wallet … and then create account
+            // below it").
+            Text(made ? "Your account is ready" : "Set up your wallet")
                 .dsText(.heading24)
                 .foregroundStyle(DS.textPrimary)
             DSDoorRow(icon: made ? "plus" : WalletSection.yourAccount.glyph,
                       title: Text(made ? "Add money" : "Create account")) {
                 DSHaptic.selection()
+                if walk { chrome.moveWalk = true }
                 chrome.moveTray = true
             }
             WalletWatchField(onWatched: {}, showsPeekChip: true, showsConnect: false,
