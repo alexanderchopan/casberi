@@ -907,8 +907,6 @@ extension EnvironmentValues {
     /// (prd §1843): it takes no chapter air, since the chips' own gap above
     /// them is that air and the chips belong to the feed they jump through.
     @Entry var feedSectionLeads: String? = nil
-    /// Set on that section's header, which then stands close under the chips.
-    @Entry var feedSectionHeaderTight = false
     /// Whether the panel draws its fill: nowhere, since prd §1393 (the
     /// Feed's and the Wallet's since §1382, Library's since §1383). The
     /// shape stays, so rows keep their column and the gaps their height;
@@ -1440,7 +1438,6 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                         .accessibilityHidden(true)
                 }
                 header
-                    .environment(\.feedSectionHeaderTight, tight)
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(SectionPanel(part: .top, lit: lit, inset: panelInset, filled: panelFilled))
@@ -1597,7 +1594,6 @@ struct PinnedHeaderPushed: ViewModifier {
 struct ActivityWord: View {
     let name: String
     let open: (() -> Void)?
-    @Environment(\.feedSectionHeaderTight) private var tight
 
     var body: some View {
         Group {
@@ -1641,7 +1637,9 @@ struct ActivityWord: View {
         }
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.trailing, DS.Space.s4)
-            .padding(.top, tight ? DS.Space.s2 : DS.Space.s6)
+            // Under Home's chips the header keeps this air and drops only
+            // the section gap above it (`SectionPanelGroup`, prd §1846).
+            .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
             .contentShape(Rectangle())
     }

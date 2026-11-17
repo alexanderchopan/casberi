@@ -73578,3 +73578,15 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** None: the head is the phone's alone (`PhoneHome.isOn`).
 
 **Checks.** None new.
+
+## §1846 — Home's head breathes: its three groups stand apart; the Wallet section stays when empty (amends §1843 item 6) (user, 2026-11-17: "jump chips and needs you could come down a bit and so could the watchlist and account stuff. there is enough room to have more padding between and make the sections feel separate"; "definitely use the same spacing"; "we can't remove wallet when it has no rows b/c someone will want to see their transaction history"; of the jump chips "i don't mind them")
+
+1. **The watchlist and Account stand `s6` under the card** (was `s1`, `FeedScreen.homeLinesGap`).
+2. **The jump chips stand a section gap and `s2` under Account** (was the gap less `s2`, `homeChipsGap`).
+3. **Needs you under the chips takes `s6` above its name** (was `s2`). It still drops the section gap the chips' own air replaces; `feedSectionHeaderTight` is deleted, the header's top is one value.
+4. **One gap between sections stays `DSRoomChassis.sectionGap`** (§1386); measured on the screenshot, Risks → Wallet and Wallet → Media were that gap. The Wallet's word with no new move under it is what read as uneven, and it stays: it is the door to every move (§1831).
+5. **The jump chips stay** (declining a proposal to draw them only on a long page).
+
+**Mac half (§1402).** None: the head is the phone's alone.
+
+**Checks.** None new.

@@ -71,7 +71,10 @@ extension FeedScreen {
                 homeWatchlistLine
                 homeAccountLine
             }
-            .listRowInsets(.init(top: DS.Space.s1, leading: DSRoomChassis.rowInset,
+            // Air between the groups (user: "there is enough room to have
+            // more padding between and make the sections feel separate",
+            // prd §1846): the lines stand a gap under the card.
+            .listRowInsets(.init(top: Self.homeLinesGap, leading: DSRoomChassis.rowInset,
                                  bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
@@ -154,6 +157,13 @@ extension FeedScreen {
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
     }
+
+    /// **THE HEAD'S THREE GROUPS STAND APART (prd §1846).** The watchlist
+    /// and Account a gap under the card (was 4pt), the jump chips a section
+    /// gap and more under Account (was 24pt); Needs you under the chips
+    /// takes `s6` (`ActivityWord`'s tight top, was `s2`).
+    static let homeLinesGap: CGFloat = DS.Space.s6
+    static let homeChipsGap: CGFloat = DSRoomChassis.sectionGap + DS.Space.s2
 
     /// The card's height while it has no balance to draw.
     static let homeStartHeight: CGFloat = 200
@@ -392,7 +402,7 @@ extension FeedScreen {
                 }
                 .padding(.horizontal, DSRoomChassis.rowInset)
             }
-            .listRowInsets(.init(top: DSRoomChassis.sectionGap - DS.Space.s2, leading: 0, bottom: 0, trailing: 0))
+            .listRowInsets(.init(top: Self.homeChipsGap, leading: 0, bottom: 0, trailing: 0))
             .feedRowBackground()
             .listRowSeparator(.hidden)
         }
