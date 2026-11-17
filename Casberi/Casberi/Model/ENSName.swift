@@ -323,9 +323,16 @@ enum ENSName {
     /// day-and-month alone is ambiguous at ENS's timescales — plenty of names
     /// are registered for decades, and "expires Mar 4" about 2048 reads as
     /// next week.
+    ///
+    /// Inside a year but in another calendar year the year rides too, "Oct 1,
+    /// 2027": read in November, "expires Oct 1" said a date already passed.
     static func dateWord(_ date: Date, from now: Date = .now) -> String {
         let year: TimeInterval = 365 * 24 * 60 * 60
         if abs(date.timeIntervalSince(now)) < year {
+            let calendar = Calendar.current
+            if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
+                return date.formatted(.dateTime.month(.abbreviated).day().year())
+            }
             return date.formatted(.dateTime.month(.abbreviated).day())
         }
         return date.formatted(.dateTime.month(.abbreviated).year())

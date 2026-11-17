@@ -56,6 +56,18 @@ enum WalletNeedsYou {
         return false
     }
 
+    /// How near a dated row's day has to be before it needs you: 90 days,
+    /// the ENS ladder's own horizon (`ENSName.horizonDays`), the longest
+    /// notice any seat gives. A name renewed to next October kept its row
+    /// in Needs you ten months ahead, under "Oct 1", read as a date passed.
+    static let dueHorizon: TimeInterval = 90 * 86_400
+
+    /// Whether a dated row needs you now: due after `now`, inside the horizon.
+    static func dueSoon(_ due: Date?, now: Date) -> Bool {
+        guard let due, due > now else { return false }
+        return due.timeIntervalSince(now) <= dueHorizon
+    }
+
     /// Whether the rule needs the zFi book for this row at all — Day reads
     /// the book only when a reclaim row is among its candidates.
     static func readsBook(ref: String?) -> Bool {
