@@ -73645,3 +73645,22 @@ Six changes nobody has to switch on, and a list of what was asked for and not bu
 **Mac half (§1402).** Item 8 reaches the Mac's and the iPad's Risks page unchanged. Items 1 to 7 are the phone's Home (`PhoneHome.isOn`, `quietActivity`).
 
 **Checks.** None new.
+
+## §1850 — Home's doors are words with a chevron, its jumps are circles, its head stands on the page with no card, and the map's day fill is brighter (amends §1849 items 1, 2 and 6, §1843 items 1 and 6, §1837) (user, 2026-11-17, of the round buttons: "its very functional but not yet delightful … it looks like a prototype"; of a glass bar: "the glass is probably totally all wrong bc those are actual pages someone goes to"; of the mock built here: "build a … the chevrons are a great touch")
+
+Eleven canvases in one sitting, from glass discs to a floating tab bar, ended on the plainest answer. Account, Risks and Apps are places. A place on this page is already drawn one way: the balance, a word and a grey chevron (§1815, §1838). The buttons, the bar and the glass were all controls drawn over doors.
+
+1. **Home's doors are words** (`DSHomeDoor`, `homeAccountLine`): Account (or "Create account", "Finish setup"), Risks and Apps, each a bold word and a grey chevron, in one centred row under the watchlist. No disc, no bar, no glyph, no glass. `DSHomeAction` is deleted.
+2. **A door changes only to say something** (§1004): Risks takes the attention ink and its count while a finding is unseen; Account takes it while its setup waits.
+3. **The copy is not a door**: the address's tail (`AddressTail.short`, §1553) in grey with the copy's glyph in the chevron's place; pressed, it reads "Copied" in the confirm ink for a moment (§867). It says which address, which §1849's button did not.
+4. **The jumps are circles** (`DSHomeCircle`, `homeCircles`, over §1843's chips): one a section standing on the page. Needs you wears how many wait, on the attention wash; the Wallet its glyph; a category the mark of the app whose row leads it (`homeCircleApp`, `BridgeIcon(circular:)`), or its own glyph when that app has no mark. No ring, nothing lit (user: "the circles shouldn't have rings b/c they always are new stuff"). The row is drawn once the feed has one category; the Wallet takes a circle again, amending §1849 item 6.
+5. **The head stands on the page** (`homeMoneyCard`): with a balance to show it draws no card and no fade, amending §1843's "one quiet card". The start (no balance yet) keeps its well.
+6. **The map's day fill is brighter** (`HoldingsTreemap.dayFill`): 24% to 60% of the hue, was 14% to 36% (user: "is the green in our tree map too dull?"). Holdings' map and Home's band share it.
+
+**Declined on the way, each drawn first.** Glass on the buttons and chips (nothing scrolls under them, and glass is the floating layer's). A bar floating at the foot as a tab bar (user: "i want it back where it was"). Four tiles (user: "it will make it look like every other wallet"). The map bleeding to the screen's edge (user: "like racing stripe"). The day's colour washing the head (user: "would get on people's nerves"). A grey bleed and a fade behind the head.
+
+**Lost, said plainly.** The count on Risks reads "Risks 2", not "2 risks": the plural needs a string in every language. A category whose leading app changes wears a different mark from visit to visit. Four doors on a set-up account were not seen on the simulator.
+
+**Mac half (§1402).** Items 1 to 5 are the phone's Home (`PhoneHome.isOn`, `quietActivity`). Item 6 reaches the Mac's and the iPad's Holdings map unchanged.
+
+**Checks.** None new.

@@ -304,10 +304,12 @@ struct HoldingsTreemap: View {
     }
 
     /// A tile's fill by its day (prd §1837), shared with Home's band (§1843).
+    /// Brighter since prd §1850 (user: "is the green in our tree map too
+    /// dull?"): 24% to 60% of the hue, was 14% to 36%.
     static func dayFill(move: Double?, widest: Double) -> Color {
         guard let m = move, abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
         let strength = min(1, abs(m) / widest)
-        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.14 + 0.22 * strength)
+        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.24 + 0.36 * strength)
     }
 
     /// The day as words and their ink (prd §1815): "+0.5% today" in the

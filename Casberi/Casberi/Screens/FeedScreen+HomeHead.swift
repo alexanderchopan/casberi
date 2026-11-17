@@ -1,10 +1,11 @@
 import SwiftUI
 
 /// **THE PHONE'S HOME IS ONE SCROLL (prd §1843).** What you have, then what
-/// is new: the Wallet stands at the head of the feed's page, on one quiet
-/// card (the balance, the day, Public · Private and the map as a band), then
-/// the watchlist's moves on one line, Account and its address as two chips,
-/// and a row of chips that jump to each section under them. Home's five
+/// is new: the Wallet stands at the head of the feed's page, on the page's
+/// own black since prd §1850 (the balance, the day, Public · Private, the map
+/// as a band and the watchlist's moves), then its doors as one row of words
+/// (Account, Risks, Apps, the address), and a row of circles that jump to each
+/// section under them. Home's five
 /// cards and the separate Activity place are the rail's (iPad, Mac).
 ///
 /// The head is the feed page's (`source == "All"`): that page holds every
@@ -86,7 +87,7 @@ extension FeedScreen {
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
-            homeJumpChips(jumps)
+            homeCircles(jumps, visible)
         }
     }
 
@@ -100,8 +101,25 @@ extension FeedScreen {
     /// the watchlist and Account stand on the screen's middle; the band
     /// spans the card, and the jump chips and the feed under them keep the
     /// rows' left edge.
+    ///
+    /// **THE HEAD STANDS ON THE PAGE (prd §1850).** With a balance to show it
+    /// draws no card: the balance, the day, the map and the watchlist stand
+    /// on the page's own black, centred, and the feed under them keeps the
+    /// rows' left edge. Only the start (no balance yet) keeps its well.
     @ViewBuilder
     var homeMoneyCard: some View {
+        if (portfolioShown?.totalUSD ?? 0) > 0 {
+            homeMoneyStack.frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            homeMoneyStack
+                .padding(DS.Space.s3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
+        }
+    }
+
+    @ViewBuilder
+    private var homeMoneyStack: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         VStack(alignment: .center, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
@@ -166,9 +184,6 @@ extension FeedScreen {
             // money stands on the card; what is under it is only acts.
             if !homeBare { homeWatchlistLine }
         }
-        .padding(DS.Space.s3)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsWell(cornerRadius: DS.Radius.widget, quiet: true)
     }
 
     /// Your account was made for you and its walk has not been taken.
@@ -190,12 +205,12 @@ extension FeedScreen {
         }
     }
 
-    /// **THE HEAD'S THREE GROUPS STAND APART (prd §1846).** The watchlist
-    /// and Account a gap under the card (was 4pt), the jump chips a section
-    /// gap and more under Account (was 24pt); Needs you under the chips
-    /// takes `s6` (`ActivityWord`'s tight top, was `s2`).
-    static let homeLinesGap: CGFloat = DS.Space.s6
-    static let homeChipsGap: CGFloat = DSRoomChassis.sectionGap + DS.Space.s2
+    /// **TWO GROUPS, NOT THREE STRIPS (prd §1850, over §1846).** The doors
+    /// stand right under the watchlist, the foot of the money over them;
+    /// the break is above the circles, which are the feed's. Needs you under
+    /// the circles takes `s6` (`ActivityWord`'s tight top).
+    static let homeLinesGap: CGFloat = 0
+    static let homeChipsGap: CGFloat = DS.Space.s8
 
     /// The card's height while it has no balance to draw.
     static let homeStartHeight: CGFloat = 200
@@ -334,17 +349,17 @@ extension FeedScreen {
         .fixedSize()
     }
 
-    /// **HOME'S ACTS, FOUR ROUND BUTTONS (prd §1849, over §1843's chips,
-    /// §1847 and §1848):** Account (or the verb that makes or finishes it),
-    /// Risks, Apps, and the address's copy, a glyph on a disc over one word
-    /// (`DSHomeAction`). Risks takes the attention hue and a count while a
-    /// finding is unseen; the copy marks its own disc.
+    /// **HOME'S DOORS, ONE ROW OF WORDS (prd §1850, over §1849's round
+    /// buttons):** Account (or the verb that makes or finishes it), Risks and
+    /// Apps, each a word and a chevron (`DSHomeDoor`), then the address's
+    /// tail and its copy. Risks takes the attention ink and a count while a
+    /// finding is unseen; the copy says "Copied" in its own place.
     @ViewBuilder
     func homeAccountLine(apps: Bool, bare: Bool) -> some View {
         let yours = YourAccountDemo.shownAddress
         let pending = homeSetupPending
         let risks = homeRisksUnseen
-        HStack(alignment: .top, spacing: 0) {
+        HStack(alignment: .center, spacing: DS.Space.s6) {
             if !bare {
                 Button {
                     DSHaptic.selection()
@@ -358,12 +373,11 @@ extension FeedScreen {
                         homeOpen(.yourAccount)
                     }
                 } label: {
-                    DSHomeAction(name: yours == nil ? String(localized: "Create account")
-                                    : pending ? String(localized: "Finish setup") : WalletSection.yourAccount.label,
-                                 glyph: WalletSection.yourAccount.glyph,
-                                 tone: pending ? .attention : .rest)
+                    DSHomeDoor(name: yours == nil ? String(localized: "Create account")
+                                  : pending ? String(localized: "Finish setup") : WalletSection.yourAccount.label,
+                               tone: pending ? .attention : .rest)
                 }
-                .buttonStyle(PressSpring())
+                .buttonStyle(RowPress())
                 // **RISKS IS ALWAYS HERE (prd §1847, user: "if i dismiss all
                 // the 'needs you' items then i can no longer see my privacy
                 // score").** Its ask in Needs you leaves once seen; the door
@@ -373,10 +387,10 @@ extension FeedScreen {
                         ActivitySeen.shared.leavingForPage()
                         homeOpen(.threats)
                     } label: {
-                        DSHomeAction(name: WalletSection.threats.label, glyph: WalletSection.threats.glyph,
-                                     tone: risks > 0 ? .attention : .rest, badge: risks > 0 ? risks : nil)
+                        DSHomeDoor(name: WalletSection.threats.label,
+                                   tone: risks > 0 ? .attention : .rest, count: risks > 0 ? risks : nil)
                     }
-                    .buttonStyle(PressSpring())
+                    .buttonStyle(RowPress())
                 }
             }
             // **APPS IS A DOOR AT THE HEAD (prd §1848).** Its panel stood at
@@ -387,9 +401,9 @@ extension FeedScreen {
                     ActivitySeen.shared.leavingForPage()
                     route.present(.apps)
                 } label: {
-                    DSHomeAction(name: PlaceTab.library.label, glyph: ScopeTileGlyph.apps)
+                    DSHomeDoor(name: PlaceTab.library.label)
                 }
-                .buttonStyle(PressSpring())
+                .buttonStyle(RowPress())
             }
             if !bare, let yours, !pending {
                 HomeCopyAction(address: yours)
@@ -444,23 +458,42 @@ extension FeedScreen {
     /// The jumps, one chip a section, in a row that runs off the trailing
     /// edge when they do not fit (prd §1843): a chip lands on its section,
     /// and nothing is lit, since the row jumps rather than narrows.
+    ///
+    /// **THE JUMPS ARE CIRCLES (prd §1850, over the chips):** Needs you with
+    /// how many wait, the Wallet, then each category wearing the mark of the
+    /// app whose row leads it.
     @ViewBuilder
-    func homeJumpChips(_ jumps: [String]) -> some View {
-        let names = Self.homeChipNames(jumps)
+    func homeCircles(_ jumps: [String], _ visible: [Thing]) -> some View {
+        let names = Self.homeCircleNames(jumps)
         if !names.isEmpty {
+            let byCategory = feedSectionRows(visible, hiding: [])
+            let asked = Set(activityNeedThings(visible).map(\.source))
+            let waiting = homeNeedsCount(visible)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: DS.Space.s2) {
+                HStack(alignment: .top, spacing: DS.Space.s2) {
                     ForEach(names, id: \.self) { name in
                         Button {
                             DSHaptic.selection()
-                            chrome.feedJump = name == PlaceTab.library.label ? Self.appsPanelName : name
+                            chrome.feedJump = name
                         } label: {
-                            Chip(text: name, selected: true)
+                            if name == WalletSection.needsYou.label {
+                                DSHomeCircle(name: name, tone: .attention) { DSHomeCircleCount(count: waiting) }
+                            } else if name == Self.homeWalletName {
+                                DSHomeCircle(name: name) { DSHomeCircleGlyph(glyph: ScopeTileGlyph.wallets) }
+                            } else if let app = homeCircleApp(name, byCategory, asked: asked),
+                                      BridgeIcon.hasMark(app) {
+                                DSHomeCircle(name: name) {
+                                    BridgeIcon(name: app, size: DS.Mark.hero, circular: true)
+                                }
+                            } else {
+                                DSHomeCircle(name: name) { DSHomeCircleGlyph(glyph: CategoryFold.glyph(for: name)) }
+                            }
                         }
                         .buttonStyle(PressSpring())
+                        .dsTapTarget()
                     }
                 }
-                .padding(.horizontal, DSRoomChassis.rowInset)
+                .padding(.horizontal, DSRoomChassis.rowInset - (DSHomeCircleMetrics.column - DSHomeCircleMetrics.face) / 2)
             }
             .listRowInsets(.init(top: Self.homeChipsGap, leading: 0, bottom: 0, trailing: 0))
             .feedRowBackground()
@@ -468,24 +501,41 @@ extension FeedScreen {
         }
     }
 
-    /// The chips drawn for the page's sections. Needs you takes none (user:
-    /// "it's jump chip is unnecessary"): it is always the first thing under
-    /// the chips. The Wallet and Apps alone are the whole page: nothing to
-    /// jump past, so no row.
-    static func homeChipNames(_ jumps: [String]) -> [String] {
-        // The Wallet takes none either (prd §1849, user: "do we need a chip
-        // for wallet if it is always shown?"): it is always the first
-        // section, or right under Needs you.
-        let names = jumps.filter { $0 != WalletSection.needsYou.label && $0 != homeWalletName }
-        // Two categories of the feed at least (Apps' panel is not one).
-        return names.filter { $0 != PlaceTab.library.label }.count > 1 ? names : []
+    /// The app whose row leads a category's section this visit: the mark
+    /// its circle wears. Read as the section itself reads its rows.
+    func homeCircleApp(_ category: String, _ byCategory: [String: [Thing]], asked: Set<String>) -> String? {
+        if category == RoomAccounts.dayRoom { return Self.nextPerApp(dayFeedRows.live).first?.source }
+        return Self.newestPerApp((byCategory[category] ?? []).live.filter { !asked.contains($0.source) })
+            .first { !ActivitySeen.shared.isHidden($0.id) }?.source
     }
 
-    /// The section standing right under the chips, which takes no chapter
+    /// How many things wait in Needs you, as its section counts its rows:
+    /// your account's ask, the Wallet's asks, the unseen risks, and what the
+    /// apps ask.
+    func homeNeedsCount(_ visible: [Thing]) -> Int {
+        let money = activityMoneyRows(visible)
+        let yours = YourAccountDemo.shownAddress
+        let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
+        let wants = money.isEmpty ? nil : pending ? "" : (yours != nil ? yourAccountWants : nil)
+        return (wants == nil ? 0 : 1) + walletNeedsCount(upcoming: walletUpcoming(money))
+            + homeRisksUnseen + activityNeedThings(visible).count
+    }
+
+    /// The circles drawn for the page's sections: every section standing on
+    /// it, once the feed has a category to jump to. The Wallet alone (with
+    /// or without Needs you) is the whole page: nothing to jump past, so no
+    /// row. Apps' panel takes none (it is a door at the head, §1848).
+    static func homeCircleNames(_ jumps: [String]) -> [String] {
+        let names = jumps.filter { $0 != PlaceTab.library.label }
+        let categories = names.filter { $0 != WalletSection.needsYou.label && $0 != homeWalletName }
+        return categories.isEmpty ? [] : names
+    }
+
+    /// The section standing right under the circles, which takes no chapter
     /// air of its own (`feedSectionLeads`): the first on the page, when the
-    /// chips are drawn.
+    /// circles are drawn.
     static func homeLeadAnchor(_ jumps: [String]) -> String? {
-        guard !homeChipNames(jumps).isEmpty, let first = jumps.first else { return nil }
+        guard !homeCircleNames(jumps).isEmpty, let first = jumps.first else { return nil }
         return scrollAnchor(first)
     }
 }
@@ -507,11 +557,26 @@ private struct HomeCopyAction: View {
                 copied = false
             }
         } label: {
-            DSHomeAction(name: copied ? String(localized: "Copied") : String(localized: "Copy"),
-                         glyph: copied ? "checkmark" : "doc.on.doc",
-                         tone: copied ? .done : .rest)
+            // Not a door: the address's tail, grey, and the copy's glyph in
+            // the chevron's place (prd §1850).
+            HStack(spacing: DS.Space.s1) {
+                Text(verbatim: copied ? String(localized: "Copied") : AddressTail.short(address))
+                    .dsText(.body17)
+                    .monospacedDigit()
+                    .foregroundStyle(copied ? DS.confirmInk : DS.textSecondary)
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .dsGlyph(.subhead)
+                    .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: DS.Hit.min)
+            .contentShape(Rectangle())
+            .animation(DS.Motion.standard, value: copied)
         }
-        .buttonStyle(PressSpring())
+        .buttonStyle(RowPress())
         .accessibilityLabel(Text("Copy address"))
     }
 }

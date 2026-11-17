@@ -259,7 +259,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2028 of 2102 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2029 of 2103 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2289,6 +2289,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1847 — Risks is always on Home, the Wallet always shows one thing, the first run says each thing once, and the cover is "Kee…
 - §1848 — Apps is a chip at Home's head, and Home ends where the feed ends (amends §1839's "the Apps section should always show…
 - §1849 — Home's acts are four round buttons, the day stands on a pill, the watchlist is the card's, the Wallet's rows open its…
+- §1850 — Home's doors are words with a chevron, its jumps are circles, its head stands on the page with no card, and the map's…
 
 ## Dead rulings → what replaced them (generated)
 
