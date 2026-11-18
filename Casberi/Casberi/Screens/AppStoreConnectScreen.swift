@@ -143,7 +143,7 @@ struct AppStoreConnectScreen: View {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading App Store Connect…"),
                                  proof: result)
-            DSSlabNote(text: "Verdicts, reviews and expiring builds land on their own.", plain: true)
+            DSSlabNote(text: "Verdicts, reviews, expiring builds land.", plain: true)
         } else {
             keyForm
         }

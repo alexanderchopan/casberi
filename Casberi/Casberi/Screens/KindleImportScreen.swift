@@ -38,7 +38,7 @@ struct KindleImportScreen: View {
                 // Kept: the upkeep line says an import can be re-run, it does
                 // not say highlights arrive GROUPED BY BOOK, which is the
                 // thing somebody is deciding about.
-                DSSlabNote(text: "Highlights become findable notes, grouped by book.", plain: true)
+                DSSlabNote(text: "Highlights become notes, by book.", plain: true)
             },
             more: {
                 ImportUpkeepSection(source: "Kindle", held: held,

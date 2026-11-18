@@ -79,7 +79,7 @@ struct NearAISetupScreen: View {
             // kept because it names the trade the controls cannot: an answer
             // that arrives all at once looks like a slow seat unless you know
             // why, and "signed" is meaningless without "whole".
-            DSSlabNote(text: "Answers arrive all at once, because that is what the hardware can sign. NEAR AI bills you directly.",
+            DSSlabNote(text: "Answers arrive whole. NEAR AI bills you.",
                        plain: true)
         }
     }

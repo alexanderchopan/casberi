@@ -88,7 +88,7 @@ struct GitHubWatchTray: View {
                                             : String(localized: "Looking them up…"),
                                          proof: result,
                                          faces: faces, faceFallback: TokenBridge.github.rawValue)
-                    DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
+                    DSSlabNote(text: "Private. Nobody is followed or notified.")
                     Text("Feeds")
                         .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .padding(.top, DS.Space.s3)

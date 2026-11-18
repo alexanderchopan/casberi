@@ -135,7 +135,7 @@ struct AWSScreen: View {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading AWS…"),
                                  proof: result)
-            DSSlabNote(text: "Alarms, deploys and a spend anomaly land on their own.", plain: true)
+            DSSlabNote(text: "Alarms, deploys, spend anomalies land.", plain: true)
         }
     }
 

@@ -192,7 +192,7 @@ struct TokenSetupScreen: View {
                                     : String(localized: "Looking it up…"),
                                  proof: watchResult,
                                  faces: watchFaces, faceFallback: bridge.rawValue)
-            DSSlabNote(text: "Private to \(DS.device) — nobody is followed or notified, and nothing shows on your GitHub account.")
+            DSSlabNote(text: "Private. Nobody is followed or notified.")
             if !rows.isEmpty { FollowListDoor(room: .work, count: rows.count) }
         } else if let webSeat, WebSession.signedIn(webSeat) {
             // Signed in on the web (prd §1584): nothing to replace here; a

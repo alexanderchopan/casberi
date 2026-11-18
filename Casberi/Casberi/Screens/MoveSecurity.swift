@@ -1115,7 +1115,7 @@ struct MoveSecurity: View {
                     .dsText(.subhead12)
                     .foregroundStyle(DS.attentionInk)
             }
-            DSFootnote("This key alone can move everything in your account. Use a wallet whose key only you hold, like a Ledger, never an exchange's deposit address.")
+            DSFootnote("Alone, this key moves everything. Never an exchange address.")
             HStack {
                 Button { addOutside() } label: {
                     Text("Add as a key")

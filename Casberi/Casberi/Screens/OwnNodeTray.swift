@@ -40,7 +40,7 @@ struct OwnNodeTray: View {
                         row(line)
                         if editing == line.id { field(line) }
                     }
-                    DSFootnote("Your node sees your address. Tor doesn't hide it from your own node.")
+                    DSFootnote("Your own node sees your address, even over Tor.")
                         .padding(.top, DS.Space.s4)
                 }
                 .padding(.vertical, DS.Space.s4)

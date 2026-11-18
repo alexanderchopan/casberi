@@ -309,7 +309,7 @@ struct NetworkReachScreen: View {
                 // title row's pink (prd §1222), never under a second name.
                 DSRoomTitleRow(title: String(localized: "There is no server."))
                     .dsRoomTitleListRow(inSheet: true)
-                DSProse.text("Every request below goes straight from \(DS.device) to the service named.")
+                DSProse.text("Every request below goes straight from \(DS.device) to its service.")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
@@ -320,7 +320,7 @@ struct NetworkReachScreen: View {
                 // those. Leaving that to be assumed on the one screen whose
                 // job is making the privacy claim checkable would be the fake
                 // status this app refuses everywhere else.
-                DSFootnote("Each service sees your IP; iCloud Private Relay covers Safari, not apps.")
+                DSFootnote("Each service sees your IP. Private Relay covers Safari, not apps.")
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }

@@ -553,7 +553,7 @@ struct CalendarSubscribeSheet: View {
                 if let refused {
                     Text(refused).dsText(.label12).foregroundStyle(DS.attentionInk)
                 }
-                DSFootnote(Text("Its events show in Coming up and Day — nothing is added to your Calendar app."))
+                DSFootnote(Text("Its events show in Coming up and Day, not your Calendar app."))
             }
         }
         .onAppear { focused = true }

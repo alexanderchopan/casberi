@@ -437,7 +437,7 @@ struct SafeSignBlock: View {
             // array argument can carry thousands of values.
             if described.lines.count > Self.batchDrawCap {
                 let hidden = described.lines.count - Self.batchDrawCap
-                DSProse.text("\(hidden) more values aren't shown here. Open it in your Safe app before signing.")
+                DSProse.text("\(hidden) more aren't shown. Open your Safe app before signing.")
                     .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }

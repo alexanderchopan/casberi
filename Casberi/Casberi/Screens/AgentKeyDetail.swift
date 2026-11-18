@@ -313,7 +313,7 @@ struct AgentLibrarianRow: View {
                     // itself shows, and a digest goes into a retrieval-only
                     // field. Said plainly, because "an AI renamed my things"
                     // is a fair thing to be wary of.
-                    DSFootnote("Only words your things already contain — a chat summary is never shown.")
+                    DSFootnote("Uses only words already in your things.")
                     AgentBudgetControl(tick: $tick)
                     if working {
                         HStack(spacing: DS.Space.s2) {

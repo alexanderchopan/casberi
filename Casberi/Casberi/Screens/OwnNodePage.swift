@@ -115,7 +115,7 @@ struct OwnNodeRows: View {
                       check: { await model.checkAztec() }, useList: { model.useList(key: OwnNodeStore.aztecKey) })
                     .walletListRow()
             }
-            DSFootnote("Your node sees your address. Tor doesn't hide it from your own node.")
+            DSFootnote("Your own node sees your address, even over Tor.")
                 .walletListRow()
         }
     }

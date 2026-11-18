@@ -77,7 +77,7 @@ struct PrivyScreen: View {
                              syncingLine: String(localized: "Reading your Privy apps…"),
                              proof: result,
                              retry: { Task { await sync() } })
-        DSSlabNote(text: "Balances are read from the chain, not from Privy.",
+        DSSlabNote(text: "Balances come from the chain, not Privy.",
                    plain: true)
     }
 
@@ -86,7 +86,7 @@ struct PrivyScreen: View {
     @ViewBuilder private var displayBlock: some View {
         let store = PrivyHomeStore.shared
         DSToggleRow(title: Text("Show empty apps"),
-                    detail: DSProse.text("Apps holding nothing that you haven't used in 90 days."),
+                    detail: DSProse.text("Holding nothing, unused for 90 days."),
                     isOn: Binding(get: { store.showEmpty }, set: { store.setShowEmpty($0) }))
         DSPushRow(title: Text("Hidden apps"),
                   fact: Text(store.hidden.isEmpty ? String(localized: "None")

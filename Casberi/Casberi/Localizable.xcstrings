@@ -4294,34 +4294,6 @@
         }
       }
     },
-    "%@ confirmed this key can't trade or withdraw." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ confirmó que esta clave no puede operar ni retirar fondos."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ が、このキーでは取引も出金もできないことを確認しました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에서 이 키로는 거래나 출금을 할 수 없음을 확인했습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ 已确认此密钥无法交易或提现。"
-          }
-        }
-      }
-    },
     "%@ connected addresses across %@ of yours" : {
       "localizations" : {
         "en" : {
@@ -26126,6 +26098,34 @@
         }
       }
     },
+    "%lld more aren't shown. Open your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se muestran %lld más. Abre tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "さらに %lld 件は表示されていません。署名する前に Safe アプリを開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개가 더 표시되지 않았습니다. 서명하기 전에 Safe 앱을 여세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还有 %lld 个未显示。签名前请打开你的 Safe 应用。"
+          }
+        }
+      }
+    },
     "%lld more assets" : {
       "localizations" : {
         "es" : {
@@ -26660,34 +26660,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "另有 %lld 个代币"
-          }
-        }
-      }
-    },
-    "%lld more values aren't shown here. Open it in your Safe app before signing." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Aquí no se muestran %lld valores más. Ábrelo en tu app de Safe antes de firmar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ここには表示されていない値がさらに %lld 件あります。署名する前に Safe アプリで開いてください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "여기에 표시되지 않은 값이 %lld개 더 있습니다. 서명하기 전에 Safe 앱에서 여세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "此处还有 %lld 个值未显示。签名前请在你的 Safe 应用中打开。"
           }
         }
       }
@@ -51294,6 +51266,34 @@
         }
       }
     },
+    "Alarms, deploys, spend anomalies land." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegan alarmas, despliegues y anomalías de gasto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アラーム、デプロイ、支出の異常が届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알람, 배포, 지출 이상이 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "警报、部署和支出异常会到达。"
+          }
+        }
+      }
+    },
     "Album" : {
       "localizations" : {
         "es" : {
@@ -52898,6 +52898,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "额度已开启"
+          }
+        }
+      }
+    },
+    "Alone, this key moves everything. Never an exchange address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta clave sola mueve todo. Nunca una dirección de exchange."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この鍵だけですべてを動かせます。取引所のアドレスは使わないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 키 하나로 모든 것을 옮길 수 있습니다. 거래소 주소는 절대 쓰지 마세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅凭此密钥即可转走一切。切勿使用交易所地址。"
           }
         }
       }
@@ -55226,6 +55254,34 @@
         }
       }
     },
+    "Answers arrive whole. NEAR AI bills you." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las respuestas llegan completas. NEAR AI te cobra a ti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回答は一括で届きます。請求は NEAR AI から届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "답변은 한 번에 도착합니다. 요금은 NEAR AI가 청구합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回答会一次性到达。费用由 NEAR AI 向你收取。"
+          }
+        }
+      }
+    },
     "Answers for chain %@, not %@'s %@" : {
       "localizations" : {
         "en" : {
@@ -57272,34 +57328,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "应用"
-          }
-        }
-      }
-    },
-    "Apps holding nothing that you haven't used in 90 days." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Apps sin saldo que no has usado en 90 días."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "残高がなく、90日間使っていないアプリ。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "잔액이 없고 90일간 사용하지 않은 앱."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "余额为空且 90 天未使用的应用。"
           }
         }
       }
@@ -61209,12 +61237,12 @@
         }
       }
     },
-    "Balances are read from the chain, not from Privy." : {
+    "Balances come from the chain, not Privy." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Los saldos se leen de la cadena, no de Privy."
+            "value" : "Los saldos vienen de la cadena, no de Privy."
           }
         },
         "ja" : {
@@ -61232,7 +61260,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "余额从链上读取，而非来自 Privy。"
+            "value" : "余额来自链上，而非 Privy。"
           }
         }
       }
@@ -71690,6 +71718,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用面容 ID 确认"
+          }
+        }
+      }
+    },
+    "Confirmed by %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Confirmado por %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が確認しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 확인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已由 %@ 确认。"
           }
         }
       }
@@ -86298,30 +86354,30 @@
         }
       }
     },
-    "Each service sees your IP; iCloud Private Relay covers Safari, not apps." : {
+    "Each service sees your IP. Private Relay covers Safari, not apps." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cada servicio ve tu IP; iCloud Private Relay cubre Safari, no las apps."
+            "value" : "Cada servicio ve tu IP. Private Relay cubre Safari, no las apps."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "各サービスにあなたの IP が見えます。iCloud Private Relay が守るのは Safari で、アプリではありません。"
+            "value" : "各サービスにあなたの IP が見えます。Private Relay が守るのは Safari で、アプリではありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "각 서비스가 내 IP를 봅니다. iCloud 비공개 릴레이는 앱이 아닌 Safari만 보호합니다."
+            "value" : "각 서비스가 내 IP를 봅니다. 비공개 릴레이는 앱이 아닌 Safari만 보호합니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "每项服务都会看到你的 IP；iCloud 专用代理只保护 Safari，不保护应用。"
+            "value" : "每项服务都会看到你的 IP。专用代理只保护 Safari，不保护应用。"
           }
         }
       }
@@ -89131,30 +89187,30 @@
         }
       }
     },
-    "Every request below goes straight from %@ to the service named." : {
+    "Every request below goes straight from %@ to its service." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cada petición de abajo va directamente desde %@ al servicio indicado."
+            "value" : "Cada petición de abajo va directamente desde %@ a su servicio."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "以下のリクエストはすべて %@ から記載のサービスへ直接送信されます。"
+            "value" : "以下のリクエストはすべて %@ から各サービスへ直接送信されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "아래의 모든 요청은 %@에서 명시된 서비스로 직접 전송됩니다."
+            "value" : "아래의 모든 요청은 %@에서 해당 서비스로 직접 전송됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "下方的每个请求都从 %@ 直接发往所列的服务。"
+            "value" : "下方的每个请求都从 %@ 直接发往对应的服务。"
           }
         }
       }
@@ -103343,6 +103399,34 @@
         }
       }
     },
+    "Highlights become notes, by book." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los subrayados se vuelven notas, por libro."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ハイライトは本ごとのノートになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하이라이트는 책별 노트가 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "标注会按书整理成笔记。"
+          }
+        }
+      }
+    },
     "Highlights stay with you" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -103424,6 +103508,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "长按显示"
+          }
+        }
+      }
+    },
+    "Holding nothing, unused for 90 days." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin saldo y sin usar en 90 días."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高がなく、90日間使っていないアプリ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액이 없고 90일간 사용하지 않은 앱."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "余额为空且 90 天未使用。"
           }
         }
       }
@@ -107246,30 +107358,30 @@
         }
       }
     },
-    "It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (%@)." : {
+    "It needs your co-signer (%@) to sign in." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Necesita iniciar sesión con una billetera de Ethereum fuera de Casberi. Inicia sesión con tu cofirmante (%@)."
+            "value" : "Necesita que tu cofirmante (%@) inicie sesión."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Casberi の外にある Ethereum ウォレットでのサインインが必要です。共同署名者（%@）でサインインしてください。"
+            "value" : "共同署名者（%@）でのサインインが必要です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Casberi 외부의 이더리움 지갑으로 로그인해야 합니다. 공동 서명자(%@)로 로그인하세요."
+            "value" : "공동 서명자(%@)로 로그인해야 합니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "它需要使用 Casberi 之外的以太坊钱包登录。请使用你的共同签名人（%@）登录。"
+            "value" : "它需要你的共同签名人（%@）登录。"
           }
         }
       }
@@ -107526,30 +107638,30 @@
         }
       }
     },
-    "It sees your account's address. Casberi asks before every signature and sends nothing from this page." : {
+    "It sees your address and can ask to sign." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ve la dirección de tu cuenta. Casberi pregunta antes de cada firma y no envía nada desde esta página."
+            "value" : "Ve tu dirección y puede pedirte firmar."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "アカウントのアドレスが見えます。Casberi は署名のたびに確認し、このページから何も送信しません。"
+            "value" : "アドレスが見え、署名を求めることができます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "계정 주소를 볼 수 있습니다. Casberi는 서명할 때마다 묻고, 이 페이지에서는 아무것도 보내지 않습니다."
+            "value" : "내 주소를 보고 서명을 요청할 수 있습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "它能看到你账户的地址。Casberi 在每次签名前都会询问，且不会从此页面发送任何内容。"
+            "value" : "它能看到你的地址，并可请求你签名。"
           }
         }
       }
@@ -108220,30 +108332,30 @@
         }
       }
     },
-    "Its events show in Coming up and Day — nothing is added to your Calendar app." : {
+    "Its events show in Coming up and Day, not your Calendar app." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Sus eventos aparecen en Próximamente y en Day — no se añade nada a tu app Calendario."
+            "value" : "Sus eventos aparecen en Próximamente y en Day, no en tu app Calendario."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "予定は「予定」と Day に表示されます — カレンダーアプリには何も追加されません。"
+            "value" : "予定は「予定」と Day に表示され、カレンダーアプリには追加されません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "일정은 다가오는 일정과 Day에 표시됩니다 — 캘린더 앱에는 아무것도 추가되지 않습니다."
+            "value" : "일정은 다가오는 일정과 Day에 표시되며, 캘린더 앱에는 추가되지 않습니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "其中的日程会显示在“即将到来”和 Day 中 — 不会向你的日历 App 添加任何内容。"
+            "value" : "其中的日程会显示在“即将到来”和 Day 中，不会添加到你的日历 App。"
           }
         }
       }
@@ -138093,34 +138205,6 @@
         }
       }
     },
-    "On automatically — both doors land as they happen." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Activado automáticamente: ambas vías llegan según ocurren."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "自動的にオン — どちらの経路も発生と同時に届きます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "자동으로 켜짐 — 두 경로 모두 발생하는 대로 도착합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "自动开启 — 两条通道都会随发生实时到达。"
-          }
-        }
-      }
-    },
     "On automatically — both doors land in your feed as they happen." : {
       "localizations" : {
         "es" : {
@@ -138173,6 +138257,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "自动开启 — 审核通过存款的那一刻就会通知你。"
+          }
+        }
+      }
+    },
+    "On automatically, for both doors." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activado automáticamente, para ambas vías."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動的にオン。どちらの経路も対象です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자동으로 켜짐, 두 경로 모두."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自动开启，两条通道均适用。"
           }
         }
       }
@@ -140703,34 +140815,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅限你自己的内容中已有的词。对话摘要用于再次检索，且从不显示。"
-          }
-        }
-      }
-    },
-    "Only words your things already contain — a chat summary is never shown." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solo palabras que ya contienen tus cosas: nunca se muestra un resumen de chat."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あなたの情報に元から含まれる言葉だけです。チャットの要約は表示されません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내 자료에 이미 있는 단어만 사용합니다 — 대화 요약은 표시되지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "仅使用你的内容中已有的词语 — 绝不显示聊天摘要。"
           }
         }
       }
@@ -150006,6 +150090,34 @@
         }
       }
     },
+    "Pick the folder, not the .json, for photos." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige la carpeta, no el .json, para traer las fotos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "写真も取り込むには、.json ではなくフォルダを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사진까지 가져오려면 .json이 아닌 폴더를 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要带上照片，请选择文件夹而非 .json。"
+          }
+        }
+      }
+    },
     "Pick what pays" : {
       "localizations" : {
         "es" : {
@@ -153123,6 +153235,34 @@
         }
       }
     },
+    "Private. Nobody is followed or notified." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privado. No se sigue ni se avisa a nadie."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開。誰もフォローされず、通知も届きません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개입니다. 아무도 팔로우되거나 알림을 받지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密。不会关注或通知任何人。"
+          }
+        }
+      }
+    },
     "Privy answered in a shape Casberi doesn't read yet." : {
       "localizations" : {
         "es" : {
@@ -155166,6 +155306,34 @@
         }
       }
     },
+    "Re-enrolling Face ID erased this key. Have an owner swap it out." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al volver a registrar Face ID se borró esta clave. Pide a un propietario que la sustituya."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID の再登録でこのキーは消去されました。所有者に差し替えてもらってください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID를 다시 등록해 이 키가 삭제되었습니다. 소유자에게 교체를 요청하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重新录入 Face ID 已抹除此密钥。请让一位所有者将其替换。"
+          }
+        }
+      }
+    },
     "Reach a score of %lld" : {
       "localizations" : {
         "es" : {
@@ -156174,34 +156342,6 @@
         }
       }
     },
-    "Read-only — Acorns is never asked to move money." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Solo lectura: nunca se le pide a Acorns que mueva dinero."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "読み取り専用で、Acorns に送金を依頼することはありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "읽기 전용이며, Acorns에 송금을 요청하지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "只读 — 绝不会要求 Acorns 转账。"
-          }
-        }
-      }
-    },
     "Read-only — following can never move funds." : {
       "localizations" : {
         "es" : {
@@ -156654,6 +156794,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "只读，仅公开数据。点赞将在日后随登录一起到来。"
+          }
+        }
+      }
+    },
+    "Read-only. Nothing here moves money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo lectura. Nada aquí mueve dinero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り専用。ここからお金が動くことはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽기 전용입니다. 여기서는 돈이 움직이지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只读。这里不会转移任何资金。"
           }
         }
       }
@@ -194482,30 +194650,30 @@
         }
       }
     },
-    "The librarian sends things to %@ on its own to name and summarize them." : {
+    "The librarian sends your things to %@ on its own." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "El bibliotecario envía cosas a %@ por su cuenta para nombrarlas y resumirlas."
+            "value" : "El bibliotecario envía tus cosas a %@ por su cuenta."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ライブラリアンが名前付けと要約のために、自動で%@に送信します。"
+            "value" : "ライブラリアンが自動であなたの情報を%@に送信します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "사서가 이름을 붙이고 요약하기 위해 스스로 %@에 항목을 보냅니다."
+            "value" : "사서가 스스로 내 자료를 %@에 보냅니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "图书管理员会自动将内容发送给 %@，用于命名和摘要。"
+            "value" : "图书管理员会自动将你的内容发送给 %@。"
           }
         }
       }
@@ -199851,34 +200019,6 @@
         }
       }
     },
-    "This key alone can move everything in your account. Use a wallet whose key only you hold, like a Ledger, never an exchange's deposit address." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Esta clave por sí sola puede mover todo lo de tu cuenta. Usa una cartera cuya clave solo tengas tú, como una Ledger, nunca la dirección de depósito de un exchange."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "この鍵だけでアカウントのすべてを動かせます。Ledgerのように鍵をあなただけが持つウォレットを使い、取引所の入金アドレスは使わないでください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이 키 하나로 계정의 모든 것을 옮길 수 있습니다. Ledger처럼 키를 나만 보유한 지갑을 사용하고, 거래소의 입금 주소는 절대 사용하지 마세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "仅凭此密钥即可转走你账户中的一切。请使用只有你持有密钥的钱包（如 Ledger），切勿使用交易所的充值地址。"
-          }
-        }
-      }
-    },
     "This month" : {
       "localizations" : {
         "es" : {
@@ -200547,34 +200687,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这部手机的密钥尚未在 Safe 上设置。请先在你的另一个钱包中完成。"
-          }
-        }
-      }
-    },
-    "This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clave de firma de este teléfono ha desaparecido: se volvió a registrar Face ID, lo que la borra por diseño. Pide a otro propietario que sustituya la dirección antigua en la Safe."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この iPhone の署名キーは失われました。Face ID を再登録すると、仕様により消去されます。別の所有者に、Safe から古いアドレスを差し替えてもらってください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 기기의 서명 키가 사라졌습니다 — Face ID를 다시 등록하면 설계상 삭제됩니다. 다른 소유자에게 Safe에서 이전 주소를 교체해 달라고 요청하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这台手机的签名密钥已消失 — 重新录入 Face ID 会按设计将其抹除。请让另一位所有者在 Safe 中替换掉旧地址。"
           }
         }
       }
@@ -207990,6 +208102,34 @@
         }
       }
     },
+    "Uses only words already in your things." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo usa palabras que ya están en tus cosas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの情報に元から含まれる言葉だけを使います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 자료에 이미 있는 단어만 사용합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅使用你的内容中已有的词语。"
+          }
+        }
+      }
+    },
     "Validating" : {
       "localizations" : {
         "es" : {
@@ -208266,6 +208406,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "审核结论、评价和即将过期的构建，一发生就会到达。Apple 不提供只读角色，因此这里只做读取。"
+          }
+        }
+      }
+    },
+    "Verdicts, reviews, expiring builds land." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegan veredictos, reseñas y compilaciones por caducar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "審査結果、レビュー、期限切れ間近のビルドが届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "심사 결과, 리뷰, 만료 예정 빌드가 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "审核结果、评价和即将过期的构建版本会到达。"
           }
         }
       }
@@ -221464,30 +221632,30 @@
         }
       }
     },
-    "You approve each send in your wallet. Each network keeps a little of its own token to pay for them." : {
+    "You approve each send. Fees are kept back." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Apruebas cada envío en tu cartera. Cada red guarda un poco de su propio token para pagarlos."
+            "value" : "Apruebas cada envío. Se reserva lo de las comisiones."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "各送金はウォレットで承認します。各ネットワークには手数料分のトークンが少し残ります。"
+            "value" : "各送金を承認します。手数料分は残されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "각 전송은 지갑에서 승인합니다. 각 네트워크에는 수수료용 토큰이 조금 남습니다."
+            "value" : "각 전송을 승인합니다. 수수료만큼은 남겨 둡니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "每笔发送都在你的钱包中批准。每个网络会留下少量自身代币用于支付费用。"
+            "value" : "每笔发送都由你批准。手续费会被留下。"
           }
         }
       }
@@ -223292,34 +223460,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你从本机为你的 Safe 签署了一条声明"
-          }
-        }
-      }
-    },
-    "You signed in here with your co-signer (%@) before." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Antes iniciaste sesión aquí con tu cofirmante (%@)."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "以前ここで共同署名者（%@）でサインインしました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이전에 여기서 공동 서명자(%@)로 로그인했습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你之前在这里用共同签名人（%@）登录过。"
           }
         }
       }
@@ -227308,6 +227448,34 @@
         }
       }
     },
+    "Your annotations land on their own." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus anotaciones llegan por sí solas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注釈は自動で届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주석은 자동으로 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的标注会自动到达。"
+          }
+        }
+      }
+    },
     "Your approved private balance does not cover it" : {
       "localizations" : {
         "es" : {
@@ -227842,6 +228010,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人（%1$@）持有 %2$@ ETH。这需要 %3$@ ETH 及手续费。"
+          }
+        }
+      }
+    },
+    "Your co-signer (%@) signed in before." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante (%@) ya inició sesión antes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以前、共同署名者（%@）でサインインしました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전에 공동 서명자(%@)로 로그인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你之前用共同签名人（%@）登录过。"
           }
         }
       }
@@ -229569,34 +229765,6 @@
         }
       }
     },
-    "Your node sees your address. Tor doesn't hide it from your own node." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tu nodo ve tu dirección. Tor no la oculta de tu propio nodo."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ノードにはアドレスが見えます。Tor は自分のノードからアドレスを隠しません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "내 노드는 내 주소를 봅니다. Tor는 내 노드에서 주소를 숨기지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的节点能看到你的地址。Tor 不会对你自己的节点隐藏它。"
-          }
-        }
-      }
-    },
     "Your node stopped" : {
       "localizations" : {
         "es" : {
@@ -230097,6 +230265,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你自己的节点"
+          }
+        }
+      }
+    },
+    "Your own node sees your address, even over Tor." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu propio nodo ve tu dirección, incluso con Tor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自分のノードには、Tor 経由でもアドレスが見えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 노드는 Tor를 거쳐도 내 주소를 봅니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "即使通过 Tor，你自己的节点也能看到你的地址。"
           }
         }
       }

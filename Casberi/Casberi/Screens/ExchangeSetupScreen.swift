@@ -80,7 +80,7 @@ struct ExchangeSetupScreen: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Read-only key")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
-                DSFootnote("\(venue.display) confirmed this key can't trade or withdraw.")
+                DSFootnote("Confirmed by \(venue.display).")
             }
             Spacer(minLength: 0)
         }

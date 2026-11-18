@@ -219,7 +219,7 @@ struct PostHogScreen: View {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading PostHog…"),
                                  proof: result)
-            DSSlabNote(text: "Deploys and launches you annotate land on their own.")
+            DSSlabNote(text: "Your annotations land on their own.")
         }
     }
 

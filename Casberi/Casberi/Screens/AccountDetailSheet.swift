@@ -494,7 +494,7 @@ struct AccountDetailSheet: View {
                 // only departure from the baseline that this page can state is
                 // the librarian; without it there is none to state (prd §718).
                 if let keyedAgent, librarianOn {
-                    DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
+                    DSFootnote("The librarian sends your things to \(keyedAgent.company) on its own.")
                 }
                 // THE CLAIM'S EVIDENCE (prd §1611): the week's receipts under
                 // the stamp, and the door to them — it was a row in Your data.

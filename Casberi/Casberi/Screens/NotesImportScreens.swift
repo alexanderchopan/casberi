@@ -86,7 +86,7 @@ struct DayOneImportScreen: View {
                 // The one fine print that changes what somebody DOES (§315):
                 // the folder and the .json both import, and only the folder
                 // can reach `photos/`.
-                DSSlabNote(text: "Pick the folder, not the .json, to bring your photos too.", plain: true)
+                DSSlabNote(text: "Pick the folder, not the .json, for photos.", plain: true)
             },
             more: {
                 ImportUpkeepSection(source: "Day One", held: held,

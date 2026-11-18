@@ -1071,11 +1071,11 @@ struct AztecAskSheet: View {
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .ethConnect where leadsWithCoSigner && reconnecting:
-            DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (\(AddressTail.short(coSigner ?? ""))).")
+            DSProse.text("It needs your co-signer (\(AddressTail.short(coSigner ?? ""))) to sign in.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .ethConnect where leadsWithCoSigner:
-            DSProse.text("You signed in here with your co-signer (\(AddressTail.short(coSigner ?? ""))) before.")
+            DSProse.text("Your co-signer (\(AddressTail.short(coSigner ?? ""))) signed in before.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .ethTopUp(_, _, let signer, let amount, let holds, let needs):
@@ -1091,7 +1091,7 @@ struct AztecAskSheet: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                DSProse.text("It sees your account's address. Casberi asks before every signature and sends nothing from this page.")
+                DSProse.text("It sees your address and can ask to sign.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
