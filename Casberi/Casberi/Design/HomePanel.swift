@@ -32,6 +32,11 @@ enum HomePanelMetrics {
     static let cap: CGFloat = 22
     /// How far the grey runs before it is the page.
     static let fade: CGFloat = 520
+    /// How much of `DS.fillFaint` the edge takes. A phone's screen shows
+    /// black as no light at all, so the same grey reads lighter there than
+    /// on a simulator (user, 2026-11-17: "on the phone the tray is a bit
+    /// lighter"; the two screenshots measured the same pixels).
+    static let ink: Double = 0.65
 }
 
 /// The row at the panel's top: air, and the report of where the panel is.
@@ -59,8 +64,8 @@ struct HomePanelFade: View {
                 UnevenRoundedRectangle(topLeadingRadius: HomePanelMetrics.radius,
                                        topTrailingRadius: HomePanelMetrics.radius, style: .continuous)
                     .fill(LinearGradient(stops: [
-                        .init(color: DS.fillFaint, location: 0),
-                        .init(color: DS.fillFaint.opacity(0.55), location: 0.42),
+                        .init(color: DS.fillFaint.opacity(HomePanelMetrics.ink), location: 0),
+                        .init(color: DS.fillFaint.opacity(0.55 * HomePanelMetrics.ink), location: 0.42),
                         .init(color: DS.fillFaint.opacity(0), location: 1),
                     ], startPoint: .top, endPoint: .bottom))
                     .frame(height: HomePanelMetrics.fade)
