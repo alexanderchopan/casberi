@@ -328,7 +328,9 @@ final class PrivateMove {
             reserve = "0"
             minimum = "4000000000000000"
             quotedFee = "60000000000000"
-            usdcFee = "50000"
+            // The relayer's fee measured 2026-11-18 (0.0006 ETH at 0.56 gwei,
+            // about $1.40), so the demo never shows a fee nobody pays.
+            usdcFee = "1400000"
             // A tag is paid in USDC (prd §1874), on the demo too.
             if mode == .send, tag != nil {
                 guard let first = options.first else {
