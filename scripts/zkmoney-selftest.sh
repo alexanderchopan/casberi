@@ -717,4 +717,26 @@ awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND"
   | awk '/String\(localized: "Public account"\), marks: receiveNetworks/{p=NR} /receiveFromRows/{f=NR} /"Private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
   || { echo "✗ the ways in no longer stand under the public account, before the private places"; exit 1; }
 
+# Paying a tag from your private balance (prd §1874): the tag goes to the
+# private sentence AS A TAG, never its deposit address as a plain one (ETH
+# could be picked there, and a deposit takes dollars only); the deposit
+# address is asked fresh at sending; USDC alone, inside zk.money's limits;
+# a deposit address is paid out, never balance to balance.
+PM="Casberi/Casberi/Model/PrivateMove.swift"
+awk '/private func goPrivate\(_ mode: PrivateMove.Mode\) \{/,/^    }/' "$SEND" > "$TMP/gopriv.txt"
+grep -q 'if mode == .send, paysZkMoney {' "$TMP/gopriv.txt" \
+  && grep -q 'privateMove.pay(tag: privateMove.onEthereum ? ZkMoneyWire.tag(resolved?.name ?? "") : nil)' "$TMP/gopriv.txt" \
+  && ! grep -q 'privateMove.recipient = mode == .send ? resolved?.address : nil' "$TMP/gopriv.txt" \
+  || { echo "✗ a tag's deposit address reaches the private send as a plain address again, where ETH can be paid to it (prd §1874)"; exit 1; }
+grep -q 'guard case .address(let deposit) = await ZkMoney.depositAddress(tag: tag) else {' "$PM" \
+  || { echo "✗ a private tag payment no longer asks zk.money for a fresh deposit address at sending"; exit 1; }
+grep -q 'return usdcChoices.filter { Self.tagTakes($0) }.map { ("USDC", $0) }' "$PM" \
+  && grep -q 'guard symbol == "USDC", Self.tagTakes(amount) else {' "$PM" \
+  || { echo "✗ a private tag payment can be made in ETH, or outside zk.money's limits (prd §1874)"; exit 1; }
+grep -q 'if tag != nil { balanceToBalance = false; return }' "$PM" \
+  && grep -q 'balanceToBalance: tag == nil && balanceToBalance == true)' "$PM" \
+  || { echo "✗ a deposit address could be paid balance to balance, where zk.money never sees it"; exit 1; }
+grep -q 'if tag != nil, !onEthereum {' "$PM" \
+  || { echo "✗ a tag can be paid from Sepolia's private balance"; exit 1; }
+
 echo "✓ zk.money self-test passed"

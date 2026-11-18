@@ -46708,6 +46708,34 @@
         }
       }
     },
+    "A zk.money tag is paid in USDC, and your private balance has none to send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una etiqueta de zk.money se paga en USDC, y tu saldo privado no tiene para enviar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.moneyのタグへの支払いはUSDCです。プライベート残高に送れるUSDCがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 태그는 USDC로 지불되며, 비공개 잔액에 보낼 USDC가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 标签需用 USDC 支付，而你的私密余额中没有可发送的 USDC"
+          }
+        }
+      }
+    },
     "A zone of yours isn't being served, and %@" : {
       "localizations" : {
         "es" : {
@@ -258296,6 +258324,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "zk.money"
+          }
+        }
+      }
+    },
+    "zk.money keeps about $%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money se queda unos $%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.moneyが約$%@を差し引きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money가 약 $%@를 가져갑니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 约收取 $%@"
           }
         }
       }

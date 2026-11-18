@@ -46,6 +46,12 @@ final class PrivateMove {
     var stage: Stage = .reading
     /// Switch on: who it goes to, an address.
     var recipient: String?
+    /// **A ZK.MONEY TAG, PAID FROM YOUR PRIVATE BALANCE (prd §1874).** The
+    /// bare tag; its one-time deposit address is asked of zk.money's
+    /// resolver at the moment of sending, never kept, and the relayer pays
+    /// it in USDC (a deposit takes dollars; your private balance holds USDC
+    /// and ETH). Ethereum only. Nil for an address.
+    var tag: String?
     /// Switch on: the relayer's terms for ETH (`PrivateMoney.relayerTerms`).
     private(set) var terms: PrivateMoney.RelayerTerms?
 
@@ -160,9 +166,28 @@ final class PrivateMove {
     /// The ETH kept back for the network fee, rounded up.
     var feeKept: String? { reserve.flatMap { PrivateMoney.numberUp($0, decimals: 18) } }
 
-    /// Every amount the sentence offers, ETH's then USDC's.
+    /// Every amount the sentence offers, ETH's then USDC's. To a tag, USDC
+    /// alone, and only what zk.money takes: over its fee, under its cap.
     var options: [(symbol: String, amount: String)] {
-        choices.map { ("ETH", $0) } + usdcChoices.map { ("USDC", $0) }
+        if tag != nil {
+            return usdcChoices.filter { Self.tagTakes($0) }.map { ("USDC", $0) }
+        }
+        return choices.map { ("ETH", $0) } + usdcChoices.map { ("USDC", $0) }
+    }
+
+    /// Whether a deposit takes this many USDC (`ZkMoneyWire.payRefusal`).
+    static func tagTakes(_ usdc: String) -> Bool {
+        ZkMoneyWire.payRefusal(chainId: 1, token: ZkMoneyWire.usdc, usd: Double(usdc)) == nil
+    }
+
+    /// Pays `tag` (or an address, `tag` nil): to a tag, the amount moves to
+    /// USDC's if it was ETH's (prd §1874).
+    func pay(tag newTag: String?, address: String? = nil) {
+        tag = newTag
+        recipient = newTag == nil ? address : nil
+        if newTag != nil, !options.contains(where: { $0.symbol == symbol && $0.amount == amount }), let first = options.first {
+            pick(first.amount, of: first.symbol)
+        }
     }
 
     /// Picks `step` of `token` (the glass box's row).
@@ -174,6 +199,8 @@ final class PrivateMove {
     /// Switch on, a new recipient: asks the keystore whether they hold a
     /// private account (prd §1567), so the line can say where it goes.
     func checkRecipient() async {
+        // A deposit address is nobody's private account: paid out, always.
+        if tag != nil { balanceToBalance = false; return }
         guard let to = recipient, PrivateMoney.isAddress(to), !DemoMode.isActive else { balanceToBalance = nil; return }
         balanceToBalance = nil
         let has = await PrivateOnEthereum.hasPrivateAccount(to, on: network)
@@ -301,6 +328,17 @@ final class PrivateMove {
             reserve = "0"
             minimum = "4000000000000000"
             quotedFee = "60000000000000"
+            usdcFee = "50000"
+            // A tag is paid in USDC (prd §1874), on the demo too.
+            if mode == .send, tag != nil {
+                guard let first = options.first else {
+                    stage = .failed(String(localized: "A zk.money tag is paid in USDC, and your private balance has none to send"))
+                    return
+                }
+                if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }) { pick(first.amount, of: first.symbol) }
+                stage = .ready
+                return
+            }
             stage = choices.isEmpty ? (mode == .send ? .nothingPrivate : .ready) : .ready
             return
         }
@@ -324,6 +362,11 @@ final class PrivateMove {
             }
             guard mine == reads else { return }
             let options = self.options
+            // A tag is paid in private USDC alone (prd §1874).
+            if tag != nil, options.isEmpty {
+                stage = .failed(String(localized: "A zk.money tag is paid in USDC, and your private balance has none to send"))
+                return
+            }
             // Nothing private yet is said as that, never as the relayer's
             // silence (user, with nothing deposited: "0xBow's relayer did not
             // answer"): the quote only matters for what there is to send.
@@ -434,6 +477,11 @@ final class PrivateMove {
 
     /// The act: a deposit, or switch on a relayed withdrawal.
     func run() async {
+        // zk.money's deposit addresses are Ethereum's (prd §1874).
+        if tag != nil, !onEthereum {
+            stage = .failed(String(localized: "zk.money takes DAI, USDC or USDT on Ethereum"))
+            return
+        }
         // Where a private send goes is known before anything is proved
         // (prd §1567): asked again if the node had not answered, and never
         // paid out publicly on a guess.
@@ -463,9 +511,29 @@ final class PrivateMove {
         deposited = nil
         do {
             if mode == .send {
-                guard let to = recipient, PrivateMoney.isAddress(to) else { return }
+                let to: String
+                if let tag {
+                    // Asked now, fresh (prd §1692, §1874): a deposit address
+                    // is single-use, and only USDC goes to one from here.
+                    guard symbol == "USDC", Self.tagTakes(amount) else {
+                        stage = .failed(ZkMoneyWire.payRefusal(chainId: 1, token: symbol == "USDC" ? ZkMoneyWire.usdc : nil,
+                                                               usd: Double(amount)) ?? String(localized: "zk.money takes DAI, USDC or USDT on Ethereum"))
+                        return
+                    }
+                    stage = .preparing
+                    guard case .address(let deposit) = await ZkMoney.depositAddress(tag: tag) else {
+                        stage = .failed(String(localized: "zk.money's resolver didn't answer. Try again in a minute."))
+                        return
+                    }
+                    to = deposit
+                    NSLog("privateMove| tag | %@ | deposit %@", tag, YourAccount.short(deposit))
+                } else {
+                    guard let r = recipient, PrivateMoney.isAddress(r) else { return }
+                    to = r
+                }
                 stage = .opening
-                let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to, balanceToBalance: balanceToBalance == true)
+                let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
+                                                            balanceToBalance: tag == nil && balanceToBalance == true)
                 stage = .done(hash)
             } else {
                 stage = .preparing

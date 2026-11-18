@@ -74015,3 +74015,24 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The same strings; the Mac's column is wider, so one line there too.
 
 **Checks.** No audit holds the line yet: the measure needs the font, and the sweep's scripts were scratch. `aztec-connect-selftest.sh` asserts the new authorization sentence; `nerdwallet-selftest.sh` still finds "nothing here reads your money". Built for the simulator; Kindle's note and both lines on What this app reaches were seen on one line.
+
+## §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fresh at sending (extends §1692, §1563, §1768; user, 2026-11-18: "is there nothing creative we can do with 0xdai? i mean it just seems so frustrating", then of paying a tag privately through 0xBow: "ok lets do this", "ok are you building the casberi to zkmoney via 0xbow?") — BUILT
+
+**Why.** 0xDAI cannot live in Casberi (every move is signed by zk.money's enclave, which fails §1538), and zk.money's Send pays registered tags only, so the two apps meet on Ethereum. Paying a tag from your public account shows the payment from it. From your private balance, 0xBow's relayer pays the deposit address: Ethereum sees "the pool paid X USDC to a zk.money deposit address", naming neither side.
+
+**Measured 2026-11-18 (read-only, Blockscout).** zk.money's Aztec V6 deposit addresses are swept whoever pays them: one took 4.8982 USDC from a contract (`0x3943…d1bD`, called through a multicall), swapped it to DAI through Curve's 3pool and paid 4.4977 DAI into the portal; another took DAI from zk.money's own withdrawal executor. About 0.40 DAI was kept on USDC deposits. 0xBow's router pays a withdrawal out the same way (a USDC transfer from a contract). Not yet seen: one of ours landing.
+
+**Found on the way.** Picking From › Your private balance with a tag in To handed the private sentence the tag's deposit address as a plain address, where ETH could be picked and paid to an address that takes dollars only.
+
+**Ruling.**
+1. **A tag goes to the private sentence as a tag** (`PrivateMove.tag`, `pay(tag:)`): never its deposit address. Typed in the private sentence's own To, a tag pays the same way.
+2. **The deposit address is asked of zk.money's resolver at sending** (`ZkMoney.depositAddress(tag:)`), never kept (§1692).
+3. **USDC alone, inside zk.money's limits** (over its $0.35 fee, under $5,000, `tagTakes`); with no private USDC the sentence says so.
+4. **Always paid out**, never balance to balance; Ethereum only (never Sepolia).
+5. The line says the relayer's fee and "zk.money keeps about $0.35"; Activity names the tag ("ana.zk.money").
+
+**Not built.** The canvas's "They get about 19.60 DAI" row: zk.money's fee on USDC is measured, not published.
+
+**Mac half (§1402).** Move's tray on the iPad and Mac: unchanged reach.
+
+**Checks.** `zkmoney-selftest.sh`: the tag goes as a tag (mutated: caught), the fresh lookup, USDC and the limits, never balance to balance, Ethereum only.

@@ -170,7 +170,7 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// Ready to act: an amount, and switch on, an address.
     private var ready: Bool {
-        move.stage == .ready && (move.mode == .deposit || move.recipient.map(PrivateMoney.isAddress) == true)
+        move.stage == .ready && (move.mode == .deposit || move.recipient.map(PrivateMoney.isAddress) == true || move.tag != nil)
     }
 
     // MARK: - The sentence
@@ -226,7 +226,7 @@ struct MovePrivateSentence<Head: View>: View {
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
-            } else if move.recipient != nil {
+            } else if move.recipient != nil || move.tag != nil {
                 // Nobody picked is not said (prd §1791): no "to address".
                 MoveClause(glue: String(localized: "to")) { recipientWord }
             }
@@ -256,7 +256,9 @@ struct MovePrivateSentence<Head: View>: View {
                 toggle(.recipient)
             } label: {
                 Group {
-                    if let to = move.recipient {
+                    if let tag = move.tag {
+                        MoveWord(ZkMoneyWire.display(tag), ink: MoveSentence.settledInk)
+                    } else if let to = move.recipient {
                         MoveWord(YourAccount.short(to), ink: MoveSentence.settledInk)
                     } else {
                         MoveWord(String(localized: "address"), ink: open == .recipient ? DS.pickInk : DS.textTertiary)
@@ -352,8 +354,11 @@ struct MovePrivateSentence<Head: View>: View {
         let fee: String? = move.symbol == "USDC"
             ? move.fee.map { String(localized: "\(PrivateMoney.figure($0, decimals: 6, symbol: "USDC")) relayer fee") }
             : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { String(localized: "\($0) ETH relayer fee") }
+        // To a tag, zk.money's own fee follows the relayer's (prd §1874).
+        let zkFee = move.tag == nil ? nil
+            : String(localized: "zk.money keeps about $\(ZkMoneyWire.payFeeUSD.formatted(.number.precision(.fractionLength(2))))")
         // The relayer refused Tor and was asked directly (`TorFallback`).
-        let parts = [fee, String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
+        let parts = [fee, zkFee ?? String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }
 
@@ -390,7 +395,8 @@ struct MovePrivateSentence<Head: View>: View {
         // To, From, Network, Amount (prd §1789, §1802).
         if move.mode == .send {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
-                                      value: move.recipient.map(YourAccount.short) ?? "", empty: move.recipient == nil) { toggle(.recipient) })
+                                      value: move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short) ?? "",
+                                      empty: move.recipient == nil && move.tag == nil) { toggle(.recipient) })
             if live { rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) }) }
         } else if live {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
@@ -475,6 +481,17 @@ struct MovePrivateSentence<Head: View>: View {
 
     private func take(_ raw: String) {
         let address = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A zk.money tag typed here pays as Send's To does (prd §1874).
+        if move.onEthereum, let tag = ZkMoneyWire.tag(address) {
+            notAnAddress = false
+            withAnimation(DS.Motion.standard) {
+                move.pay(tag: tag)
+                open = nil
+            }
+            DSHaptic.selection()
+            if failed { Task { await move.read() } }
+            return
+        }
         guard PrivateMoney.isAddress(address) else {
             typed = address
             DSHaptic.failure()
@@ -484,7 +501,7 @@ struct MovePrivateSentence<Head: View>: View {
         }
         notAnAddress = false
         withAnimation(DS.Motion.standard) {
-            move.recipient = address
+            move.pay(tag: nil, address: address)
             open = nil
         }
         DSHaptic.selection()
@@ -655,7 +672,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// lead, the words with no verb, Etherscan its door.
     private func land(_ hash: String) {
         let title = PrivateMoney.activityTitle(figure: figure,
-                                               to: move.mode == .send ? move.recipient.map(YourAccount.short) : nil)
+                                               to: move.mode == .send ? (move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short)) : nil)
         PrivateActivity.land(hash: hash, title: title, chainId: move.network.chainId, context: context)
         chrome.refreshRooms()
     }

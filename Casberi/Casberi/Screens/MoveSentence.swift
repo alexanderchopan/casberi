@@ -129,7 +129,15 @@ struct MoveSentence: View {
 
     private func goPrivate(_ mode: PrivateMove.Mode) {
         privateMove.mode = mode
-        privateMove.recipient = mode == .send ? resolved?.address : nil
+        // **A TAG GOES AS A TAG (prd §1874).** Its deposit address was handed
+        // over as a plain address, where ETH could be picked and paid to an
+        // address that takes dollars only. The private sentence asks for a
+        // fresh one itself, in USDC; never a deposit address on Sepolia.
+        if mode == .send, paysZkMoney {
+            privateMove.pay(tag: privateMove.onEthereum ? ZkMoneyWire.tag(resolved?.name ?? "") : nil)
+        } else {
+            privateMove.pay(tag: nil, address: mode == .send ? resolved?.address : nil)
+        }
         withAnimation(DS.Motion.standard) { open = nil; privateMode = mode }
         DSHaptic.selection()
     }
