@@ -64,7 +64,10 @@ struct MoveSentence: View {
         _aztecMove = State(initialValue: aztecMove)
         // A send to someone still going, or failed, behind its sheet is the
         // sentence Move opens on (prd §1806).
-        let keptRailgun = railgun?.takeBack == true && railgun?.recipient != nil ? RailgunMove.kept : nil
+        // A send or a swap kept behind its sheet opens as it stands, its
+        // reason and Try again included (prd §1806, §1885).
+        let keptRailgun = (railgun?.takeBack == true && railgun?.recipient != nil)
+            || (railgun?.swap == true && RailgunMove.kept?.mode == .swap) ? RailgunMove.kept : nil
         let railgunMove = keptRailgun ?? RailgunMove()
         if keptRailgun == nil {
             railgunMove.mode = railgun?.swap == true ? .swap : railgun?.takeBack == true ? .takeBack : .deposit

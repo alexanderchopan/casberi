@@ -220,7 +220,8 @@ struct MoveStepCapsule: View {
                     chrome.moveAztec = .send
                     chrome.moveTray = true
                 } else if let kept = RailgunMove.kept, steps.awayFrom == .railgun {
-                    chrome.moveRailgun = .init(contract: kept.wanted, takeBack: true, recipient: kept.recipient)
+                    chrome.moveRailgun = .init(contract: kept.wanted, takeBack: kept.mode != .swap, recipient: kept.recipient,
+                                               swap: kept.mode == .swap)
                     chrome.moveTray = true
                 } else {
                     withAnimation(DS.Motion.standard) { steps.clearAway() }
