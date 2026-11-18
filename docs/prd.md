@@ -73785,3 +73785,17 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The phone's Home only (`homeHeadShown`); the rail's Home and Activity are unchanged.
 
 **Checks.** None new.
+
+## §1858 — Home: the wallet stands on the page with Public and Private as two sections, and what is new rises on a panel that fades to the page (amends §1857 items 1, 4, 5 and 6; §1838's chevron stands again) (user, 2026-11-17, of the mocks "Holdings within reach": "holdings are not the same as activity", "what if we bring back the idea that the feed is on a tray (not literally but looks like it with a curved top)", "today our holdings page separates public from private in two sections", "people want to see their tokens", "ok this is great. i'd say that works", of the panel's colour: "do the fade", of the sections' chevrons: "don't do that b/c they go to the same place", "build it and ship it")
+
+**Why.** §1857 stood Holdings in the feed, between Activity and Work, where something you have read as one more thing that happened. What you have and what is new are two kinds of thing, and the page now says so by where each stands.
+
+1. **The wallet is the page's head** (`homeMoneyStack`, `homeHoldingRows`): the balance with the day's pill at its trailing end; then "Public" with its total over its biggest tokens, and "Private" with its total over its biggest; then the doors. Two tokens each, three while nobody has built a feed (`homeFeedless`). The line "Public · Private" under the balance is deleted with its halves: the sections' heads carry the totals.
+2. **The balance is the one door to Holdings and wears its chevron again** (amends §1857 item 1). Public and Private are labels, no chevron and no tap. A public token opens itself, as on Holdings; a private one opens Holdings.
+3. **What is new rises on a panel** (`HomePanelCap`, `HomePanelFade`, `HomePanelPlace`): a curved top edge, radius 30, in `fillFaint`, fading to the page within 520pt, so the feed you scroll is the page's own ground. One layer behind the List, placed by the cap row and, once that row is recycled, by the scroll. Declined for the panel: one grey throughout, a darker grey, and the wallet on grey with the feed on black ("people will want to see the balance more").
+4. **The panel holds** the circles, Needs you, Activity and the feed. Activity leads with the watchlist's line again (amends §1857 item 5), its star in the rows' lead column and its name where their words start (`DSHomeFactRow(inRowColumns:)`); with no feed it shows the three newest moves. Holdings is no longer a feed section (`homeHoldingsSection` deleted).
+5. **A new person's "Set up your feed" leads the panel**, with its cross (§1857 item 6).
+
+**Mac half (§1402).** The phone's Home only (`homeHeadShown`).
+
+**Checks.** None new. **Seen** on the simulator with the demo: the head, the panel at rest, and the fade still moving with the page after its cap row had scrolled away.

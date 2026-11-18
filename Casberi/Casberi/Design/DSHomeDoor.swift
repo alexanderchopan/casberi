@@ -120,6 +120,10 @@ struct DSHomeFactRow: View {
     let items: [Item]
     /// Said in the pick's ink in the items' place, when there are none.
     var verb: String? = nil
+    /// The glyph stands in the rows' lead column and the name where their
+    /// words start (prd §1858, user: "make the indent the same so the glyphs
+    /// are aligned").
+    var inRowColumns = false
 
     var body: some View {
         // **A NAME IS NEVER CUT TO FIT (prd §1851).** The row drops its last
@@ -144,6 +148,8 @@ struct DSHomeFactRow: View {
             Image(systemName: glyph)
                 .dsGlyph(.subhead)
                 .foregroundStyle(DS.brandInk)
+                .frame(width: inRowColumns ? DSRoomChassis.headGlyph : nil)
+                .padding(.trailing, inRowColumns ? DSRoomChassis.headGap - DS.Space.s2 : 0)
                 .accessibilityHidden(true)
             Text(verbatim: name).foregroundStyle(DS.textSecondary).fixedSize()
             if shown.isEmpty, let verb {

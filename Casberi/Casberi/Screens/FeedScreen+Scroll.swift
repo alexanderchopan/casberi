@@ -494,7 +494,10 @@ extension FeedScreen {
         // the watchlist gone to Holdings' section.
         let word = homeHeadShown ? Self.homeWalletName : String(localized: "Wallet")
         let shown = fresh.isEmpty ? Array(moves.prefix(1)) : fresh
-        activitySection(word, homeHeadShown ? Array(shown.prefix(1)) : shown,
+        // With no feed the wallet takes the room: the three newest moves,
+        // seen or not (prd §1858).
+        let onHome = homeFeedless ? Array(moves.prefix(3)) : Array(shown.prefix(1))
+        activitySection(word, homeHeadShown ? onHome : shown,
                         // **THE ROW IS THE DOOR (prd §1849, user: "does wallet
                         // need a chevron if everything else doesn't have one?
                         // tapping a transaction could open history").** The
@@ -510,6 +513,7 @@ extension FeedScreen {
                             chrome.openWalletActivity(fromActivity: word)
                         } : nil,
                         keepsWord: true,
+                        lead: homeHeadShown && !homeBare ? AnyView(homeWatchRow) : nil,
                         rowOpens: {
             DSHaptic.selection()
             // Under Activity, and back to it (prd §1827, §1840).
@@ -538,6 +542,7 @@ extension FeedScreen {
                 chrome.openWalletActivity(fromActivity: word)
             })
         } rows: {
+            if homeHeadShown && !homeBare { homeWatchRow }
             DSPushRow(title: Text(yours == nil ? "Create an account" : "Your account"),
                       subtitle: yours == nil ? nil : wants.map { Text(verbatim: $0) } ?? Text("No moves yet"),
                       subtitleTone: wants != nil ? DS.attentionInk : DS.textSecondary,
@@ -930,7 +935,6 @@ extension FeedScreen {
                 // Needs you and the Wallet carry their word's anchor, not a
                 // category's id (prd §1843: Home's chips jump to them too).
                 let target = category == WalletSection.needsYou.label || category == Self.homeWalletName
-                    || category == WalletSection.holdings.label
                     ? Self.scrollAnchor(category) : Self.sectionID(category)
                 withTransaction(instant) { proxy.scrollTo(target, anchor: .top) }
             }

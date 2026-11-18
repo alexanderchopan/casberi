@@ -1728,6 +1728,8 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
+        // The feed's panel, behind the rows (prd §1858).
+        .background(alignment: .top) { if homeHeadShown { HomePanelFade() } }
         .overlay(alignment: .top) { feedSectionPill(proxy) }
         // Markets' and Notes' tiles left the floating bar (prd §1209a): the
         // band is face · bar · Wallet on every page (§1278), Notes' tiles stand under its
@@ -2053,6 +2055,12 @@ struct FeedScreen: View {
             let clamped = min(new, 140)
             guard abs(chrome.pullTension - clamped) > 0.5 else { return }
             chrome.pullTension = clamped
+        }
+        // Where the feed's panel is once its cap row has scrolled away
+        // (prd §1858): read by `HomePanelFade` alone, never by this body.
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, new in
+            guard homeHeadShown, isActive else { return }
+            HomePanelPlace.shared.offset = new
         }
         .dsSoftScrollEdges()
         // Arrival is `isActive`, not `onAppear` (2026-07-16, the pager): a

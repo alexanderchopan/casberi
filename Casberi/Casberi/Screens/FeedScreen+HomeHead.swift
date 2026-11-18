@@ -62,6 +62,8 @@ extension FeedScreen {
             // line and no chips under it.
             // Apps is a chip here once its panel has left the page's foot
             // (prd §1848), so it stands even before the account does.
+            // **PUBLIC, THEN PRIVATE, AS HOLDINGS HAS THEM (prd §1858).**
+            if homePlated && !homeBare { homeHoldingRows() }
             if !homeBare || !panel {
                 homeAccountLine(apps: homePlated || !panel, bare: homeBare)
                 // Air between the groups (user: "there is enough room to have
@@ -71,6 +73,13 @@ extension FeedScreen {
                                      bottom: 0, trailing: DSRoomChassis.rowInset))
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
+            }
+            // What is new stands on its panel from here down (prd §1858).
+            if !homeBare {
+                HomePanelCap()
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
             homeCircles(jumps, visible)
         }
@@ -137,38 +146,28 @@ extension FeedScreen {
                             .contentTransition(.numericText())
                             .lineLimit(1)
                             .minimumScaleFactor(0.45)
-                        // No chevron (prd §1857, user: "do we need the chevron on
-                        // the balance figure if we have it on holdings in
-                        // feed?", "keep the tap"): "Holdings ›" under it is the
-                        // door that says so; the tap stays a shortcut.
+                        // The one door to Holdings wears its chevron again
+                        // (prd §1858, §1815): no "Holdings" word stands on
+                        // Home to say so for it.
+                        Image(systemName: "chevron.right")
+                            .dsGlyph(.tick, weight: .bold)
+                            .foregroundStyle(DS.textSecondary)
+                            .accessibilityHidden(true)
+                        Spacer(minLength: DS.Space.s2)
+                        // The day beside the balance; a last reading says
+                        // when it was read (§825, §1593).
+                        if shown.asOf != nil, stamp.hasPrefix("as of") {
+                            Text(verbatim: stamp).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1)
+                        } else if let day {
+                            DSDayPill(words: day.words, ink: day.ink)
+                        }
+                        homeWhoseWord
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
                 .accessibilityHint(Text("Opens \(WalletSection.holdings.label)"))
-                // **ONE ROW OF FACTS (prd §1851).** The day, then Public and
-                // Private, on the balance's own left edge; a balance too wide
-                // for one row stands the halves under the day.
-                let lead = HStack(spacing: DS.Space.s2) {
-                    if shown.asOf != nil, stamp.hasPrefix("as of") {
-                        Text(verbatim: stamp).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-                    } else if let day {
-                        DSDayPill(words: day.words, ink: day.ink)
-                    }
-                    homeWhoseWord
-                }
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: DS.Space.s4) {
-                        lead
-                        homeHalves(total: shown.totalUSD, mask: mask)
-                    }
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        lead
-                        homeHalves(total: shown.totalUSD, mask: mask)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
             } else if walletAccountSlots.allSatisfy(\.id.isEmpty) {
                 // No account at all: the first one starts here (§1364).
                 WalletStartFigure(bare: homeBare).frame(height: homeBare ? nil : Self.homeStartHeight)
@@ -233,36 +232,6 @@ extension FeedScreen {
     /// The card's height while it has no balance to draw.
     static let homeStartHeight: CGFloat = 200
 
-    /// Public and Private under the balance (§1807): Yours and All only, as
-    /// the Private section stands (§1590).
-    @ViewBuilder
-    func homeHalves(total: Double, mask: String?) -> some View {
-        if !walletOnFollowing, selectedWallet.map(YourAccountDemo.isYours) ?? true {
-            let hidden = min(total, walletPrivateUSD)
-            Button { homeOpen(.holdings) } label: {
-                HStack(spacing: DS.Space.s4) {
-                    homeHalf(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
-                    homeHalf(String(localized: "Private"), mask ?? WalletValue.money(hidden))
-                }
-                .fixedSize()
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .accessibilityElement(children: .combine)
-        }
-    }
-
-    private func homeHalf(_ word: String, _ figure: String) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Text(verbatim: word).foregroundStyle(DS.textSecondary)
-            Text(verbatim: figure).monospacedDigit().foregroundStyle(DS.textPrimary)
-        }
-        // A size under the 52pt balance (prd §1857; `heading20` under the 84).
-        .dsText(.heading17)
-        .fontWeight(.bold)
-        .lineLimit(1)
-    }
-
     /// Whose money the card shows, said only when it is not yours (user:
     /// "lets get rid of the yours following all on the home screen and only
     /// have it on holdings … too much extra to tap"). The choice is
@@ -315,65 +284,65 @@ extension FeedScreen {
 
     // MARK: - Holdings
 
-    /// Holdings stands on Home once there is a balance to show, never on a
-    /// first run's start.
-    var homeHoldingsShown: Bool { homeHeadShown && !homeBare && homePlated }
+    /// Nobody has built a feed: no category beyond Day and Notes is
+    /// connected. The wallet then takes the room (prd §1858).
+    var homeFeedless: Bool {
+        !HomeScope.feedCategories(chips: chrome.chipOrder).contains {
+            $0 != RoomAccounts.dayRoom && $0 != HomeScope.notesSection
+        }
+    }
 
-    /// **HOLDINGS IS A SECTION, ONE ROW EACH (prd §1857, user: "maybe the
-    /// holdings just shows the top 1 in each category to be like the feeds
-    /// sort of are").** Under Activity: your biggest public token and your
-    /// biggest private one, each row's line saying which; the word opens
-    /// Holdings, a public row its token. One side empty draws one row;
-    /// private money is yours alone, so a followed wallet draws none (§1590).
-    /// The watchlist's line leads it, the one door to the watchlist on the
-    /// phone since the Wallet section left (§1851's row, moved).
+    /// **PUBLIC, THEN PRIVATE (prd §1858, user: "today our holdings page
+    /// separates public from private in two sections").** Under the balance,
+    /// on the page: each side's name and total, then its biggest tokens, two
+    /// each (three while there is no feed). The names are labels (user:
+    /// "don't do that b/c they go to the same place"); the balance is the
+    /// door to Holdings; a public token opens itself, as on Holdings. Private
+    /// money is yours alone (§1590), and a side with nothing draws nothing.
     @ViewBuilder
-    func homeHoldingsSection() -> some View {
-        if homeHoldingsShown {
-            let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-            // Each row only while its half of the line above has money, by
-            // the line's own sum (`homeHalves`), so the section never shows a
-            // public token beside "Public $0".
-            let total = portfolioShown?.totalUSD ?? 0
-            let hidden = min(total, walletPrivateUSD)
-            let pub = total - hidden < 0.01 ? nil
-                : (portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? [])
-                    .filter { $0.usd > 0 }
-                    .max { $0.usd != $1.usd ? $0.usd < $1.usd : $0.symbol > $1.symbol }
-            let priv = walletShowsPrivatePlaces && hidden >= 0.01
-                ? homePrivateByToken.filter { $0.value > 0 }
-                    .max { $0.value != $1.value ? $0.value < $1.value : $0.key > $1.key }
-                : nil
-            let word = WalletSection.holdings.label
-            SectionPanelGroup(anchor: Self.scrollAnchor(word)) {
-                ActivityWord(name: word, open: {
-                    DSHaptic.selection()
-                    ActivitySeen.shared.leavingForPage()
-                    homeOpen(.holdings)
-                })
-            } rows: {
-                // The watchlist's line leads (user: "yes do it first"): a
-                // thin line under the word, then the rows, so the section
-                // ends on a full row like every other.
-                homeWatchRow
-                if let pub {
-                    walletPreviewRow(pub.symbol, line: String(localized: "Public"),
-                                     figure: mask ?? WalletValue.money(pub.usd),
-                                     act: { walletOpenToken(pub) }) {
-                        AssetMark(name: pub.symbol, size: DS.Mark.badge)
-                    }
-                }
-                if let priv {
-                    walletPreviewRow(priv.key, line: String(localized: "Private"),
-                                     figure: mask ?? WalletValue.money(priv.value),
-                                     act: { homeOpen(.holdings) }) {
-                        AssetMark(name: priv.key, size: DS.Mark.badge)
-                    }
+    func homeHoldingRows() -> some View {
+        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+        let count = homeFeedless ? 3 : 2
+        let total = portfolioShown?.totalUSD ?? 0
+        let hidden = walletShowsPrivatePlaces ? min(total, walletPrivateUSD) : 0
+        let pub = total - hidden < 0.01 ? []
+            : Array((portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? [])
+                .filter { $0.usd > 0 }
+                .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.symbol < $1.symbol }
+                .prefix(count))
+        let priv = hidden < 0.01 ? []
+            : Array(homePrivateByToken.filter { $0.value > 0 }
+                .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+                .prefix(count))
+        if !pub.isEmpty {
+            homeSideHead(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
+            walletTokenPreview(pub, mask: mask) { walletOpenToken($0) }
+        }
+        if !priv.isEmpty {
+            homeSideHead(String(localized: "Private"), mask ?? WalletValue.money(hidden))
+            ForEach(priv, id: \.key) { held in
+                walletPreviewRow(held.key, figure: mask ?? WalletValue.money(held.value),
+                                 act: { homeOpen(.holdings) }) {
+                    AssetMark(name: held.key, size: DS.Mark.badge)
                 }
             }
-            .environment(\.feedSectionPanelFilled, false)
-            .environment(\.dsTitleOnly, true)
         }
+    }
+
+    /// A side's name and its total: a label, never a door.
+    private func homeSideHead(_ name: String, _ figure: String) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            Text(verbatim: name).dsText(.heading17).fontWeight(.bold).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: DS.Space.s2)
+            Text(verbatim: figure).dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+        }
+        .lineLimit(1)
+        .frame(minHeight: 34)
+        .padding(.top, DS.Space.s1)
+        .accessibilityElement(children: .combine)
+        .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
     }
 
     /// Your private balance by token, with your Aztec account's private
@@ -392,7 +361,7 @@ extension FeedScreen {
 
     // MARK: - The lines
 
-    /// **THE WATCHLIST LEADS HOLDINGS' SECTION (prd §1857, was the Wallet
+    /// **THE WATCHLIST LEADS ACTIVITY (prd §1858, back from Holdings' section, §1857, was the Wallet
     /// section's under §1851).** Its glyph, its name, the token that moved
     /// most today; empty, the verb. It opens the watchlist.
     @ViewBuilder
@@ -410,7 +379,7 @@ extension FeedScreen {
         } label: {
             DSHomeFactRow(glyph: WalletSection.watchlist.glyph, name: WalletSection.watchlist.label,
                           items: Self.homeWatchItems(tokens, quotes),
-                          verb: String(localized: "Watch a token"))
+                          verb: String(localized: "Watch a token"), inRowColumns: true)
         }
         .buttonStyle(RowPress())
         .task(id: tokens.map(\.id)) { await walletWatchlistRefresh(tokens) }
@@ -514,7 +483,6 @@ extension FeedScreen {
         // The first run draws no Wallet section to jump to (prd §1847).
         // (a bank's rows still draw one, and keep the jump).
         if !(homeBare && Self.walletMoves(money).isEmpty) { names.append(Self.homeWalletName) }
-        if homeHoldingsShown { names.append(WalletSection.holdings.label) }
         let byCategory = feedSectionRows(visible, hiding: [])
         let asked = Set(needs.map(\.source))
         for category in scrollCategories where category != HomeScope.notesSection {
@@ -576,7 +544,7 @@ extension FeedScreen {
                 }
                 .padding(.horizontal, DSRoomChassis.rowInset - (DSHomeCircleMetrics.column - DSHomeCircleMetrics.face) / 2)
             }
-            .listRowInsets(.init(top: Self.homeChipsGap, leading: 0, bottom: 0, trailing: 0))
+            .listRowInsets(EdgeInsets())
             .feedRowBackground()
             .listRowSeparator(.hidden)
         }
@@ -601,7 +569,6 @@ extension FeedScreen {
         // circles, so a jump to them goes nowhere.
         jumps.filter {
             $0 != PlaceTab.library.label && $0 != WalletSection.needsYou.label && $0 != homeWalletName
-                && $0 != WalletSection.holdings.label
         }
     }
 

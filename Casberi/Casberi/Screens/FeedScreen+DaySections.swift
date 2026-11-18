@@ -428,14 +428,15 @@ extension FeedScreen {
                 // closes for good (user: "can it be dismissable?").
                 let jumps = homeHeadShown ? homeJumpNames(visible, panel: false) : []
                 if homeHeadShown { homeHeadSection(visible, jumps: jumps, panel: false) }
+                // A new person's start leads the panel (prd §1858).
+                if starts, quietActivity, homeHeadShown { activityStartSection }
                 Group {
                     if !starts || homeHeadShown { activityNeedsSection(visible) }
                     if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
-                    if homeHeadShown { homeHoldingsSection() }
                 }
                 .environment(\.feedSectionLeads, Self.homeLeadAnchor(jumps))
                 .environment(\.feedSectionClose, homeHeadShown)
-                if starts, quietActivity { activityStartSection }
+                if starts, quietActivity, !homeHeadShown { activityStartSection }
             }
             feedScrollSections(visible,
                                hiding: drawsLead ? Set(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []) : [],
