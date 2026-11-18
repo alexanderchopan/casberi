@@ -135,8 +135,8 @@ use "$SENT" 'where [.noFeeToken, .feeTokenPending, .noBroadcaster].contains(fail
 # §1725: the relays through Tor on the phone, never a direct socket instead.
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'guard let tor = await TorClient.shared.session(isolation: Self.circuit) else { return nil }' "a relay socket rides Tor, or does not open"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'engine?.toPage(socket: id, "error", "Tor did not connect")' "no Tor, no socket: the page hears an error, never a direct socket"
-[[ $(grep -c 'try await relaysReady()' Casberi/Casberi/Model/RailgunEngine.swift) == 3 ]] \
-  && echo "  ✓ Tor is up before Waku dials, for the broadcasters, a send's quote and a swap's (§1875)" \
+[[ $(grep -c 'try await relaysReady()' Casberi/Casberi/Model/RailgunEngine.swift) == 4 ]] \
+  && echo "  ✓ Tor is up before Waku dials, for the broadcasters and every quote (§1875, §1877)" \
   || { echo "  ✗ Waku can dial before Tor is up (§1725)"; fail=1; }
 
 # §1721 item 3: one door to RailgunPocket.send, and its recipient is your account.
@@ -190,7 +190,7 @@ use "$MOVEF" "PrivateStepRows(run: run, confirmed: move.unlockedFirst" "the step
 use "$MOVEF" "steps.fail(Self.words(error))" "a failure stays on the step it reached"
 use "$MOVEF" "steps.begin(.move, plan: .signed(.ethereum))" "a move-in's rows are signed, as Aztec's Shield deposit's"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'PrivateSendSteps.shared.mark(key, from: .railgun)' "the engine's step lines move the rows"
-[[ $(grep -c "say('step proving')" "$ENGINE") == 5 && $(grep -c "say('step sent')" "$ENGINE") == 2 ]] \
+[[ $(grep -c "say('step proving')" "$ENGINE") == 7 && $(grep -c "say('step sent')" "$ENGINE") == 3 ]] \
   && echo "  ✓ every proof says it starts, and the broadcaster's hand-over says it left" \
   || { echo "  ✗ a Railgun proof or hand-over no longer says its step (§1728 item 5)"; fail=1; }
 grep -q "step proving" Casberi/Casberi/Resources/railgun-engine.js \
@@ -284,6 +284,42 @@ fi
 grep -q "quoteSwap" Casberi/Casberi/Resources/railgun-engine.js \
   && echo "  ✓ the bundled engine carries the swap" \
   || { echo "  ✗ the bundled engine was not rebuilt with the swap"; fail=1; }
+
+# §1877: a send to someone's private balance stays inside Railgun; Receive shows your private address.
+echo "railgun-selftest: the private send (§1877)"
+use "$ENGINE" "if (!validateRailgunAddress(to)) throw" "a private send goes only to a private address the SDK accepts"
+use "$ENGINE" "if (to === getRailgunAddress(walletID)) throw" "never to your own private address"
+[[ $(grep -c "getAddress(tx.to) !== getAddress(PROXY)\|getAddress(transaction.to) !== getAddress(PROXY)" "$ENGINE") -ge 3 ]] \
+  && echo "  ✓ every private send is a transaction to Railgun's proxy" \
+  || { echo "  ✗ a private send's transaction is no longer held to Railgun's proxy"; fail=1; }
+use "$ENGINE" "generateTransferProof(V2, NETWORK, walletID, encryptionKey, false," "the receiver is never shown who sent it"
+use "$POCKET" "guard RailgunSwap.isPrivateAddress(to)" "the pocket refuses anything but a private address"
+privrun=$(awk '/case \.takeBack where toPrivate && viaFresh:/{on=1} on&&/case \.takeBack where toSomeoneElse && viaFresh:/{exit} on' "$MOVEF")
+if [[ -z "$privrun" ]] || printf '%s' "$privrun" | grep -q "RailgunPocket.send(token:" \
+   || ! printf '%s' "$privrun" | grep -q "RailgunPocket.transfer(plan" || ! printf '%s' "$privrun" | grep -q "RailgunPocket.transferFromFresh(plan"; then
+  echo "  ✗ a send to a private address reaches your account, or leaves Railgun"; fail=1
+else
+  echo "  ✓ a send to a private address stays inside Railgun, carried by a broadcaster or a fresh sender"
+fi
+mkdir -p "$TMP/addr"
+cat > "$TMP/addr/main.swift" <<'SWIFT'
+import Foundation
+var bad2 = 0
+func check2(_ ok: Bool, _ what: String) { if ok { print("  ✓ \(what)") } else { print("  ✗ \(what)"); bad2 += 1 } }
+let good = "0zk1qyqrw8a5h9mc0tk3n6fz2l4s7vxj9uq8e5pd3rjkm6g2wa0tyz4h7cxs9ld3unv8kq2fe6mrx5pa4w0jg7t3yhs9cvz2lm8dq6rkue0xan5tw3pfy8hg4jv7f3a"
+check2(RailgunSwap.isPrivateAddress(good), "a 127-character 0zk address is private")
+check2(!RailgunSwap.isPrivateAddress(String(good.dropLast())), "one character short is not")
+check2(!RailgunSwap.isPrivateAddress(good.replacingOccurrences(of: "q6r", with: "qbr")), "a character outside bech32 is not")
+check2(!RailgunSwap.isPrivateAddress("0x8ba1f109551bd432803012645ac136ddd64dba72"), "a public address is not")
+if bad2 > 0 { exit(1) }
+SWIFT
+if ! xcrun swiftc -O -o "$TMP/addr/run" "$SWAP" "$TMP/swap/stubs.swift" "$TMP/addr/main.swift" 2> "$TMP/swap/err2"; then
+  echo "  ✗ the private address check does not compile"; head -10 "$TMP/swap/err2"; fail=1
+elif ! "$TMP/addr/run"; then fail=1; fi
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" "privateAddress = try await RailgunPocket.privateAddress()" "Receive reads your private address from your own wallet"
+grep -q "broadcastTransfer" Casberi/Casberi/Resources/railgun-engine.js \
+  && echo "  ✓ the bundled engine carries the private send" \
+  || { echo "  ✗ the bundled engine was not rebuilt with the private send"; fail=1; }
 
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

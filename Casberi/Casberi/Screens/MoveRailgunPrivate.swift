@@ -151,9 +151,18 @@ final class RailgunMove {
 
     /// A send to someone else: a broadcaster sends it, never your account.
     var toSomeoneElse: Bool {
-        guard mode == .takeBack, let recipient, PrivateMoney.isAddress(recipient) else { return false }
+        guard mode == .takeBack, let recipient else { return false }
+        if toPrivate { return true }
+        guard PrivateMoney.isAddress(recipient) else { return false }
         return recipient.lowercased() != YourAccountKey.address?.lowercased()
     }
+
+    /// To someone's private balance on Railgun (prd §1877): the send stays
+    /// inside Railgun, a broadcaster (or a fresh sender) carrying it.
+    var toPrivate: Bool { mode == .takeBack && recipient.map(RailgunSwap.isPrivateAddress) == true }
+    /// A note only the receiver can read (prd §1877).
+    var note = ""
+    private(set) var transferPlan: RailgunPocket.TransferPlan?
 
     static var floorUSD: Double { RailgunRouting.floorUSD }
 
@@ -201,6 +210,7 @@ final class RailgunMove {
         quoteTask?.cancel()
         quote = nil
         swapPlan = nil
+        transferPlan = nil
         demoBack = nil
         switch stage {
         case .quoting, .needsFees, .failed: stage = .ready
@@ -298,6 +308,7 @@ final class RailgunMove {
     /// asks nothing: its fee is 0.14 USDC.
     func requote() async {
         if mode == .swap { await requoteSwap(); return }
+        if toPrivate { await requoteTransfer(); return }
         guard let picked, let to = recipient, toSomeoneElse else { return }
         quote = nil
         viaFresh = false
@@ -390,6 +401,40 @@ final class RailgunMove {
             stage = !viaFresh && feeToken == nil ? .failed(String(localized: "Railgun did not answer. Nothing was sent.")) : .ready
         } catch {
             guard self.picked == picked, self.buy == buy else { return }
+            stage = .failed(Self.words(error))
+        }
+    }
+
+    /// Prices a send to a private address (prd §1877). The demo asks
+    /// nothing: its fee is 0.14 USDC.
+    private func requoteTransfer() async {
+        guard let picked, let to = recipient else { return }
+        transferPlan = nil
+        viaFresh = false
+        stage = .quoting
+        if DemoMode.isActive { stage = .ready; return }
+        do {
+            let plan = try await RailgunPocket.quoteTransfer(token: picked.contract, amount: picked.units, to: to, memo: note)
+            guard self.picked == picked, recipient == to else { return }
+            if let b = plan.broadcast {
+                if let held = RailgunHoldings.shared.shown.first(where: { $0.id == b.feeToken.lowercased() }) {
+                    feeToken = (held.symbol, held.decimals)
+                } else if let listed = await YourAccountTokens.lookUp(b.feeToken, on: YourAccountOp.ethereum) {
+                    feeToken = (listed.token.symbol, listed.token.decimals)
+                } else {
+                    feeToken = nil
+                }
+                feePriceUSD = nil
+                if let symbol = feeToken?.symbol.lowercased(), symbol != "weth" {
+                    let prices = await MainnetPrices.prices(for: [symbol])
+                    feePriceUSD = prices[symbol] ?? prices[symbol.uppercased()]
+                }
+            }
+            viaFresh = plan.broadcast == nil
+            transferPlan = plan
+            stage = !viaFresh && feeToken == nil ? .failed(String(localized: "Railgun did not answer. Nothing was sent.")) : .ready
+        } catch {
+            guard self.picked == picked, recipient == to else { return }
             stage = .failed(Self.words(error))
         }
     }
@@ -546,7 +591,7 @@ final class RailgunMove {
     }
 
     /// The broadcaster's fee, hex base units: a send's or a swap's.
-    private var broadcastFee: String? { quote?.fee ?? swapPlan?.broadcast?.fee }
+    private var broadcastFee: String? { quote?.fee ?? swapPlan?.broadcast?.fee ?? transferPlan?.broadcast?.fee }
 
     /// About $10 of ETH, as WETH, for broadcasters' fees.
     func addFees() async {
@@ -614,6 +659,19 @@ final class RailgunMove {
                 }
                 steps.finish()
                 stage = .done(String(localized: "On its way: private in about an hour."))
+            case .takeBack where toPrivate && viaFresh:
+                guard let plan = transferPlan else { return }
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.transferFromFresh(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) }) { _ in }
+                finishSteps()
+                stage = .done(String(localized: "Sent privately."))
+            case .takeBack where toPrivate:
+                guard let plan = transferPlan else { return }
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.transfer(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
+                transferPlan = nil
+                finishSteps()
+                stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse && viaFresh:
                 stage = .working(String(localized: "Confirm with Face ID"))
                 _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
@@ -801,6 +859,8 @@ struct MoveRailgunSentence<Head: View>: View {
     /// The cost's list stands in the rows' place (prd §1876).
     @State private var costOpen = false
     @FocusState private var typing: Bool
+    /// The note to a private address is being written (prd §1877).
+    @FocusState private var writing: Bool
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -930,7 +990,8 @@ struct MoveRailgunSentence<Head: View>: View {
                 // Your account (your account sends it), or someone else (a
                 // broadcaster sends it, §1721 item 3); a tap picks who.
                 MoveWordsClause(glue: String(localized: "to"),
-                                words: move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account."),
+                                words: move.toPrivate ? String(localized: "\(YourAccount.short(move.recipient ?? ""))'s private balance.")
+                                    : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account."),
                                 ink: DS.textPrimary,
                                 action: { if picking { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
@@ -1029,6 +1090,7 @@ struct MoveRailgunSentence<Head: View>: View {
     private var costTail: String? {
         switch move.mode {
         case .deposit: String(localized: "private in about an hour")
+        case .takeBack where move.toPrivate: String(localized: "only they see how much")
         case .takeBack where move.toSomeoneElse: String(localized: "your account isn't on it")
         case .takeBack: nil
         case .swap: String(localized: "your account isn't on it")
@@ -1105,7 +1167,8 @@ struct MoveRailgunSentence<Head: View>: View {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
         case .takeBack:
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
-                                      value: move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")) {
+                                      value: move.toPrivate ? String(localized: "Private · \(YourAccount.short(move.recipient ?? ""))")
+                                          : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")) {
                 leave(.pickRecipient)
             })
             rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
@@ -1127,11 +1190,38 @@ struct MoveRailgunSentence<Head: View>: View {
                                   field: AnyView(amountField), typing: typing) {
             withAnimation(DS.Motion.standard) { open = false; buyOpen = false; amountOpen.toggle() }
         })
+        // A note only they can read, to a private address (prd §1877).
+        if move.toPrivate {
+            // Optional, so never "Choose" in the pick's ink: grey until written.
+            rows.append(MoveChoiceRow(id: "note", name: String(localized: "Note"),
+                                      value: move.note.isEmpty ? String(localized: "Optional") : move.note,
+                                      ink: move.note.isEmpty ? DS.textSecondary : nil,
+                                      field: AnyView(noteField), typing: writing) {
+                withAnimation(DS.Motion.standard) { open = false; amountOpen = false }
+                writing = true
+            })
+        }
         // What comes back, after Railgun's two fees (prd §1875).
         if move.mode == .swap, let gets = move.getsWords {
             rows.append(MoveChoiceRow(id: "gets", name: String(localized: "You get"), value: gets, fixed: true) {})
         }
         return rows
+    }
+
+    /// The note, typed: at most 140 characters, which only the receiver
+    /// can read; a change asks the broadcaster again, as the amount does.
+    private var noteField: some View {
+        TextField(text: $move.note, prompt: Text("Optional").foregroundStyle(DS.textTertiary)) { Text("Note") }
+            .focused($writing)
+            .dsText(.body17)
+            .multilineTextAlignment(.trailing)
+            .foregroundStyle(DS.textPrimary)
+            .tint(DS.pickInk)
+            .submitLabel(.done)
+            .onChange(of: move.note) { _, now in
+                if now.count > 140 { move.note = String(now.prefix(140)); return }
+                move.amountChanged()
+            }
     }
 
     private func toggleBuy() {
@@ -1254,7 +1344,7 @@ struct MoveRailgunSentence<Head: View>: View {
 
     private var ready: Bool {
         move.stage == .ready && move.amountOK && !DemoMode.isActive
-            && (!move.toSomeoneElse || move.viaFresh || (move.quote != nil && move.feeWords != nil))
+            && (!move.toSomeoneElse || move.viaFresh || ((move.quote != nil || move.transferPlan != nil) && move.feeWords != nil))
             && (move.mode != .swap || (move.swapPlan != nil && (move.viaFresh || move.feeWords != nil)))
     }
 

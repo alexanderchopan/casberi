@@ -275,6 +275,21 @@ final class RailgunEngine: NSObject {
         try await call(.prepareSwap, swap, as: Wire.PreparedSwap.self)
     }
 
+    // MARK: - A private send (prd §1877)
+
+    func quoteTransfer(_ t: Wire.Transfer) async throws -> Wire.TransferQuote {
+        try await relaysReady()
+        return try await call(.quoteTransfer, t, as: Wire.TransferQuote.self)
+    }
+
+    func broadcastTransfer(_ t: Wire.Transfer) async throws -> Wire.Broadcasted {
+        try await call(.broadcastTransfer, t, as: Wire.Broadcasted.self)
+    }
+
+    func prepareTransfer(_ t: Wire.Transfer) async throws -> Wire.PreparedTransfer {
+        try await call(.prepareTransfer, t, as: Wire.PreparedTransfer.self)
+    }
+
     /// The relays the broadcasters are reached through: their `NetworkReach`
     /// entry's.
     static let broadcasterService = "Railgun broadcasters"

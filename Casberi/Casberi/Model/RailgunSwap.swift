@@ -53,6 +53,15 @@ enum RailgunSwap {
         calls.map { .init(to: $0.to, data: SafeABI.hex($0.data)) }
     }
 
+    /// Whether `s` is a private address on Railgun (prd §1877): `0zk1`, then
+    /// bech32 characters, 127 in all, as the SDK writes one. The engine asks
+    /// the SDK again before anything is proved.
+    static func isPrivateAddress(_ s: String) -> Bool {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        let charset = Set("qpzry9x8gf2tvdw0s3jn54khce6mua7l")
+        return t.count == 127 && t.hasPrefix("0zk1") && t.dropFirst(4).allSatisfy { charset.contains($0) }
+    }
+
     // MARK: - Arithmetic on whole base units
 
     private static func whole(_ s: String) -> Decimal? {

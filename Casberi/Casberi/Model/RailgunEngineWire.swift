@@ -16,7 +16,7 @@ enum RailgunEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, sync, balances, prepareShield, prepareUnshield, broadcasters, quoteBroadcast, broadcastSend,
-             quoteSwap, broadcastSwap, prepareSwap, close
+             quoteSwap, broadcastSwap, prepareSwap, quoteTransfer, broadcastTransfer, prepareTransfer, close
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -122,6 +122,19 @@ enum RailgunEngineWire {
         let amount: String
         let buyToken: String
         let calls: [Call]
+        var feeToken: String? = nil
+        var fee: String? = nil
+        var maxFeePerGas: String? = nil
+        var maxPriorityFeePerGas: String? = nil
+    }
+
+    /// A private send (prd §1877): `amount` of `token` to another private
+    /// address, with a note only its receiver can read.
+    struct Transfer: Encodable, Equatable {
+        let token: String
+        let amount: String
+        let to: String
+        var memo: String? = nil
         var feeToken: String? = nil
         var fee: String? = nil
         var maxFeePerGas: String? = nil
@@ -295,6 +308,27 @@ enum RailgunEngineWire {
         let token: String
         let amount: String
         let buyToken: String
+        let proofMs: Int
+        let ms: Int
+    }
+
+    struct TransferQuote: Decodable, Equatable {
+        let token: String
+        let amount: String
+        let feeToken: String
+        let fee: String
+        let gasEstimate: String
+        let gasPrice: String
+        let broadcaster: String
+        let expiration: Double
+        let ms: Int
+    }
+
+    struct PreparedTransfer: Decodable, Equatable {
+        let tx: Tx
+        let gasEstimate: String
+        let token: String
+        let amount: String
         let proofMs: Int
         let ms: Int
     }

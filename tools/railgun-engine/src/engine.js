@@ -25,6 +25,7 @@ import {
   gasEstimateForUnprovenUnshieldBaseToken, generateUnshieldBaseTokenProof, populateProvedUnshieldBaseToken,
   calculateBroadcasterFeeERC20Amount,
   gasEstimateForUnprovenCrossContractCalls, generateCrossContractCallsProof, populateProvedCrossContractCalls,
+  gasEstimateForUnprovenTransfer, generateTransferProof, populateProvedTransfer, validateRailgunAddress,
 } from '@railgun-community/wallet';
 import { WakuBroadcasterClient, BroadcasterTransaction } from '@railgun-community/waku-broadcaster-client-web';
 import { NetworkName, NETWORK_CONFIG, TXIDVersion, EVMGasType } from '@railgun-community/shared-models';
@@ -218,6 +219,22 @@ async function balanceList() {
 let broadcasting = null;
 let quoted = null;
 let quotedSwap = null;
+let quotedTransfer = null;
+
+// A private send's parts, checked (prd §1877): the token and its amount, a
+// private address that is not this wallet's own, and a note of at most 140
+// characters, which only the receiver can read. Nothing leaves Railgun.
+function transferParts(p) {
+  const amount = BigInt(p.amount);
+  if (amount <= 0n) throw new Error('amount must be positive');
+  const token = getAddress(p.token);
+  const to = String(p.to ?? '').trim();
+  if (!validateRailgunAddress(to)) throw Object.assign(new Error('not a private address'), { name: 'NotPrivateAddress' });
+  if (to === getRailgunAddress(walletID)) throw Object.assign(new Error('that is your own private address'), { name: 'NotPrivateAddress' });
+  const memo = p.memo ? String(p.memo).slice(0, 140) : undefined;
+  return { token, amount, to, memo, recipients: [{ tokenAddress: token, amount, recipientAddress: to }] };
+}
+const transferKey = (p) => plainJSON([getAddress(p.token), BigInt(p.amount), String(p.to).trim(), p.memo ? String(p.memo).slice(0, 140) : null]);
 
 // A swap's parts, checked: the token out and its amount, the token back, and
 // the calls the adapter makes. No call may touch Railgun's own contracts or
@@ -620,9 +637,86 @@ const methods = {
     };
   },
 
+  // ---- A private send (prd §1877): `amount` of `token` from this wallet to
+  // another private address, inside Railgun: nothing public names either
+  // side or the amount. Carried as a send to a public address is (§1723,
+  // §1726): a broadcaster paid inside Railgun, or a fresh address of yours.
+
+  async quoteTransfer(p) {
+    requireOpen();
+    const t = now();
+    await startBroadcasters();
+    const s = transferParts(p);
+    const feeToken = getAddress(p.feeToken);
+    const selected = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, false);
+    if (!selected) throw Object.assign(new Error(`no broadcaster takes ${feeToken}`), { name: 'NoBroadcaster' });
+    const gasPrice = (BigInt(await rpc('eth_gasPrice', [])) * 4n) / 3n;
+    const feeTokenDetails = { tokenAddress: feeToken, feePerUnitGas: BigInt(selected.tokenFee.feePerUnitGas) };
+    const estimating = { evmGasType: EVMGasType.Type1, gasEstimate: 0n, gasPrice };
+    const est = await gasEstimateForUnprovenTransfer(V2, NETWORK, walletID, encryptionKey, s.memo, s.recipients, [], estimating, feeTokenDetails, false);
+    const details = { evmGasType: EVMGasType.Type1, gasEstimate: est.gasEstimate, gasPrice };
+    const fee = calculateBroadcasterFeeERC20Amount(feeTokenDetails, details).amount;
+    quotedTransfer = { ...s, key: transferKey(p), feeToken, fee, details, gasPrice, selected };
+    return {
+      token: s.token, amount: hex(s.amount), feeToken, fee: hex(fee), gasEstimate: hex(est.gasEstimate), gasPrice: hex(gasPrice),
+      broadcaster: selected.railgunAddress, expiration: Number(selected.tokenFee.expiration ?? 0), ms: Math.round(now() - t),
+    };
+  },
+
+  async broadcastTransfer(p) {
+    requireOpen();
+    const t = now();
+    const q = quotedTransfer;
+    if (!q || transferKey(p) !== q.key || getAddress(p.feeToken) !== q.feeToken || BigInt(p.fee) !== q.fee) {
+      throw Object.assign(new Error('the send is not the one quoted'), { name: 'NotQuoted' });
+    }
+    if (q.selected.tokenFee.expiration && Date.now() > Number(q.selected.tokenFee.expiration)) {
+      throw Object.assign(new Error('the broadcaster offer expired'), { name: 'QuoteExpired' });
+    }
+    const feeRecipient = { tokenAddress: q.feeToken, amount: q.fee, recipientAddress: q.selected.railgunAddress };
+    const pt = now();
+    say('step proving');
+    await generateTransferProof(V2, NETWORK, walletID, encryptionKey, false, q.memo, q.recipients, [], feeRecipient, false, q.gasPrice, () => {});
+    const proofMs = Math.round(now() - pt);
+    const populated = await populateProvedTransfer(V2, NETWORK, walletID, false, q.memo, q.recipients, [], feeRecipient, false, q.gasPrice, q.details);
+    const tx = populated.transaction;
+    if (getAddress(tx.to) !== getAddress(PROXY)) throw Object.assign(new Error(`send goes to ${tx.to}, not Railgun`), { name: 'NotRailgun' });
+    const sending = await BroadcasterTransaction.create(V2, tx.to, tx.data, q.selected.railgunAddress, q.selected.tokenFee.feesID,
+      CHAIN, populated.nullifiers ?? [], q.gasPrice, false, populated.preTransactionPOIsPerTxidLeafPerList ?? {});
+    let txHash;
+    say('step sent');
+    try {
+      txHash = await sending.send();
+    } catch (e) {
+      quotedTransfer = null;
+      throw Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
+    }
+    quotedTransfer = null;
+    return { txHash, proofMs, ms: Math.round(now() - t) };
+  },
+
+  async prepareTransfer(p) {
+    requireOpen();
+    const t = now();
+    const s = transferParts(p);
+    const est = await gasEstimateForUnprovenTransfer(V2, NETWORK, walletID, encryptionKey, s.memo, s.recipients, [], gasDetails(p), undefined, true);
+    const pt = now();
+    say('step proving');
+    await generateTransferProof(V2, NETWORK, walletID, encryptionKey, false, s.memo, s.recipients, [], undefined, true, undefined, () => {});
+    const proofMs = Math.round(now() - pt);
+    const { transaction } = await populateProvedTransfer(V2, NETWORK, walletID, false, s.memo, s.recipients, [], undefined, true, undefined,
+      gasDetails(p, est.gasEstimate));
+    if (getAddress(transaction.to) !== getAddress(PROXY)) throw Object.assign(new Error(`send goes to ${transaction.to}, not Railgun`), { name: 'NotRailgun' });
+    return {
+      tx: { to: getAddress(transaction.to), data: transaction.data, value: hex(transaction.value ?? 0n) },
+      gasEstimate: hex(est.gasEstimate), token: s.token, amount: hex(s.amount), proofMs, ms: Math.round(now() - t),
+    };
+  },
+
   async close() {
     quoted = null;
     quotedSwap = null;
+    quotedTransfer = null;
     if (walletID && openedRandom) await deleteWalletByID(walletID).catch(() => {});
     if (walletID) unloadWalletByID(walletID);
     walletID = null;

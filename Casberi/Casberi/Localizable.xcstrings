@@ -18610,6 +18610,34 @@
         }
       }
     },
+    "%@'s private balance." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "el saldo privado de %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の非公開残高。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 비공개 잔액."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 的私密余额。"
+          }
+        }
+      }
+    },
     "%@'s registration" : {
       "localizations" : {
         "es" : {
@@ -45274,6 +45302,34 @@
         }
       }
     },
+    "A private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密余额"
+          }
+        }
+      }
+    },
     "A proof here still names a snapshot the chain remembers, for another %@." : {
       "localizations" : {
         "es" : {
@@ -55834,6 +55890,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 上的任何代币。"
+          }
+        }
+      }
+    },
+    "Anyone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquiera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "誰でも"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "누구나"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何人"
           }
         }
       }
@@ -155462,6 +155546,34 @@
         }
       }
     },
+    "Railgun did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgunから応答がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun이 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 没有响应"
+          }
+        }
+      }
+    },
     "Railgun did not answer. Nothing was sent." : {
       "localizations" : {
         "es" : {
@@ -197950,6 +198062,34 @@
         }
       }
     },
+    "Their private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Su saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相手の非公開残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "상대의 비공개 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "对方的私密余额"
+          }
+        }
+      }
+    },
     "Theme" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -231435,6 +231575,34 @@
         }
       }
     },
+    "Your private address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu dirección privada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの非公開アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 비공개 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的私密地址"
+          }
+        }
+      }
+    },
     "Your private balance" : {
       "localizations" : {
         "es" : {
@@ -247957,6 +248125,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "再有一个签名就会执行"
+          }
+        }
+      }
+    },
+    "only they see how much" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "solo esa persona ve cuánto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "金額は相手にしか見えません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "금액은 상대만 볼 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只有对方能看到金额"
           }
         }
       }

@@ -28,6 +28,14 @@ struct MoveFreshSentence<Head: View>: View {
     @ViewBuilder let head: () -> Head
 
     @State private var copied = false
+    /// From a private balance (prd §1877): your private address on Railgun,
+    /// for a payer who holds a private balance of their own.
+    @State private var fromPrivate = false
+    @State private var fromOpen = false
+    @State private var privateAddress: String?
+    @State private var privateFailed = false
+    /// The demo's private address: nothing is opened.
+    static var demoPrivateAddress: String { "0zk1qyqrw8a5h9mc0tk3n6fz2l4s7vxj9uq8e5pd3rjkm6g2wa0tyz4h7cxs9ld3unv8kq2fe6mrx5pa4w0jg7t3yhs9cvz2lm8dq6rkue0xan5tw3pfy8hg4jv7f3a" }
     @State private var reading = false
     /// A failed token move whose address is short of gas (prd §1823), read
     /// after each look, never in a body.
@@ -58,11 +66,33 @@ struct MoveFreshSentence<Head: View>: View {
                     .allowsHitTesting(false)
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     // Its one network, said as a row and fixed (prd §1802).
-                    MoveChoiceRows(rows: [MoveChoiceRow(id: "network", name: String(localized: "Network"), value: network.name,
+                    MoveChoiceRows(rows: [MoveChoiceRow(id: "network", name: String(localized: "Network"), value: shownNetwork,
                                                         mark: MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) },
-                                                        fixed: true) {}],
-                                   open: .constant(nil)) { _ in EmptyView() }
-                    if let entry {
+                                                        fixed: true) {},
+                                          MoveChoiceRow(id: "from", name: String(localized: "From"),
+                                                        value: fromPrivate ? String(localized: "A private balance") : String(localized: "Anyone")) {
+                                              withAnimation(DS.Motion.standard) { fromOpen.toggle() }
+                                              DSHaptic.selection()
+                                          }],
+                                   open: Binding(get: { fromOpen ? "from" : nil }, set: { if $0 == nil { fromOpen = false } })) { _ in fromMenu }
+                    if fromPrivate {
+                        // Your private address (prd §1877): the same every
+                        // time; only a private balance on Railgun can pay it.
+                        if let privateAddress {
+                            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                Text("Your private address").dsText(.body17).foregroundStyle(DS.textSecondary)
+                                code(privateAddress)
+                            }
+                            ShareLink(item: privateAddress) {
+                                MoveVerbRowLabel(title: String(localized: "Share"), glyph: "square.and.arrow.up")
+                            }
+                            .buttonStyle(RowPress())
+                        } else if privateFailed {
+                            Text("Railgun did not answer").dsText(.body17).foregroundStyle(DS.attentionInk)
+                        } else {
+                            DSSpinner(size: .small)
+                        }
+                    } else if let entry {
                         // Named for what it is (prd §1803): good once.
                         VStack(alignment: .leading, spacing: DS.Space.s2) {
                             Text("One-time address").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -86,7 +116,7 @@ struct MoveFreshSentence<Head: View>: View {
                         }
                     }
                     // One line, only when there is something to say.
-                    line
+                    if !fromPrivate { line }
                     // **A WAY ON FROM "NEEDS A LITTLE PRIVATE ETH" (prd §1779; user,
                     // of a tester's 1,000 USDC: "do 1 and 2 before we ship").** A
                     // new account has no private ETH to pay with, so the line was
@@ -126,6 +156,8 @@ struct MoveFreshSentence<Head: View>: View {
             book.ensureCurrent()
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "freshAddressNew") { book.make() }
+            // `-receiveFromPrivate YES` (prd §1877): From › A private balance.
+            if UserDefaults.standard.bool(forKey: "receiveFromPrivate") { fromPrivate = true; await readPrivateAddress() }
             NSLog("[Casberi] moveFreshReceive: %@ | %d addresses", entry.map { YourAccount.short($0.address) } ?? "none", book.entries.count)
             #endif
             // Opened, every address is looked at at once (a failed move is
@@ -179,6 +211,45 @@ struct MoveFreshSentence<Head: View>: View {
 
     /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1567).
     private var network: PrivacyNetwork { book.network ?? .ethereum }
+
+    /// Anyone (a one-time address) or a private balance (your private
+    /// address); picking the second reads it once.
+    private var fromMenu: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach([false, true], id: \.self) { priv in
+                Button {
+                    withAnimation(DS.Motion.standard) { fromPrivate = priv; fromOpen = false; copied = false }
+                    DSHaptic.selection()
+                    if priv, privateAddress == nil { Task { await readPrivateAddress() } }
+                } label: {
+                    HStack {
+                        Text(priv ? "A private balance" : "Anyone").dsText(.body17)
+                            .foregroundStyle(priv == fromPrivate ? DS.textSecondary : DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                    }
+                    .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityAddTraits(priv == fromPrivate ? [.isSelected] : [])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func readPrivateAddress() async {
+        privateFailed = false
+        if DemoMode.isActive { privateAddress = Self.demoPrivateAddress; return }
+        do { privateAddress = try await RailgunPocket.privateAddress() } catch { privateFailed = true }
+    }
+
+    /// What the sentence and the act are about: your private address, or
+    /// the one-time one.
+    private var shownAddress: String? { fromPrivate ? privateAddress : entry?.address }
+
+    /// Railgun is Ethereum's alone, in every build (a DEBUG build's one-time
+    /// address is on Sepolia).
+    private var shownNetwork: String { fromPrivate ? String(localized: "Ethereum") : network.name }
 
     /// The address in groups of five, as public Receive shows yours; a tap
     /// copies the whole (prd §1719: no QR).
@@ -262,9 +333,9 @@ struct MoveFreshSentence<Head: View>: View {
             MoveFlow {
                 MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
                 MovePhrase(String(localized: "your private balance"), glue: String(localized: "to"), ink: DS.textPrimary)
-                MovePhrase(network.name, glue: String(localized: "on"))
-                if let entry {
-                    MovePhrase(YourAccount.short(entry.address) + ".", glue: String(localized: "at"), ink: DS.textPrimary)
+                MovePhrase(shownNetwork, glue: String(localized: "on"))
+                if let shown = shownAddress {
+                    MovePhrase(YourAccount.short(shown) + ".", glue: String(localized: "at"), ink: DS.textPrimary)
                 }
             }
             // The sentence is no control (prd §1781).
@@ -275,8 +346,8 @@ struct MoveFreshSentence<Head: View>: View {
             HStack(alignment: .center, spacing: DS.Space.s2) {
                 // Back to where it was picked, never Move's menu (prd §1803).
                 MoveBackCard(act: leave, disabled: moving)
-                if let entry {
-                    Button { copy(entry.address) } label: {
+                if let shown = shownAddress {
+                    Button { copy(shown) } label: {
                         MoveSentence.actCard(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true)
                     }
                     .buttonStyle(PressSpring())

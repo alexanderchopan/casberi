@@ -5495,6 +5495,15 @@ struct MoveSentence: View {
         // The person the line above goes to leads, said so (§1442h).
         let above = keptSends.last.flatMap { p in WalletWatch.sameAddress(p.to, resolved?.address ?? "") ? nil : p }
         return VStack(alignment: .leading, spacing: 0) {
+            // **A PRIVATE ADDRESS (prd §1877):** a Railgun address pasted in
+            // To is someone's private balance: the send stays inside Railgun,
+            // and nothing public names either side or the amount.
+            if RailgunPocket.available, RailgunSwap.isPrivateAddress(q) {
+                listHeader(String(localized: "Private"))
+                listRow(String(localized: "Their private balance"), sub: YourAccount.short(q), symbol: "eye.slash") {
+                    goRailgun(.takeBack, contract: nil, recipient: q)
+                }
+            }
             // **RECENT (prd §1752):** the last people Send sent to from here,
             // at the top of the list, above Private and your book; typing searches
             // the book, so the three stand only while the field is blank.

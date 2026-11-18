@@ -92,12 +92,13 @@ struct MoveTrayPresenter: ViewModifier {
         // `back` as a Railgun row in Holdings, `swap` as a private token
         // picked in Swap (prd §1875).
         .task {
-            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), ["in", "back", "send", "swap"].contains(how) else { return }
+            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), ["in", "back", "send", "swap", "private"].contains(how) else { return }
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] moveRailgun: raised %@", how)
             // `send`: out to someone else, a broadcaster's send (§1721 item 3).
             chrome.moveRailgun = .init(contract: nil, takeBack: how != "in",
-                                       recipient: how == "send" ? "0x8ba1f109551bd432803012645ac136ddd64dba72" : nil,
+                                       recipient: how == "send" ? "0x8ba1f109551bd432803012645ac136ddd64dba72"
+                                           : how == "private" ? "0zk1qyqrw8a5h9mc0tk3n6fz2l4s7vxj9uq8e5pd3rjkm6g2wa0tyz4h7cxs9ld3unv8kq2fe6mrx5pa4w0jg7t3yhs9cvz2lm8dq6rkue0xan5tw3pfy8hg4jv7f3a" : nil,
                                        swap: how == "swap")
             chrome.moveTray = true
         }

@@ -502,6 +502,113 @@ enum RailgunPocket {
         return hash
     }
 
+    // MARK: - Send to a private address (prd §1877)
+
+    /// A private send ready to go: what moves, and how it is carried.
+    struct TransferPlan: Equatable, Sendable {
+        let wire: RailgunEngineWire.Transfer
+        /// The broadcaster's quote, or nil: a fresh sender carries it.
+        let broadcast: RailgunEngineWire.TransferQuote?
+    }
+
+    /// Prices sending `amount` (base units, decimal) of `token` from your
+    /// Railgun wallet to the private address `to`, inside Railgun: the
+    /// broadcaster's fee, or the fresh sender's gas found. Reads only.
+    static func quoteTransfer(token: String, amount: String, to: String, memo: String?) async throws -> TransferPlan {
+        guard RailgunSwap.isPrivateAddress(to), let hexAmount = PrivateMoney.hex(amount),
+              let wanted = Decimal(string: amount), wanted > 0 else { throw Failure.notWritten }
+        let opened = try await open(reason: nil)
+        guard to.trimmingCharacters(in: .whitespacesAndNewlines) != opened.address else { throw Failure.notWritten }
+        let synced = try await sync()
+        var spendable: [String: Decimal] = [:]
+        for b in synced.balances { spendable[b.token.lowercased()] = Decimal(string: PrivateMoney.decimal(hex: b.spendable)) ?? 0 }
+        guard wanted <= spendable[token.lowercased()] ?? 0 else { throw Failure.nothingSpendable }
+        let note = memo?.trimmingCharacters(in: .whitespacesAndNewlines)
+        var wire = RailgunEngineWire.Transfer(token: token.lowercased(), amount: hexAmount,
+                                              to: to.trimmingCharacters(in: .whitespacesAndNewlines),
+                                              memo: note?.isEmpty == false ? String(note!.prefix(140)) : nil)
+        var broadcast: RailgunEngineWire.TransferQuote?
+        if let taken = try? await RailgunEngine.shared.broadcasters(), !taken.isEmpty,
+           let feeToken = RailgunRouting.feeToken(sending: token.lowercased(), taken: taken.map(\.token), spendable: spendable) {
+            var asked = wire
+            asked.feeToken = feeToken
+            if let q = try? await RailgunEngine.shared.quoteTransfer(asked),
+               RailgunRouting.covers(amount: wanted, of: token.lowercased(), fee: Decimal(string: PrivateMoney.decimal(hex: q.fee)) ?? 0,
+                                     in: feeToken, spendable: spendable) {
+                asked.fee = q.fee
+                wire = asked
+                broadcast = q
+            }
+        }
+        if broadcast == nil, !(await privateGasCovers()) { throw Failure.noPrivateGas }
+        NSLog("railgunPocket| transfer quoted | %@ of %@ | %@", amount, token,
+              broadcast.map { "fee \(PrivateMoney.decimal(hex: $0.fee)) of \($0.feeToken)" } ?? "fresh sender")
+        return TransferPlan(wire: wire, broadcast: broadcast)
+    }
+
+    /// Sends the quoted private send through its broadcaster: Face ID, the
+    /// proof on this phone, your account nowhere. Returns the hash.
+    static func transfer(_ plan: TransferPlan, unlocked: @MainActor () -> Void = {}) async throws -> String {
+        guard YourAccountKey.address != nil else { throw Failure.noAccount }
+        guard plan.broadcast != nil, plan.wire.fee != nil else { throw Failure.noBroadcaster }
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        unlocked()
+        let sent = try await RailgunEngine.shared.broadcastTransfer(plan.wire)
+        NSLog("railgunPocket| sent privately | %@ | %@ of %@ | proof %d ms", sent.txHash, plan.wire.amount, plan.wire.token, sent.proofMs)
+        return sent.txHash
+    }
+
+    /// The same send with no broadcaster: a fresh sender, its gas a relayed
+    /// withdrawal of your private ETH, sends the proved transfer to Railgun.
+    static func transferFromFresh(_ plan: TransferPlan, unlocked: @MainActor () -> Void = {},
+                                  stage: @escaping @MainActor (String) -> Void) async throws -> String {
+        guard YourAccountKey.address != nil else { throw Failure.noAccount }
+        guard let (need, network) = await senderGasCost(), let ethPool = network.yieldPool(for: PrivateMove.eth) else {
+            throw Failure.noPrivateGas
+        }
+        let sender = try senderAddress()
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        unlocked()
+        let held = Decimal(string: try await PrivateRPC.decimal(network, "eth_getBalance", [sender.address, "latest"])) ?? 0
+        if held < need {
+            let short = need - held
+            let fee = Decimal(string: await PrivateMove.relayerFee(ethPool, network: network, to: sender.address) ?? "") ?? 0
+            let spendable = Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0
+            guard fee > 0, spendable >= short + fee else { throw Failure.noPrivateGas }
+            stage(String(localized: "Paying its gas from your private ETH…"))
+            let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(short), to: sender.address,
+                                                      reason: String(localized: "Send from your private balance"))
+            guard try await FreshSigner.landed(tx, on: network) else { throw Failure.gasOnItsWay }
+        }
+        stage(String(localized: "Proving on this iPhone…"))
+        try await open(reason: nil)
+        var wire = plan.wire
+        wire.feeToken = nil
+        wire.fee = nil
+        let p = try await RailgunEngine.shared.prepareTransfer(wire)
+        guard p.tx.to.lowercased() == proxy, p.tx.data.lowercased().hasPrefix(FreshTx.railgunTransact),
+              PrivateMoney.decimal(hex: p.tx.value) == "0" else { throw Failure.notRailgun }
+        let fees = try await PrivateRPC.fees(network)
+        let estimate = Int(try await PrivateRPC.decimal(network, "eth_estimateGas",
+                                                        [["from": sender.address, "to": p.tx.to, "data": p.tx.data, "value": "0x0"]])) ?? 0
+        guard estimate > 0, estimate <= FreshTx.railgunSendGas else { throw Failure.notRailgun }
+        stage(String(localized: "Sending…"))
+        PrivateSendSteps.shared.mark(.sent, from: .railgun)
+        let hash = try await FreshSigner.send(to: p.tx.to, data: p.tx.data, value: "0x0", index: sender.index, root: sender.root,
+                                              from: sender.address, network: network, gas: FreshTx.railgunSendGas,
+                                              tip: fees.tip, maxFee: fees.maxFee) { _, _ in
+            UserDefaults.standard.set(Int(sender.index - FreshAddress.senderBase) + 1, forKey: senderKey(sender.root))
+        }
+        NSLog("railgunPocket| sent privately from a fresh sender | %@ | %@ of %@ | proof %d ms", hash, wire.amount, wire.token, p.proofMs)
+        return hash
+    }
+
+    /// Your private address on Railgun (prd §1877): what Receive shows for a
+    /// payer with a private balance of their own. Opens the wallet; reads only.
+    static func privateAddress() async throws -> String {
+        try await open(reason: nil).address
+    }
+
     private static func landed(_ sent: YourAccountChain.Sent) -> String? {
         switch sent.outcome {
         case .landed(let tx, _): tx

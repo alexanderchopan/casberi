@@ -74084,3 +74084,22 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Hook.** `-moveDetails YES` opens the cost's list two seconds after mount, as it opened Details.
 
 **Checks.** `your-account-selftest.sh` still finds `ledger(door: offersDetails)`; `ds-template-audit.py`, `footnote-audit.py`, `prd-index-audit.py` clean. `AztecMoveCostTests` now reads `cost.amount`; the test target was not run. **Seen** on the iPhone 17 Pro simulator (demo): Railgun's send to someone (the row, its list, the foot unmoved, the back card closing the list) and Send to a new address (the amber line, Cost, its list over the same foot). **Not seen:** Swap, Sweep, Aztec and Earn, which draw through the same two paths.
+
+## §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their private balance", the send stays inside Railgun with a note only they can read, carried by a broadcaster or a fresh sender; Receive's From picks Anyone (the one-time address) or A private balance (your private address, no QR) (extends §1719, §1721, §1723, §1726; amends §1713 item 4's "Casberi never shows" the 0zk address; builds the canvas "Railgun private swaps and sends", rows 2A–2D and 3A–3B) (user, 2026-11-18: "mock railgun private swaps and private sends", "ok do it") — BUILT; seen on the simulator in the demo, NOT run with real money
+
+**Measured first.** A Railgun private address is 127 characters, `0zk1` and bech32 (`RailgunEngine.encodeAddress`, SDK 11.3.0's `validateRailgunAddress` accepts it). A private send is one Railgun transaction to the proxy: no unshield, so nothing public names the sender, the receiver or the amount.
+
+**Ruling.**
+1. **To takes a private address.** Pasted or typed in Send's To, a Railgun address offers one row under "Private", "Their private balance" with its tail; picking it opens Railgun's sentence: "Send 25 DAI from your private balance to ...7f3a's private balance." The To row reads "Private · ...7f3a".
+2. **A note, optional.** Its row reads "Optional" in grey until written, at most 140 characters, which only the receiver can read (Railgun's memo). The receiver is never shown who sent it.
+3. **Carried as a send to someone is** (§1723, §1726): a broadcaster paid inside Railgun, else a fresh sender, its gas your private ETH; Face ID once; the shared steps; "Sent privately · N s". The line: "Costs about $0.20 · only they see how much".
+4. **Receive › Your private balance · Ethereum has a From row:** Anyone (the one-time address, §1560, as before) or A private balance (your private address: written out in groups, Share, Copy address; no QR, §1719). The network reads Ethereum in every build: Railgun is Ethereum's alone.
+5. **Engine**: `quoteTransfer`, `broadcastTransfer`, `prepareTransfer` over the SDK's transfer, refusing an address the SDK rejects or your own.
+
+**Not built.** Contacts with a saved private address (the canvas's Ana and Sam): no book entry holds one yet. The canvas's 2E (private USDC to a private address, out of Privacy Pools): dropped with §1875's routes.
+
+**Hooks.** `-moveRailgun private` opens a send to a sample private address; `-receiveFromPrivate YES` opens Receive on A private balance (demo).
+
+**Mac half (§1402).** The same rows in Move's tray.
+
+**Checks.** `railgun-selftest.sh`: the address check compiled (127 characters, bech32, a public address refused), the SDK's own check and never your own address in the engine, every private send a transaction to the proxy, the sender never shown, the send never through your account or out of Railgun, Receive reading your own wallet's address, the bundle carrying it. **Seen** on the iPhone 17 Pro simulator (demo): the send's rows, sentence, Note and cost; Receive's From and your private address.
