@@ -119,6 +119,8 @@ final class RailgunMove {
     }
     /// What the toast says when a send behind its sheet lands.
     static var landedWords: String { String(localized: "Sent privately") }
+    /// This move's: a swap lands as one (prd §1875).
+    private var landed: String { mode == .swap ? String(localized: "Swapped privately") : Self.landedWords }
     /// The broadcaster's terms for the picked amount.
     private(set) var quote: RailgunEngineWire.Quote?
     /// A private swap's (prd §1875): what it buys, and its plan once priced.
@@ -728,7 +730,7 @@ final class RailgunMove {
 
     /// The sheet closed over a send still going (prd §1806).
     func goAway() {
-        PrivateSendSteps.shared.sendAway(from: .railgun, landed: Self.landedWords)
+        PrivateSendSteps.shared.sendAway(from: .railgun, landed: landed)
     }
 
     #if DEBUG
@@ -784,7 +786,7 @@ final class RailgunMove {
         stage = .working(String(localized: "Sending…"))
         // Face ID was the last ask: the rest needs nobody, so the sheet
         // goes and the shell's capsule says the rest (prd §1806).
-        if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: Self.landedWords) {
+        if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: landed) {
             Self.kept = self
             onAway()
         }

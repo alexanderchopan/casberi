@@ -188612,6 +188612,34 @@
         }
       }
     },
+    "Swapped privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiado en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開で交換済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개로 교환함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已私密兑换"
+          }
+        }
+      }
+    },
     "Swapped privately · %lld s" : {
       "localizations" : {
         "es" : {
