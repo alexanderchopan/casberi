@@ -476,6 +476,50 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
+    /// **SPENDING IS A ROW IN THE WALLET'S SECTION (prd §1870, user: "put a
+    /// spending row in home's wallet section").** Its page lost its last door
+    /// when §1843 retired Home's cards: Subscriptions, Places, Fees and
+    /// Round-ups stood behind nothing. The row is the window's total, "$3,410
+    /// in November", and opens Spending; unread or empty it says its name.
+    @ViewBuilder
+    var homeSpendingRow: some View {
+        let reading = SpendingReading.shared
+        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+        let spent = !(reading.page.places.isEmpty && reading.page.subscriptions.isEmpty)
+        Button {
+            homeOpen(.spending)
+        } label: {
+            DSHomeFactRow(glyph: WalletSection.spending.glyph, name: WalletSection.spending.label,
+                          items: spent ? [DSHomeFactRow.Item(
+                              id: "spending",
+                              name: Self.spendingTotal(reading.page, window: reading.window, mask: mask))] : [],
+                          inRowColumns: true)
+        }
+        .buttonStyle(RowPress())
+        // Whose money Home shows, as the page reads it (prd §1524), then
+        // the reading, after the hand is still (wallet-perf-spec B4).
+        .onChange(of: walletSpendingScope, initial: true) { _, scope in
+            SpendingReading.shared.narrow(scope)
+        }
+        .task(id: walletSpendingKey) {
+            await GestureGate.idle()
+            guard !Task.isCancelled else { return }
+            await SubscriptionsReading.shared.refresh(modelContext, key: walletSubscriptionsKey)
+            await SpendingReading.shared.refresh(modelContext, key: walletSpendingKey)
+        }
+        .feedRowBackground()
+        .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
+        .listRowSeparator(.hidden)
+    }
+
+    /// The Wallet section's own rows on Home, over its moves: the
+    /// watchlist, then Spending (prd §1858, §1870).
+    @ViewBuilder
+    var homeWalletLeadRows: some View {
+        homeWatchRow
+        homeSpendingRow
+    }
+
     /// The one token the row names: the day's biggest mover, else the first
     /// on the list (unread, it says its name alone).
     static func homeWatchItems(_ tokens: [WatchedToken], _ quotes: [String: WatchlistRules.Quote]) -> [DSHomeFactRow.Item] {

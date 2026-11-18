@@ -73957,3 +73957,17 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The tray is the Mac's and iPad's Move; both rulings reach them unchanged.
 
 **Checks.** `move-details-selftest.sh`: the verb change sets `moveTall` for every verb; Buy's Network row skips the reported blank and reads `depositSeller`. Both mutated back and caught.
+
+## §1870 — Spending is a row in Home's Wallet section, under the Watchlist (amends §1843, §1858) (user, 2026-11-18: "where in the app is the spending data. that shows subscriptions everything else and fees", then "put a spending row in home's wallet section") — BUILT; not yet built or seen on a simulator
+
+**What was found.** The Spending page (`WalletSection.spending`: Subscriptions, Places, Fees, Round-ups, §1476, §1480 item 5, §1523) had no door. §1807 moved it from a Wallet tile to Activity's "All money"; the Wallet's Activity page became the moves alone (`walletActivitySections`); §1843 retired the phone's Home cards. Only `-openSection spending` and a plan's service door (to Subscriptions) reached it.
+
+**Ruling.**
+1. **Home's Wallet section draws Spending under the Watchlist** (`homeSpendingRow`, through `homeWalletLeadRows`), the same `DSHomeFactRow` in the rows' columns: its glyph, "Spending", the window's total ("$3,410 in November", `spendingTotal`), a chevron. Unread or nothing spent, the name alone. Hide balances masks the figure.
+2. **The tap opens Spending** (`homeOpen(.spending)`), keeping whose money Home shows; the title goes back to Home.
+3. **The row starts the reading** as the page does: narrowed to `walletSpendingScope` (§1524), read after the hand is still.
+4. `activitySection`'s `lead: AnyView?` is `walletLead: Bool`: two rows inside one `AnyView` are not two `List` rows.
+
+**Mac half (§1402).** iPad and Mac keep Home's cards (§1843), which carry no Spending card; nothing changes there, and Spending has no door on them yet.
+
+**Checks.** Not built: written in a session with no Swift toolchain. Needs `scripts/verify.sh` and a look at Home over the demo.

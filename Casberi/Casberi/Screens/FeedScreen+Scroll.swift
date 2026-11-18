@@ -204,7 +204,7 @@ extension FeedScreen {
     @ViewBuilder
     func activitySection(_ name: String, _ rows: [Thing], nextEventID: UUID?,
                          open: (() -> Void)?, fades: Bool = true,
-                         keepsWord: Bool = false, lead: AnyView? = nil,
+                         keepsWord: Bool = false, walletLead: Bool = false,
                          rowOpens: (() -> Void)? = nil) -> some View {
         let _ = { memo.sectionCounts[name] = rows.count }()
         // A category with nothing new leaves Activity; a word that opens a
@@ -213,9 +213,10 @@ extension FeedScreen {
             SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
                 ActivityWord(name: name, open: open)
             } rows: {
-                // A row the section itself owns, over its apps' rows (the
-                // Wallet's watchlist, prd §1851).
-                if let lead { lead }
+                // Rows the section itself owns, over its apps' rows (the
+                // Wallet's watchlist and Spending, prd §1851, §1870). Rows,
+                // never one `AnyView`: a `List` reads each as its own row.
+                if walletLead { homeWalletLeadRows }
                 ForEach(keyed(rows), id: \.id) { item in
                     if let thing = item.live { activityAppRow(thing, from: name, fades: fades, opens: rowOpens) }
                 }
@@ -545,7 +546,7 @@ extension FeedScreen {
                             chrome.openWalletActivity(fromActivity: word)
                         } : nil,
                         keepsWord: true,
-                        lead: homeHeadShown && !homeBare ? AnyView(homeWatchRow) : nil,
+                        walletLead: homeHeadShown && !homeBare,
                         rowOpens: {
             DSHaptic.selection()
             // Under Activity, and back to it (prd §1827, §1840).
@@ -574,7 +575,7 @@ extension FeedScreen {
                 chrome.openWalletActivity(fromActivity: word)
             })
         } rows: {
-            if homeHeadShown && !homeBare { homeWatchRow }
+            if homeHeadShown && !homeBare { homeWalletLeadRows }
             DSPushRow(title: Text(yours == nil ? "Create an account" : "Your account"),
                       subtitle: yours == nil ? nil : wants.map { Text(verbatim: $0) } ?? Text("No moves yet"),
                       subtitleTone: wants != nil ? DS.attentionInk : DS.textSecondary,
