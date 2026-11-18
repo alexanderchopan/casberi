@@ -74175,3 +74175,7 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Trade-off said plainly**: the sender and your receive address are both one-time addresses of yours, and the transfer links them on chain; it happens only on a refund.
 
 **Checks.** `private-money-selftest.sh`: WETH home with no value, WETH's approval only to the SpokePool, a refund only of WETH or USDC, only to your receive address, never an approval; the look, the receive-index guard, the derived recipient and the two-try cap pinned.
+
+## §1883
+
+**Receive names the tokens, never "dollars"** (user, 2026-11-18, testing build 1042: "on receive it said 'dollars' but should say 'usdc'"). Amends §1880 item 4: the line before anything arrives reads "On Ethereum, Base or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it." USDG is Robinhood's dollar (§1880), so it is named beside USDC rather than folded into it.

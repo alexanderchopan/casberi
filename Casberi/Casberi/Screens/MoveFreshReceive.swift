@@ -307,7 +307,7 @@ struct MoveFreshSentence<Head: View>: View {
             // Robinhood goes home to Ethereum (prd §1878).
             Group {
                 if network.chainId == FreshTx.homeChain {
-                    Text("On Ethereum, Base or Robinhood. ETH and dollars sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it.")
+                    Text("On Ethereum, Base or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it.")
                 } else {
                     Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
                 }

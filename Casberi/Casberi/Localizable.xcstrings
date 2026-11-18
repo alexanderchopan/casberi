@@ -139005,30 +139005,30 @@
         }
       }
     },
-    "On Ethereum, Base or Robinhood. ETH and dollars sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it." : {
+    "On Ethereum, Base or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "En Ethereum, Base o Robinhood. El ETH y los dólares enviados en Base o Robinhood pasan a Ethereum para generar rendimiento. Todo lo que no sea ETH necesita un poco de ETH enviado con ello."
+            "value" : "En Ethereum, Base o Robinhood. El ETH, USDC y USDG enviados en Base o Robinhood pasan a Ethereum para generar rendimiento. Todo lo que no sea ETH necesita un poco de ETH enviado con ello."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum、Base、Robinhood で受け取れます。Base や Robinhood で送られた ETH とドルは Ethereum に移って利回りを得ます。ETH 以外には少しの ETH を一緒に送る必要があります。"
+            "value" : "Ethereum、Base、Robinhood で受け取れます。Base や Robinhood で送られた ETH、USDC、USDG は Ethereum に移って利回りを得ます。ETH 以外には少しの ETH を一緒に送る必要があります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum, Base 또는 Robinhood에서 받을 수 있습니다. Base나 Robinhood로 보낸 ETH와 달러는 Ethereum으로 옮겨져 이자를 받습니다. ETH가 아닌 것은 약간의 ETH를 함께 보내야 합니다."
+            "value" : "Ethereum, Base 또는 Robinhood에서 받을 수 있습니다. Base나 Robinhood로 보낸 ETH, USDC, USDG는 Ethereum으로 옮겨져 이자를 받습니다. ETH가 아닌 것은 약간의 ETH를 함께 보내야 합니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "可在 Ethereum、Base 或 Robinhood 上接收。在 Base 或 Robinhood 上发送的 ETH 和美元会转到 Ethereum 赚取收益。ETH 以外的资产需要随附少量 ETH。"
+            "value" : "可在 Ethereum、Base 或 Robinhood 上接收。在 Base 或 Robinhood 上发送的 ETH、USDC 和 USDG 会转到 Ethereum 赚取收益。ETH 以外的资产需要随附少量 ETH。"
           }
         }
       }
