@@ -281,7 +281,15 @@ struct MoveFreshSentence<Head: View>: View {
         } else if let entry, let waiting = book.homeNeedsGas[entry.id] {
             // A dollar paid on Base or Robinhood with no ETH there for its move (prd §1880).
             let parts = waiting.split(separator: "|").map(String.init)
-            Text("\(parts.first ?? "USDC") on \(parts.last ?? "Base") needs a little ETH sent there to move.")
+            let (symbol, place) = (parts.first ?? "USDC", parts.count > 1 ? parts[1] : "Base")
+            Group {
+                if parts.count > 2 {
+                    // Across gave it back twice (prd §1882).
+                    Text("\(symbol) on \(place) couldn't move to Ethereum. It stays at this address.")
+                } else {
+                    Text("\(symbol) on \(place) needs a little ETH sent there to move.")
+                }
+            }
                 .dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         } else if let entry, let from = book.homeMoving[entry.id] {

@@ -74163,3 +74163,15 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The widgets and notifications are the same on the Mac; the Wallet tile is published wherever Home's balance is drawn on All.
 
 **Checks.** `notify-selftest.sh` (new kinds stand alone, Across and Work asks classified, one ask per alarm, proved to fail without it) and `widget-selftest.sh` (rewritten for the new payloads, four new mutations) pass; the app and widget extension build for the simulator. **Seen** on the iPhone 17 Pro simulator, over the demo: `-notifyProbe` plans (Work asks batched per app, deadlines alone) and the demo census composing the Feed tile (3 rows, 89 more). **Not seen:** the tiles drawn on a Home Screen (the demo publishes nothing to a widget, by §217), and any move-ending notification fired (each needs a real move finishing while away).
+
+## §1882
+
+**What Across gives back comes back to you** (user, 2026-11-18: "re across refunds not brought back yet wdym", then "ya"). Across refunds a deposit no relayer fills by its deadline to the depositor, on the network it left from; every depositor in §1878–§1880 is a one-time address.
+
+1. **Receiving ETH on Base or Robinhood**: a refund is WETH at the address there. It goes home as ETH did (the SpokePool pulls it once approved, `FreshTx.homeAllowed` with no value), its gas the ETH beside it; an ETH move now keeps gas for that too (two deposits and an approval, fractions of a cent there). Short of gas, Receive says "WETH on Base needs a little ETH sent there to move."
+2. **Receiving dollars**: a refund is the dollar again, sent home again by the next look, **twice at most** per address and network (`freshAddresses.homeTries.v1`); after that it stays, and Receive says "USDC on Base couldn't move to Ethereum. It stays at this address."
+3. **Sending to Base or Robinhood**: each sender is watched until a day past its deposit's fill deadline (`privateAway.watched.v1`). WETH or USDC found there is sent to your current receive address on Ethereum, whose look moves it into your private balance (USDC into the pool, WETH through Railgun). Its gas is what the sender kept, at today's price if the usual cap is more than it holds. The sender's key can make only that transfer (`FreshTx.refundAllowed`, `FreshSigner.sendRefund`): WETH or USDC, to an address the signer derives itself from your root at a receive index.
+
+**Trade-off said plainly**: the sender and your receive address are both one-time addresses of yours, and the transfer links them on chain; it happens only on a refund.
+
+**Checks.** `private-money-selftest.sh`: WETH home with no value, WETH's approval only to the SpokePool, a refund only of WETH or USDC, only to your receive address, never an approval; the look, the receive-index guard, the derived recipient and the two-try cap pinned.

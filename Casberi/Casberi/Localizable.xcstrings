@@ -10318,6 +10318,34 @@
         }
       }
     },
+    "%@ on %@ couldn't move to Ethereum. It stays at this address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ en %2$@ no pudo pasar a Ethereum. Se queda en esta dirección."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ の %1$@ は Ethereum に移せませんでした。このアドレスに残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@의 %1$@을(를) Ethereum으로 옮기지 못했습니다. 이 주소에 남아 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 上的 %1$@ 未能转到 Ethereum，仍留在此地址。"
+          }
+        }
+      }
+    },
     "%@ on %@ needs a little ETH sent there to move." : {
       "localizations" : {
         "es" : {

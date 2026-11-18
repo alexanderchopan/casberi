@@ -110,6 +110,38 @@ enum FreshSigner {
         return hash
     }
 
+    /// **A REFUND SENT ON (prd §1882).** A fresh sender's `amount` of WETH
+    /// or USDC to your receive address `receiveIndex`, which this derives
+    /// itself under the same root (a receive index, never a sender's): the
+    /// only payment a sender's key can make. On Ethereum.
+    static func sendRefund(token: String, amount: String, receiveIndex: UInt32, index: UInt32, root: String, from: String,
+                           network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64) async throws -> String {
+        guard network.chainId == FreshTx.homeChain, receiveIndex < FreshAddress.senderBase else { throw Failure.refused("not your receive address") }
+        let recipient = try address(receiveIndex, root: root)
+        guard let data = FreshTx.transferData(to: recipient, amount: amount) else { throw Failure.refused("not a refund") }
+        let nonce = try await PrivateRPC.call(network, "eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
+        guard let tx = FreshTx.Tx(refund: recipient, nonce: nonce, maxPriorityFeePerGas: "0x" + String(tip, radix: 16),
+                                  maxFeePerGas: "0x" + String(maxFee, radix: 16), gas: "0x" + String(gas, radix: 16),
+                                  to: token, data: data) else { throw Failure.refused("not a fresh address's move") }
+        let k = try key(index, root: root)
+        guard SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation))?.lowercased() == from.lowercased() else {
+            throw Failure.curve
+        }
+        let signature = try k.signature(for: HashDigest(tx.signingHash))
+        let compact = try signature.compactRepresentation
+        let rs = [UInt8](compact.signature)
+        guard rs.count == 64, let raw = tx.signed(yParity: Int(compact.recoveryId), r: Array(rs[0..<32]), s: Array(rs[32..<64])) else {
+            throw Failure.curve
+        }
+        let hash = "0x" + Keccak256.hexString(Keccak256.hash(raw))
+        do {
+            _ = try await PrivateRPC.call(network, "eth_sendRawTransaction", [TestnetTx.hex(raw)])
+        } catch Failure.refused(let why) where why.lowercased().contains("already known") {
+        }
+        NSLog("freshAddress| refund sent on | %@ | to receive %u", hash, receiveIndex)
+        return hash
+    }
+
     /// **AWAY FROM ETHEREUM (prd §1879).** Signs and sends a fresh sender's
     /// Across deposit to Base or Robinhood on Ethereum; nil-built
     /// (`FreshTx.Tx(away:)`) for anything else.

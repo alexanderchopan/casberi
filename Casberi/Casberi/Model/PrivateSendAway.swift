@@ -135,9 +135,77 @@ enum PrivateSendAway {
         await stage(String(localized: "Moving it with Across…"))
         let hash = try await FreshSigner.sendAway(to: FreshTx.awaySpoke, data: data, value: value, index: sender.index,
                                                   root: sender.root, from: sender.address, network: network,
-                                                  gas: FreshTx.awayGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in keep(nil) }
+                                                  gas: FreshTx.awayGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in
+            keep(nil)
+            watch(sender, until: quote.fillDeadline)
+        }
         NSLog("privateAway| sent | %@ | to %@ on %d", hash, YourAccount.short(payee), chainId)
         return hash
+    }
+
+    // MARK: - Refunds (prd §1882)
+
+    /// A sender whose Across deposit may yet be refunded to it: watched until
+    /// a day past the deposit's fill deadline.
+    struct Watched: Codable, Equatable {
+        let index: UInt32
+        let address: String
+        let root: String
+        let until: Date
+    }
+
+    private static let watchedKey = "privateAway.watched.v1"
+
+    static var watched: [Watched] {
+        UserDefaults.standard.data(forKey: watchedKey).flatMap { try? JSONDecoder().decode([Watched].self, from: $0) } ?? []
+    }
+
+    private static func saveWatched(_ list: [Watched]) {
+        if let data = try? JSONEncoder().encode(list) { DefaultsWrite.set(data, forKey: watchedKey) }
+    }
+
+    private static func watch(_ sender: (index: UInt32, address: String, root: String), until deadline: Int) {
+        let until = Date(timeIntervalSince1970: TimeInterval(deadline)).addingTimeInterval(86_400)
+        saveWatched(watched.filter { $0.address != sender.address } + [Watched(index: sender.index, address: sender.address, root: sender.root, until: until)])
+    }
+
+    /// The gas a refund's transfer may use.
+    static let refundGas = 80_000
+
+    /// **WHAT ACROSS GAVE BACK (prd §1882).** Each watched sender holding WETH
+    /// or USDC sends it to your current receive address on Ethereum, whose
+    /// look moves it into your private balance (WETH through Railgun, USDC
+    /// into the pool); its gas from the ETH the sender kept. A sender past its
+    /// watch is dropped.
+    static func lookRefunds(receiveIndex: UInt32?, receiveRoot: String?) async {
+        let now = Date()
+        var list = watched
+        let expired = list.filter { $0.until < now }
+        if !expired.isEmpty { list.removeAll { $0.until < now }; saveWatched(list) }
+        guard !list.isEmpty, let network = PrivacyNetwork.forChain(FreshTx.homeChain), let receiveIndex else { return }
+        for s in list where s.root == receiveRoot {
+            for token in [FreshTx.homeWETH, FreshTx.homeUSDC] {
+                guard let held = try? await PrivateRPC.tokenBalance(network, token: token, of: s.address), held != "0" else { continue }
+                do {
+                    let fees = try await PrivateRPC.fees(network)
+                    let eth = Decimal(string: try await PrivateRPC.decimal(network, "eth_getBalance", [s.address, "latest"])) ?? 0
+                    // What the sender kept pays: up to the usual cap, at least
+                    // today's price and tip (`TestnetTx.fees`: cap = 2×price + tip).
+                    let floorFee = (fees.maxFee - fees.tip) / 2 + fees.tip
+                    let affordable = NSDecimalNumber(decimal: eth / Decimal(refundGas)).uint64Value
+                    guard affordable >= floorFee else {
+                        NSLog("privateAway| refund waits for gas | %@ | %@ of %@", YourAccount.short(s.address), held, token)
+                        continue
+                    }
+                    let hash = try await FreshSigner.sendRefund(token: token, amount: held, receiveIndex: receiveIndex, index: s.index,
+                                                                root: s.root, from: s.address, network: network, gas: refundGas,
+                                                                tip: fees.tip, maxFee: min(fees.maxFee, affordable))
+                    NSLog("privateAway| refund sent on | %@ | %@ of %@ | %@", YourAccount.short(s.address), held, token, hash)
+                } catch {
+                    NSLog("privateAway| refund failed | %@ | %@", YourAccount.short(s.address), String(describing: error))
+                }
+            }
+        }
     }
 
     // MARK: - Dollars (prd §1880)
@@ -242,7 +310,10 @@ enum PrivateSendAway {
         await stage(String(localized: "Moving it with Across…"))
         let hash = try await FreshSigner.sendDollar(chainId: FreshTx.homeChain, node: node, name: name, to: FreshTx.awaySpoke, data: data,
                                                     index: sender.index, root: sender.root, from: sender.address,
-                                                    gas: dollarDepositGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in keep(nil) }
+                                                    gas: dollarDepositGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in
+            keep(nil)
+            watch(sender, until: quote.fillDeadline)
+        }
         NSLog("privateAway| dollar sent | %@ | to %@ on %d", hash, YourAccount.short(payee), chainId)
         return hash
     }

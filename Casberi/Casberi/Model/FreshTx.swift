@@ -265,9 +265,11 @@ enum FreshTx {
     /// `homeDeposit` writes it, to that network's SpokePool, its value the
     /// amount deposited. Read back word by word, so no fresh key can be made
     /// to send anything anywhere else, or to anyone else.
+    /// With no value it is WETH the SpokePool pulls (a refund going home
+    /// again, prd §1882), approved first; with a value, native ETH.
     static func homeAllowed(to: String, data: String, value: String, chainId: Int, from: String) -> Bool {
         guard let origin = homeOrigins.first(where: { $0.chainId == chainId }), to.lowercased() == origin.spoke,
-              PrivateMoney.isAddress(from), let carried = TestnetTx.quantity(value), !carried.isEmpty else { return false }
+              PrivateMoney.isAddress(from), let carried = TestnetTx.quantity(value) else { return false }
         let d = data.lowercased()
         guard d.hasPrefix(homeSelector), d.count == 10 + 13 * 64 else { return false }
         let words = (0..<13).map { i in String(d.dropFirst(10 + i * 64).prefix(64)) }
@@ -277,7 +279,7 @@ enum FreshTx {
         let me = from.lowercased()
         guard address(words[0]) == me, address(words[1]) == me,
               address(words[2]) == origin.weth, address(words[3]) == homeWETH,
-              PrivateMoney.decimal(hex: "0x" + words[4]) == PrivateMoney.decimal(hex: value),
+              carried.isEmpty || PrivateMoney.decimal(hex: "0x" + words[4]) == PrivateMoney.decimal(hex: value),
               words[6] == PrivateYield.uint(String(homeChain)),
               address(words[7]) != nil,
               words[11] == PrivateYield.uint(String(12 * 32)), words[12] == PrivateYield.uint("0") else { return false }
@@ -488,7 +490,10 @@ extension FreshTx {
     static func dollarApprovalAllowed(to: String, data: String, value: String, chainId: Int) -> Bool {
         let token: String, spoke: String
         if chainId == homeChain { (token, spoke) = (homeUSDC, awaySpoke) }
-        else if let origin = homeOrigins.first(where: { $0.chainId == chainId }) { (token, spoke) = (origin.dollar, origin.spoke) }
+        else if let origin = homeOrigins.first(where: { $0.chainId == chainId }) {
+            // The dollar, or WETH a refund left there (prd §1882).
+            (token, spoke) = (to.lowercased() == origin.weth ? origin.weth : origin.dollar, origin.spoke)
+        }
         else { return false }
         guard to.lowercased() == token, let carried = TestnetTx.quantity(value), carried.isEmpty else { return false }
         let d = data.lowercased()
@@ -531,6 +536,30 @@ extension FreshTx {
     }
 }
 
+// MARK: - Refunds (prd §1882)
+
+extension FreshTx {
+    /// `transfer(address,uint256)`, hex with 0x.
+    static func transferData(to: String, amount: String) -> String? {
+        guard PrivateMoney.isAddress(to), let word = PrivateYield.uint(amount) else { return nil }
+        return "0xa9059cbb" + addressWord(to) + word
+    }
+
+    /// **WHAT ACROSS GAVE BACK GOES TO YOUR OWN RECEIVE ADDRESS (prd §1882).**
+    /// A fresh sender on Ethereum whose deposit Across refunded holds WETH or
+    /// USDC; it may send exactly that token, all or part, to `recipient`,
+    /// which the signer derives itself as one of your receive addresses, and
+    /// nothing else.
+    static func refundAllowed(to: String, data: String, value: String, chainId: Int, recipient: String) -> Bool {
+        guard chainId == homeChain, [homeWETH, homeUSDC].contains(to.lowercased()), PrivateMoney.isAddress(recipient),
+              let carried = TestnetTx.quantity(value), carried.isEmpty else { return false }
+        let d = data.lowercased()
+        guard d.hasPrefix("0xa9059cbb"), d.count == 2 + 8 + 128, wordAddress(String(d.dropFirst(10).prefix(64))) == recipient.lowercased(),
+              let amount = Decimal(string: PrivateMoney.decimal(hex: "0x" + String(d.dropFirst(74)))), amount > 0 else { return false }
+        return true
+    }
+}
+
 extension FreshTx.Tx {
     /// A dollar's move: its approval of a SpokePool, a home deposit on Base
     /// or Robinhood, or a fresh sender's deposit on Ethereum (prd §1880);
@@ -544,6 +573,16 @@ extension FreshTx.Tx {
         guard let address = TestnetTx.bytes(to), address.count == 20, TestnetTx.bytes(data) != nil else { return nil }
         self.init(chainId: chainId, nonce: nonce, maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
                   gas: gas, to: to, value: value, data: data)
+    }
+
+    /// A refund sent on to your own receive address, nil unless `refundAllowed`.
+    init?(refund recipient: String, nonce: String, maxPriorityFeePerGas: String, maxFeePerGas: String,
+          gas: String, to: String, data: String) {
+        guard FreshTx.refundAllowed(to: to, data: data, value: "0x0", chainId: FreshTx.homeChain, recipient: recipient) else { return nil }
+        for q in [nonce, maxPriorityFeePerGas, maxFeePerGas, gas] where TestnetTx.quantity(q) == nil { return nil }
+        guard let address = TestnetTx.bytes(to), address.count == 20, TestnetTx.bytes(data) != nil else { return nil }
+        self.init(chainId: FreshTx.homeChain, nonce: nonce, maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+                  gas: gas, to: to, value: "0x0", data: data)
     }
 
     /// An away deposit on Ethereum, nil unless `awayAllowed`.

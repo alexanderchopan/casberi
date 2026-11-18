@@ -298,6 +298,10 @@ for pair in "8453 0x09aea4b2242abc8bb4bb78d537a67a245a7bec64" "4663 0xd29c85f15d
         || { echo "✗ a home origin's SpokePool is not Across's own on $1"; exit 1; }
 done
 use "Casberi/Casberi/Model/FreshReceive.swift" 'await lookHome(entry, network: network)' "money paid to a receive address on Base or Robinhood is never looked at"
+use "Casberi/Casberi/Model/FreshReceive.swift" 'await PrivateSendAway.lookRefunds(receiveIndex: here.index, receiveRoot: here.root)' "what Across gives back to a private send's sender is never looked at (prd §1882)"
+use "$FSIGN" 'guard network.chainId == FreshTx.homeChain, receiveIndex < FreshAddress.senderBase else' "a refund is sent on to a sender's index, not a receive address (prd §1882)"
+use "$FSIGN" 'let recipient = try address(receiveIndex, root: root)' "a refund's recipient is not derived from your own root (prd §1882)"
+use "Casberi/Casberi/Model/FreshReceive+Home.swift" 'guard (Self.homeTries[key] ?? 0) < 2 else {' "a dollar Across keeps giving back is sent home a third time (prd §1882)"
 ! grep -q 'TestnetTx.Tx(\|PrivacyTestnetSender' "$FSIGN" || { echo "✗ the mainnet fresh signer goes through the testnet sender"; exit 1; }
 use "$FSIGN" 'guard SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation))?.lowercased() == from.lowercased() else {' "a fresh key signs as another address"
 use "$FRESHM" 'guard FreshAddress.matchesYield(to: d.tx.to, value: d.tx.value, approvals: d.approvals.count, budget: plan.budget, pool: pool) else {' "a fresh deposit on Ethereum is not checked against its plan"
@@ -847,6 +851,21 @@ check(!dollar(8453, FreshTx.awaySpoke, usdcAway), "a dollar send leaves from Bas
 let usdcAwayMessage = String(usdcAway.dropLast(64)) + PrivateYield.uint("32")! + String(repeating: "ab", count: 32)
 check(!dollar(1, FreshTx.awaySpoke, usdcAwayMessage), "a dollar send carries a message")
 check(!home(homeBase.spoke, dollarHome, "0x0") && !away(FreshTx.awaySpoke, usdcAway, "0x0"), "a dollar's deposit passes as ETH's")
+// §1882: refunds — WETH home with no value once approved; a sender pays only your own receive address, only WETH or USDC.
+check(home(homeBase.spoke, homeData, "0x0"), "WETH a refund left on Base cannot go home")
+check(dollar(8453, homeBase.weth, "0x" + FreshTx.approveData(spender: homeBase.spoke, amount: "5000000000000000")!),
+      "WETH a refund left on Base cannot be approved to the SpokePool")
+check(!dollar(8453, homeBase.weth, "0x" + FreshTx.approveData(spender: "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", amount: "1")!),
+      "a refund's WETH is approved to anyone but the SpokePool")
+let mine = "0x3333333333333333333333333333333333333333"
+func refund(_ token: String, _ data: String, to recipient: String = mine) -> Bool {
+    FreshTx.Tx(refund: recipient, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x2", gas: "0x13880", to: token, data: data) != nil
+}
+check(refund(FreshTx.homeUSDC, FreshTx.transferData(to: mine, amount: "20000000")!), "a sender cannot send a refunded USDC on to your receive address")
+check(refund(FreshTx.homeWETH, FreshTx.transferData(to: mine, amount: "5000000000000000")!), "a sender cannot send a refunded WETH on")
+check(!refund(FreshTx.homeUSDC, FreshTx.transferData(to: awayPayee, amount: "20000000")!), "a sender pays a refund to someone other than your receive address")
+check(!refund("0x6b175474e89094c44da98b954eedeac495271d0f", FreshTx.transferData(to: mine, amount: "1")!), "a sender sends on a token other than WETH or USDC")
+check(!refund(FreshTx.homeUSDC, "0x" + FreshTx.approveData(spender: mine, amount: "1")!), "a sender approves where it should transfer")
 // §1724: Railgun, Ethereum only — a listed token's approval of the proxy, the proxy's shield, no ETH.
 let dai = FreshTx.railgunToken(symbol: "DAI")!
 let railApprove = FreshTx.railgunApproval(dai, amount: "400000000000000000000")!

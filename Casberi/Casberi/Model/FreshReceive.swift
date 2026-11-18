@@ -141,6 +141,11 @@ final class FreshReceive {
         looking = true
         looked = Date()
         defer { looking = false }
+        // What Across gave back to a private send's sender goes on to this
+        // address, and from it into your private balance (prd §1882).
+        if let here = current, here.network == FreshTx.homeChain, !(network?.isTest ?? true) {
+            await PrivateSendAway.lookRefunds(receiveIndex: here.index, receiveRoot: here.root)
+        }
         for entry in watched {
             // A failed move is tried again when Receive opens, never by
             // itself every 15 s.

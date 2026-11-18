@@ -28,6 +28,18 @@ extension FreshReceive {
     }
 
     private static let homeKey = "freshAddresses.home.v1"
+    private static let triesKey = "freshAddresses.homeTries.v1"
+
+    /// How many times a dollar has left each address on each network.
+    static var homeTries: [String: Int] {
+        UserDefaults.standard.data(forKey: triesKey).flatMap { try? JSONDecoder().decode([String: Int].self, from: $0) } ?? [:]
+    }
+
+    private static func tried(_ key: String) {
+        var t = homeTries
+        t[key, default: 0] += 1
+        if let data = try? JSONEncoder().encode(t) { DefaultsWrite.set(data, forKey: triesKey) }
+    }
 
     static var homeSent: [String: HomeSent] {
         UserDefaults.standard.data(forKey: homeKey)
@@ -67,6 +79,12 @@ extension FreshReceive {
                 continue
             }
             homeNeedsGas[entry.id] = nil
+            // WETH a refund left there goes home again, its gas the ETH beside it (prd §1882).
+            let weth = await Self.tokenBalance(origin.weth, of: entry.address, node: node, name: origin.name)
+            if weth != "0" {
+                await sendWETHHome(entry, root: root, held: weth, eth: eth, origin: origin, node: node, network: network, key: key)
+                continue
+            }
             guard eth != "0" else { continue }
             await sendHome(entry, root: root, balance: eth, origin: origin, node: node, network: network, key: key)
         }
@@ -100,6 +118,12 @@ extension FreshReceive {
     /// address's own ETH there; with too little, it waits, and Receive says so.
     private func sendDollarHome(_ entry: FreshAddress.Entry, root: String, held: String, eth: String, origin: FreshTx.HomeOrigin,
                                 node: String, network: PrivacyNetwork, key: String) async {
+        // Twice at most (prd §1882): a dollar Across gave back twice stays
+        // where it is, and Receive says so, never paying a third fee.
+        guard (Self.homeTries[key] ?? 0) < 2 else {
+            homeNeedsGas[entry.id] = "\(origin.dollarSymbol)|\(origin.name)|stuck"
+            return
+        }
         do {
             let price = UInt64(PrivateMoney.decimal(hex: try await PrivateRPC.call(at: node, named: origin.name, "eth_gasPrice", []) as? String ?? "0x0")) ?? 0
             let tipRaw = (try? await PrivateRPC.call(at: node, named: origin.name, "eth_maxPriorityFeePerGas", [])) as? String
@@ -173,6 +197,7 @@ extension FreshReceive {
                                                  index: entry.index, root: root, from: entry.address, gas: Self.dollarDepositGas,
                                                  tip: fees.tip, maxFee: fees.maxFee) { hash, _ in
                 Self.keepHome(key, HomeSent(tx: hash, at: Date(), amount: held, network: origin.name))
+                Self.tried(key)
                 // Its note waits for the pool to show it, as a bridged round-up's does (§1574).
                 PrivateMoneyStore.shared.add(.init(commitment: note.commitment, label: note.label, labelHash: note.labelHash,
                                                    symbol: note.symbol, amount: note.amount, decimals: note.decimals,
@@ -183,6 +208,64 @@ extension FreshReceive {
             }
         } catch {
             NSLog("freshAddress| home dollar failed | %@ | %u | %@", origin.name, entry.index, String(describing: error))
+        }
+    }
+
+    /// **WETH A REFUND LEFT (prd §1882)** goes home as ETH did: all of it,
+    /// pulled by the SpokePool once approved, to the same address on
+    /// Ethereum (paid as ETH there), its gas the ETH beside it.
+    private func sendWETHHome(_ entry: FreshAddress.Entry, root: String, held: String, eth: String, origin: FreshTx.HomeOrigin,
+                              node: String, network: PrivacyNetwork, key: String) async {
+        do {
+            let price = UInt64(PrivateMoney.decimal(hex: try await PrivateRPC.call(at: node, named: origin.name, "eth_gasPrice", []) as? String ?? "0x0")) ?? 0
+            let tipRaw = (try? await PrivateRPC.call(at: node, named: origin.name, "eth_maxPriorityFeePerGas", [])) as? String
+            let fees = TestnetTx.fees(gasPrice: price, tip: UInt64(PrivateMoney.decimal(hex: tipRaw ?? "0x0")) ?? 0)
+            let allowed = await Self.allowance(origin.weth, owner: entry.address, spender: origin.spoke, node: node, name: origin.name)
+            let approving = (Decimal(string: allowed) ?? 0) < (Decimal(string: held) ?? 0)
+            let gasNeeded = Decimal((approving ? Self.dollarApproveGas : 0) + FreshTx.homeGas) * Decimal(fees.maxFee)
+            guard (Decimal(string: eth) ?? 0) >= gasNeeded else {
+                homeNeedsGas[entry.id] = "WETH|\(origin.name)"
+                NSLog("freshAddress| home weth | %@ | %u | waits for gas", origin.name, entry.index)
+                return
+            }
+            guard let pool = network.yieldPool(for: PrivateMove.eth), let least = await minimumBudget(pool, on: network) else { return }
+            let ethereum = try await PrivateRPC.fees(network)
+            guard let floor = FreshAddress.tooLittleBelow(minimumBudget: least, maxFee: String(ethereum.maxFee)) else { return }
+            var parts = URLComponents(string: YourAccountAcross.feesEndpoint)
+            parts?.queryItems = [URLQueryItem(name: "inputToken", value: origin.weth), URLQueryItem(name: "outputToken", value: FreshTx.homeWETH),
+                                 URLQueryItem(name: "originChainId", value: String(origin.chainId)),
+                                 URLQueryItem(name: "destinationChainId", value: String(FreshTx.homeChain)),
+                                 URLQueryItem(name: "amount", value: held),
+                                 URLQueryItem(name: "depositor", value: entry.address.lowercased()),
+                                 URLQueryItem(name: "recipient", value: entry.address.lowercased())]
+            guard let url = parts?.url,
+                  let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: "Your account"), http.statusCode == 200,
+                  let quote = YourAccountAcross.fees(try? JSONSerialization.jsonObject(with: data), from: origin.chainId) else { return }
+            let now = Int(Date().timeIntervalSince1970)
+            guard !quote.tooLow, FreshTx.homeWorthIt(input: held, output: quote.outputAmount, floor: floor),
+                  quote.fillDeadline > now, quote.fillDeadline <= now + YourAccountAcross.maxDeadlineSeconds,
+                  let call = FreshTx.homeDeposit(origin, address: entry.address, input: held, output: quote.outputAmount,
+                                                 relayer: quote.exclusiveRelayer, quoteTimestamp: quote.quoteTimestamp,
+                                                 fillDeadline: quote.fillDeadline, exclusivity: quote.exclusivity) else {
+                NSLog("freshAddress| home weth | %@ | %u | too little or no terms", origin.name, entry.index)
+                return
+            }
+            if approving {
+                guard let approval = FreshTx.approveData(spender: origin.spoke, amount: held) else { return }
+                let hash = try await FreshSigner.sendDollar(chainId: origin.chainId, node: node, name: origin.name, to: origin.weth,
+                                                            data: "0x" + approval, index: entry.index, root: root, from: entry.address,
+                                                            gas: Self.dollarApproveGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in }
+                try await PrivateRPC.waitFor(at: node, named: origin.name, hash, seconds: 90)
+            }
+            _ = try await FreshSigner.sendHome(chainId: origin.chainId, node: node, name: origin.name, to: origin.spoke, data: call,
+                                               value: "0x0", index: entry.index, root: root, from: entry.address,
+                                               gas: FreshTx.homeGas, tip: fees.tip, maxFee: fees.maxFee) { hash, _ in
+                Self.keepHome(key, HomeSent(tx: hash, at: Date(), amount: held, network: origin.name))
+                homeMoving[entry.id] = origin.name
+                NSLog("freshAddress| home weth kept | %@ | %u | %@", origin.name, entry.index, hash)
+            }
+        } catch {
+            NSLog("freshAddress| home weth failed | %@ | %u | %@", origin.name, entry.index, String(describing: error))
         }
     }
 
@@ -231,7 +314,10 @@ extension FreshReceive {
             let price = UInt64(PrivateMoney.decimal(hex: try await PrivateRPC.call(at: node, named: origin.name, "eth_gasPrice", []) as? String ?? "0x0")) ?? 0
             let tipRaw = (try? await PrivateRPC.call(at: node, named: origin.name, "eth_maxPriorityFeePerGas", [])) as? String
             let fees = TestnetTx.fees(gasPrice: price, tip: UInt64(PrivateMoney.decimal(hex: tipRaw ?? "0x0")) ?? 0)
-            guard let input = FreshTx.homeInput(balance: balance, maxFee: String(fees.maxFee)) else { return }
+            // Gas kept for this deposit and, should Across give it back as
+            // WETH, that WETH's approval and deposit too (prd §1882).
+            guard let input = FreshTx.homeInput(balance: balance, maxFee: String(fees.maxFee),
+                                                gas: FreshTx.homeGas * 2 + Self.dollarApproveGas) else { return }
             // What Ethereum's look would move: the pool's least plus its deposit's gas there.
             guard let pool = network.yieldPool(for: PrivateMove.eth), let least = await minimumBudget(pool, on: network) else { return }
             let ethereum = try await PrivateRPC.fees(network)
