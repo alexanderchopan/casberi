@@ -292,6 +292,11 @@ extension FeedScreen {
         }
     }
 
+    /// How many apps' newest moves Activity shows on Home while there is no
+    /// feed (prd §1858). Still each app's newest (§1809), never the latest
+    /// three of one app.
+    static let homeFeedlessMoves = 3
+
     /// **PUBLIC, THEN PRIVATE (prd §1858, user: "today our holdings page
     /// separates public from private in two sections").** Under the balance,
     /// on the page: each side's name and total, then its biggest tokens, two

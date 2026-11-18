@@ -496,7 +496,7 @@ extension FeedScreen {
         let shown = fresh.isEmpty ? Array(moves.prefix(1)) : fresh
         // With no feed the wallet takes the room: the three newest moves,
         // seen or not (prd §1858).
-        let onHome = homeFeedless ? Array(moves.prefix(3)) : Array(shown.prefix(1))
+        let onHome = Array(homeFeedless ? moves.prefix(Self.homeFeedlessMoves) : shown.prefix(1))
         activitySection(word, homeHeadShown ? onHome : shown,
                         // **THE ROW IS THE DOOR (prd §1849, user: "does wallet
                         // need a chevron if everything else doesn't have one?

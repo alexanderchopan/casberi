@@ -143,6 +143,8 @@ feed_wallet_gone() { # $1 a root holding the files below; prints the breach and 
   # Money follows every category's rule since prd §1809: each app's newest.
   grep -q 'Self.newestPerApp(Self.walletMoves(money)' "$root/$SCROLL" \
     || { echo "✗ Money on Activity is no longer each app's newest move (prd §1809)"; return 1; }
+  # Home with no feed shows up to `homeFeedlessMoves` apps' newest (prd §1858),
+  # by name; a bare three here is §1807's deleted rule coming back.
   grep -q 'prefix(3)' "$root/$SCROLL" \
     && { echo "✗ Money on Activity is capped at three again — one rule for every category (prd §1809)"; return 1; }
   return 0
