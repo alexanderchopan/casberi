@@ -1657,6 +1657,9 @@ struct MoveSentence: View {
             // The phone's menu already asked which verb (prd §1852).
             if let raw = chrome.moveAsk, let v = Self.asked(raw) {
                 chrome.moveAsk = nil
+                // A sentence kept on another verb stays behind: Buy picked
+                // after a half-filled Send opened Send (prd §1867).
+                if let d = chrome.moveDraft, Self.page(d.verb) != Self.page(v) { chrome.moveDraft = nil }
                 pickVerb(v)
                 return
             }
@@ -3262,6 +3265,15 @@ struct MoveSentence: View {
         case .send: .send
         case .swap: .swap
         case nil: nil
+        }
+    }
+
+    /// The menu's page a verb stands on: a verb's two kinds share one (prd §1852).
+    private static func page(_ v: Verb) -> Verb {
+        switch v {
+        case .buy: .deposit
+        case .sweep: .swap
+        default: v
         }
     }
 

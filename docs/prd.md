@@ -73917,3 +73917,13 @@ The short Move sheet (`MoveTray.short`, 0.6) cut off a private Send: the To · N
 **Mac half (§1402).** Catalyst has no detents; the Mac's Move pane is unchanged. The cost line's one-line rule draws there too.
 
 **Checks.** Not built or seen: this session ran in a Linux container with no Xcode. Unseen: each Send on the simulator at open, the cost line at a two-figure fee.
+
+## §1867 — A verb picked from Move's menu is the verb that opens (amends §1779's kept sentence) (user, 2026-11-18, of a Send sheet: "i clicked buy and it opened send")
+
+A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1852), Buy set the verb on appear, and the sheet's first task then picked up the kept Send and wrote its verb over Buy's.
+
+1. **The menu's verb wins.** When the menu asks for a verb, a kept sentence on another page is dropped before it is picked up (`MoveSentence.page`: Gift cards and Tokens are Buy's page, Sweep is Swap's). A kept sentence on the asked page comes back as before, so Send after a half-filled Send still opens it.
+
+**Mac half (§1402).** The Mac has no menu over the page; Move's tray opens on its verbs as before. Nothing changes there.
+
+**Checks.** Not built or seen: this session ran in a Linux container with no Xcode. Unseen: fill a Send, close, pick Buy within five minutes; then pick Send and see the kept sentence.
