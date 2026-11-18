@@ -270,8 +270,15 @@ extension FeedScreen {
             // A thing by a person leads with their face, its app on the
             // corner (prd §1865, user: "show the users avatar w the x icon");
             // anything else keeps the app's icon.
+            // A chat leads with whom it is with as its room draws them: a
+            // photo by URL, a Telegram photo kept as bytes, else the name's
+            // initial (`ChatFaceMark`).
             Group {
-                if let face = BandRow.personFace(thing) {
+                if ChatFace.isPersonChat(thing) {
+                    ChatFaceMark(thing: thing)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .appCorner(thing.source, always: true)
+                } else if let face = BandRow.personFace(thing) {
                     RemoteThumb(urlString: face, size: DS.Face.rowCircle,
                                 fallback: thing.source, circular: true)
                         .frame(width: DS.Mark.row, height: DS.Mark.row)

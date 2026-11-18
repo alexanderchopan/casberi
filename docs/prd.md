@@ -73901,6 +73901,7 @@ Open, not ruled: a seen row keeps the seen ink (§1816), so the six rows turn gr
 1. **A thing by a person leads with their face** (`activityAppRow`): a chat's person, a followed account, a post's or a notice's author, read through one rule, `BandRow.personFace`, the face rules `BandRow` already used (`identityAvatarURL`, `SocialRoom.drawsPosts`, `ChatFace`). The face is a circle at `DS.Face.rowCircle` in the row's 30pt seat.
 2. **The app's mark rides the face's corner** through `AppCorner` with `always: true`, at §1810's size and ring. A thing by no one (a move, a mail, a page) keeps the app's icon.
 3. **A dead picture falls back to the app's icon** (`RemoteThumb`'s fallback), so the row never stands empty.
+4. **Every social app, chats included** (user, 2026-11-18: "can u do the same for all the social apps, especially telegram"): Bluesky, X, Instagram, Threads, TikTok, Telegram and Snapchat. A chat leads with `ChatFaceMark`, the face its room draws: a photo by URL, a Telegram photo kept as bytes (§1660), else the name's initial, never the app's icon alone. A Telegram channel's post wears the channel's picture.
 
 **Mac half (§1402).** The same row draws in the Mac's Activity; nothing else changes there.
 

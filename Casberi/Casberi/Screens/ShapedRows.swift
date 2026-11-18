@@ -425,13 +425,13 @@ struct BandRow: View {
         return faceSources.contains(thing.source) ? avatar : nil
     }
 
-    /// **WHO A THING IS BY, as one picture (prd §1865).** A chat's person,
-    /// a followed account's face, else — on a network that draws posts,
-    /// where a notice leads with the liked picture — its author's avatar.
-    /// Nil for a thing by no one: a move, a mail, a page. Activity's row
-    /// leads with this face, its app on the corner.
+    /// **WHO A THING IS BY, as one picture (prd §1865).** A followed
+    /// account's face, else — on a network that draws posts, where a notice
+    /// leads with the liked picture — its author's avatar. Nil for a thing
+    /// by no one: a move, a mail, a page. A chat asks `ChatFaceMark`, which
+    /// also draws a face kept as bytes. Activity's row leads with this face,
+    /// its app on the corner.
     static func personFace(_ thing: Thing) -> String? {
-        if ChatFace.isPersonChat(thing) { return ChatFace.url(thing) }
         if let avatar = identityAvatarURL(thing) { return avatar }
         guard SocialRoom.drawsPosts(thing.source),
               let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
