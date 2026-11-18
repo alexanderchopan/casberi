@@ -101,7 +101,8 @@ extension FeedScreen {
                 // Network · fact (prd §1718): "Aztec · Gas"; a public token,
                 // "Aztec" alone, as the Tokens rows above it name theirs.
                 aztecRow(title: holding.name,
-                         line: gas ? Self.gasLine(AztecGas.state) : "Aztec",
+                         // A row holding gas never says None (prd §1862, §83).
+                         line: gas ? Self.gasLine(Self.gasStanding(units)) : "Aztec",
                          figure: mask ?? (gas ? nil : store.usd(holding, units: units).map(WalletValue.money))
                              ?? Self.aztecFigure(holding, units: units),
                          // Grey, as every Tokens row's figure is.
@@ -173,6 +174,13 @@ extension FeedScreen {
 
     /// The gas row's line: the place and the fact (prd §1718), and how the
     /// gas stands when that needs saying (prd §1761).
+    /// How the gas stands for a row that holds `units`: "None" only when it
+    /// holds none.
+    static func gasStanding(_ units: String?) -> AztecGas.Standing {
+        let held = (units.flatMap { Decimal(string: $0) } ?? 0) > 0
+        return held && AztecGas.state == .none ? .enough : AztecGas.state
+    }
+
     static func gasLine(_ state: AztecGas.Standing) -> String {
         guard let word = AztecGasTray.word(state) else { return String(localized: "Aztec · Gas") }
         return String(localized: "Aztec · Gas") + " · " + word.words
@@ -205,7 +213,7 @@ extension FeedScreen {
                 if arriving {
                     Image(systemName: "clock").dsGlyph(.body, weight: .regular).foregroundStyle(DS.textSecondary)
                 } else if let mark {
-                    AssetMark(name: mark, size: DS.Mark.badge)
+                    AssetMark(name: mark, size: DS.Mark.row)
                 } else {
                     ProtocolInlineMark(mark: "aztec")
                 }

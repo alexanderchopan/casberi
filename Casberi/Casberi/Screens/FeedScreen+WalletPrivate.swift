@@ -235,7 +235,7 @@ extension FeedScreen {
                             .dsGlyph(.body, weight: .regular)
                             .foregroundStyle(DS.textSecondary)
                     } else {
-                        AssetMark(name: h.symbol, size: DS.Mark.badge)
+                        AssetMark(name: h.symbol, size: DS.Mark.row)
                     }
                 }
                 .frame(width: DSRoomChassis.headGlyph)
@@ -586,7 +586,7 @@ extension FeedScreen {
                             .dsGlyph(.body, weight: .regular)
                             .foregroundStyle(hue)
                     } else {
-                        AssetMark(name: row.symbol, size: DS.Mark.badge)
+                        AssetMark(name: row.symbol, size: DS.Mark.row)
                     }
                 }
                 .frame(width: DSRoomChassis.headGlyph)

@@ -73839,3 +73839,25 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The same Permissions page on Catalyst.
 
 **Checks.** None new. **Seen** on the simulator over the demo's account: Co-signer under Approvals, one row, "...d203" and "Check approvals". Not seen: a row named by a kept session, which the simulator has none of, and the door on a real co-signer's address.
+
+## §1862 — Home and Holdings, polished before the ship: one Public figure, no flat day, a pill that says today, the address in Account, a Needs you row that leads with its fact; Holdings' sections alike, its rows at Home's mark size with their day (amends §1858, §1859, §1850's copy, §1815 for Accounts' total, §1700e's gas line) (user, 2026-11-17, of the polish mocks "Home and Holdings polish": "2. fix", "3 ok", "4 ok", of the address: "problem is people want to copy their address often. it's usally on home pages. but ok lets try it", "6 yes", "yes"; of Holdings: "1. ok, 2, ok, 3, ok, 4, ok, 5 ok")
+
+**Why.** Home said Public $55K while Holdings said Public $24K beside Accounts $33K: Home's Public was the balance less Private, an app's money included. The rest were small: a flat "0.0%" in grey, an "All" with no control beside the pill, the address crowding the doors, "Needs attention ·" under a heading that says the same, an Activity chevron below the word's line, a chevron on one section's total and not the others, Holdings' marks smaller than Home's, and a Fee Juice row holding 2.5 whose line said "None".
+
+1. **Public is one figure** (`walletPublicUSD`): what your wallets hold in the open plus what Aave holds for you, never an app's money nor Private. Home and Holdings both read it.
+2. **A day that rounds to zero draws nothing** under a token's dollars, on Home and on Holdings (§83).
+3. **The pill says "+0.5% today"**; the whose word ("All") left Home, the choice stays Holdings'.
+4. **The address and its copy leave Home's doors** (`HomeCopyAction` deleted); Account holds them. On trial: the user expects people to want it on Home.
+5. **Needs you's row leads with its fact** (`NeedsYouWords.name`, §1378's rule now on Home's Wallet row too); "+14" reads "14 more".
+6. **A section word's chevron sits on the word's line** (`ActivityWord`, centred, was first-baseline).
+7. **Holdings: Accounts' total draws no chevron**, as Public's and Private's do not; the row still opens Accounts.
+8. **A one-line preview row takes half the air** (`walletPreviewRow`); two-line rows keep the pitch.
+9. **Holdings' token rows carry the day** under the dollars, as Home's do.
+10. **Holdings' marks are a row's size** (`DS.Mark.row`, was `badge`): tokens, accounts, positions, private, lent, round-ups, Aztec.
+11. **A gas row holding gas never says None** (`gasStanding`). Its Aztec ink stays (§1779) and its figure stays bare (the user's 2026-11-04 rule).
+
+Not done: the Move disc over a row's figure (user: "doesn't matter it will always be there in that spot").
+
+**Mac half (§1402).** The same figures and rows on Catalyst; the address's copy was the phone Home's only.
+
+**Checks.** None new. **Seen** on the simulator over the demo: Home Public $24K and Private $2K matching Holdings after the reads land (the first frame said $23K and $1K while lent and Railgun read), the pill, three doors, "£200 → €235 · Deposit" with "14 more", Holdings' Accounts head without a chevron, marks at 30pt, LINK's −6.4%, Fee Juice "Aztec · Gas". Not seen: a flat token on Holdings, the lent and round-ups marks at the new size (built, not shot).

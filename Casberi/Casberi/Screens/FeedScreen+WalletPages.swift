@@ -567,14 +567,16 @@ extension FeedScreen {
         // (an app's money is in All and in neither of the others).
         walletDoorsSection {
             if walletOnAll, hasApps {
-                walletDoor(.apps, figure: money(groups.apps))
+                // No chevron on a section's total (prd §1862): Accounts
+                // reads as Public and Private do; its row still opens Accounts.
+                walletDoor(.apps, figure: money(groups.apps), act: { chrome.walletSection = .apps })
                 ForEach(Array(groups.apps.sorted { $0.usd > $1.usd }.prefix(Self.holdingsPreviewCount))) { app in
                     walletPreviewRow(app.label, figure: mask ?? WalletValue.money(app.usd),
                                      act: { chrome.walletSection = .apps }) {
                         if let bank = SimpleFINShape.connID(fromHolder: app.address) {
-                            BankMark(connID: bank, size: DS.Mark.badge)
+                            BankMark(connID: bank, size: DS.Mark.row)
                         } else {
-                            BridgeIcon(name: Self.venueMark(app), size: DS.Mark.badge)
+                            BridgeIcon(name: Self.venueMark(app), size: DS.Mark.row)
                         }
                     }
                 }
@@ -589,10 +591,9 @@ extension FeedScreen {
             // the lent standing, a last reading included, §1697). Lent is
             // no longer a section: private money is lent too.
             let lent = walletLentStanding
-            let lentUSD = lent.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0
             if !tokens.isEmpty || anyHidden || lent.map({ !$0.rows.isEmpty || $0.roundUps != nil }) == true {
                 walletDoor(.holdings, name: String(localized: "Public"),
-                           figure: mask ?? WalletValue.money(tokens.reduce(0) { $0 + $1.usd } + lentUSD),
+                           figure: mask ?? WalletValue.money(walletPublicUSD),
                            act: { feedSheet = .walletTokens })
                     .task(id: lent?.account) {
                         if let lent { await lent.lend.read(account: lent.account) }
@@ -629,7 +630,7 @@ extension FeedScreen {
                                      act: {
                                          if let ref = item.ref { openBySourceRef(ref, in: all) } else { appSettings?() }
                                      }) {
-                        BridgeIcon(name: seat.mark, size: DS.Mark.badge)
+                        BridgeIcon(name: seat.mark, size: DS.Mark.row)
                     }
                 }
             }
@@ -648,7 +649,7 @@ extension FeedScreen {
                     walletPreviewRow(row.name, figure: row.word,
                                      tone: row.alert ? DS.attentionInk : DS.textSecondary,
                                      act: { chrome.walletSection = .positions }) {
-                        BridgeIcon(name: row.mark, size: DS.Mark.badge)
+                        BridgeIcon(name: row.mark, size: DS.Mark.row)
                     }
                 }
             }
@@ -687,6 +688,17 @@ extension FeedScreen {
     /// How many rows a Holdings door previews under it (prd §1525).
     static let holdingsPreviewCount = 3
 
+    /// **PUBLIC IS ONE FIGURE, HOLDINGS' AND HOME'S (prd §1862).** What your
+    /// wallets hold in the open and what Aave holds for you, never an app's
+    /// money (Accounts on All) nor Private: Home said the balance less
+    /// Private, $55K over Holdings' $24K.
+    var walletPublicUSD: Double {
+        let tokens = portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []
+        let lent = walletLentStanding
+        let lentUSD = lent.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0
+        return tokens.reduce(0) { $0 + $1.usd } + lentUSD
+    }
+
     /// The biggest tokens the given accounts hold, biggest first, cut to the
     /// preview. Addresses match as the portfolio stores them, lower case.
     static func topTokens(_ portfolio: WalletPortfolio?, held addresses: [String]) -> [WalletPortfolio.Position] {
@@ -702,6 +714,7 @@ extension FeedScreen {
     /// rung read as a row you could not press.
     func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, lineInk: Color = DS.textSecondary,
                                       figure: String?, tone: Color = DS.textPrimary,
+                                      move: Double? = nil,
                                       act: @escaping () -> Void,
                                       @ViewBuilder mark: () -> Mark) -> some View {
         Button {
@@ -727,12 +740,26 @@ extension FeedScreen {
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
-                if let figure {
-                    walletRowFigure(figure, tone: tone)
+                // The figure over its day, as Home's token rows (prd §1862);
+                // a day that rounds to zero draws nothing (§83).
+                let day = move.map { WatchlistRules.change($0 * 100) }
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let figure {
+                        walletRowFigure(figure, tone: tone)
+                    }
+                    if let day, day.tone == .up || day.tone == .down {
+                        Text(verbatim: day.words)
+                            .dsText(.subhead12)
+                            .monospacedDigit()
+                            .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
+                            .lineLimit(1)
+                    }
                 }
             }
-            // The app's one row pitch (prd §1496): a preview is a row.
-            .walletRowPitch()
+            // The app's one row pitch (prd §1496): a preview is a row; a
+            // one-line row takes half the air (prd §1862).
+            .frame(minHeight: DSFeed.headHeight)
+            .padding(.vertical, line == nil ? FeedScreen.rowAir / 2 : FeedScreen.rowAir)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -753,8 +780,9 @@ extension FeedScreen {
             walletPreviewRow(token.symbol,
                              line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
                              lineInk: differs ? DS.attentionInk : DS.textSecondary,
-                             figure: mask ?? WalletValue.money(token.usd), act: { act(token) }) {
-                AssetMark(name: token.symbol, size: DS.Mark.badge)
+                             figure: mask ?? WalletValue.money(token.usd),
+                             move: walletHoldingMoves[HoldingMoves.key(token.symbol)], act: { act(token) }) {
+                AssetMark(name: token.symbol, size: DS.Mark.row)
             }
             // Hide from the row you see first, as from the Tokens list
             // (prd §1591); the list's Hidden row brings it back.

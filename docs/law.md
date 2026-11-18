@@ -260,7 +260,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2040 of 2114 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2041 of 2115 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2302,6 +2302,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1859 — Home's token rows take the feed's row height and say where the token is and how its day went; a private row does what…
 - §1860 — Account's face and name are a door: one tap asks the name-and-photo question, and Settings' Name row is deleted (amen…
 - §1861 — Permissions names the co-signer: one row per key, a door to its approvals on Revoke.cash (extends §1710; keeps §112,…
+- §1862 — Home and Holdings, polished before the ship: one Public figure, no flat day, a pill that says today, the address in A…
 
 ## Dead rulings → what replaced them (generated)
 

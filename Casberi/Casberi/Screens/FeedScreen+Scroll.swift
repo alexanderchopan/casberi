@@ -342,7 +342,8 @@ extension FeedScreen {
         // **THE ROW NAMES WHAT WAITS (prd §1809).** It read "Money · 13"
         // directly over the Money section, two Moneys in a row; it is the
         // first thing waiting now, and how many more.
-        let first = asks.first(where: \.isLive)?.title
+        // Under Needs you a row does not say it needs you (§1378, §1862).
+        let first = asks.first(where: \.isLive).map { NeedsYouWords.name($0.title) }
         let yours = YourAccountDemo.shownAddress
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         // Before anything has moved the Wallet's own row says it (prd
@@ -382,7 +383,8 @@ extension FeedScreen {
                 if showsNeeds {
                     activityAskRow(glyph: ScopeTileGlyph.wallets,
                                    name: first ?? String(localized: "Wallet"),
-                                   word: first == nil ? "\(needs)" : needs > 1 ? "+\(needs - 1)" : "") {
+                                   word: first == nil ? "\(needs)"
+                                       : needs > 1 ? String(localized: "\(needs - 1) more") : "") {
                         chrome.openWalletPage(.needsYou, fromActivity: WalletSection.needsYou.label)
                     }
                 }
@@ -1692,7 +1694,9 @@ struct ActivityWord: View {
     /// standing in the icons' column so it hangs left of every row's words,
     /// and a section's worth of air above it.
     private var word: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
+        // Centred, so the chevron sits on the word's line, never under it
+        // (prd §1862).
+        HStack(alignment: .center, spacing: DS.Space.s1) {
             Text(verbatim: name)
                 .dsText(.heading24)
                 .foregroundStyle(DS.headInk)

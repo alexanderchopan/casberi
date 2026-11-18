@@ -159,9 +159,10 @@ extension FeedScreen {
                         if shown.asOf != nil, stamp.hasPrefix("as of") {
                             Text(verbatim: stamp).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1)
                         } else if let day {
-                            DSDayPill(words: day.words, ink: day.ink)
+                            // The pill says what it measures (prd §1862); the
+                            // whose word beside it is Holdings' alone.
+                            DSDayPill(words: String(localized: "\(day.words) today"), ink: day.ink)
                         }
-                        homeWhoseWord
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
@@ -232,22 +233,6 @@ extension FeedScreen {
     /// The card's height while it has no balance to draw.
     static let homeStartHeight: CGFloat = 200
 
-    /// Whose money the card shows, said only when it is not yours (user:
-    /// "lets get rid of the yours following all on the home screen and only
-    /// have it on holdings … too much extra to tap"). The choice is
-    /// Holdings'; Home follows it, and a balance that is not yours alone
-    /// says so in one grey word, a fact and no control (§83).
-    @ViewBuilder
-    var homeWhoseWord: some View {
-        if WalletWhoseSwitch.offered.count > 1 {
-            let lit = WalletWhose.lit(scope: chrome.walletScope, yours: WalletWhoseSwitch.yours,
-                                      same: WalletWatch.sameAddress)
-            if lit != .yours {
-                Text(verbatim: lit.label).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-            }
-        }
-    }
-
     /// The choice itself, on the card only while a scope has nothing to
     /// draw, so that card is never a dead end (§1526).
     @ViewBuilder
@@ -310,7 +295,9 @@ extension FeedScreen {
         let count = homeFeedless ? 3 : 2
         let total = portfolioShown?.totalUSD ?? 0
         let hidden = walletShowsPrivatePlaces ? min(total, walletPrivateUSD) : 0
-        let pub = total - hidden < 0.01 ? []
+        // Holdings' Public, never the balance less Private (prd §1862).
+        let open = walletPublicUSD
+        let pub = open < 0.01 ? []
             : Array((portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? [])
                 .filter { $0.usd > 0 }
                 .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.symbol < $1.symbol }
@@ -321,7 +308,7 @@ extension FeedScreen {
                 .prefix(count))
         let moves = walletHoldingMoves
         if !pub.isEmpty {
-            homeSideHead(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
+            homeSideHead(String(localized: "Public"), mask ?? WalletValue.money(open))
             ForEach(pub) { token in
                 // Ethereum disagreed twice in a row (prd §1825): said in
                 // amber where the networks stand, as on Holdings.
@@ -378,7 +365,8 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 VStack(alignment: .trailing, spacing: 2) {
                     walletRowFigure(figure)
-                    if let day {
+                    // A day that rounds to zero draws nothing (prd §1862, §83).
+                    if let day, day.tone == .up || day.tone == .down {
                         Text(verbatim: day.words)
                             .dsText(.subhead12)
                             .monospacedDigit()
@@ -552,9 +540,7 @@ extension FeedScreen {
                 }
                 .buttonStyle(RowPress())
             }
-            if !bare, let yours, !pending {
-                HomeCopyAction(address: yours)
-            }
+            // The address and its copy are Account's (prd §1862).
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -674,46 +660,5 @@ extension FeedScreen {
     static func homeLeadAnchor(_ jumps: [String]) -> String? {
         guard !homeCircleNames(jumps).isEmpty, let first = jumps.first else { return nil }
         return scrollAnchor(first)
-    }
-}
-
-/// The address's copy, one of Home's round buttons (prd §1849): pressed, its
-/// disc turns to the confirm hue and a check and its word reads "Copied" for
-/// a moment (§867), in place of a toast.
-private struct HomeCopyAction: View {
-    let address: String
-    @State private var copied = false
-
-    var body: some View {
-        Button {
-            DSPasteboard.copy(address)
-            DSHaptic.selection()
-            copied = true
-            Task {
-                try? await Task.sleep(for: .seconds(1.2))
-                copied = false
-            }
-        } label: {
-            // Not a door: the address's tail, grey, and the copy's glyph in
-            // the chevron's place (prd §1850).
-            HStack(spacing: DS.Space.s1) {
-                Text(verbatim: copied ? String(localized: "Copied") : AddressTail.short(address))
-                    .dsText(.body17)
-                    .monospacedDigit()
-                    .foregroundStyle(copied ? DS.confirmInk : DS.textSecondary)
-                    .lineLimit(1)
-                    .contentTransition(.opacity)
-                Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    .dsGlyph(.subhead)
-                    .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
-                    .contentTransition(.symbolEffect(.replace))
-                    .accessibilityHidden(true)
-            }
-            .frame(minHeight: DS.Hit.min)
-            .contentShape(Rectangle())
-            .animation(DS.Motion.standard, value: copied)
-        }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text("Copy address"))
     }
 }

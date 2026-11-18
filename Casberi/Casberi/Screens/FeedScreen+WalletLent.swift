@@ -65,7 +65,7 @@ extension FeedScreen {
         let state = (["Base"] + (mask == nil ? [String(localized: "\(RoundUpsPot.figure(units)) of \(at)")] : []) + ["Aave"])
             .joined(separator: " · ")
         return HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-            AssetMark(name: "USDC", size: DS.Mark.badge)
+            AssetMark(name: "USDC", size: DS.Mark.row)
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -113,7 +113,7 @@ extension FeedScreen {
         let state = [m.network, AaveLend.rateOnly(lend.rates[LendMove.key(m)]), "Aave"].compactMap { $0 }.joined(separator: " · ")
         return Button { walletOpenLend(.takeBack, m) } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                AssetMark(name: m.symbol, size: DS.Mark.badge)
+                AssetMark(name: m.symbol, size: DS.Mark.row)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
