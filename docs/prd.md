@@ -73893,3 +73893,15 @@ Open, not ruled: a seen row keeps the seen ink (§1816), so the six rows turn gr
 **Mac half (§1402).** None: the quiet Activity is the phone's; beside a pane the Feed's rows were already a title and an icon (§1497).
 
 **Checks.** `needs-you-selftest.sh` holds the six-moves rule by name, with a mutation that puts one row per app back. **Seen** on the simulator: Home with no feed over a followed wallet, six rows ("Burned an NFT" five times, "Received 0.0000 ETH"), the newest in the seen ink; the demo's Activity, Day and Social with no names ("Blue Bottle · $6.50", "Standup", "rui liked your video", "Imported 248 things"). Not seen: a phone, a thing with no words, VoiceOver.
+
+## §1865 — A person's thing on Activity leads with their face, its app on the corner (amends §1864 item 1; extends §1810's `AppCorner` to Home) (user, 2026-11-18: "on social feed on home can we show the users avatar w the x icon? or if we have to show only one show the avatar?")
+
+**Why.** §1864 made an Activity row its app's icon and its newest thing. For X that read as X's mark beside "rui liked your video": the icon said the app, and nothing said who. §1810 already drew a face with its app's mark on the corner for a title-only row; Home's Activity row did not take it.
+
+1. **A thing by a person leads with their face** (`activityAppRow`): a chat's person, a followed account, a post's or a notice's author, read through one rule, `BandRow.personFace`, the face rules `BandRow` already used (`identityAvatarURL`, `SocialRoom.drawsPosts`, `ChatFace`). The face is a circle at `DS.Face.rowCircle` in the row's 30pt seat.
+2. **The app's mark rides the face's corner** through `AppCorner` with `always: true`, at §1810's size and ring. A thing by no one (a move, a mail, a page) keeps the app's icon.
+3. **A dead picture falls back to the app's icon** (`RemoteThumb`'s fallback), so the row never stands empty.
+
+**Mac half (§1402).** The same row draws in the Mac's Activity; nothing else changes there.
+
+**Checks.** Not built or seen: this session ran in a Linux container with no Xcode. Unseen: the row on the simulator, a face that fails to load, a seen row's faded face and corner.

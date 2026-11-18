@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2043 of 2117 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2044 of 2118 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2306,6 +2306,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1862 — Home and Holdings, polished before the ship: one Public figure, no flat day, a pill that says today, the address in A…
 - §1863 — Polish pass two: a swap's row names the pair, a Wise row its amounts, the windows read at the row's size through one…
 - §1864 — The icon says the app: an Activity row is its app's icon and its newest thing on one line, no name; with no feed Home…
+- §1865 — A person's thing on Activity leads with their face, its app on the corner (amends §1864 item 1; extends §1810's `AppC…
 
 ## Dead rulings → what replaced them (generated)
 

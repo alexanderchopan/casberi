@@ -411,7 +411,9 @@ struct BandRow: View {
         "Telegram",
     ]
 
-    private var identityAvatarURL: String? {
+    private var identityAvatarURL: String? { Self.identityAvatarURL(thing) }
+
+    static func identityAvatarURL(_ thing: Thing) -> String? {
         // A Telegram chat with one person leads with their face (prd §1575),
         // never the channel mark below. Read off the handle the row already
         // holds, so a conversation landed before faces has one too.
@@ -420,7 +422,20 @@ struct BandRow: View {
             return thing.authorHandle.map(TelegramMessages.face(handle:))
         }
         guard let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
-        return Self.faceSources.contains(thing.source) ? avatar : nil
+        return faceSources.contains(thing.source) ? avatar : nil
+    }
+
+    /// **WHO A THING IS BY, as one picture (prd §1865).** A chat's person,
+    /// a followed account's face, else — on a network that draws posts,
+    /// where a notice leads with the liked picture — its author's avatar.
+    /// Nil for a thing by no one: a move, a mail, a page. Activity's row
+    /// leads with this face, its app on the corner.
+    static func personFace(_ thing: Thing) -> String? {
+        if ChatFace.isPersonChat(thing) { return ChatFace.url(thing) }
+        if let avatar = identityAvatarURL(thing) { return avatar }
+        guard SocialRoom.drawsPosts(thing.source),
+              let avatar = thing.authorAvatarURL, !avatar.isEmpty else { return nil }
+        return avatar
     }
 
     /// An RSS row leads with its PUBLISHER's mark — Reuters, a blog — the way

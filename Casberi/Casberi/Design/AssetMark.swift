@@ -270,14 +270,19 @@ struct ProtocolBadge: ViewModifier {
 /// app's mark rides the face's corner at `ProtocolBadge`'s size and ring. Only
 /// where a row is its title alone (`\.dsTitleOnly`): an app's own page, a
 /// category's page and a sheet already say the app.
+///
+/// **HOME'S ACTIVITY TOO (prd §1865):** a row there is one app's newest thing,
+/// and a thing by a person leads with their face, so `always` draws the corner
+/// whatever the row's environment says.
 struct AppCorner: ViewModifier {
     let source: String?
+    var always = false
     @Environment(\.dsTitleOnly) private var titleOnly
     @Environment(\.dsGroupedSource) private var groupedSource
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottomTrailing) {
-            if titleOnly, groupedSource == nil, let source {
+            if always || (titleOnly && groupedSource == nil), let source {
                 // An app is a rounded square, a person a circle (prd §1122).
                 BridgeIcon(name: source, size: DS.Mark.inline)
                     .overlay(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.inline), style: .continuous)
@@ -291,8 +296,8 @@ struct AppCorner: ViewModifier {
 
 extension View {
     /// The app's mark on a face's corner, on Activity only (`AppCorner`).
-    func appCorner(_ source: String?) -> some View {
-        modifier(AppCorner(source: source))
+    func appCorner(_ source: String?, always: Bool = false) -> some View {
+        modifier(AppCorner(source: source, always: always))
     }
 
     /// A protocol's mark on this lead's corner, or nothing (`ProtocolBadge`).

@@ -267,9 +267,21 @@ extension FeedScreen {
                                  chrome.walletScope = RoomAccounts.scopeID(host.seat)
                              }
                          }) {
-            BridgeIcon(name: thing.source, size: DS.Mark.row)
-                .opacity(seen ? 0.5 : 1)
-                .accessibilityHidden(true)
+            // A thing by a person leads with their face, its app on the
+            // corner (prd §1865, user: "show the users avatar w the x icon");
+            // anything else keeps the app's icon.
+            Group {
+                if let face = BandRow.personFace(thing) {
+                    RemoteThumb(urlString: face, size: DS.Face.rowCircle,
+                                fallback: thing.source, circular: true)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .appCorner(thing.source, always: true)
+                } else {
+                    BridgeIcon(name: thing.source, size: DS.Mark.row)
+                }
+            }
+            .opacity(seen ? 0.5 : 1)
+            .accessibilityHidden(true)
         }
         .accessibilityLabel(Text(verbatim: words.isEmpty ? app : "\(app), \(words)"))
         // On screen is seen, once you leave (prd §1831); Day's rows are what
