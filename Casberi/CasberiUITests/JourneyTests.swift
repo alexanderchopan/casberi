@@ -93,8 +93,10 @@ final class JourneyTests: XCTestCase {
     /// the app.
     @MainActor func testSpending() {
         let w = Walk("spending", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label == %@", "Wallet"), "band Wallet")
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Spending"), "Spending row")
+        // Spending is a row in Home's Wallet section (prd §1870); the bar is
+        // Move alone (§1809), so there is no Wallet tab to take first.
+        w.scrollUntil(w.el(.button, "label BEGINSWITH %@", "Spending"), "Spending row on Home")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Spending"), "Spending row")
         let month = DateFormatter().monthSymbols[Calendar.current.component(.month, from: Date()) - 1]
         w.see(w.el(.staticText, "label CONTAINS %@", " in \(month)"), "Spending panel")
         w.finish()
@@ -260,7 +262,9 @@ final class JourneyTests: XCTestCase {
             throw XCTSkip("no catalogue list (run through journeys.sh catalog)")
         }
         let names = list.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-        let fresh = ["-onboarded", "YES", "-demo.corpusAllowed", "NO", "-openSettings", "YES"]
+        // Apps' own page: `-openSettings` lands on the Account page since prd
+        // §1808, which draws no Apps door.
+        let fresh = ["-onboarded", "YES", "-demo.corpusAllowed", "NO", "-deeplink", "casberi://apps"]
         for name in names {
             let w = Walk("catalog-\(Walk.slug(name))", launch: fresh, test: self, quiet: true)
             // Settings opens on Sources with Casberi's folder up (prd §1321);
@@ -341,13 +345,11 @@ final class JourneyTests: XCTestCase {
         w.maybe(w.el(.button, "label BEGINSWITH %@", "Keep it moving"), within: 8, "intro cover")
         // The band's "Exit demo" (prd §1322).
         w.maybe(w.el(.button, "label == %@", "Exit demo"), within: 8, "band, Exit demo")
-        // On Sources once Exit lands there. Casberi's folder is the test: it
-        // stands only in Sources' library (prd §1316, §1321).
-        let casberi = w.el(.button, "label == %@", "Casberi, Settings")
-        if !casberi.waitForExistence(timeout: 6) {
-            w.openApps()
-        }
-        w.see(casberi, "Sources")
+        // On Apps, its field on screen. Casberi's folder was the test until
+        // Apps stopped drawing a Casberi row (prd §1111) and Settings became
+        // the Account page (prd §1808); the field stands on Apps alone (§1715).
+        w.openApps()
+        w.see(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "Apps")
         w.begin()
     }
 
