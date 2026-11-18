@@ -67904,6 +67904,34 @@
         }
       }
     },
+    "Changes your name or photo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia tu nombre o foto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前または写真を変更します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름 또는 사진을 변경합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更改你的名字或照片"
+          }
+        }
+      }
+    },
     "Changes your savings goal" : {
       "localizations" : {
         "es" : {
@@ -68264,6 +68292,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "再次检查"
+          }
+        }
+      }
+    },
+    "Check approvals" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobar aprobaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "承認を確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "승인 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "检查授权"
+          }
+        }
+      }
+    },
+    "Check approvals for co-signer %@ on Revoke.cash" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobar las aprobaciones del cofirmante %@ en Revoke.cash"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revoke.cash で共同署名者 %@ の承認を確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revoke.cash에서 공동 서명자 %@의 승인 확인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Revoke.cash 上检查共同签名人 %@ 的授权"
           }
         }
       }
@@ -104588,6 +104672,34 @@
         }
       }
     },
+    "Imported %lld things" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se importaron %lld elementos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件のアイテムをインポートしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 항목을 가져왔습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已导入 %lld 项内容"
+          }
+        }
+      }
+    },
     "Imported %lld things from %@" : {
       "localizations" : {
         "en" : {
@@ -104618,6 +104730,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已从 %@ 导入 %lld 项内容"
+          }
+        }
+      }
+    },
+    "Imported 1 thing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se importó 1 elemento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件のアイテムをインポートしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "항목 1개를 가져왔습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已导入 1 项内容"
           }
         }
       }
