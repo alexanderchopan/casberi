@@ -82,7 +82,7 @@ struct PolarScreen: View {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading Polar…"),
                                  proof: result)
-            DSSlabNote(text: "Sales, refunds, disputes and subscriptions leaving a healthy state land on their own. Renewals stay out.", plain: true)
+            DSSlabNote(text: "Sales, refunds, disputes. No renewals.", plain: true)
         }
     }
 

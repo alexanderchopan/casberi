@@ -78,7 +78,7 @@ struct HuggingFaceScreen: View {
                     togglePapers(on)
                 }
             ))
-            DSSlabNote(text: "Hugging Face's own daily pick — each lands with its abstract.", plain: true)
+            DSSlabNote(text: "Their daily pick, each with its abstract.", plain: true)
         }
     }
 

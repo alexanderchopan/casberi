@@ -150,7 +150,7 @@ struct L2beatDirectoryScreen: View {
 			}
 
 			Section {
-				DSFootnote(prose: String(localized: "\(L2beatCopy.attribution) — nothing flagged is nothing they flagged, not a clean bill.\n\nBundled as of \(L2beatDirectory.generated); read live once connected."))
+				DSFootnote(prose: String(localized: "\(L2beatCopy.attribution). No flag isn't a clean bill.\n\nBundled as of \(L2beatDirectory.generated); read live once connected."))
 			}
 			.listRowSeparator(.hidden)
 			.listRowBackground(Color.clear)

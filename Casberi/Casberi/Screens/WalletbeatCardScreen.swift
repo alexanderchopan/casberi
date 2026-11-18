@@ -58,7 +58,7 @@ struct WalletbeatReportCard: View {
 						.dsText(.subhead12)
 						.foregroundStyle(DS.textTertiary)
 				} else if failed {
-					DSProse.text("Couldn't reach Walletbeat. The counts above are from when this app was last updated.")
+					DSProse.text("Couldn't reach Walletbeat. These counts came with the app.")
 						.dsText(.subhead12)
 						.foregroundStyle(DS.textTertiary)
 						.fixedSize(horizontal: false, vertical: true)

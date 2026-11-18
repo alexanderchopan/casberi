@@ -225,7 +225,7 @@ struct SafeScreen: View {
             // signing actually happens — in both states.
             DSSlabNote(text: safeCount > 0
                 ? String(localized: "Following \(safeCount) Safe")
-                : String(localized: "Follow a Safe, or an account that signs for one."),
+                : String(localized: "Follow a Safe or one of its signers."),
                        plain: true)
         }
     }
@@ -319,7 +319,7 @@ struct SafeScreen: View {
                 // only moment where "there is no recovery phrase" changes
                 // what somebody does (it is the argument for 2-of-3 rather
                 // than 2-of-2).
-                DSSlabNote(text: "The key stays on this phone behind Face ID. There is no recovery phrase, and re-enrolling Face ID erases it — so give the Safe a third owner you keep somewhere else.", plain: true)
+                DSSlabNote(text: "No recovery phrase. Add a third owner.", plain: true)
             }
             if let signerError {
                 Text(verbatim: signerError)
@@ -360,7 +360,7 @@ struct SafeScreen: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Image(systemName: "exclamationmark.triangle.fill").dsGlyph(.caption)
                         .foregroundStyle(DS.destructive)
-                    DSProse.text("\(WalletStore.shortAddress(safe.safeAddress)) needs all \(safe.ownerCount) of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner.")
+                    DSProse.text("\(WalletStore.shortAddress(safe.safeAddress)) needs all \(safe.ownerCount) owners. Add one more as a spare.")
                         .dsText(.subhead12).foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -419,7 +419,7 @@ struct SafeScreen: View {
     @ViewBuilder private var enclaveBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if enclavePresence == .destroyed {
-                DSProse.text("This phone's vault-chip key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap its signer address out of the Safe.")
+                DSProse.text("Re-enrolling Face ID erased this key. Have an owner swap it out.")
                     .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                 DSSlabDoor(title: String(localized: "Make a new vault-chip key"), systemImage: "cpu", opens: false) {

@@ -305,7 +305,7 @@ grep -q "const answer = await new Promise(resolve => waiting.set(id, resolve));"
   || { echo "✗ an authorization is written without the person's yes"; exit 1; }
 grep -q "const sent = await watched('app', () => sendOwn(wallet, grant, answer.gas, async () => (await ownFeeJuice(wallet)) > 0n));" $MAIN \
   || { echo "✗ an authorization's transaction no longer pays and takes turns as Casberi's sends do"; exit 1; }
-grep -q 'It lets \\(grantee) make this call in your name, once. Anyone can see it.' Casberi/Casberi/Screens/AztecBrowser.swift \
+grep -q '\\(grantee) can make this call once, publicly.' Casberi/Casberi/Screens/AztecBrowser.swift \
   || { echo "✗ the sheet no longer says who an authorization is for"; exit 1; }
 
 # ── What a call says (prd §1763) ─────────────────────────────────────────

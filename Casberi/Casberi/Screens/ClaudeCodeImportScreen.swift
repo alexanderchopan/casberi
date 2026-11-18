@@ -123,7 +123,7 @@ struct ClaudeCodeImportScreen: View {
             // "you can import again", which the upkeep line says — it is
             // that a session which GREW is updated in place rather than
             // landing twice, and nothing else on screen says it.
-            DSSlabNote(text: "Re-import later and sessions that grew are updated, not duplicated.", plain: true)
+            DSSlabNote(text: "Re-import updates sessions that grew.", plain: true)
         }
     }
 

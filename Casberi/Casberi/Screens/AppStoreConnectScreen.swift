@@ -286,7 +286,7 @@ struct AppStoreConnectScreen: View {
             // choice Apple's own token spec defines, and somebody with an
             // individual key who feels obliged to invent a value here gets
             // a 401 they cannot diagnose.
-            DSSlabNote(text: "Leave the Issuer ID empty for an individual key.", plain: true)
+            DSSlabNote(text: "Individual key? Leave Issuer ID empty.", plain: true)
         BridgeSyncStatusRows(syncing: connecting,
                              syncingLine: String(localized: "Checking the key…"),
                              proof: result)

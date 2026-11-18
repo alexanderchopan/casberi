@@ -126,7 +126,7 @@ struct SentryScreen: View {
             // Named because the failure is otherwise a bare 401 that reads
             // exactly like a bad token — the one setup mistake here that
             // has nothing to do with what you pasted.
-            DSSlabNote(text: "EU region? Use de.sentry.io. Self-hosted? Use your own domain.",
+            DSSlabNote(text: "EU: de.sentry.io. Self-hosted: your host.",
                        plain: true)
         }
     }

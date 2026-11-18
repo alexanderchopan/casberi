@@ -256,7 +256,7 @@ struct OpenRouterRoutingRow: View {
                 // fine print elsewhere — this is the one setting here that
                 // can make a question fail to answer.
                 DSToggleRow(title: Text("Only providers that don't keep what you send"),
-                            detail: DSProse.text("Some models won't be served that way — you'll be told which."),
+                            detail: DSProse.text("Some models drop out. You'll be told which."),
                             isOn: $privateRouting)
                 .onChange(of: privateRouting) { _, on in AgentOpenRouter.privateRouting = on }
             }
@@ -301,7 +301,7 @@ struct AgentLibrarianRow: View {
         if AgentKey.active == provider, provider != .bankr, !AgentLibrarian.deviceCanDoIt {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSToggleRow(title: Text("Let your key organize"),
-                            detail: DSProse.text("Names screenshots and reads long chats so they can be found."),
+                            detail: DSProse.text("Names screenshots and reads long chats."),
                             isOn: $enabled)
                 .onChange(of: enabled) { _, on in
                     AgentLibrarian.isEnabled = on

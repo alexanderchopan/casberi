@@ -108,7 +108,7 @@ struct SnapchatImportScreen: View {
                 DSHaptic.tap()
                 Task { await runFetch() }
             }
-            DSSlabNote(text: "Memories arrive as links that Snapchat kills 7 days after the export. Photos are fetched; videos stay as dated entries.", plain: true)
+            DSSlabNote(text: "Snapchat kills the links after 7 days.", plain: true)
         }
     }
 

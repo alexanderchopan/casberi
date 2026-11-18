@@ -69,7 +69,7 @@ struct ThreadsScreen: View {
                                 syncingLine: String(localized: "Checking Threads…"),
                                 proof: result,
                                 retry: connected ? retrySync : nil)
-            DSSlabNote(text: "You sign in with Instagram. Meta may ask you to confirm it was you.", plain: true)
+            DSSlabNote(text: "You sign in with Instagram.", plain: true)
         }
     }
 

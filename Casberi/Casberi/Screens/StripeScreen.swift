@@ -144,7 +144,7 @@ struct StripeScreen: View {
             BridgeSyncStatusRows(syncing: syncing,
                                  syncingLine: String(localized: "Reading Stripe…"),
                                  proof: result)
-            DSSlabNote(text: "Disputes, payouts, cancellations and failed payments land on their own.", plain: true)
+            DSSlabNote(text: "Disputes, payouts, cancellations land.", plain: true)
         }
     }
 

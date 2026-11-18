@@ -108,7 +108,7 @@ struct AWSScreen: View {
                         text: $regionField, actionLabel: "Save",
                         isArmed: hasBothRequired,
                         action: save)
-            DSSlabNote(text: "Cost Explorer always reads from us-east-1.", plain: true)
+            DSSlabNote(text: "Cost Explorer always reads us-east-1.", plain: true)
             BridgeSyncStatusRows(syncing: connecting,
                                  syncingLine: String(localized: "Checking the key pair…"),
                                  proof: result)

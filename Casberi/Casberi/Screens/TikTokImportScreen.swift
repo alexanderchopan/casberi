@@ -114,7 +114,7 @@ struct TikTokImportScreen: View {
             BridgeSyncStatusRows(syncing: liveSyncing,
                                 syncingLine: String(localized: "Checking TikTok…"),
                                 proof: liveResult)
-            DSSlabNote(text: "TikTok may ask you to confirm it was you.", plain: true)
+            DSSlabNote(text: "TikTok may ask if it was you.", plain: true)
         }
     }
 

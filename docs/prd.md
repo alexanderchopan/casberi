@@ -74003,3 +74003,15 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The tray is the Mac's and iPad's Move; every item reaches them unchanged. The notification is the phone's and the Mac's alike.
 
 **Checks.** `move-details-selftest.sh` runs `MoveClauseLayout.lines` on four cases (mutated: caught) and greps the rest; `notify-selftest.sh` classifies `aztec:upgrade:` as `networkUpgrade` and counts six stand-alone kinds; `aztec-stake-selftest.sh` holds the gate and the account's words.
+
+## §1873 — Helper text fits one line (amends §748) (user, 2026-11-18: "I want to make sure all helper text is one line") — BUILT for every sentence the sweep measured; three seen on a simulator
+
+**Ruling.**
+1. **An explaining sentence fits one line on the phone.** Drawn through `DSFootnote`, `DSSlabNote` or `DSProse`, it has about 39 characters at `body17` on an account page (a 320pt column: the page less the act's inset) and about 60 at `subhead12` (366pt). A sentence that cannot fit is cut to the one fact the controls do not say, never wrapped.
+2. **The sweep.** 137 literal sentences were measured in Figtree at the iPhone 17 Pro's column. 69 wrapped. The 26 that ended on a two-word line went first (a4222bc58), the other 43 with this entry. Several lost a clause to fit: the Safe key lines no longer say "by design", Apple Intelligence's line no longer says what Apple keeps, Snapchat's no longer tells photos from videos.
+3. **Kept as written:** the Nymis footnote (§1701 item 1) is the user's own sentence and still takes two lines.
+4. **Not measured:** sentences passed as variables (the ENS renewal lines, Telegram's sign-in lines, the ceiling on What this app reaches), empty-state words, and setup steps. Kindle's first step still breaks before "a Mac).".
+
+**Mac half (§1402).** The same strings; the Mac's column is wider, so one line there too.
+
+**Checks.** No audit holds the line yet: the measure needs the font, and the sweep's scripts were scratch. `aztec-connect-selftest.sh` asserts the new authorization sentence; `nerdwallet-selftest.sh` still finds "nothing here reads your money". Built for the simulator; Kindle's note and both lines on What this app reaches were seen on one line.

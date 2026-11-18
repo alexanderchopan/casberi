@@ -109,7 +109,7 @@ struct DropboxScreen: View {
                     action: saveFolder)
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your Dropbox…"),
                              proof: result)
-        DSSlabNote(text: "Changing the folder starts a fresh sync there.", plain: true)
+        DSSlabNote(text: "A new folder starts a fresh sync.", plain: true)
     }
 
 

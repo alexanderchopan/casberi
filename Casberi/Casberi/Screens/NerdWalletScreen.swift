@@ -74,7 +74,7 @@ struct NerdWalletScreen: View {
         // name says "wallet" and the catalog shelf it sits on is Reading, so
         // "this does not reach an account" is the fact a person actually needs
         // before tapping — not a restatement of the control above it.
-        DSSlabNote(text: "Articles only — nothing here reads your money.",
+        DSSlabNote(text: "Nothing here reads your money.",
                    plain: true)
     }
 

@@ -39,7 +39,7 @@ struct LogosObserverPairTray: View {
                                                       if on { chosen.insert(scope) } else { chosen.remove(scope) }
                                                   }))
                     }
-                    DSFootnote(prose: String(localized: "Casberi can't control your node. Your network can see that you're reaching it, but not what it reports."))
+                    DSFootnote(prose: String(localized: "Read-only. Your network sees the connection, not the reports."))
                         .padding(.top, DS.Space.s2)
                     if let failure {
                         Text(failure)

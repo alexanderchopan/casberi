@@ -99,7 +99,7 @@ struct SpotifyScreen: View {
                              syncingLine: String(localized: "Reading your Spotify…"),
                              proof: result,
                              retry: { Task { await sync() } })
-        DSSlabNote(text: "The albums and playlists you play, and what your friends play, land in Media.", plain: true)
+        DSSlabNote(text: "Your plays, and friends', land in Media.", plain: true)
     }
 
     /// The web view handed back a session. Store it, confirm it works, sync.

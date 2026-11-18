@@ -118,7 +118,7 @@ struct RocketMoneyScreen: View {
     @ViewBuilder private var unreadableBlock: some View {
         if !reading.unreadable.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
-                DSProse.text("Rocket Money answered, but Casberi didn't recognise the shape.")
+                DSProse.text("Couldn't read Rocket Money's answer.")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 ForEach(reading.unreadable.keys.sorted(), id: \.self) { op in
                     Text("\(op) — \((reading.unreadable[op] ?? []).joined(separator: ", "))")

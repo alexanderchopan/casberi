@@ -29,7 +29,7 @@ struct SavingsGoalTray: View {
         // sum that reaches it from what is saved now.
         DSTray(title: String(localized: "Savings goal"), height: dated ? 560 : 440) {
             VStack(alignment: .leading, spacing: 0) {
-                DSFootnote("A target for your private balance. Round-ups and what you send there fill it.")
+                DSFootnote("A target for your private balance. Round-ups and sends fill it.")
                     .padding(.bottom, DS.Space.s3)
                 HStack(spacing: DS.Space.s2) {
                     Text("Goal").dsText(.body17).foregroundStyle(DS.textSecondary)

@@ -1016,7 +1016,7 @@ struct AztecAskSheet: View {
     @ViewBuilder private var content: some View {
         switch ask {
         case .connect:
-            DSProse.text("It sees your Aztec account's address. Casberi asks you before anything it sends.")
+            DSProse.text("It sees your address and can ask to send.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .emoji(_, _, let emoji):
@@ -1028,7 +1028,7 @@ struct AztecAskSheet: View {
         case .send(_, _, let calls, let fee):
             // An authorization says who gets it before what it is for (prd §1760).
             if let grantee = calls.first?.grantee {
-                DSProse.text("It lets \(grantee) make this call in your name, once. Anyone can see it.")
+                DSProse.text("\(grantee) can make this call once, publicly.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1067,7 +1067,7 @@ struct AztecAskSheet: View {
                 }
             }
         case .ethConnect where needsCoSigner:
-            DSProse.text("It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here.")
+            DSProse.text("It needs a co-signer wallet to sign in.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .ethConnect where leadsWithCoSigner && reconnecting:
@@ -1078,16 +1078,16 @@ struct AztecAskSheet: View {
             DSProse.text("Your co-signer (\(AddressTail.short(coSigner ?? ""))) signed in before.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-        case .ethTopUp(_, _, let signer, let amount, let holds, let needs):
-            DSProse.text("Your co-signer (\(AddressTail.short(signer))) holds \(YourAccountOp.spoken(holds, decimals: 18)) ETH. This needs \(YourAccountOp.spoken(needs, decimals: 18)) ETH and its fee.")
+        case .ethTopUp(_, _, _, _, let holds, let needs):
+            DSProse.text("It holds \(YourAccountOp.spoken(holds, decimals: 18)) ETH. This needs \(YourAccountOp.spoken(needs, decimals: 18)).")
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Casberi sends \(YourAccountOp.spoken(amount, decimals: 18)) ETH from your account to your co-signer, then asks it to send.")
+            Text("Casberi tops it up from your account, then asks it to send.")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .ethConnect:
             if sends {
-                DSProse.text("It sees your account's address. Casberi asks before every signature and every send.")
+                DSProse.text("It sees your address and can ask to send.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {

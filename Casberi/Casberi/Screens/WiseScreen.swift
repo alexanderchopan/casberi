@@ -109,7 +109,7 @@ struct WiseScreen: View {
             // expectation of it left unmet, which §83 treats as a status
             // claim — see `WiseBridge`'s type doc for why the signed-approval
             // step is deliberately not built rather than half-built.
-            DSSlabNote(text: "Card spending stays behind Wise's signed-approval step, so it isn't read here.",
+            DSSlabNote(text: "Card spending isn't read here.",
                        plain: true)
         }
     }

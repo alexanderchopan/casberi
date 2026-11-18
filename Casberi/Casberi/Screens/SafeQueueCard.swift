@@ -279,7 +279,7 @@ struct SafeSignBlock: View {
                     }
                 }
             case .keyDestroyed:
-                DSProse.text("This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen.")
+                DSProse.text("Re-enrolling Face ID erased this key. Make a new one in Safe.")
                     .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
             case .done:

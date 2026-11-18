@@ -105,7 +105,7 @@ struct BankrSetupScreen: View {
             BridgeSyncStatusRows(syncing: checking,
                                  syncingLine: String(localized: "Checking the key…"),
                                  proof: result)
-            DSSlabNote(text: "Casberi makes a read-only key for you. Every prompt says answer only, never execute.", plain: true)
+            DSSlabNote(text: "Read-only key, answers only.", plain: true)
         }
     }
 

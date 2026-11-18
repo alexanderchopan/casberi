@@ -108,7 +108,7 @@ struct AcornsScreen: View {
     @ViewBuilder private var unreadableBlock: some View {
         if !reading.unreadable.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Acorns answered, but Casberi didn't recognise the shape.")
+                Text("Couldn't read Acorns' answer.")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 ForEach(reading.unreadable.keys.sorted(), id: \.self) { path in
                     Text("\(path) — \((reading.unreadable[path] ?? []).joined(separator: ", "))")

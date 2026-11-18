@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2051 of 2125 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2052 of 2126 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1092,7 +1092,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §745 — Every source room's head composes `DSRoomChassis`; the twenty-two hand-drawn heads are one template, and what they dr… (amended by §760; part superseded by §758)
 - §746 — A pill is a choice or a fact, and every verb is a row
 - §747 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (amended by §1039; part superseded by §774)
-- §748 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py`
+- §748 — An explaining sentence has one view and one screen gets one of them: `DSFootnote`, counted by `footnote-audit.py` (amended by §1873)
 - §749 — Rows are bare again, and every room without a visualization leads with its newest thing, unbacked (amended by §1042)
 - §750 — The wallet family's Home is one surface: a head, Actions, Readings, and the accounts as the floating face rail above… (amended by §1039; part superseded by §1005)
 - §751 — Every chart head draws at one height and caps at one row count, and three more text heads take the cover (amended by §760, §1042)
@@ -2314,6 +2314,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1870 — Spending is a row in Home's Wallet section, under the Watchlist
 - §1871 — Spending is a card on the iPad's and Mac's Home, between Risks and Watchlist
 - §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another s…
+- §1873 — Helper text fits one line
 
 ## Dead rulings → what replaced them (generated)
 

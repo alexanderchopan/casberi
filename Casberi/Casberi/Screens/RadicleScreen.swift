@@ -117,7 +117,7 @@ struct RadicleScreen: View {
                         isArmed: RadicleWire.normalizeSeed(seedField) != nil
                             && RadicleWire.normalizeSeed(seedField) != radicle.seed,
                         action: useSeed)
-            DSSlabNote(text: "A seed answers only for the repos it seeds.", plain: true)
+            DSSlabNote(text: "A seed answers only for repos it seeds.", plain: true)
         }
     }
 

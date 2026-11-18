@@ -595,7 +595,7 @@ struct AccountDetailSheet: View {
                         .foregroundStyle(DS.textTertiary)
                         .frame(width: DSRoomChassis.headGlyph)
                         .accessibilityHidden(true)
-                    DSFootnote("End-to-end only with Advanced Data Protection: \(DS.settingsAppName) › your name › iCloud.")
+                    DSFootnote("End-to-end only with Advanced Data Protection.")
                 }
             }
             }

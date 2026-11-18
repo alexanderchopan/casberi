@@ -58,7 +58,7 @@ struct L2beatRiskCard: View {
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 			} else if failed {
-				DSProse.text("Couldn't reach ETHBEAT, and this chain isn't in the copy bundled with the app.")
+				DSProse.text("Couldn't reach ETHBEAT, and this chain isn't bundled.")
 					.dsText(.subhead12)
 					.foregroundStyle(DS.textTertiary)
 					.fixedSize(horizontal: false, vertical: true)
