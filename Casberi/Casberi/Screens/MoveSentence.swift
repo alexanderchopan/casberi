@@ -1634,6 +1634,8 @@ struct MoveSentence: View {
         // was open closes, so a list never stands cut off in the short sheet.
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: focus) { _, now in if now != nil { chrome.moveTall = true } }
+        // Send opens whole, as the private sends do.
+        .onChange(of: verb, initial: true) { _, now in if now == .send, inTray { chrome.moveTall = true } }
         // A price typed over is no longer the preset it started as (prd §1683).
         .onChange(of: priceText) { if focus == .price { whenPreset = nil } }
         .onChange(of: chrome.moveTall) { _, tall in

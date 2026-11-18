@@ -73906,3 +73906,14 @@ Open, not ruled: a seen row keeps the seen ink (§1816), so the six rows turn gr
 **Mac half (§1402).** The same row draws in the Mac's Activity; nothing else changes there.
 
 **Checks.** Not built or seen: this session ran in a Linux container with no Xcode. Unseen: the row on the simulator, a face that fails to load, a seen row's faded face and corner.
+
+## §1866 — Send opens whole, and its cost line is one line (amends §1681's short opening for Send) (user, 2026-11-18, of the Aztec Send sheet: "send sheets should open 3/4 or full bc there is clipping. also the time estimate should be on one line and not wrap")
+
+The short Move sheet (`MoveTray.short`, 0.6) cut off a private Send: the To · Network · Token · Amount rows scrolled under the sentence and its foot, so Amount stood half drawn.
+
+1. **Every Send opens the whole sheet** (`chrome.moveTall = true` on appear): Aztec (`MoveAztecPrivateSentence`), Railgun (`MoveRailgunSentence`), Privacy Pools (`MovePrivateSentence`) and the public Send (`MoveSentence`, on `verb == .send`, in the tray only), as Receive already did (`MoveAztecReceive`, `MoveFreshReceive`). Swap, Buy and the rest keep §1681's short opening.
+2. **The cost line is one line** (`PrivateCostLine`): "Costs about $0.08 · private in 5 to 15 minutes" holds one line beside its chevron and shrinks to 70% before it would wrap; it no longer breaks the time across two lines.
+
+**Mac half (§1402).** Catalyst has no detents; the Mac's Move pane is unchanged. The cost line's one-line rule draws there too.
+
+**Checks.** Not built or seen: this session ran in a Linux container with no Xcode. Unseen: each Send on the simulator at open, the cost line at a two-figure fee.

@@ -39,7 +39,9 @@ struct PrivateCostLine: View {
                         Text(verbatim: [cost.figure, tail].compactMap { $0 }.joined(separator: " · "))
                             .dsText(.body17).foregroundStyle(DS.textSecondary)
                             .monospacedDigit()
-                            .fixedSize(horizontal: false, vertical: true)
+                            // One line: the time never wraps under the figure.
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         Spacer(minLength: 0)
                         Image(systemName: showParts ? "chevron.up" : "chevron.down")
                             .dsGlyph(.body, weight: .regular).foregroundStyle(DS.textTertiary)

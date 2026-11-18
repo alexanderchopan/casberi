@@ -86,6 +86,8 @@ struct MovePrivateSentence<Head: View>: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        // Send opens whole: its rows and sentence clip in the short sheet.
+        .onAppear { chrome.moveTall = true }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in

@@ -713,6 +713,8 @@ struct MoveRailgunSentence<Head: View>: View {
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        // Send opens whole: its rows and sentence clip in the short sheet.
+        .onAppear { chrome.moveTall = true }
         .onChange(of: open) { _, now in if now { chrome.moveTall = true } }
         // A send kept behind its sheet is shown as it stands, running or
         // failed, never read over (prd §1806).
