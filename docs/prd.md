@@ -73879,3 +73879,17 @@ Declined: tiles behind the dark marks (Threads, X, TikTok).
 **Mac half (§1402).** The same rows, windows and box on Catalyst.
 
 **Checks.** `wallet-row-words-selftest.sh` takes the pair and Wise shapes, five new mutations and a grep on `WiseBridge`'s titles. **Seen** on the simulator over a fresh demo: "Swapped ETH for USDC · 0.5 ETH → 1,240 USDC", "Swapped USDC for ETH · 1,240 USDC → 0.4962 ETH on Uniswap · Everyday", Week · Month at the row size, Trader Joe's on Chase, Snapchat "Imported 248 things", the Watchlist at ETH +2.1% beside a row at +2.1% with no halves. Not seen: a Wise row (none in today's demo window), a token page's chips. Still cut: "Received 500 USDC from sam.e…" (§1805's sentence, not touched).
+
+## §1864 — The icon says the app: an Activity row is its app's icon and its newest thing on one line, no name; with no feed Home lists the Wallet's six latest moves (amends §1840, §1858) (user, 2026-11-17: "if someone hasn't set up their feed and needs you isn't present how do we make it so it's not so empty", of the mock's rows: "so wait we won't say the app names anymore?", then "should we remove the app names from the feed writ large? i'd say so, then we don't even need subtext and its more minimal", "Yes, build it")
+
+**Why.** With no feed and nothing waiting, Home was the wallet, one or two Activity rows and a black page: Activity is one row per app, and a person with one wallet has one app. Listing the wallet's own moves fills it, but under §1840's row ("Accounts" over the move) the name repeats down the list. The icon already says the app, so the name goes, everywhere Activity draws a row.
+
+1. **An Activity row is the icon and the thing** (`activityAppRow`): the newest thing's title in the name's place and size, nothing under it. A thing with no words keeps its app's name. VoiceOver says "App, thing". The tap is §1840's: the app's page.
+2. **With no feed, Home's Activity is the Wallet's six latest moves** (`homeFeedlessMoves`), seen or not, whichever app made them; §1858's rule was three apps' newest. With a feed it stays one row, the newest move.
+3. **Also darker:** the panel takes 65% of `fillFaint` at its edge (`HomePanelMetrics.ink`); a phone's screen shows black as no light, and the same grey read lighter there than on a simulator.
+
+Open, not ruled: a seen row keeps the seen ink (§1816), so the six rows turn grey once Home has been left. A row's name was added in October because the feed "all blends together" (§1103); the category words and one row per app do that separating now.
+
+**Mac half (§1402).** None: the quiet Activity is the phone's; beside a pane the Feed's rows were already a title and an icon (§1497).
+
+**Checks.** `needs-you-selftest.sh` holds the six-moves rule by name, with a mutation that puts one row per app back. **Seen** on the simulator: Home with no feed over a followed wallet, six rows ("Burned an NFT" five times, "Received 0.0000 ETH"), the newest in the seen ink; the demo's Activity, Day and Social with no names ("Blue Bottle · $6.50", "Standup", "rui liked your video", "Imported 248 things"). Not seen: a phone, a thing with no words, VoiceOver.

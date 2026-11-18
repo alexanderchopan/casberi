@@ -209,6 +209,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Every demo picture is its own drawn asset (§890). The demo is one person's life in Berlin, and their app is Quillmark, never Casberi (§1026).
 - The cover says "Keep it moving" over "privately." in pink, under the app icon (§1847), and begins no demo; it lifts into your own first run: "Set up your wallet" over "Create account", "Set up your feed" over six apps (Calendar, Files, Photos, Spotify, Telegram, X), then Apps (§1847); the demo is `-demoEnter` only (§1741). Risks is a chip on the phone's Home and the Wallet's section always shows one thing (§1847). The demo's Exit lands on the catalogue (§863).
 - On the phone Activity is two halves: its sections on the page, Apps (heading, search, folders) on a panel under them; the Wallet leads from the first run over your account's row, the start's six apps stand under it until something is added, Notes is its folder's, and a followed wallet's row reads "Your account" or "Accounts", never "Wallet" (§1839).
+- An Activity row is its app's icon and its newest thing on one line, no name; with no feed, Home's Activity is the Wallet's six latest moves (§1864).
 - Every surface the app can draw over a populated corpus also draws over the demo (§617).
 
 ### 16. Agents and the composer
@@ -260,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2042 of 2116 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2043 of 2117 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2304,6 +2305,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1861 — Permissions names the co-signer: one row per key, a door to its approvals on Revoke.cash (extends §1710; keeps §112,…
 - §1862 — Home and Holdings, polished before the ship: one Public figure, no flat day, a pill that says today, the address in A…
 - §1863 — Polish pass two: a swap's row names the pair, a Wise row its amounts, the windows read at the row's size through one…
+- §1864 — The icon says the app: an Activity row is its app's icon and its newest thing on one line, no name; with no feed Home…
 
 ## Dead rulings → what replaced them (generated)
 

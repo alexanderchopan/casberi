@@ -228,20 +228,26 @@ extension FeedScreen {
     /// **THE ROW IS THE APP (prd §1840, user: "if you press an app icon you
     /// go to the app page, but if you press the row you open the individual
     /// message. this isn't clear to anyone").** Activity is one row per app,
-    /// so the row says the app's name, its newest thing under it, and one tap
+    /// so the row is the app's, and one tap
     /// anywhere opens the app's page, where that thing leads. It had two
     /// targets in one 44pt row, the icon to the app and the words to the
     /// thing, and nothing told them apart.
     ///
     /// White until seen (prd §1816): the newest thing is seen once its app's
     /// page has been opened over it, or once it was opened anywhere else.
+    ///
+    /// **THE ICON SAYS THE APP (prd §1864, user: "should we remove the app
+    /// names from the feed writ large? i'd say so, then we don't even need
+    /// subtext and its more minimal").** The row is the app's icon and its
+    /// newest thing, on one line; the name stood over it and repeated down
+    /// any list of one app's things. A thing with no words keeps the name,
+    /// and VoiceOver still says it.
     func activityAppRow(_ thing: Thing, from section: String, fades: Bool = true,
                         opens: (() -> Void)? = nil) -> some View {
         let seen = fades && ActivitySeen.shared.has(thing.id)
         let words = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return DSPushRow(title: Text(verbatim: Self.activityAppName(thing.source)),
-                         subtitle: words.isEmpty ? nil : Text(verbatim: words),
-                         subtitleTone: DS.textSecondary,
+        let app = Self.activityAppName(thing.source)
+        return DSPushRow(title: Text(verbatim: words.isEmpty ? app : words),
                          tint: seen ? DS.textSecondary : DS.textPrimary,
                          action: {
                              ActivitySeen.shared.mark(thing.id)
@@ -265,6 +271,7 @@ extension FeedScreen {
                 .opacity(seen ? 0.5 : 1)
                 .accessibilityHidden(true)
         }
+        .accessibilityLabel(Text(verbatim: words.isEmpty ? app : "\(app), \(words)"))
         // On screen is seen, once you leave (prd §1831); Day's rows are what
         // is coming and are never left out.
         .onAppear { if fades { ActivitySeen.shared.noteShown(thing.id) } }
@@ -471,9 +478,10 @@ extension FeedScreen {
         // expiry months out, or one you marked as seen, left Needs you and
         // landed here as the Wallet's newest move.
         let now = Date.now
-        let moves = Self.newestPerApp(Self.walletMoves(money).filter {
+        let landed = Self.walletMoves(money).filter {
             !asks.contains($0.id) && ($0.dueAt ?? .distantPast) <= now
-        })
+        }
+        let moves = Self.newestPerApp(landed)
         // **THE WALLET ALWAYS SHOWS ONE THING (prd §1847, user: "wallet
         // should have one transaction").** With nothing new its last move
         // stands, in the seen ink (`activityAppRow`).
@@ -496,9 +504,12 @@ extension FeedScreen {
         // the watchlist gone to Holdings' section.
         let word = homeHeadShown ? Self.homeWalletName : String(localized: "Wallet")
         let shown = fresh.isEmpty ? Array(moves.prefix(1)) : fresh
-        // With no feed the wallet takes the room: the three newest moves,
-        // seen or not (prd §1858).
-        let onHome = Array(homeFeedless ? moves.prefix(Self.homeFeedlessMoves) : shown.prefix(1))
+        // **WITH NO FEED THE WALLET'S HISTORY FILLS THE PANEL (prd §1864,
+        // user: "how do we make it so it's not so empty").** Its latest
+        // moves, seen or not, whichever app made them; one row per app left
+        // a single wallet with one row over a black page (§1858's three).
+        let latest = landed.sorted { $0.capturedAt > $1.capturedAt }.prefix(Self.homeFeedlessMoves)
+        let onHome = homeFeedless ? Array(latest) : Array(shown.prefix(1))
         activitySection(word, homeHeadShown ? onHome : shown,
                         // **THE ROW IS THE DOOR (prd §1849, user: "does wallet
                         // need a chevron if everything else doesn't have one?

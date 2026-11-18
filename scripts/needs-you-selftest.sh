@@ -141,10 +141,13 @@ feed_wallet_gone() { # $1 a root holding the files below; prints the breach and 
   grep -v '^[[:space:]]*//' "$root/$FEED" | grep -Ewq 'walletMoves' \
     && { echo "✗ $FEED reads the Wallet's moves — the Feed has no Wallet section (prd §1489)"; return 1; }
   # Money follows every category's rule since prd §1809: each app's newest.
-  grep -q 'Self.newestPerApp(Self.walletMoves(money)' "$root/$SCROLL" \
+  grep -q 'let landed = Self.walletMoves(money).filter' "$root/$SCROLL" \
+    && grep -q 'let moves = Self.newestPerApp(landed)' "$root/$SCROLL" \
     || { echo "✗ Money on Activity is no longer each app's newest move (prd §1809)"; return 1; }
-  # Home with no feed shows up to `homeFeedlessMoves` apps' newest (prd §1858),
-  # by name; a bare three here is §1807's deleted rule coming back.
+  # Home with no feed shows the Wallet's latest `homeFeedlessMoves` moves (prd
+  # §1864), by name; a bare three here is §1807's deleted rule coming back.
+  grep -q 'landed.sorted { $0.capturedAt > $1.capturedAt }.prefix(Self.homeFeedlessMoves)' "$root/$SCROLL" \
+    || { echo "✗ Home with no feed no longer shows the Wallet's latest moves (prd §1864)"; return 1; }
   grep -q 'prefix(3)' "$root/$SCROLL" \
     && { echo "✗ Money on Activity is capped at three again — one rule for every category (prd §1809)"; return 1; }
   return 0
@@ -361,6 +364,8 @@ wallet_mutate "the Feed reads the Wallet's asks again" \
   'echo "    @State var walletNeeds: [Thing] = []" >> Casberi/Casberi/Screens/FeedScreen.swift' || mfail=1
 wallet_mutate "the scroll lists the Wallet's moves again" \
   'echo "    let m = Self.walletMoves([])" >> Casberi/Casberi/Screens/FeedScreen+Scroll.swift' || mfail=1
+wallet_mutate "Home with no feed is one row per app again" \
+  'sed -i.bak "s/landed.sorted { \$0.capturedAt > \$1.capturedAt }.prefix/moves.prefix/" Casberi/Casberi/Screens/FeedScreen+Scroll.swift' || mfail=1
 
 # The bare-bar guard (prd §1490), over its own copy.
 tabs_root() {
