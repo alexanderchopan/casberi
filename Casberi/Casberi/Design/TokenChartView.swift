@@ -1005,36 +1005,21 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         }
     }
 
+    /// The windows through the one template (prd §1863), as the
+    /// Watchlist's box and the Wallet's Week · Month read.
     private var rangeChips: some View {
-        HStack(spacing: DS.Space.s1) {
-            ForEach(R.allCases, id: \.self) { r in
-                Button {
-                    guard r != range else { return }
-                    DSHaptic.tap()
-                    // A drawn line BENDS into the next range (prd §1199): the
-                    // marks are keyed by position, so Charts carries each
-                    // point to its new place on the glide.
-                    withAnimation(reduceMotion ? nil : DS.Motion.glide) {
-                        scrubIndex = nil
-                        range = r
-                    }
-                    TokenChartStyle.remember(r, key: memoryKey)
-                } label: {
-                    Text(r.label)
-                        .dsText(.label12)
-                        // Never wraps — squeezed, the row gives, not the
-                        // label ("24h" once folded into a circled "24/h").
-                        .lineLimit(1)
-                        .fixedSize()
-                        .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(r == range ? DS.fillFaint : .clear,
-                                    in: Capsule(style: .continuous))
-                }
-                .buttonStyle(PressSpring())
+        DSRangeChips(ranges: Array(R.allCases), range: range, label: { $0.label },
+                     slim: true, reads: true) { r in
+            // A drawn line BENDS into the next range (prd §1199): the
+            // marks are keyed by position, so Charts carries each
+            // point to its new place on the glide.
+            withAnimation(reduceMotion ? nil : DS.Motion.glide) {
+                scrubIndex = nil
+                range = r
             }
+            TokenChartStyle.remember(r, key: memoryKey)
         }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     /// The line's height inside the room's box: the figure above, the windows

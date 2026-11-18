@@ -47,7 +47,7 @@ enum WalletRowWords {
 
     /// The row's words off a stored title; nil for a title in another shape.
     static func read(_ title: String) -> Words? {
-        swap(title) ?? safe(title) ?? moved(title) ?? spent(title)
+        swap(title) ?? safe(title) ?? moved(title) ?? spent(title) ?? wise(title)
     }
 
     // MARK: - Card spending
@@ -136,12 +136,45 @@ enum WalletRowWords {
         // **ACTIVITY KEEPS THE SENTENCE MOVE WROTE (prd §1805, amending
         // §1555's "the swap glyph says Swapped"):** a swap's row reads as a
         // send's and a receive's do, verb first, in the past tense.
-        let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"
+        // **THE PAIR IS THE NAME, THE AMOUNTS THE LINE (prd §1863, amending
+        // §1805's whole sentence):** "Swapped 1,240 USDC for 0.4962 E…" ran
+        // off the row. The name keeps the verb and says what for what
+        // ("Swapped USDC for ETH"); the amounts and the venue are the line.
+        let name = "Swapped \(out.symbol) for \(inn.symbol)"
+        let said = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"
         let on = venue.flatMap { $0.isEmpty ? nil : $0 }
+        let amounts = out.amount == nil && inn.amount == nil
+            ? nil : "\(Self.amounted(out)) → \(Self.amounted(inn))"
+        let clause = amounts.map { a in on.map { "\(a) on \($0)" } ?? a } ?? on.map { "On \($0)" }
         return Words(name: name,
-                     clause: on.map { "On \($0)" },
+                     clause: clause,
                      qualifier: seam.line,
-                     spoken: name + (on.map { " on \($0)" } ?? ""))
+                     spoken: said + (on.map { " on \($0)" } ?? ""))
+    }
+
+    // MARK: - Wise
+
+    /// "<Stage> · <amounts>[ · <reference>]" (`WiseBridge.rowTitle`). The
+    /// reference ran the name off the row ("Sending · £120 → €141 ·
+    /// Invoice…"), so the name is the stage and the amounts, the reference
+    /// the line (prd §1863). "Needs attention · " keeps its seam so the
+    /// Needs-you trim (`NeedsYouWords`) still finds it.
+    static func wise(_ title: String) -> Words? {
+        let seam = TitleSeam.split(title)
+        for stage in ["Sent", "Sending", "Returned", "Needs attention"] {
+            let lead = stage + " · "
+            guard seam.name.hasPrefix(lead) else { continue }
+            let rest = String(seam.name.dropFirst(lead.count))
+            guard rest.contains(" → ") || rest.first?.isCurrencySymbol == true || rest.first?.isNumber == true
+            else { return nil }
+            let parts = rest.components(separatedBy: " · ")
+            guard let amounts = parts.first, !amounts.isEmpty else { return nil }
+            let reference = parts.dropFirst().joined(separator: " · ")
+            let name = stage == "Needs attention" ? lead + amounts : "\(stage) \(amounts)"
+            return Words(name: name, clause: reference.isEmpty ? nil : reference,
+                         qualifier: seam.line, spoken: seam.name)
+        }
+        return nil
     }
 
     /// "0.5 ETH", or the bare symbol when the title carries no amount.

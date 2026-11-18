@@ -31,9 +31,11 @@ enum ImportReceipt {
                      context: ModelContext) {
         guard count > 0 else { return }
         let ref = Corpus.importReceiptRef(source: source)
+        // The row stands under its app's name, so it does not say the app
+        // again (prd §1863): "Imported 248 things" under Snapchat.
         let title = count == 1
-            ? String(localized: "Imported 1 thing from \(source)")
-            : String(localized: "Imported \(count) things from \(source)")
+            ? String(localized: "Imported 1 thing")
+            : String(localized: "Imported \(count) things")
 
         if let existing = try? context.fetch(FetchDescriptor<Thing>(
             predicate: #Predicate { $0.sourceRef == ref })).first {

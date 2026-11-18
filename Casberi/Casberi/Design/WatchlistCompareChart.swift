@@ -6,8 +6,8 @@ import SwiftUI
 /// of the mockups, "lets go with E").** The first five watched tokens
 /// (`WatchlistRules.charted`), each window drawn as the percent it is from
 /// where it began, one line each on one scale, so a line above another did
-/// better. Up from the start is a faint green, down a faint red, and no line
-/// marks zero (no hairlines). The column on the right names each line and its
+/// better. No line marks zero (no hairlines) and no tint marks up or down
+/// (prd §1863). The column on the right names each line and its
 /// change; a tap opens that token. The windows sit under it as a token's own
 /// boxed chart has them.
 ///
@@ -74,32 +74,17 @@ struct WatchlistCompareChart: View {
         .task(id: readKey) { await read() }
     }
 
-    /// The windows as a token's own boxed chart draws them (`TokenChartView`'s
-    /// `rangeChips`): small words, the pick on a faint capsule, so the
-    /// Watchlist's box and a token's read as one.
+    /// The windows through the one template (prd §1863): words at the
+    /// reading size, the pick in the primary ink, as the Wallet's Week ·
+    /// Month and Yours · Following · All read. It was a hand-rolled copy of a
+    /// token chart's small capsules.
     private var rangeChips: some View {
-        HStack(spacing: DS.Space.s1) {
-            ForEach(TokenRange.allCases, id: \.self) { r in
-                Button {
-                    guard r != range else { return }
-                    DSHaptic.tap()
-                    range = r
-                    TokenChartStyle.remember(r, key: Self.memoryKey)
-                } label: {
-                    Text(r.label)
-                        .dsText(.label12)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .foregroundStyle(r == range ? DS.textPrimary : DS.textSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(r == range ? DS.fillFaint : .clear, in: Capsule(style: .continuous))
-                        .animation(DS.Motion.standard, value: r == range)
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityAddTraits(r == range ? .isSelected : [])
-            }
+        DSRangeChips(ranges: TokenRange.allCases, range: range, label: { $0.label },
+                     slim: true, reads: true) { r in
+            range = r
+            TokenChartStyle.remember(r, key: Self.memoryKey)
         }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     /// The scale every line shares: zero always in it, a little air past the
@@ -113,12 +98,8 @@ struct WatchlistCompareChart: View {
 
     private func plot(_ lines: [Line], domain: ClosedRange<Double>) -> some View {
         Chart {
-            RectangleMark(xStart: .value("start", 0.0), xEnd: .value("end", 1.0),
-                          yStart: .value("from", 0.0), yEnd: .value("to", domain.upperBound))
-                .foregroundStyle(TokenChartStyle.accent(up: true, scheme: scheme).opacity(0.07))
-            RectangleMark(xStart: .value("start", 0.0), xEnd: .value("end", 1.0),
-                          yStart: .value("from", domain.lowerBound), yEnd: .value("to", 0.0))
-                .foregroundStyle(TokenChartStyle.accent(up: false, scheme: scheme).opacity(0.07))
+            // No green and red halves (prd §1863): the lines and their
+            // labels say up and down; a box under them read as two panels.
             ForEach(lines) { line in
                 ForEach(Array(line.values.enumerated()), id: \.offset) { i, v in
                     LineMark(x: .value("t", Double(i) / Double(max(line.values.count - 1, 1))),
@@ -147,13 +128,14 @@ struct WatchlistCompareChart: View {
     /// Each line's name and change beside where it ends, pushed apart where
     /// two would touch (`WatchlistRules.labelCenters`).
     private func labels(_ lines: [Line], domain: ClosedRange<Double>) -> some View {
-        GeometryReader { geo in
+        let quotes = WatchlistPrices.shared.quotes
+        return GeometryReader { geo in
             let h = geo.size.height
             let span = domain.upperBound - domain.lowerBound
             let wanted = lines.map { (domain.upperBound - $0.last) / span * h }
             let centers = WatchlistRules.labelCenters(wanted, gap: 18, lo: 9, hi: max(h - 9, 9))
             ForEach(Array(lines.enumerated()), id: \.element.id) { i, line in
-                let change = WatchlistRules.change(line.last)
+                let change = WatchlistRules.change(Self.dayFigure(line, range: range, quotes: quotes))
                 Button {
                     DSHaptic.selection()
                     onOpen(line.token)
@@ -175,6 +157,15 @@ struct WatchlistCompareChart: View {
                 .position(x: geo.size.width / 2, y: centers[i])
             }
         }
+    }
+
+    /// **ONE DAY, ONE FIGURE (prd §1863).** On 1D the label says the
+    /// quote's day, the figure the token's row and Home's watchlist row say;
+    /// the window's own start drew "+1.5%" over a row's "+2.1%". Every other
+    /// window is the line's own change.
+    private static func dayFigure(_ line: Line, range: TokenRange, quotes: [String: WatchlistRules.Quote]) -> Double {
+        guard range == .day, let day = quotes[line.token.id]?.change else { return line.last }
+        return day
     }
 
     private func read() async {

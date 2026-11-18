@@ -73861,3 +73861,21 @@ Not done: the Move disc over a row's figure (user: "doesn't matter it will alway
 **Mac half (§1402).** The same figures and rows on Catalyst; the address's copy was the phone Home's only.
 
 **Checks.** None new. **Seen** on the simulator over the demo: Home Public $24K and Private $2K matching Holdings after the reads land (the first frame said $23K and $1K while lent and Railgun read), the pill, three doors, "£200 → €235 · Deposit" with "14 more", Holdings' Accounts head without a chevron, marks at 30pt, LINK's −6.4%, Fee Juice "Aztec · Gas". Not seen: a flat token on Holdings, the lent and round-ups marks at the new size (built, not shot).
+
+## §1863 — Polish pass two: a swap's row names the pair, a Wise row its amounts, the windows read at the row's size through one template, the watchlist's day is one figure with no tinted halves, an import's row does not repeat its app, and the demo no longer seeds one purchase twice (amends §1805 for swaps, §1414, the Watchlist box of 2026-11-01) (user, 2026-11-17, of the mocks "App polish pass": "activity: OK", "feed: icons no. OK", "watchlist: ok on 1; on 2 ok but know that there are usually a few tokens there and it sshows their name on the right, and 3 ok but i mean is that consistent elsewhere? we can't just handroll things")
+
+**Why.** "Swapped 1,240 USDC for 0.4962 E…" and "Sending · £120 → €141 · Invoice…" ran off their rows. Week · Month stood beside Yours · Following · All a size smaller. The Watchlist's 1D label said ETH +1.5% (the window's start) over a row saying +2.1% (the quote's day), its green and red halves read as two panels, and its windows were a hand-rolled copy of a token chart's small capsules, themselves hand-rolled. Snapchat's row read "Imported from Snapchat" under Snapchat. The demo seeded Whole Foods $84.20 on Chase and on Apple Card the same day.
+
+1. **A swap's name is the pair** ("Swapped USDC for ETH", `WalletRowWords.swap`); the amounts and venue are the line ("1,240 USDC → 0.4962 ETH on Uniswap"); VoiceOver says the whole sentence.
+2. **A Wise row's name is its stage and amounts** ("Sending £120 → €141", `WalletRowWords.wise`), the reference the line. "Needs attention · " keeps its seam for `NeedsYouWords`.
+3. **Every window is `DSRangeChips(slim:, reads:)`**: the Wallet's and Spending's Week · Month, the Watchlist's box and a token's boxed chart (`TokenChartView.rangeChips`); the two hand-rolled capsule rows are gone. The thing sheet's tiles (§1174) stay tiles.
+4. **The Watchlist's 1D label is the quote's day** (`WatchlistCompareChart.dayFigure`), the figure the rows say; other windows keep the line's own change. The labels stay on the right, one per token.
+5. **No tinted halves** under the Watchlist's lines, and no zero line (no hairlines).
+6. **An import's receipt says "Imported 248 things"** (`ImportReceipt`), never the app's name under its own header. Receipts already stored keep their words until the next import.
+7. **The demo's Chase purchase is Trader Joe's $52.10**, so no purchase reads twice. No app rule folds two cards' charges: Apple Card and a bank card are different cards.
+
+Declined: tiles behind the dark marks (Threads, X, TikTok).
+
+**Mac half (§1402).** The same rows, windows and box on Catalyst.
+
+**Checks.** `wallet-row-words-selftest.sh` takes the pair and Wise shapes, five new mutations and a grep on `WiseBridge`'s titles. **Seen** on the simulator over a fresh demo: "Swapped ETH for USDC · 0.5 ETH → 1,240 USDC", "Swapped USDC for ETH · 1,240 USDC → 0.4962 ETH on Uniswap · Everyday", Week · Month at the row size, Trader Joe's on Chase, Snapchat "Imported 248 things", the Watchlist at ETH +2.1% beside a row at +2.1% with no halves. Not seen: a Wise row (none in today's demo window), a token page's chips. Still cut: "Received 500 USDC from sam.e…" (§1805's sentence, not touched).

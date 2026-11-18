@@ -82,7 +82,7 @@ struct WalletSpendingFigure: View {
                 WalletWhoseSwitch()
                 Spacer(minLength: 0)
                 DSRangeChips(ranges: Spending.Window.allCases, range: window,
-                             label: Self.label, slim: true, onPick: onPick)
+                             label: Self.label, slim: true, reads: true, onPick: onPick)
                     .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.top, DS.Space.s2)

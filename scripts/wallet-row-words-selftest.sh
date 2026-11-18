@@ -40,28 +40,41 @@ typealias W = WalletRowWords.Words
 // A swap: the trade as it reads, "for" for the arrow, its verb left to the
 // glyph and kept for VoiceOver, the venue on the line (prd §1555).
 check(WalletRowWords.read("Swapped 0.0136 ETH → 32.55 USDC on Uniswap")
-      == W(name: "Swapped 0.0136 ETH for 32.55 USDC", clause: "On Uniswap",
+      == W(name: "Swapped ETH for USDC", clause: "0.0136 ETH → 32.55 USDC on Uniswap",
            spoken: "Swapped 0.0136 ETH for 32.55 USDC on Uniswap"),
-      "an EVM swap reads out for in, the venue on the line, the verb spoken")
-check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")?.name == "Swapped 1,240 USDC for 0.4962 ETH",
+      "an EVM swap names the pair, the amounts and venue on the line, the whole sentence spoken (prd §1863)")
+check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")?.clause == "1,240 USDC → 0.4962 ETH on Uniswap",
       "a grouped amount stays whole")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")
-      == W(name: "Swapped 0.5 ETH for 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
-      "no venue, no line clause")
+      == W(name: "Swapped ETH for USDC", clause: "0.5 ETH → 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      "no venue: the amounts alone on the line")
 check(WalletRowWords.read("Swapped ETH → USDC")
       == W(name: "Swapped ETH for USDC", spoken: "Swapped ETH for USDC"),
-      "bare symbols")
+      "bare symbols, no line clause")
 check(WalletRowWords.read("Swapped 2 SOL → 310 USDC on Jupiter")
-      == W(name: "Swapped 2 SOL for 310 USDC", clause: "On Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter"),
+      == W(name: "Swapped SOL for USDC", clause: "2 SOL → 310 USDC on Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter"),
       "a Solana swap reads the same")
-check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "Swapped 0.05 ETH for 160 ÚЅDС",
+check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "Swapped ETH for ÚЅDС",
       "a look-alike symbol is drawn as it is; the row's flag picks the ink")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC — on Base")
-      == W(name: "Swapped 0.5 ETH for 1,240 USDC", qualifier: "on Base", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      == W(name: "Swapped ETH for USDC", clause: "0.5 ETH → 1,240 USDC", qualifier: "on Base",
+           spoken: "Swapped 0.5 ETH for 1,240 USDC"),
       "a seam after a swap rides as the qualifier")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.hasPrefix("Swapped ") == true
       && WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.contains("→") == false,
       "the drawn name leads with its verb and carries no arrow")
+
+// A Wise row (prd §1863): the stage and amounts are the name, the reference
+// the line; "Needs attention · " stays for the Needs-you trim.
+check(WalletRowWords.read("Sending · £120.00 → €141.00 · Invoice 204")
+      == W(name: "Sending £120.00 → €141.00", clause: "Invoice 204", spoken: "Sending · £120.00 → €141.00 · Invoice 204"),
+      "a Wise send names its amounts, the reference on the line")
+check(WalletRowWords.read("Sent · £50.00")
+      == W(name: "Sent £50.00", spoken: "Sent · £50.00"),
+      "no reference, no line clause")
+check(WalletRowWords.read("Needs attention · £200.00 → €235.00 · Deposit")?.name == "Needs attention · £200.00 → €235.00",
+      "a stuck transfer keeps the seam the Needs-you trim reads")
+check(WalletRowWords.read("Sending · love") == nil, "a word is not an amount")
 
 // A Safe row: the act is the name, the count the line.
 check(WalletRowWords.read("1 of 2 signatures collected on deposit ETH — your signature is needed")
@@ -156,14 +169,23 @@ mutate "a swap keeps its sentence" \
     'swap(title) ?? safe(title)' \
     'safe(title)'
 mutate "the verb leaves the drawn name (prd §1805)" \
-    'let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"' \
-    'let name = "\(Self.amounted(out)) for \(Self.amounted(inn))"'
-mutate "VoiceOver loses the verb" \
-    'spoken: name + (on.map { " on \($0)" } ?? ""))' \
+    'let name = "Swapped \(out.symbol) for \(inn.symbol)"' \
+    'let name = "\(out.symbol) for \(inn.symbol)"'
+mutate "the amounts back in the name, the row cut again (prd §1863)" \
+    'let name = "Swapped \(out.symbol) for \(inn.symbol)"' \
+    'let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"'
+mutate "VoiceOver loses the amounts" \
+    'spoken: said + (on.map { " on \($0)" } ?? ""))' \
     'spoken: name)'
-mutate "the venue leaves the line" \
-    'clause: on.map { "On \($0)" },' \
-    'clause: nil,'
+mutate "the amounts and venue leave the line" \
+    '                     clause: clause,' \
+    '                     clause: nil,'
+mutate "a Wise row keeps its sentence (prd §1863)" \
+    '?? spent(title) ?? wise(title)' \
+    '?? spent(title)'
+mutate "a stuck Wise row loses the seam the Needs-you trim reads" \
+    'let name = stage == "Needs attention" ? lead + amounts : "\(stage) \(amounts)"' \
+    'let name = "\(stage) \(amounts)"'
 mutate "a move keeps its sentence" \
     'swap(title) ?? safe(title) ?? moved(title)' \
     'swap(title) ?? safe(title)'
@@ -171,8 +193,8 @@ mutate "a move's amount signed and green" \
     '                     stayed: true)' \
     '                     stayed: false)'
 mutate "a card spend keeps its sentence and says the amount twice (prd §1810)" \
-    'swap(title) ?? safe(title) ?? moved(title) ?? spent(title)' \
-    'swap(title) ?? safe(title) ?? moved(title)'
+    'swap(title) ?? safe(title) ?? moved(title) ?? spent(title) ?? wise(title)' \
+    'swap(title) ?? safe(title) ?? moved(title) ?? wise(title)'
 mutate "a card's figure in the received green" \
     'spoken: seam.name, spent: true)' \
     'spoken: seam.name, spent: false)'
@@ -189,6 +211,8 @@ grep -q 'venue.map { "\\(head) on \\($0)" }' "$INGEST" \
     || fail "WalletIngest no longer appends the venue as \" on <venue>\""
 grep -q 'Story(title: "Swapped \\(a) → \\(b)\\(tail)"' "$SOL" \
     || fail "SolanaActivity no longer titles a swap \"Swapped <out> → <in>\""
+grep -q 'Needs attention · \\(amounts)\\(reference)' "Casberi/Casberi/Model/WiseBridge.swift" && grep -q 'Sending · \\(amounts)\\(reference)' "Casberi/Casberi/Model/WiseBridge.swift" \
+    || fail "WiseBridge no longer titles a transfer \"<Stage> · <amounts> · <reference>\" — WalletRowWords.wise must follow it"
 grep -q 'signatures collected on \\(description)")' "$SAFE" \
     || fail "SafeBridge no longer writes \"N of M signatures collected on <act>\" — WalletRowWords.safe must follow it"
 grep -q 'String(localized: "Fully signed — \\(description) is ready to execute")' "$SAFE" \

@@ -95,7 +95,7 @@ struct WalletActivityFigure: View {
                 Spacer(minLength: 0)
                 DSRangeChips(ranges: Spending.Window.allCases, range: window,
                              label: { $0 == .week ? String(localized: "Week") : String(localized: "Month") },
-                             slim: true) { picked in
+                             slim: true, reads: true) { picked in
                     withAnimation(DS.Motion.standard) { windowRaw = picked.rawValue }
                 }
                 .fixedSize(horizontal: true, vertical: false)

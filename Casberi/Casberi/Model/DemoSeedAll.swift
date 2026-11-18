@@ -1145,8 +1145,10 @@ enum DemoSeedAll {
 
     /// The import receipt a bulk-import room needs so ALL shows one row for it
     /// instead of the whole archive (`Corpus.showsInAll`).
-    private static func receipt(_ source: String, _ line: String, days: Double) -> Thing {
-        row(.note, "Imported from \(source)", source: source,
+    private static func receipt(_ source: String, _ line: String, count: Int, days: Double) -> Thing {
+        // As `ImportReceipt.land` titles it (prd §1863): the count, never
+        // the app's name again under its own header.
+        row(.note, "Imported \(count) things", source: source,
             ref: Corpus.importReceiptRef(source: source),
             days: days, hour: 9, content: line)
     }
@@ -2126,7 +2128,7 @@ enum DemoSeedAll {
     }
 
     private static func tiktok() -> [Thing] {
-        var out: [Thing] = [receipt("TikTok", "212 saved · 64 comments", days: 9)]
+        var out: [Thing] = [receipt("TikTok", "212 saved · 64 comments", count: 276, days: 9)]
         let captions: [(String, [String], Double)] = [
             ("My first V4, finally", ["Bouldering"], 10),
             ("Heel hooks, for people who hate heel hooks", ["Bouldering", "Technique"], 20),
@@ -2176,7 +2178,7 @@ enum DemoSeedAll {
     /// conversations as rows. The board ranks on `messageCount` — a stamped
     /// field, never the stored transcript's line count.
     private static func snapchat() -> [Thing] {
-        var out: [Thing] = [receipt("Snapchat", "38 chats · 210 memories", days: 13)]
+        var out: [Thing] = [receipt("Snapchat", "38 chats · 210 memories", count: 248, days: 13)]
         let chats: [(String, Int, Double)] = [
             ("Sam", 4_820, 2), ("Mia", 2_140, 4), ("Dad", 960, 9),
             ("Climbing crew", 610, 16), ("Uma", 245, 30),
@@ -2228,7 +2230,7 @@ enum DemoSeedAll {
                                               "quietbuilds": "7.9K"]
 
     private static func telegram() -> [Thing] {
-        var out: [Thing] = [receipt("Telegram", "38 chats · 176 saved", days: 9)]
+        var out: [Thing] = [receipt("Telegram", "38 chats · 176 saved", count: 214, days: 9)]
 
         // The live half: followed channels, captioned posts and wordless
         // pictures, so the room draws its grid AND its post cards. The
@@ -3813,7 +3815,7 @@ enum DemoSeedAll {
         // its own site — never SimpleFIN's.
         let bank: [(String, String, Double, [String], String, String, Double)] = [
             ("Blue Bottle · $6.50", "Blue Bottle", 6.50, ["Purchase"], "sent", "Chase · Sapphire", 0.3),
-            ("Whole Foods · $84.20", "Whole Foods", 84.20, ["Purchase"], "sent", "Chase · Sapphire", 1.4),
+            ("Trader Joe's · $52.10", "Trader Joe's", 52.10, ["Purchase"], "sent", "Chase · Sapphire", 1.4),
             ("Received · Northwind Payroll · $3,200.00", "Northwind Payroll", 3_200, ["Deposit"], "received",
              "Chase · Total Checking", 4),
             ("Chase Card Payment · $612.00", "Chase Card Payment", 612, [], "sent", "Chase · Total Checking", 5),
