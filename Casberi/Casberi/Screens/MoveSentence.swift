@@ -1527,6 +1527,14 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: verb)
     }
 
+    /// Scroll the page to its end once the foot has taken its new height.
+    private func showLimitLine(_ reader: ScrollViewProxy) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            withAnimation(DS.Motion.standard) { reader.scrollTo("movePage", anchor: .bottom) }
+        }
+    }
+
     private var accountPage: some View {
         // The sentence stands at the top and never moves: a blank's choices
         // open under it, down toward the foot (§1442b, user: "it can't extend
@@ -1573,6 +1581,18 @@ struct MoveSentence: View {
                 // an open list has no foot and runs to the edge itself.
                 .padding(.bottom, inlineOpen == nil ? (sentenceLow ? Self.footFade : DS.Space.s4 + Self.footFade) : 0)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
+                .id("movePage")
+            }
+            // A limit order's line stands clear of the sentence: its four
+            // lines leave less room than the rows and the line need, and
+            // "Until Nov 22" wrapped under the foot's fade, half hidden.
+            .onChange(of: limiting, initial: true) { _, now in
+                guard now else { return }
+                showLimitLine(reader)
+            }
+            .onChange(of: open) { _, now in
+                guard now == nil, limiting else { return }
+                showLimitLine(reader)
             }
             // The row a figure is typed in stands clear of the keys and the
             // foot (prd §1791): the system brings the cursor into view, and
