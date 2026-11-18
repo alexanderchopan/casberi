@@ -1523,10 +1523,16 @@ enum KeptAskComposers {
     /// that case identically and without a misleading leading ellipsis — so
     /// this falls back to that head rather than dropping the line.
     private static func snippet(of thing: Thing, terms: [String]) -> String {
-        let body = [thing.content, thing.postText ?? "", thing.summary ?? "",
+        let raw = [thing.content, thing.postText ?? "", thing.summary ?? "",
                     thing.enrichedText ?? ""]
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty && !$0.hasPrefix("http") } ?? ""
+        // A note's words begin with its own title, which the row already
+        // draws: the line carries what the title does not (prd §764).
+        let title = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = !title.isEmpty && raw.hasPrefix(title)
+            ? String(raw.dropFirst(title.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            : raw
         guard !body.isEmpty else { return "" }
         // A tighter radius than the model's grounding snippet uses: this is
         // two lines under a row, not a passage for something to read.
