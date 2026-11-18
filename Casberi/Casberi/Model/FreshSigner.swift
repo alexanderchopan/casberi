@@ -79,6 +79,68 @@ enum FreshSigner {
         return hash
     }
 
+    /// **AWAY FROM ETHEREUM (prd §1879).** Signs and sends a fresh sender's
+    /// Across deposit to Base or Robinhood on Ethereum; nil-built
+    /// (`FreshTx.Tx(away:)`) for anything else.
+    static func sendAway(to: String, data: String, value: String, index: UInt32, root: String, from: String,
+                         network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64,
+                         kept: (_ hash: String, _ nonce: String) -> Void) async throws -> String {
+        let nonce = try await PrivateRPC.call(network, "eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
+        guard network.chainId == FreshTx.homeChain,
+              let tx = FreshTx.Tx(away: from, nonce: nonce, maxPriorityFeePerGas: "0x" + String(tip, radix: 16),
+                                  maxFeePerGas: "0x" + String(maxFee, radix: 16), gas: "0x" + String(gas, radix: 16),
+                                  to: to, value: value, data: data) else { throw Failure.refused("not a fresh address's move") }
+        let k = try key(index, root: root)
+        guard SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation))?.lowercased() == from.lowercased() else {
+            throw Failure.curve
+        }
+        let signature = try k.signature(for: HashDigest(tx.signingHash))
+        let compact = try signature.compactRepresentation
+        let rs = [UInt8](compact.signature)
+        guard rs.count == 64, let raw = tx.signed(yParity: Int(compact.recoveryId), r: Array(rs[0..<32]), s: Array(rs[32..<64])) else {
+            throw Failure.curve
+        }
+        let hash = "0x" + Keccak256.hexString(Keccak256.hash(raw))
+        kept(hash, PrivateMoney.decimal(hex: nonce))
+        do {
+            _ = try await PrivateRPC.call(network, "eth_sendRawTransaction", [TestnetTx.hex(raw)])
+        } catch Failure.refused(let why) where why.lowercased().contains("already known") {
+        }
+        NSLog("freshAddress| sent away | %@ | gas %d", hash, gas)
+        return hash
+    }
+
+    /// **HOME TO ETHEREUM (prd §1878).** Signs and sends address `index`'s
+    /// Across deposit to itself on Base or Robinhood, at exactly this gas and
+    /// these fees; nil-built (`FreshTx.Tx(home:)`) for anything else. Kept
+    /// before it goes, as `send` is.
+    static func sendHome(chainId: Int, node: String, name: String, to: String, data: String, value: String,
+                         index: UInt32, root: String, from: String, gas: Int, tip: UInt64, maxFee: UInt64,
+                         kept: (_ hash: String, _ nonce: String) -> Void) async throws -> String {
+        let nonce = try await PrivateRPC.call(at: node, named: name, "eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
+        guard let tx = FreshTx.Tx(home: chainId, from: from, nonce: nonce, maxPriorityFeePerGas: "0x" + String(tip, radix: 16),
+                                  maxFeePerGas: "0x" + String(maxFee, radix: 16), gas: "0x" + String(gas, radix: 16),
+                                  to: to, value: value, data: data) else { throw Failure.refused("not a fresh address's move") }
+        let k = try key(index, root: root)
+        guard SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation))?.lowercased() == from.lowercased() else {
+            throw Failure.curve
+        }
+        let signature = try k.signature(for: HashDigest(tx.signingHash))
+        let compact = try signature.compactRepresentation
+        let rs = [UInt8](compact.signature)
+        guard rs.count == 64, let raw = tx.signed(yParity: Int(compact.recoveryId), r: Array(rs[0..<32]), s: Array(rs[32..<64])) else {
+            throw Failure.curve
+        }
+        let hash = "0x" + Keccak256.hexString(Keccak256.hash(raw))
+        kept(hash, PrivateMoney.decimal(hex: nonce))
+        do {
+            _ = try await PrivateRPC.call(at: node, named: name, "eth_sendRawTransaction", [TestnetTx.hex(raw)])
+        } catch Failure.refused(let why) where why.lowercased().contains("already known") {
+        }
+        NSLog("freshAddress| sent home | %@ | %@ | gas %d", name, hash, gas)
+        return hash
+    }
+
     /// Waits for `hash` at most `seconds`: true landed, false still out (a
     /// wait that ends says nothing); a reverted one throws.
     static func landed(_ hash: String, on network: PrivacyNetwork, seconds: Int = 240) async throws -> Bool {
@@ -97,7 +159,13 @@ enum FreshSigner {
 /// node's "slow down" is waited out; its error is thrown.
 enum PrivateRPC {
     static func call(_ network: PrivacyNetwork, _ method: String, _ params: [Any]) async throws -> Any {
-        guard let url = URL(string: network.rpcUrl) else { throw FreshSigner.Failure.node("no node") }
+        try await call(at: network.rpcUrl, named: network.name, method, params)
+    }
+
+    /// The same call to any node (prd §1878: Base's and Robinhood's, where a
+    /// fresh address sends what it was paid home).
+    static func call(at node: String, named name: String, _ method: String, _ params: [Any]) async throws -> Any {
+        guard let url = URL(string: node) else { throw FreshSigner.Failure.node("no node") }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -105,7 +173,7 @@ enum PrivateRPC {
         request.timeoutInterval = 30
         for attempt in 0..<5 {
             guard let (data, http) = await IngestSupport.sendRequest(request, service: PrivacyEngine.service) else {
-                throw FreshSigner.Failure.node("no answer from \(network.name)")
+                throw FreshSigner.Failure.node("no answer from \(name)")
             }
             let text = String(decoding: data.prefix(512), as: UTF8.self)
             if PrivacyEngineWire.throttled(status: http.statusCode, body: text), attempt < 4 {
@@ -120,7 +188,7 @@ enum PrivateRPC {
             }
             return json["result"] ?? NSNull()
         }
-        throw FreshSigner.Failure.node("\(network.name)'s node is busy")
+        throw FreshSigner.Failure.node("\(name)'s node is busy")
     }
 
     /// A quantity answer as decimal ("0x1bc16d674ec80000" → "2000000000000000000").

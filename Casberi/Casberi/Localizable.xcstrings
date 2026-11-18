@@ -47744,6 +47744,34 @@
         }
       }
     },
+    "Across and gas keep about 1–2%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across y el gas se quedan con un 1–2%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across とガス代で約1〜2%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across와 가스비로 약 1–2%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 和 Gas 费约占 1–2%"
+          }
+        }
+      }
+    },
     "Across asked for something other than this swap, so nothing was signed" : {
       "localizations" : {
         "es" : {
@@ -47800,6 +47828,34 @@
         }
       }
     },
+    "Across didn't answer. Your ETH waits at a one-time address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across no respondió. Tu ETH espera en una dirección de un solo uso."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across から応答がありません。ETH は使い捨てアドレスで待機しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across가 응답하지 않았습니다. ETH는 일회용 주소에서 대기 중입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 没有响应。你的 ETH 在一次性地址中等待。"
+          }
+        }
+      }
+    },
     "Across does not carry %@ to %@" : {
       "localizations" : {
         "es" : {
@@ -47852,6 +47908,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Across 不支持从 %1$@ 到 %2$@ 转移此资产"
+          }
+        }
+      }
+    },
+    "Across won't carry this amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across no lleva este importe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across はこの金額を送れません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across가 이 금액을 옮기지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 不承接此金额"
           }
         }
       }
@@ -47940,6 +48024,34 @@
         }
       }
     },
+    "Across's deposit would cost more gas than expected" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El depósito de Across costaría más gas de lo previsto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across への入金のガス代が想定を超えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 입금의 가스비가 예상보다 큽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 存款的 Gas 费超出预期"
+          }
+        }
+      }
+    },
     "Across's fee is too high for this amount" : {
       "localizations" : {
         "es" : {
@@ -47964,6 +48076,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "对此金额而言 Across 的手续费过高"
+          }
+        }
+      }
+    },
+    "Across's terms changed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las condiciones de Across cambiaron"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across の条件が変わりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across의 조건이 바뀌었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 的条件已变化"
           }
         }
       }
@@ -54622,6 +54762,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此账户的上一笔发送仍在结算中，请一分钟后再试。"
+          }
+        }
+      }
+    },
+    "An earlier send to another network is still on its way" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un envío anterior a otra red aún está en camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のネットワークへの以前の送金がまだ処理中です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 네트워크로 보낸 이전 송금이 아직 진행 중입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "之前发往另一个网络的转账仍在途中"
           }
         }
       }
@@ -85422,6 +85590,62 @@
         }
       }
     },
+    "ETH on its way from %@ to Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH en camino de %@ a Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH が %@ から Ethereum へ移動中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH가 %@에서 Ethereum으로 이동 중입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH 正从 %@ 转往 Ethereum。"
+          }
+        }
+      }
+    },
+    "ETH only, to an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo ETH, a una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH のみ、アドレス宛て"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH만, 주소로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 ETH，发往地址"
+          }
+        }
+      }
+    },
     "ETHBEAT" : {
       "localizations" : {
         "es" : {
@@ -88136,34 +88360,6 @@
         }
       }
     },
-    "Ethereum network · new each time" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Red Ethereum · nueva cada vez"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ethereumネットワーク · 毎回新しい"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ethereum 네트워크 · 매번 새 주소"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ethereum 网络 · 每次都是新的"
-          }
-        }
-      }
-    },
     "Ethereum to Aztec" : {
       "localizations" : {
         "es" : {
@@ -88300,6 +88496,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Ethereum · 每次一个新地址"
+          }
+        }
+      }
+    },
+    "Ethereum, Base or Robinhood" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base o Robinhood"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base、Robinhood"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base 또는 Robinhood"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base 或 Robinhood"
+          }
+        }
+      }
+    },
+    "Ethereum, Base or Robinhood · new each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base o Robinhood · nueva cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base、Robinhood · 毎回新しい"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base 또는 Robinhood · 매번 새 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base 或 Robinhood · 每次都是新的"
           }
         }
       }
@@ -119954,6 +120206,34 @@
         }
       }
     },
+    "Moving it with Across…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Moviéndolo con Across…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across で移動中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across로 옮기는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正通过 Across 转移…"
+          }
+        }
+      }
+    },
     "Moving to %@" : {
       "localizations" : {
         "es" : {
@@ -138613,6 +138893,34 @@
         }
       }
     },
+    "On Ethereum, Base or Robinhood. ETH sent on Base or Robinhood moves to Ethereum to earn. Any other token needs a little ETH sent with it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En Ethereum, Base o Robinhood. El ETH enviado en Base o Robinhood pasa a Ethereum para generar rendimiento. Cualquier otro token necesita un poco de ETH enviado con él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base、Robinhood で受け取れます。Base や Robinhood で送られた ETH は Ethereum に移って利回りを得ます。ほかのトークンには少しの ETH を一緒に送る必要があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base 또는 Robinhood에서 받을 수 있습니다. Base나 Robinhood로 보낸 ETH는 Ethereum으로 옮겨져 이자를 받습니다. 다른 토큰은 약간의 ETH를 함께 보내야 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可在 Ethereum、Base 或 Robinhood 上接收。在 Base 或 Robinhood 上发送的 ETH 会转到 Ethereum 赚取收益。其他代币需要随附少量 ETH。"
+          }
+        }
+      }
+    },
     "On Ethereum. Move funds in from your public account. Send and receive at fresh addresses, and your balance stays hidden." : {
       "localizations" : {
         "es" : {
@@ -138951,6 +139259,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在发往 %@"
+          }
+        }
+      }
+    },
+    "On its way to a one-time address. Try again to finish it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino a una dirección de un solo uso. Inténtalo de nuevo para terminar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使い捨てアドレスへ移動中です。もう一度試すと完了します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일회용 주소로 가는 중입니다. 다시 시도하면 마무리됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正发往一次性地址。再试一次即可完成。"
           }
         }
       }
@@ -167391,6 +167727,34 @@
         }
       }
     },
+    "Robinhood" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Robinhood"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Robinhood"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Robinhood"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Robinhood"
+          }
+        }
+      }
+    },
     "Rocket Money signed you out — connect again." : {
       "localizations" : {
         "es" : {
@@ -174097,6 +174461,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在向 %2$@ 发送 %1$@"
+          }
+        }
+      }
+    },
+    "Sending from your private balance…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando desde tu saldo privado…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高から送金中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액에서 보내는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正从你的私密余额发送…"
           }
         }
       }
@@ -255913,6 +256305,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "低于"
+          }
+        }
+      }
+    },
+    "under $0.01" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "menos de $0,01"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$0.01 未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "$0.01 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不到 $0.01"
           }
         }
       }

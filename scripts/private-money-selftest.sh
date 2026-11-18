@@ -291,6 +291,13 @@ TMPF=$(mktemp /tmp/private-money-fresh.XXXXXX)
 for f in "$FSIGN" "$FTX"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
 ! grep -q '#if DEBUG' "$FSIGN" "$FTX" || { echo "✗ the fresh addresses' mainnet signer is DEBUG-only (it must ship)"; exit 1; }
 use "$FSIGN" 'guard let tx = FreshTx.Tx(network: network, nonce: nonce,' "a fresh key signs something FreshTx did not make"
+use "$FSIGN" 'guard let tx = FreshTx.Tx(home: chainId, from: from, nonce: nonce,' "a fresh key sends home something FreshTx did not make"
+for pair in "8453 0x09aea4b2242abc8bb4bb78d537a67a245a7bec64" "4663 0xd29c85f15df544ba632c9e25829fd29d767d7978"; do
+    set -- ${=pair}
+    grep -q "$1: \"$2\"" Casberi/Casberi/Model/YourAccountAcross.swift && grep -q "chainId: $1, weth: .*spoke: \"$2\"\|spoke: \"$2\"" "$FTX" \
+        || { echo "✗ a home origin's SpokePool is not Across's own on $1"; exit 1; }
+done
+use "Casberi/Casberi/Model/FreshReceive.swift" 'await lookHome(entry, network: network)' "money paid to a receive address on Base or Robinhood is never looked at"
 ! grep -q 'TestnetTx.Tx(\|PrivacyTestnetSender' "$FSIGN" || { echo "✗ the mainnet fresh signer goes through the testnet sender"; exit 1; }
 use "$FSIGN" 'guard SignerKey.ethereumAddress(uncompressedPublicKey: [UInt8](k.publicKey.dataRepresentation))?.lowercased() == from.lowercased() else {' "a fresh key signs as another address"
 use "$FRESHM" 'guard FreshAddress.matchesYield(to: d.tx.to, value: d.tx.value, approvals: d.approvals.count, budget: plan.budget, pool: pool) else {' "a fresh deposit on Ethereum is not checked against its plan"
@@ -311,12 +318,13 @@ use "$FRESHV" 'arrived; needs a little private ETH to move' "the line no longer 
 # restoring line.
 use "$MOVE" 'return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: usdcLadder, minimum: usdcMinimum)' "USDC's amounts do not start at the pool's minimum"
 use "$MOVE" 'PrivateMoney.ladder(PrivateMoney.usdcLadder, from: usdcMinimum ?? "0", decimals: 6, places: 2)' "USDC's first step is a round number over the pool's minimum, not the minimum (prd §1694)"
-use "$MOVE" 'let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to, balanceToBalance: balanceToBalance == true)' "a private send on Ethereum ignores the token or the recipient's private account"
+use "$MOVE" 'let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,' "a private send on Ethereum ignores the token or the recipient"
+use "$MOVE" 'balanceToBalance: tag == nil && balanceToBalance == true)' "a private send on Ethereum ignores the recipient's private account (a zk.money tag is paid as an address, §1874)"
 use "$ETH" 'let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)' "balance to balance is not a transfer inside the pool"
 use "$ETH" 'return PrivateMoney.hasViewingKey(answer)' "a recipient's private account is not read off the keystore"
 awk '/static func hasPrivateAccount\(/,/^    }$/' "$ETH" | grep -q 'return nil' || { echo "✗ an unanswered keystore read is taken for no private account (it would pay out publicly)"; exit 1; }
 awk '/    func run\(\) async \{/,/^    }$/' "$MOVE" | grep -q 'guard balanceToBalance != nil else {' || { echo "✗ a private send runs without knowing where it goes"; exit 1; }
-use "$MPRIV" 'if move.balanceToBalance == true {' "the line does not say a send goes balance to balance"
+use "$MPRIV" 'if move.balanceToBalance == true, !move.away {' "the line does not say a send goes balance to balance (to Base or Robinhood it is paid out, §1879)"
 use "$ENGJS" "recipientDiscoveryData: { evmAddress: getAddress(recipient.toLowerCase()) } });" "the engine's transfer finds the recipient some other way than the keystore"
 ! grep -q 'allowOutOfBandFallback' "$ENGJS" || { echo "✗ the engine falls back to secrets the app would have to deliver"; exit 1; }
 use "$BUNDLE" 'sharesForUnderlying' "the shipped bundle cannot transfer on a yield pool — rebuild with tools/privacy-pools-engine/build.mjs"
@@ -756,6 +764,52 @@ check(!made(ppUSDC.router, "0xc63148e8" + String(repeating: "ab", count: 66), "0
       "a token deposit carries ETH, or the token router's deposit is refused")
 let otherSpender = "0x095ea7b3" + String(repeating: "0", count: 24) + "4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030" + String(repeating: "0", count: 63) + "1"
 check(!made(ppUSDC.underlying, otherSpender, "0x0"), "a fresh key approves anyone but its token's router")
+// §1878: home to Ethereum — on Base or Robinhood, only Across's deposit of the address's ETH to itself.
+let homeMe = "0x1111111111111111111111111111111111111111"
+let homeBase = FreshTx.homeOrigins.first { $0.chainId == 8453 }!
+let zeroRelayer = "0x" + String(repeating: "0", count: 40)
+let homeData = FreshTx.homeDeposit(homeBase, address: homeMe, input: "5000000000000000", output: "4968484188956779",
+                                   relayer: zeroRelayer, quoteTimestamp: 1_763_400_000, fillDeadline: 1_763_407_200, exclusivity: 0)!
+func home(_ to: String, _ data: String, _ value: String, chain: Int = 8453, from: String = homeMe) -> Bool {
+    FreshTx.Tx(home: chain, from: from, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x2", gas: "0x30d40",
+               to: to, value: value, data: data) != nil
+}
+check(FreshTx.homeSelector == "0xad5425c6", "the home deposit's selector is not Across's deposit(bytes32,…)")
+check(home(homeBase.spoke, homeData, "0x11c37937e08000"), "a fresh address cannot send its Base ETH home")
+check(!home(homeBase.spoke, homeData, "0x11c37937e08001"), "a home deposit carries more ETH than it deposits")
+check(!home(homeBase.spoke, homeData, "0x11c37937e08000", chain: 1), "a home deposit is signed on Ethereum")
+check(!home(homeBase.spoke, homeData, "0x11c37937e08000", chain: 4663), "Base's SpokePool is called on Robinhood")
+check(!home(homeBase.spoke, homeData, "0x11c37937e08000", from: "0x2222222222222222222222222222222222222222"),
+      "a fresh address deposits for another address")
+let otherRecipient = String(homeData.prefix(10 + 64)) + String(repeating: "0", count: 24) + "4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030" + String(homeData.dropFirst(10 + 128))
+check(!home(homeBase.spoke, otherRecipient, "0x11c37937e08000"), "a home deposit pays someone else on Ethereum")
+let withMessage = String(homeData.dropLast(64)) + String(repeating: "0", count: 63) + "4" + "deadbeef" + String(repeating: "0", count: 56)
+check(!home(homeBase.spoke, withMessage, "0x11c37937e08000"), "a home deposit carries a message")
+check(!home("0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", homeData, "0x11c37937e08000"), "a home deposit goes to a contract other than the SpokePool")
+check(FreshTx.homeDeposit(homeBase, address: homeMe, input: "5000000000000000", output: "4968484188956779",
+                          relayer: "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", quoteTimestamp: 1, fillDeadline: 2, exclusivity: 0) == nil,
+      "an exclusive relayer is named with no exclusivity")
+check(FreshTx.homeInput(balance: "5000000000000000", maxFee: "10000000") == "4998000000000000", "a home deposit keeps another amount for its gas")
+check(FreshTx.homeInput(balance: "1000", maxFee: "10000000") == nil, "a home deposit leaves with nothing")
+check(FreshTx.homeWorthIt(input: "5000000000000000", output: "4968484188956779", floor: "3000000000000000"), "a home deposit worth sending is not sent")
+check(!FreshTx.homeWorthIt(input: "5000000000000000", output: "4968484188956779", floor: "4970000000000000"), "a home deposit leaves that Ethereum would not move")
+check(!FreshTx.homeWorthIt(input: "5000000000000000", output: "4700000000000000", floor: "1"), "Across keeps more than 5% of a home deposit")
+// §1879: away from Ethereum — a fresh sender's Across deposit to the handler, Swap's own unwrap message, any recipient.
+let awayPayee = "0x2222222222222222222222222222222222222222"
+let awayData = FreshTx.awayDeposit(to: 8453, sender: homeMe, payee: awayPayee, input: "5000000000000000", output: "4968484188956779",
+                                   relayer: zeroRelayer, quoteTimestamp: 1_763_400_000, fillDeadline: 1_763_407_200, exclusivity: 0)!
+func away(_ to: String, _ data: String, _ value: String, from: String = homeMe) -> Bool {
+    FreshTx.Tx(away: from, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x2", gas: "0x30d40",
+               to: to, value: value, data: data) != nil
+}
+check(away(FreshTx.awaySpoke, awayData, "0x11c37937e08000"), "a fresh sender cannot send ETH to Base")
+check(!away(FreshTx.awaySpoke, awayData, "0x11c37937e08001"), "an away deposit carries more ETH than it deposits")
+check(!away(FreshTx.awaySpoke, awayData, "0x11c37937e08000", from: awayPayee), "an away deposit is signed by an address it does not name")
+check(!away(homeBase.spoke, awayData, "0x11c37937e08000"), "an away deposit is sent to Base's SpokePool on Ethereum")
+let awayTampered = String(awayData.dropLast(64)) + String(repeating: "0", count: 24) + "4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030"
+check(!away(FreshTx.awaySpoke, awayTampered, "0x11c37937e08000"), "an away deposit's message pays someone other than its fallback")
+check(!home(homeBase.spoke, awayData, "0x11c37937e08000"), "an away deposit passes as a home deposit")
+check(!made(FreshTx.awaySpoke, awayData, "0x11c37937e08000"), "an away deposit passes as a router's deposit")
 // §1724: Railgun, Ethereum only — a listed token's approval of the proxy, the proxy's shield, no ETH.
 let dai = FreshTx.railgunToken(symbol: "DAI")!
 let railApprove = FreshTx.railgunApproval(dai, amount: "400000000000000000000")!

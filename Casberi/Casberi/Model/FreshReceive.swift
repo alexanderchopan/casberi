@@ -48,6 +48,9 @@ final class FreshReceive {
     private(set) var failure: String?
     /// The root new addresses come from, read in a task (never in a body).
     private(set) var rootID: String?
+    /// The network an address's ETH is on its way home from, by entry id
+    /// (prd §1878, `FreshReceive+Home`).
+    var homeMoving: [String: String] = [:]
     @ObservationIgnored private var looking = false
     @ObservationIgnored private var looked: Date = .distantPast
     @ObservationIgnored private var walked: Set<String> = []
@@ -141,6 +144,8 @@ final class FreshReceive {
             if case .failed = entry.state, !force { continue }
             guard !Task.isCancelled else { return }
             guard let network = PrivacyNetwork.forChain(entry.network) else { continue }
+            // What it was paid on Base or Robinhood goes home first (prd §1878).
+            await lookHome(entry, network: network)
             // A transaction out for it is asked about first, and nothing new
             // is sent for it while it may still land (findings 2 and 6).
             if case .sent(let amount, let tx, let step, let nonce, let at) = entry.state {
@@ -281,7 +286,7 @@ final class FreshReceive {
 
     /// The pool's smallest budget in the token, today: its minimum in shares
     /// (`Entrypoint.assets`) at the share's live rate.
-    private func minimumBudget(_ pool: PrivacyNetwork.YieldPool, on network: PrivacyNetwork) async -> String? {
+    func minimumBudget(_ pool: PrivacyNetwork.YieldPool, on network: PrivacyNetwork) async -> String? {
         guard let config = await PrivateOnEthereum.terms(pool), config.enabled,
               let answer = await PrivateOnEthereum.ethCall(to: pool.share, data: PrivateYield.exchangeRateCall),
               let rate = PrivateYield.word(answer, 0), rate != "0" else { return nil }

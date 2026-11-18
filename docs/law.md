@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2056 of 2130 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2058 of 2132 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2319,6 +2319,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c…
 - §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired
 - §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva…
+- §1878 — Receive on Base or Robinhood, earn on Ethereum
+- §1879 — Send from your private balance to Base or Robinhood
 
 ## Dead rulings → what replaced them (generated)
 

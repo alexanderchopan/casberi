@@ -249,7 +249,11 @@ struct MoveFreshSentence<Head: View>: View {
 
     /// Railgun is Ethereum's alone, in every build (a DEBUG build's one-time
     /// address is on Sepolia).
-    private var shownNetwork: String { fromPrivate ? String(localized: "Ethereum") : network.name }
+    /// A one-time address on Ethereum takes ETH on Base and Robinhood too (prd §1878).
+    private var shownNetwork: String {
+        if fromPrivate { return String(localized: "Ethereum") }
+        return network.chainId == FreshTx.homeChain ? String(localized: "Ethereum, Base or Robinhood") : network.name
+    }
 
     /// The address in groups of five, as public Receive shows yours; a tap
     /// copies the whole (prd §1719: no QR).
@@ -274,6 +278,10 @@ struct MoveFreshSentence<Head: View>: View {
         } else if let failure = book.failure {
             Text(verbatim: failure).dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
+        } else if let entry, let from = book.homeMoving[entry.id] {
+            // Paid on Base or Robinhood, on its way to Ethereum (prd §1878).
+            Text("ETH on its way from \(from) to Ethereum.").dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         } else if let entry, let said = words(entry.state, symbol: entry.token) {
             Text(verbatim: said.0).dsText(.body17).foregroundStyle(said.1)
                 .fixedSize(horizontal: false, vertical: true)
@@ -281,8 +289,15 @@ struct MoveFreshSentence<Head: View>: View {
             // Before anything arrives (prd §1779): the address is a plain
             // one, good on every network of its kind, and only this network
             // is watched. And a token cannot pay its own gas: sent alone it
-            // waits (a tester's 1,000 USDC, 2026-11-13).
-            Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
+            // waits (a tester's 1,000 USDC, 2026-11-13). ETH paid on Base or
+            // Robinhood goes home to Ethereum (prd §1878).
+            Group {
+                if network.chainId == FreshTx.homeChain {
+                    Text("On Ethereum, Base or Robinhood. ETH sent on Base or Robinhood moves to Ethereum to earn. Any other token needs a little ETH sent with it.")
+                } else {
+                    Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
+                }
+            }
                 .dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         }

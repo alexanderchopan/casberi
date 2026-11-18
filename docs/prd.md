@@ -74103,3 +74103,29 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The same rows in Move's tray.
 
 **Checks.** `railgun-selftest.sh`: the address check compiled (127 characters, bech32, a public address refused), the SDK's own check and never your own address in the engine, every private send a transaction to the proxy, the sender never shown, the send never through your account or out of Railgun, Receive reading your own wallet's address, the bundle carrying it. **Seen** on the iPhone 17 Pro simulator (demo): the send's rows, sentence, Note and cost; Receive's From and your private address.
+
+## §1878
+
+**Receive on Base or Robinhood, earn on Ethereum** (user, 2026-11-18: "receive on base earn on ethereum", "doing both since we have robinhood would be useful"). Prompted by $20 of ETH the user sent on Base to their one-time private address, which Ethereum's watch never saw.
+
+1. **A one-time address is watched on Base and Robinhood too** (`FreshReceive+Home.swift`), every look, for ETH. Found there, it goes home: the address's own Across deposit to ITSELF on Ethereum, ETH in, ETH out (a SpokePool pays an address with no code native ETH), no message, its gas out of what arrived. Once it lands on Ethereum, the existing look (§1567) moves it into the private balance. Retroactive: every address already made is looked at.
+2. **Only when it will move on**: what Across delivers must reach what Ethereum's look would move (the pool's least plus that deposit's gas, today), and Across may keep at most 5%. Measured 2026-11-18: 0.005 ETH from Base or Robinhood, fee 0.63–0.67%, fill 8 s.
+3. **The key can sign it and nothing else there** (`FreshTx.homeAllowed`, `Tx(home:)`): Base's or Robinhood's SpokePool, the address as depositor and recipient, WETH in and Ethereum's WETH out, to chain 1, an empty message, the value the amount deposited, what arrives no more than what leaves. Kept before it goes (`freshAddresses.home.v1`); a deposit not seen in 30 minutes is dropped and the balance read again; a deposit Across does not fill is refunded to the address as WETH and stays there (not built further).
+4. **Words.** Receive's Network row: "Ethereum, Base or Robinhood"; the Private balance row: "Ethereum, Base or Robinhood · new each time"; the line before anything arrives: "On Ethereum, Base or Robinhood. ETH sent on Base or Robinhood moves to Ethereum to earn. Any other token needs a little ETH sent with it."; while it travels: "ETH on its way from Base to Ethereum."
+
+**Not built.** USDC (or any token) on Base or Robinhood: it would need ETH for its approval there. **Unproven** on mainnet: the first fill is the user's $20 on Base.
+
+**Checks.** `private-money-selftest.sh`: the selector, a home deposit allowed and every field it may not change refused (more ETH, Ethereum, the other network's pool, another depositor, another recipient, a message, another contract, a relayer named with no exclusivity), the gas kept, the floor and the 5% cap; the pinned pools equal Across's; the look is called. `CasberiTests/FreshAwayTests`: the pins against `YourAccountAcross` and `YourAccountSwap`.
+
+## §1879
+
+**Send from your private balance to Base or Robinhood** (user, 2026-11-18: "would we build send the same way? send from private balance to robinhood base or ethereum", "build both").
+
+1. **Move › Send, privately, with ETH to an address**: the Network row opens Ethereum · Base · Robinhood (`MovePrivate.networks`). A zk.money tag or USDC keeps it on Ethereum.
+2. **The mirror of §1878** (`PrivateSendAway`): 0xBow's relayer withdraws the amount to a fresh sender on Ethereum (one counter with Railgun's, §1726: a new sender each send); once it lands, the sender's one Across deposit of what it holds, less that deposit's gas, to Across's MulticallHandler on Base or Robinhood with exactly the message Swap's crossings carry (unwrap, pay the recipient, the recipient the fallback), so an account gets ETH, not WETH. What the sentence says is what leaves your private balance; the line says "Across and gas keep about 1–2%".
+3. **The key can sign it and nothing else** (`FreshTx.awayAllowed`, `Tx(away:)`): Ethereum's SpokePool, the sender as depositor, the handler as recipient, WETH out to the destination's WETH, Base or Robinhood only, the message rebuilt from its own recipient and compared byte for byte.
+4. **Interrupted, it finishes**: a withdrawal out with no deposit yet is kept (`privateAway.pending.v1`); the next send to the same recipient and network finishes it from the same sender, never withdrawing again; another send says "An earlier send to another network is still on its way".
+
+**Not built.** USDC to Base or Robinhood; a refund (WETH at the sender on Ethereum) is not brought back. **Unproven** on mainnet.
+
+**Checks.** `private-money-selftest.sh`: an away deposit allowed, and refused for more ETH, another signer, Base's pool on Ethereum, a message paying someone else, passing as a home deposit or a router's deposit. `CasberiTests/FreshAwayTests`: `FreshTx.awayMessage` equals `YourAccountAcross.message(to:amount:account:)` on both networks.

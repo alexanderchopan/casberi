@@ -54,7 +54,7 @@ struct MovePrivateSentence<Head: View>: View {
     @Environment(\.modelContext) private var context
     @Environment(ShellChrome.self) private var chrome
 
-    enum Blank { case amount, recipient }
+    enum Blank { case amount, recipient, network }
 
     private var store: PrivateMoneyStore { .shared }
 
@@ -347,7 +347,7 @@ struct MovePrivateSentence<Head: View>: View {
     private var sendLine: String {
         // To someone with a private account of their own, it stays private:
         // balance to balance (prd §1567), nothing paid out.
-        if move.balanceToBalance == true {
+        if move.balanceToBalance == true, !move.away {
             return [String(localized: "To their private balance"), String(localized: "about a minute")].joined(separator: " · ")
         }
         // A Sepolia fee is a few hundred-millionths: it keeps its digits.
@@ -358,7 +358,9 @@ struct MovePrivateSentence<Head: View>: View {
         let zkFee = move.tag == nil ? nil
             : String(localized: "zk.money keeps about $\(ZkMoneyWire.payFeeUSD.formatted(.number.precision(.fractionLength(2))))")
         // The relayer refused Tor and was asked directly (`TorFallback`).
-        let parts = [fee, zkFee ?? String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
+        // To Base or Robinhood, Across and a one-time sender's gas follow (prd §1879).
+        let away = move.away ? String(localized: "Across and gas keep about 1–2%") : nil
+        let parts = [fee, away ?? zkFee ?? String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }
 
@@ -401,10 +403,13 @@ struct MovePrivateSentence<Head: View>: View {
         } else if live {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
         }
-        // Its one network, said as a row and fixed (prd §1802).
+        // Its network, said as a row: fixed, unless ETH sent to an address
+        // may arrive on Base or Robinhood (prd §1802, §1879).
+        let arrives = move.away ? move.destination : (move.onEthereum ? 1 : 0)
         rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
-                                  value: move.onEthereum ? String(localized: "Ethereum") : String(localized: "Sepolia"),
-                                  mark: move.onEthereum ? MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) } : nil, fixed: true) {})
+                                  value: Self.networkName(arrives),
+                                  mark: arrives == 0 ? nil : MoveSentence.networkMark(chainId: arrives).map { MoveRowMark(network: $0) },
+                                  fixed: !(live && move.canGoAway)) { toggle(.network) })
         if live { rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: figure) { toggle(.amount) }) }
         return rows
     }
@@ -416,10 +421,44 @@ struct MovePrivateSentence<Head: View>: View {
             switch blank {
             case .amount: amounts
             case .recipient: recipients
+            case .network: networks
             }
         }
         .padding(.vertical, DS.Space.s2)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private static func networkName(_ chainId: Int) -> String {
+        switch chainId {
+        case 0: String(localized: "Sepolia")
+        case 8453: String(localized: "Base")
+        case 4663: String(localized: "Robinhood")
+        default: String(localized: "Ethereum")
+        }
+    }
+
+    /// Where ETH sent to an address arrives (prd §1879): Ethereum, or Base
+    /// or Robinhood through Across.
+    private var networks: some View {
+        ForEach([1, 8453, 4663], id: \.self) { chain in
+            Button {
+                withAnimation(DS.Motion.standard) {
+                    move.destination = chain
+                    open = nil
+                }
+                DSHaptic.selection()
+            } label: {
+                HStack(spacing: DS.Space.s3) {
+                    if let mark = MoveSentence.networkMark(chainId: chain) { MoveRowMark(network: mark) }
+                    Text(verbatim: Self.networkName(chain)).dsText(.body17)
+                        .foregroundStyle(move.destination == chain ? DS.pickInk : DS.textPrimary)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight + DS.Space.s3, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+        }
     }
 
     /// The amounts the money can cover: the test account's after the gas a

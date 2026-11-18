@@ -303,8 +303,14 @@ enum RailgunPocket {
 
     private static func senderKey(_ root: String) -> String { "railgun.sender." + root }
 
-    /// This send's fresh sender: the next unused index under your root.
-    private static func senderAddress() throws -> (index: UInt32, address: String, root: String) {
+    /// The next send takes a new sender, whatever this one does.
+    static func senderUsed(_ sender: (index: UInt32, address: String, root: String)) {
+        UserDefaults.standard.set(Int(sender.index - FreshAddress.senderBase) + 1, forKey: senderKey(sender.root))
+    }
+
+    /// This send's fresh sender: the next unused index under your root
+    /// (a private send to Base or Robinhood takes one too, prd §1879).
+    static func senderAddress() throws -> (index: UInt32, address: String, root: String) {
         let root = try PrivateRootKey.ensure()
         let used = UInt32(UserDefaults.standard.integer(forKey: senderKey(root)))
         let index = FreshAddress.senderBase + used

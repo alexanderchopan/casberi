@@ -52,6 +52,13 @@ final class PrivateMove {
     /// it in USDC (a deposit takes dollars; your private balance holds USDC
     /// and ETH). Ethereum only. Nil for an address.
     var tag: String?
+    /// **WHERE A SEND ARRIVES (prd §1879):** Ethereum, or ETH to Base or
+    /// Robinhood through a fresh sender and Across (`PrivateSendAway`).
+    var destination: Int = 1
+    /// A send of ETH to Base or Robinhood.
+    var away: Bool { mode == .send && onEthereum && destination != PrivacyNetwork.ethereum.chainId }
+    /// Whether a send may go to Base or Robinhood now: ETH to an address.
+    var canGoAway: Bool { mode == .send && onEthereum && symbol == "ETH" && tag == nil }
     /// Switch on: the relayer's terms for ETH (`PrivateMoney.relayerTerms`).
     private(set) var terms: PrivateMoney.RelayerTerms?
 
@@ -185,6 +192,7 @@ final class PrivateMove {
     func pay(tag newTag: String?, address: String? = nil) {
         tag = newTag
         recipient = newTag == nil ? address : nil
+        if newTag != nil { destination = PrivacyNetwork.ethereum.chainId }
         if newTag != nil, !options.contains(where: { $0.symbol == symbol && $0.amount == amount }), let first = options.first {
             pick(first.amount, of: first.symbol)
         }
@@ -194,6 +202,7 @@ final class PrivateMove {
     func pick(_ step: String, of token: String) {
         symbol = token
         amount = step
+        if token != "ETH" { destination = PrivacyNetwork.ethereum.chainId }
     }
 
     /// Switch on, a new recipient: asks the keystore whether they hold a
@@ -533,6 +542,15 @@ final class PrivateMove {
                     guard let r = recipient, PrivateMoney.isAddress(r) else { return }
                     to = r
                 }
+                if away {
+                    guard symbol == "ETH" else { return }
+                    stage = .opening
+                    let hash = try await PrivateSendAway.send(amount: value, to: destination, payee: to) { [weak self] _ in
+                        self?.stage = .sending
+                    }
+                    stage = .done(hash)
+                    return
+                }
                 stage = .opening
                 let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
                                                             balanceToBalance: tag == nil && balanceToBalance == true)
@@ -734,6 +752,15 @@ final class PrivateMove {
     /// A failure in the sentence's words: short, and what to do where there is something.
     static func words(_ error: Error, network: PrivacyNetwork = .sepolia) -> String {
         if let failure = error as? YourAccountChain.Failure { return failure.message }
+        if let failure = error as? PrivateSendAway.Failure {
+            switch failure {
+            case .notServed: return String(localized: "ETH only, to an address")
+            case .onItsWay: return String(localized: "On its way to a one-time address. Try again to finish it.")
+            case .across(let why): return why
+            case .gas: return String(localized: "Across's deposit would cost more gas than expected")
+            case .earlierSend: return String(localized: "An earlier send to another network is still on its way")
+            }
+        }
         if let failure = error as? PrivateOnEthereum.Failure {
             return failure == .noAccount ? String(localized: "Set up your account first")
                 : String(localized: "This could not be written, so nothing was signed")
