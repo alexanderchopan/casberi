@@ -74,4 +74,23 @@ struct YourAccountFacts: Equatable {
     static func noteSigners(_ count: Int) {
         UserDefaults.standard.set(count, forKey: signersKey)
     }
+
+    static let coSignersKey = "yourAccount.coSigners"
+
+    /// The co-signer keys themselves, stamped beside the count (prd §1861):
+    /// Permissions names each one without asking a network.
+    static func noteCoSigners(_ owners: [String]) {
+        var seen = Set<String>()
+        UserDefaults.standard.set(owners.filter { seen.insert($0.lowercased()).inserted }, forKey: coSignersKey)
+    }
+
+    /// The co-signer keys as last read, or the one chosen at Create while no
+    /// network has it yet (`signerCount`'s rule); the demo's in the demo.
+    static var coSigners: [String] {
+        if YourAccountDemo.isOn { return [YourAccountDemo.signer] }
+        guard let address = YourAccountKey.address else { return [] }
+        let stored = UserDefaults.standard.stringArray(forKey: coSignersKey) ?? []
+        if !stored.isEmpty { return stored }
+        return YourAccountSetup.choice(for: address)?.signer.map { [$0] } ?? []
+    }
 }

@@ -1150,6 +1150,8 @@ extension FeedScreen {
         }
         walletActingSection
         walletApprovalsSection
+        // The co-signer's own approvals, one door to the record (prd §1861).
+        walletCoSignerSection
         walletAztecGrantsSection
         // What can move a Safe of yours with nobody signing (prd §1786,
         // from Account's page): on All, or with your account picked.

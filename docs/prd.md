@@ -73823,3 +73823,19 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The same box on Catalyst's Account page.
 
 **Checks.** None new.
+
+## §1861 — Permissions names the co-signer: one row per key, a door to its approvals on Revoke.cash (extends §1710; keeps §112, §84) (user, 2026-11-17: "even if we dont' create them shouldn't we be able to show ones a user has or let them check them for their cosigner", then "Yes, build it")
+
+**Why.** The co-signer is a key in another wallet app. Nothing it approved can reach your account's money, but its own address can hold money (it is the way into Aztec, §1720), and Permissions read nothing of it unless you followed that address by hand.
+
+1. **A Co-signer group stands under Approvals**, on All and with your account picked, once a co-signer stands (`walletCoSignerSection`, `WalletCoSignerRows`). One row per key: the wallet app's name over the key's tail where a kept session names the app, else the tail alone; "Check approvals" trailing, with the mark of a door out of the app (§449).
+2. **The row opens that key's page on Revoke.cash** (`WalletApprovals.revokeURL`), the complete record, where the co-signer's own wallet signs a revoke. Nothing is signed here (§112).
+3. **The keys are the last reading** (`YourAccountFacts.coSigners`, stamped by `MoveSecurity` beside the Signers count), or the one chosen at Create while no network has it yet, so the group asks no network.
+
+**Why a door and not a list.** Approvals are read forward from the day an address is first seen (§84: a cursor, never a backfill), for every wallet. A list of the co-signer's grants would stand empty over approvals made years ago and read as "none" (§83). No keyless host gives the history: measured 2026-11-17 with a public address, Blockscout refuses automated reads on Base and answers "No logs found" to a whole-chain owner query on Ethereum.
+
+**Not done.** Reading the co-signer's NEW approvals forward, as a followed wallet's are: its rows would land in Activity and the notifications under no account of yours, which needs its own ruling. Sending the revoke to the co-signer's wallet over the kept session (`YourAccountSignerLink.sendForApp`): unmeasured for this.
+
+**Mac half (§1402).** The same Permissions page on Catalyst.
+
+**Checks.** None new. **Seen** on the simulator over the demo's account: Co-signer under Approvals, one row, "...d203" and "Check approvals". Not seen: a row named by a kept session, which the simulator has none of, and the door on a real co-signer's address.

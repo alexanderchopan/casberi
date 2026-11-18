@@ -148,6 +148,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - The Wallet's tiles are Home · Activity · Holdings · Spending; Home's doors are Your account, Following, Needs you, Permissions, Risks (§1480; Threats is Risks, §1741; Markets deleted, §1529).
 - Permissions' box is your balance, reached: one disc is what the wallets hold (places out), amber whole with the balance on it when a delegate or module reaches all of it, the apps' grants inside it at their dollars, amber with no limit and the charts' tint capped; beside it the dollars in reach and who, five then "N more"; under it No limit, Capped, Out of reach; a tap opens the grant or the delegate. Delegations and Approvals list every grant under it; empty after the last revoke, it draws the pack's skeleton with "No permissions" on it, over today's revokes (§1677, §1709, §1710). A reading kept from an earlier launch says "as of" under the key (§1709). Threats' box is this month's count against last month's, over one bar a week for twelve weeks; it never says a threat tried anything (§1633).
+- Permissions names the co-signer under Approvals: one row per key, the wallet app's name over the key's tail, opening that key's page on Revoke.cash; a door, not a list, because approvals are read forward only and no keyless host gives the history (§1861).
 - The watchlist is yours, apart from Following (§1632): one Home door like Permissions, on All and Yours only, trailing the day's biggest mover in its ink ("WLD −2.3%"), never an average, else the count; empty, it is the verb Watch a token. It pushes `Wallet · Watchlist` (the verb row, then each token: price trailing, the day's change on the line); Watch a token is a token-only search tray; a token's page is its chart, You hold, Coin or Network, Stop watching (no Swap yet). Watch is the verb for tokens, Follow for wallets and feeds, Track for subscriptions (§1632 amends §1120). Prices are keyless (DeFiLlama, CoinGecko's search), read on screen at most once per ten minutes, never through Zerion.
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry and refuse a follow (§1273, §1384). It reads both Aztec V5 and V6 deployments (§1692). A tag Send paid is titled "Sent … to <tag>": Send keeps the one-time address and the tag on this phone (§1767).
@@ -259,7 +260,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2039 of 2113 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2040 of 2114 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -2300,6 +2301,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1858 — Home: the wallet stands on the page with Public and Private as two sections, and what is new rises on a panel that fa…
 - §1859 — Home's token rows take the feed's row height and say where the token is and how its day went; a private row does what…
 - §1860 — Account's face and name are a door: one tap asks the name-and-photo question, and Settings' Name row is deleted (amen…
+- §1861 — Permissions names the co-signer: one row per key, a door to its approvals on Revoke.cash (extends §1710; keeps §112,…
 
 ## Dead rulings → what replaced them (generated)
 
