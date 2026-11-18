@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2054 of 2128 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2055 of 2129 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1905,7 +1905,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there (amended by §1824)
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
 - §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice (amended by §1613)
-- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past (amended by §1754)
+- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past (amended by §1754, §1876)
 - §1510 — Details in Move: the fee on every send, this exact operation simulated and previewed, Raw transaction a page deeper,…
 - §1511 — Move's sentence is placed against the width it was measured for, so a clause never draws over the next (applies §1501…
 - §1512 — Relay stays the one swap provider under Tor: it is read directly, and every move it carries says so on its foot (answ…
@@ -2132,7 +2132,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700v — Your Aztec account's engine starts before it is asked: the app coming back or the Wallet opening starts it and reads…
 - §1700w — A private send on Aztec says its steps where it was started: Move draws three rows under the sentence (Checked · Prov…
 - §1700x — One model and one set of rows for every private send, Aztec's and Railgun's: a send's plan is its ordered steps, the…
-- §1700y — Aztec's Move says dollars and holds one thing at a time in its foot, as Railgun's does: the amount in dollars with Ha…
+- §1700y — Aztec's Move says dollars and holds one thing at a time in its foot, as Railgun's does: the amount in dollars with Ha… (amended by §1876)
 - §1700z — Lend takes Move's one foot: the amount in dollars with Half · All under the sentence, one cost over the act, the step…
 - §1701 — Privacy, by Nymis: Wallet › Threats lists the accounts in scope, a tap scans one, and Nymis's reading opens as Casber… (amended by §1743, §1744)
 - §1701a — Nymis is read through its public Privacy Score API, never its page (amends §1701 items 3, 4 and 5) (user, 2026-11-05,… (amended by §1701b)
@@ -2195,7 +2195,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1751 — A zk.money request in oxDAI is one in DAI; a link being read is named, never spelled
 - §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P…
 - §1753 — Your Aztec account's engine starts over when its store stops answering
-- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755, §1776, §1779)
+- §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755, §1776, §1779, §1876)
 - §1755 — Move's act is a pink card
 - §1756 — Casberi's browser gets a band, and the emoji check leaves the site in view
 - §1757 — The Aztec apps you have connected stand as tiles beside the directory (extends §1700m; keeps §1700c's "no list of app… (amended by §1758)
@@ -2317,6 +2317,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1873 — Helper text fits one line
 - §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fres…
 - §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c…
+- §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired
 
 ## Dead rulings → what replaced them (generated)
 

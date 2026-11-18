@@ -798,6 +798,8 @@ struct MoveRailgunSentence<Head: View>: View {
     @State private var amountOpen = false
     /// What a swap buys: its menu is up (prd §1875).
     @State private var buyOpen = false
+    /// The cost's list stands in the rows' place (prd §1876).
+    @State private var costOpen = false
     @FocusState private var typing: Bool
     @Environment(ShellChrome.self) private var chrome
 
@@ -811,12 +813,15 @@ struct MoveRailgunSentence<Head: View>: View {
                 Group {
                     // The tokens are a menu on their row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        MoveChoiceRows(rows: choiceRows,
-                                       open: Binding(get: { open && picking ? "token" : amountOpen ? "amount" : buyOpen ? "buy" : nil },
-                                                     set: { if $0 == nil { open = false; amountOpen = false; buyOpen = false } })) { id in
-                            if id == "amount" { amountMenu } else if id == "buy" { buyList } else { tokens }
+                        // The cost is a row under them (prd §1876).
+                        MoveCostRows(cost: costRow, open: $costOpen) {
+                            MoveChoiceRows(rows: choiceRows,
+                                           open: Binding(get: { open && picking ? "token" : amountOpen ? "amount" : buyOpen ? "buy" : nil },
+                                                         set: { if $0 == nil { open = false; amountOpen = false; buyOpen = false } })) { id in
+                                if id == "amount" { amountMenu } else if id == "buy" { buyList } else { tokens }
+                            }
                         }
-                        line
+                        if !costOpen { line }
                     }
                 }
                 .padding(.top, DS.Space.s6)
@@ -994,9 +999,14 @@ struct MoveRailgunSentence<Head: View>: View {
 
     // MARK: - The cost (prd §1728 item 6)
 
-    /// Above the verb: one cost in dollars and what it buys you, the parts
-    /// one tap down. While a send to someone else is quoted, what it waits
-    /// on, in real seconds: the wallet syncing, then the broadcasters.
+    /// The Cost row's cost, once the move is ready to cost (prd §1876).
+    private var costRow: PrivateCost? {
+        move.stage == .ready && move.amountOK ? move.cost : nil
+    }
+
+    /// Above the verb: what the cost buys you; the cost is a row among the
+    /// choices (prd §1876). While a send to someone else is quoted, what it
+    /// waits on, in real seconds: the wallet syncing, then the broadcasters.
     @ViewBuilder private var costLine: some View {
         if move.stage == .quoting {
             if let since = RailgunSync.shared.since {
@@ -1010,7 +1020,7 @@ struct MoveRailgunSentence<Head: View>: View {
             }
         } else {
             // The shared view (§1700y); no price, Railgun's percentage.
-            PrivateCostLine(cost: move.cost, tail: costTail, fallback: readyLine)
+            PrivateCostNote(cost: move.cost, tail: costTail, fallback: readyLine)
         }
     }
 
@@ -1253,6 +1263,11 @@ struct MoveRailgunSentence<Head: View>: View {
         move.stage == .quoting || (move.stage == .ready && move.amountOK)
     }
 
+    /// The foot's back card closes the cost's list while it is open.
+    private var costBack: (() -> Void)? {
+        costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil
+    }
+
     private var foot: some View {
         VStack(spacing: 0) {
             MoveFlow { sentence }
@@ -1280,7 +1295,7 @@ struct MoveRailgunSentence<Head: View>: View {
                     .transition(.opacity)
             }
             HStack(alignment: .center, spacing: DS.Space.s2) {
-                MoveBackCard()
+                MoveBackCard(act: costBack)
                 Spacer(minLength: 0)
                 switch move.stage {
                 case .done:

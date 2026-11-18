@@ -74062,3 +74062,25 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** Move's tray on the iPad and Mac: the same sentence and rows.
 
 **Checks.** `railgun-selftest.sh`: the fee arithmetic and the call check compiled against stubs (an approval of more, a router paying anyone but the adapter, a router outside the book, ETH carried, a third call, another token: each refused); every swap transaction held to the classic adapter, no 7702 import, the broadcaster told it goes through the relay adapter, the swap never through your account, the bundle carries it. **Seen** on the iPhone 17 Pro simulator (demo): Swap's list with DAI under Private, the swap's rows, sentence, You get and cost.
+
+## §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired (amends §1700y, §1754, §1509 item 2) (user, 2026-11-18, of the cost line and Details: "these detail menus on all our move actions are sloppy. they are hard to access and janky to experience"; shown three mocks, `mockups/move-details/options.png`: "Build A") — BUILT
+
+**What was wrong.**
+1. **It moved the page.** A private move's cost line stood in the foot (the page's bottom inset) and unfolded there, so the foot grew and the sentence over it jumped while the parts faded in. Send's and Swap's Details unfolded under the rows and ran under the foot.
+2. **It was hard to hit.** One grey `body17` line with a faint chevron at the far edge, directly over the act.
+3. **It was spelled three ways.** A chevron at the trailing edge (private moves), a chevron after the fee's name (Send, Swap, Sweep), and "Details" with a chevron inside a warning's sentence.
+
+**Ruling.**
+1. **Cost is a row under the choices, in their shape** (`MoveCostRow`): "Cost" grey, the figure at the rows' size in white ("about $0.20", "up to $0.01", "under a cent"), and a door's grey chevron (§1824), because it opens a list in the page and never a menu.
+2. **A tap puts the cost's list in the rows' place** (`MoveCostList`): its name at its head closes it, as every list's does (§1781), the figure beside it, then what it is made of. The foot does not move: the sentence and the act stay where they were, and the act can still be taken. The foot's back card closes the list first.
+3. **Private moves and Earn** (`MoveCostRows`, over Railgun's, Aztec's and Lend's rows): the list is the cost's parts. The row stands only while the move is ready to cost.
+4. **Send, Swap and Sweep:** the ledger's fee row is the Cost row, and its list is this exact operation (`MoveDetails`: who, the fee in its coin, approvals, the nonce, the simulation, every finding, Raw transaction). With no fee read yet the row and the list are named "Details".
+5. **A warning's line is no control.** It stands in its ink over the ledger; every finding is in the cost's list.
+6. **What the cost buys stays in the foot as one plain line** (`PrivateCostNote`: "Your account isn't on it", "Private in about an hour"), never a control; with no price, the old fallback words stand there.
+7. **Retired:** `PrivateCostLine`, `PrivateCost.figure` ("Costs about …"), `detailsToggle`, and the chevron-up, chevron-down pair on a ledger row.
+
+**Mac half (§1402).** Move's tray on the iPad and Mac draws the same rows and list.
+
+**Hook.** `-moveDetails YES` opens the cost's list two seconds after mount, as it opened Details.
+
+**Checks.** `your-account-selftest.sh` still finds `ledger(door: offersDetails)`; `ds-template-audit.py`, `footnote-audit.py`, `prd-index-audit.py` clean. `AztecMoveCostTests` now reads `cost.amount`; the test target was not run. **Seen** on the iPhone 17 Pro simulator (demo): Railgun's send to someone (the row, its list, the foot unmoved, the back card closing the list) and Send to a new address (the amber line, Cost, its list over the same foot). **Not seen:** Swap, Sweep, Aztec and Earn, which draw through the same two paths.

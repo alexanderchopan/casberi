@@ -583,6 +583,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     private enum Blank { case token, recipient, amount }
     @State private var open: Blank?
     @FocusState private var typing: Bool
+    /// The cost's list stands in the rows' place (prd §1876).
+    @State private var costOpen = false
     @State private var typed = ""
     @State private var notAnAddress = false
     @State private var copied = false
@@ -619,8 +621,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 Group {
                     // A row's choices are a menu on the row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        MoveChoiceRows(rows: choiceRows, nextInk: DS.aztecInk, open: menuRow) { _ in menu }
-                        line
+                        // The cost is a row under them (prd §1876).
+                        MoveCostRows(cost: move.stage == .ready && move.amountOK ? move.cost : nil,
+                                     open: $costOpen, ink: DS.aztecInk) {
+                            MoveChoiceRows(rows: choiceRows, nextInk: DS.aztecInk, open: menuRow) { _ in menu }
+                        }
+                        if !costOpen { line }
                     }
                 }
                 .padding(.top, DS.Space.s6)
@@ -1118,13 +1124,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
             } else if move.stage == .ready, move.amountOK {
-                PrivateCostLine(cost: move.cost, tail: move.costTail, fallback: readyLine)
+                PrivateCostNote(cost: move.cost, tail: move.costTail, fallback: readyLine)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
             }
             HStack(alignment: .center, spacing: DS.Space.s2) {
-                MoveBackCard()
+                // It closes the cost's list while that is open (prd §1876).
+                MoveBackCard(act: costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil)
                 switch move.stage {
                 case .needsFunds(let address):
                     checkAgain

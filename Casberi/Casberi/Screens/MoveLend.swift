@@ -19,6 +19,8 @@ struct MoveLendSentence<Head: View>: View {
     @ViewBuilder let head: () -> Head
 
     @State private var open: Blank?
+    /// The cost's list stands in the rows' place (prd §1876).
+    @State private var costOpen = false
     @Environment(\.openURL) private var openURL
     @Environment(ShellChrome.self) private var chrome
 
@@ -34,8 +36,11 @@ struct MoveLendSentence<Head: View>: View {
                 Group {
                     // A row's choices are a menu on the row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        MoveChoiceRows(rows: choiceRows, open: menuRow) { _ in menu }
-                        line
+                        // The cost is a row under them (prd §1876).
+                        MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen) {
+                            MoveChoiceRows(rows: choiceRows, open: menuRow) { _ in menu }
+                        }
+                        if !costOpen { line }
                     }
                 }
                 .padding(.top, DS.Space.s4)
@@ -339,13 +344,14 @@ struct MoveLendSentence<Head: View>: View {
                 .padding(.bottom, DS.Space.s3)
                 .transition(.opacity)
         } else if live, move.units != nil {
-            PrivateCostLine(cost: move.cost, tail: costTail, fallback: costTail ?? "")
+            PrivateCostNote(cost: move.cost, tail: costTail, fallback: costTail ?? "")
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s1)
                 .transition(.opacity)
         }
         HStack(alignment: .center, spacing: DS.Space.s2) {
-            MoveBackCard()
+            // It closes the cost's list while that is open (prd §1876).
+            MoveBackCard(act: costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil)
             Spacer(minLength: 0)
             switch move.stage {
             case .done:

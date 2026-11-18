@@ -3531,6 +3531,9 @@ struct MoveSentence: View {
                 }
                 // The box rises into the space and fades as its pick lands.
                 .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
+            } else if costShown {
+                costList
+                    .transition(.opacity)
             } else {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     choiceRows
@@ -4472,11 +4475,15 @@ struct MoveSentence: View {
             // A warning takes the grey line's place (prd §1509 item 2): red
             // when reported or refused, amber to check; one line, and Details
             // lists every finding. A refusal dims the verb (canvas figure 9).
+            // The line is no control (prd §1876): every finding is in the
+            // cost's list, behind the Cost row under it.
             VStack(alignment: .leading, spacing: 0) {
-                detailsToggle(Text(verbatim: warningLine(warning) + " ")
-                    .foregroundStyle(warning.red ? DS.destructiveInk : DS.attentionInk))
-                if details { moveDetails }
-                ledger(door: false).padding(.top, DS.Space.s2)
+                Text(verbatim: warningLine(warning))
+                    .dsText(.body17)
+                    .foregroundStyle(warning.red ? DS.destructiveInk : DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(minHeight: MoveChoiceRowLabel.height, alignment: .leading)
+                ledger(door: true)
             }
             .fixedSize(horizontal: false, vertical: true)
         } else if let note = lineNote {
@@ -4735,13 +4742,17 @@ struct MoveSentence: View {
         return String(localized: "up to \(YourAccountPreview.coin(wei)) ETH")
     }
 
-    /// The ledger drawn. With `door`, its last row opens Details under it
-    /// (a chevron after the figure), and a second tap closes it.
+    /// The ledger drawn. With `door`, the fee's row is the Cost row (prd
+    /// §1876): it opens the cost's list in the rows' place, and nothing
+    /// unfolds under it.
     @ViewBuilder private func ledger(door: Bool) -> some View {
         // **THE TOTAL IS SAID ONCE, ON THE BUTTON (prd §1796).** Its line
         // is not drawn; Details opens from the last line that is.
         let lines = ledgerRows.filter { $0.id != "total" }
-        let rows = lines.isEmpty && door ? [LedgerRow(id: "details", name: String(localized: "Details"))] : lines
+        // With no fee read yet the door is its own row, "Details": a fact's
+        // row ("You get", "Through") is never borrowed for it (prd §1876).
+        let rows = door && !lines.contains { $0.id == "fee" }
+            ? lines + [LedgerRow(id: "details", name: String(localized: "Details"))] : lines
         if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 // Details opens from the fee's line, where one stands:
@@ -4749,12 +4760,9 @@ struct MoveSentence: View {
                 let doorAt = rows.firstIndex { $0.id == "fee" } ?? rows.count - 1
                 ForEach(Array(rows.enumerated()), id: \.element.id) { n, r in
                     if door, n == doorAt {
-                        Button {
-                            withAnimation(DS.Motion.standard) { details.toggle() }
-                            DSHaptic.selection()
-                        } label: { ledgerRow(r, chevron: details ? "chevron.up" : "chevron.down") }
-                        .buttonStyle(RowPress())
-                        .accessibilityHint(details ? Text("Hides the details") : Text("Shows what this transaction does"))
+                        MoveCostRow(name: r.id == "fee" ? String(localized: "Cost") : r.name, value: r.value) {
+                            withAnimation(DS.Motion.standard) { details = true }
+                        }
                     } else if let which = r.opens {
                         Button {
                             withAnimation(DS.Motion.standard) { open = which; search = ""; focus = nil }
@@ -4766,7 +4774,6 @@ struct MoveSentence: View {
                         ledgerRow(r)
                     }
                 }
-                if door, details { moveDetails }
             }
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -4963,23 +4970,15 @@ struct MoveSentence: View {
         #endif
     }
 
-    /// The grey line ending in Details, a chevron after it; the whole line
-    /// opens it, and a second tap closes it.
-    private func detailsToggle(_ lead: Text) -> some View {
-        Button {
-            withAnimation(DS.Motion.standard) { details.toggle() }
-            DSHaptic.selection()
-        } label: {
-            (lead + Text("Details").foregroundStyle(DS.textPrimary) + Text(verbatim: " ")
-                + Text(Image(systemName: details ? "chevron.up" : "chevron.down")).foregroundStyle(DS.textPrimary))
-                .dsText(.body17)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
+    /// **THE COST'S LIST (prd §1876):** in the rows' place, the foot where
+    /// it was. Its name closes it; under it, this exact operation.
+    private var costShown: Bool { details && receipt == nil && stage == nil && inlineOpen == nil }
+
+    private var costList: some View {
+        MoveCostList(name: feeFigure == nil ? String(localized: "Details") : String(localized: "Cost"), value: feeFigure,
+                     close: { withAnimation(DS.Motion.standard) { details = false } }) {
+            moveDetails
         }
-        .buttonStyle(RowPress())
-        .accessibilityHint(details ? Text("Hides the details") : Text("Shows what this transaction does"))
     }
 
     private var moveDetails: some View {
@@ -6498,6 +6497,11 @@ struct MoveSentence: View {
     private var backCard: some View {
         MoveBackCard(act: {
             withAnimation(DS.Motion.standard) {
+                // The cost's list goes back to the rows (prd §1876).
+                if costShown {
+                    details = false
+                    return
+                }
                 // A page of Receive goes back to its three addresses.
                 if verb == .receive, elsewhere == nil, receivePublic || receiveOther {
                     receivePublic = false

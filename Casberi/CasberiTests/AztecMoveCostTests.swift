@@ -23,7 +23,7 @@ struct AztecMoveCostTests {
         // 750,000 × 2.1866e12 = 1.64 Fee Juice × $0.0124 ≈ $0.0203
         #expect(abs(cost.usd - 0.0203) < 0.001)
         #expect(cost.parts.count == 1)
-        #expect(cost.figure == "Costs about $0.02")
+        #expect(cost.amount == "about $0.02")
     }
 
     @Test func anExitAddsShieldsHalfPercent() throws {

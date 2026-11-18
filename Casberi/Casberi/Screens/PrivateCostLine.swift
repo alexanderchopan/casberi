@@ -7,68 +7,167 @@ struct PrivateCost: Equatable {
     let usd: Double
     let parts: [Part]
 
-    /// "Costs about $0.39", or "Costs under $0.01".
-    var figure: String {
-        usd < 0.01 ? String(localized: "Costs under $0.01")
-            : String(localized: "Costs about \(usd.formatted(.currency(code: "USD").precision(.fractionLength(2))))")
+    /// The Cost row's figure: "about $0.39", or "under $0.01".
+    var amount: String {
+        usd < 0.01 ? String(localized: "under $0.01")
+            : String(localized: "about \(usd.formatted(.currency(code: "USD").precision(.fractionLength(2))))")
     }
 }
 
-/// **THE FOOT'S ONE THING (prd §1700y, agreed with the Railgun session).**
-/// A private move's foot holds one thing at a time over its act: this cost
-/// line while the move is ready, the steps while it works and after
-/// (`PrivateStepRows`), or the warming row while the balance is read
-/// (`PrivateWarmingRow`). "Costs about $0.39 · your account isn't on it";
-/// a tap shows the parts. Where no price makes a dollar figure, `fallback`
-/// (the old words: Shield's percentage, how long) stands in its place.
-struct PrivateCostLine: View {
-    let cost: PrivateCost?
-    /// What the move buys you, after the figure ("private in about an hour").
-    let tail: String?
-    let fallback: String
-    @State private var showParts = false
+/// **COST IS A ROW (prd §1876, retiring §1700y's line that unfolded and
+/// §1754's door on the fee; user: "these detail menus on all our move
+/// actions are sloppy. they are hard to access and janky").** Under a
+/// sentence's choices, in their shape: the name grey, the figure at their
+/// size, and a door's chevron, because it opens a list in the page and
+/// never a menu. Nothing unfolds: the foot is the same height before and
+/// after.
+struct MoveCostRow: View {
+    var name: String = String(localized: "Cost")
+    let value: String
+    let act: () -> Void
 
     var body: some View {
-        if let cost {
-            VStack(alignment: .leading, spacing: 0) {
-                Button {
-                    withAnimation(DS.Motion.standard) { showParts.toggle() }
+        Button {
+            act()
+            DSHaptic.selection()
+        } label: {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                Spacer(minLength: DS.Space.s3)
+                Text(verbatim: value)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                // In the menu chevron's own column, so every figure on the
+                // page ends on one edge.
+                Image(systemName: "chevron.up.chevron.down").dsGlyph(.caption, weight: .semibold)
+                    .hidden()
+                    .overlay {
+                        Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
+                            .foregroundStyle(DS.textSecondary)
+                    }
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: MoveChoiceRowLabel.height)
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Shows what it costs"))
+    }
+}
+
+/// **THE COST'S OWN LIST (prd §1876).** It takes the rows' place in the
+/// page: its name at its head closes it, as every list's does, with the
+/// figure beside it, then what the figure is made of.
+struct MoveCostList<Rows: View>: View {
+    var name: String = String(localized: "Cost")
+    var value: String?
+    var ink: Color = DS.pickInk
+    let close: () -> Void
+    @ViewBuilder let rows: () -> Rows
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                MoveListBack(name: name, ink: ink) {
+                    close()
                     DSHaptic.selection()
-                } label: {
-                    HStack(spacing: DS.Space.s2) {
-                        Text(verbatim: [cost.figure, tail].compactMap { $0 }.joined(separator: " · "))
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
-                            .monospacedDigit()
-                            // One line: the time never wraps under the figure.
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                        Spacer(minLength: 0)
-                        Image(systemName: showParts ? "chevron.up" : "chevron.down")
-                            .dsGlyph(.body, weight: .regular).foregroundStyle(DS.textTertiary)
-                    }
-                    .frame(minHeight: DS.Hit.min)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(RowPress())
-                .accessibilityHint(Text(showParts ? "Hides what it costs" : "Shows what it costs"))
-                if showParts {
-                    ForEach(cost.parts, id: \.self) { part in
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                            Text(verbatim: part.words).dsText(.body17).foregroundStyle(DS.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: DS.Space.s2)
-                            Text(verbatim: part.figure).dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
-                        }
-                        .frame(minHeight: 32)
-                        .accessibilityElement(children: .combine)
-                    }
-                    .transition(.opacity)
+                Spacer(minLength: DS.Space.s2)
+                if let value {
+                    Text(verbatim: value).dsText(.heading20).foregroundStyle(DS.textPrimary)
+                        .monospacedDigit().lineLimit(1)
                 }
             }
-        } else {
-            Text(verbatim: fallback).dsText(.body17).foregroundStyle(DS.textSecondary)
+            rows()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One part of a cost: its words grey, its figure white, at a row's pitch.
+struct MoveCostPartRow: View {
+    let part: PrivateCost.Part
+
+    var body: some View {
+        // One gap, not two: "A Railgun broadcaster sends it" and its figure
+        // fit the phone's line with 8pt between them, and wrapped with 20.
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(verbatim: part.words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: DS.Space.s2)
+            Text(verbatim: part.figure).dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                .lineLimit(1)
+                .layoutPriority(1)
+        }
+        .frame(minHeight: MoveChoiceRowLabel.height)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// **A PRIVATE SENTENCE'S ROWS, WITH ITS COST (prd §1876).** The page's own
+/// rows, the Cost row under them while there is a cost, and the cost's list
+/// in their place once it is opened. The page holds `open`, so its foot's
+/// back card can close the list too.
+struct MoveCostRows<Rows: View>: View {
+    /// Nil while there is nothing to cost: no row.
+    let cost: PrivateCost?
+    @Binding var open: Bool
+    var ink: Color = DS.pickInk
+    @ViewBuilder let rows: () -> Rows
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if open, let cost {
+                MoveCostList(value: cost.amount, ink: ink, close: { withAnimation(DS.Motion.standard) { open = false } }) {
+                    ForEach(cost.parts, id: \.self) { MoveCostPartRow(part: $0) }
+                }
+                .transition(.opacity)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    rows()
+                    if let cost {
+                        MoveCostRow(value: cost.amount) { withAnimation(DS.Motion.standard) { open = true } }
+                            .transition(.opacity)
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(DS.Motion.standard, value: cost == nil)
+        // The list never outlives its cost (the move began, the amount went).
+        .onChange(of: cost == nil) { _, gone in if gone { open = false } }
+    }
+}
+
+/// **THE FOOT'S ONE THING (prd §1700y, amended by §1876).** A private
+/// move's foot holds one thing at a time over its act: what the move buys
+/// you while it is ready ("Private in about an hour"), the steps while it
+/// works and after (`PrivateStepRows`), or the warming row while the
+/// balance is read (`PrivateWarmingRow`). The cost is a row above
+/// (`MoveCostRow`); where no price makes a dollar figure, `fallback` (the
+/// old words: Shield's percentage, how long) stands here. Never a control.
+struct PrivateCostNote: View {
+    let cost: PrivateCost?
+    let tail: String?
+    let fallback: String
+
+    private var words: String? {
+        guard cost != nil else { return fallback.isEmpty ? nil : fallback }
+        return tail.map { $0.prefix(1).localizedUppercase + $0.dropFirst() }
+    }
+
+    var body: some View {
+        if let words {
+            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, DS.Space.s2)
         }
     }
 }
