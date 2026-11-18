@@ -2481,7 +2481,7 @@ struct MoveSentence: View {
                 // Its copy opens its page too: only there is the address
                 // watched, and only there is its rule said (prd §1779).
                 receivePlace(String(localized: "Private balance"), marks: [Self.networkMark(chainId: 1)].compactMap { $0 },
-                             fact: String(localized: "Ethereum only · new address each time"), factInk: DS.textPrimary, place: "fresh",
+                             fact: String(localized: "Ethereum only · new each time"), factInk: DS.textPrimary, place: "fresh",
                              open: { goFresh() },
                              copy: {
                                  if !DemoMode.isActive {
@@ -2556,7 +2556,10 @@ struct MoveSentence: View {
             .disabled(open == nil)
             .accessibilityHint(Text("Opens its page"))
             HStack(spacing: DS.Space.s2) {
-                Text(verbatim: fact).dsText(.body17).foregroundStyle(factInk).lineLimit(1).minimumScaleFactor(0.8)
+                // One size for every place's line (user, 2026-11-18: the public
+                // line drew smaller than the rest): it wraps, it never shrinks.
+                Text(verbatim: fact).dsText(.body17).foregroundStyle(factInk).lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: DS.Space.s2)
                 if let copy {
                     let done = copiedPlace == place
@@ -3948,11 +3951,13 @@ struct MoveSentence: View {
                     case .kept(let id): keptBlock(id, follows: n > 0)
                     }
                 }
-                // **ADD IS A ROW (prd §1781):** there once the line can be
-                // kept and not before, and not where Add would refuse (§83):
-                // an order, a tag paid from elsewhere and a swap to another
-                // network go alone.
-                if verb == .send || verb == .swap, !nothingToMove, pendingItem != nil,
+                // **ADD IS A ROW, THERE FROM THE START (prd §1781, §1872;
+                // user: "it's not clear you can do batch").** Before the line
+                // can be kept, a tap says what it still needs ("Pick who it
+                // goes to"), so it is never a dead control (§83). Not where
+                // Add would refuse: an order, a tag paid from elsewhere and a
+                // swap to another network go alone.
+                if verb == .send || verb == .swap, !nothingToMove,
                    !limiting, !tagConverts, !tagCrosses, crossTo == nil {
                     Button { add() } label: {
                         HStack(spacing: DS.Space.s2) {
@@ -3977,8 +3982,9 @@ struct MoveSentence: View {
         Text("To")
             .dsText(.heading17)
             .foregroundStyle(DS.textPrimary)
-            .frame(minHeight: 30, alignment: .bottomLeading)
-            .padding(.bottom, 2)
+            // A row's pitch, so it stands as far from the row above as
+            // from the row it heads (user, 2026-11-18).
+            .frame(minHeight: MoveChoiceRowLabel.height, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -3986,8 +3992,9 @@ struct MoveSentence: View {
         Text("Pay with")
             .dsText(.heading17)
             .foregroundStyle(DS.textPrimary)
-            .frame(minHeight: 30, alignment: .bottomLeading)
-            .padding(.bottom, 2)
+            // A row's pitch, so it stands as far from the row above as
+            // from the row it heads (user, 2026-11-18).
+            .frame(minHeight: MoveChoiceRowLabel.height, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -4785,7 +4792,9 @@ struct MoveSentence: View {
                     .lineLimit(1)
             }
         }
-        .frame(minHeight: 28)
+        // The choice rows' pitch: a line under them stands as far from the
+        // next as they do (user, 2026-11-18, of Buy's "Card taken by").
+        .frame(minHeight: MoveChoiceRowLabel.height)
         .contentShape(Rectangle())
     }
 
@@ -6848,6 +6857,9 @@ struct MoveSentence: View {
             NSLog("moveAdd: missing=%@", missing ?? "-")
             #endif
             if let missing { say(missing) }
+            // And opens the row it needs (prd §1872): Add before the line is
+            // whole leads to what is missing.
+            if let row = missingRow { tapBlank(row) }
             DSHaptic.selection()
             return
         }
@@ -8679,22 +8691,54 @@ struct MoveClauseLayout: Layout {
 
     private func rows(_ width: CGFloat?, _ subviews: Subviews) -> (size: CGSize, frames: [(LayoutSubview, CGRect)]) {
         let limit = width ?? .infinity
-        var frames: [(LayoutSubview, CGRect)] = []
-        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, widest: CGFloat = 0
+        var pieces: [(LayoutSubview, CGSize)] = []
         for view in subviews {
             var size = view.sizeThatFits(.unspecified)
             // A piece wider than the whole line is offered the line: a word
             // shrinks, a phrase wraps.
             if size.width > limit + Self.slack { size = view.sizeThatFits(ProposedViewSize(width: limit, height: nil)) }
-            if x > 0, x + size.width > limit + Self.slack {
-                x = 0; y += rowH; rowH = 0
-            }
-            frames.append((view, CGRect(x: x, y: y, width: size.width, height: size.height)))
-            widest = max(widest, x + size.width)
-            x += size.width + spacing
-            rowH = max(rowH, size.height)
+            pieces.append((view, size))
         }
-        return (CGSize(width: widest, height: y + rowH), frames)
+        let lines = Self.lines(pieces.map(\.1.width), limit: limit + Self.slack, spacing: spacing)
+        var frames: [(LayoutSubview, CGRect)] = []
+        var y: CGFloat = 0, widest: CGFloat = 0
+        for line in lines {
+            var x: CGFloat = 0, rowH: CGFloat = 0
+            for i in line {
+                let (view, size) = pieces[i]
+                frames.append((view, CGRect(x: x, y: y, width: size.width, height: size.height)))
+                widest = max(widest, x + size.width)
+                x += size.width + spacing
+                rowH = max(rowH, size.height)
+            }
+            y += rowH
+        }
+        return (CGSize(width: widest, height: y), frames)
+    }
+
+    /// **NO WORD ALONE ON A CLAUSE'S LAST LINE (prd §1872, user: "balance"
+    /// alone under "from your private").** Pieces fill each line in turn;
+    /// when that leaves one piece by itself on the last line, the line
+    /// before gives it its last piece, if the two fit together and the line
+    /// before keeps one of its own: "from your / private balance".
+    static func lines(_ widths: [CGFloat], limit: CGFloat, spacing: CGFloat) -> [[Int]] {
+        var lines: [[Int]] = []
+        var x: CGFloat = 0
+        for (i, w) in widths.enumerated() {
+            if x > 0, x + w > limit, !lines.isEmpty { lines.append([]); x = 0 }
+            if lines.isEmpty { lines.append([]) }
+            lines[lines.count - 1].append(i)
+            x += w + spacing
+        }
+        let n = lines.count
+        if n >= 2, lines[n - 1].count == 1, lines[n - 2].count >= 2, let moved = lines[n - 2].last {
+            let last = lines[n - 1][0]
+            if widths[moved] + spacing + widths[last] <= limit {
+                lines[n - 2].removeLast()
+                lines[n - 1].insert(moved, at: 0)
+            }
+        }
+        return lines
     }
 }
 

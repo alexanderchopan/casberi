@@ -476,6 +476,12 @@ enum AztecStakeWire {
         String(localized: "Aztec upgrades from \(u.executableFrom.formatted(.dateTime.month(.abbreviated).day())): take your money out of zk.money first")
     }
 
+    /// The same row for someone whose own Aztec account holds money (prd
+    /// §1872): a move out takes an hour or more, and gas never comes back.
+    static func upgradeTitleForAccount(_ u: Upgrade) -> String {
+        String(localized: "Aztec upgrades from \(u.executableFrom.formatted(.dateTime.month(.abbreviated).day())): move your private account's money out first")
+    }
+
     /// `aztec:upgrade:<rollup>:<unix seconds it can execute from>`: the date
     /// rides the ref, so Needs you can end it without a read.
     static func upgradeRef(_ u: Upgrade) -> String {

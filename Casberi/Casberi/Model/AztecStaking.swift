@@ -450,9 +450,16 @@ enum AztecStaking {
         // 2026-10-20: "Funds left on Alpha V5 will be stuck once Aztec Alpha
         // V6 goes live"). Someone who used zk.money from a watched wallet is
         // told before it can execute (prd §1446).
-        if ZkMoney.hasDeposited, let wallet = addresses.first, let up = await upcomingUpgrade() {
-            land(ref: AztecStakeWire.upgradeRef(up), title: AztecStakeWire.upgradeTitle(up),
-                 url: "https://zk.money", due: up.executableFrom, wallet: wallet)
+        // Your own Aztec account stands on that Rollup too (prd §1872): its
+        // tokens' bridges are pinned to it, and its gas never comes back.
+        // One row either way; the account's words win, zk.money's door
+        // stays for someone who only used zk.money.
+        let accountHolds = !DemoMode.isActive && AztecAccountStore.shared.snapshot.holdings.contains(where: \.isHeld)
+        if ZkMoney.hasDeposited || accountHolds, let wallet = addresses.first, let up = await upcomingUpgrade() {
+            land(ref: AztecStakeWire.upgradeRef(up),
+                 title: accountHolds ? AztecStakeWire.upgradeTitleForAccount(up) : AztecStakeWire.upgradeTitle(up),
+                 url: accountHolds ? "https://aztecgov.nethermind.io/\(up.id)" : "https://zk.money",
+                 due: up.executableFrom, wallet: wallet)
         }
         if let wallet = book.stakes.first?.owner {
             for p in book.proposals {

@@ -244,6 +244,10 @@ enum NotifySweep {
         //   vote (`aztec:vote:`) stays a row.
         if ref.hasPrefix("aztec:stake:"), ref.contains(":stopped:") { return .nodeDown }
         if ref.hasPrefix("aztec:exit:") { return .poolCleared }
+        //   An Aztec upgrade while money sits on the Rollup it leaves (prd
+        //   §1446, §1872): told once, at landing; the row lands only for
+        //   someone with money in zk.money or their own Aztec account.
+        if ref.hasPrefix("aztec:upgrade:") { return .networkUpgrade }
         //   A zFi order whose escrow can be taken back (prd §1282): money
         //   ready for you, act whenever.
         if ref.hasPrefix("zfi:reclaim:") { return .poolCleared }

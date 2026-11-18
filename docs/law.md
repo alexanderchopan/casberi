@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2050 of 2124 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2051 of 2125 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
@@ -1843,7 +1843,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1443 — The toast draws above every sheet [+9 sub-entries]
 - §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del… [+1 sub-entries]
 - §1445 — A card per subscription: Pro makes each tracked plan its own Privacy.com card, Premium is Casberi's own card (builds…
-- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… (amended by §1565) [+2 sub-entries]
+- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… (amended by §1565, §1872) [+2 sub-entries]
 - §1448 — The node's epoch, read the day the Observer sends it
 - §1449 — Robinhood Chain leaves the account (amends §1441, §1441a) (amended by §1454)
 - §1450 — Diagnostics is deleted; Wallet's Subscriptions opens as a page again; one row per alarm on the Feed
@@ -1897,7 +1897,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
-- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518, §1679)
+- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518, §1679, §1872)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
@@ -2222,7 +2222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
 - §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
-- §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size…
+- §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872)
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
 - §1783 — The phone's bar is Feed · Wallet with Move apart; Apps leaves the bar for the top right of the title row (amends §171…
 - §1784 — A choice's list is a menu on its row, in every Move sentence (amends §1781, §1782, §1616)
@@ -2240,7 +2240,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1796 — Swap's rows are Network, Token, To network, To token; a whole swap fits without a scroll (amends §1795, §1794 items 3…
 - §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (…
 - §1798 — Shield stays Move's one way into Aztec; an app's own bridge is not added (keeps §1700d and §1700e)
-- §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6)
+- §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (amended by §1872)
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
 - §1801 — The private sends take Move's layout (amends §1781, §1755)
 - §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro…
@@ -2265,7 +2265,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1821 — Aztec's directory is deleted: Library's Wallet folder keeps only the Aztec apps you have connected (retires §1700i, §…
 - §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac… (amended by §1824)
 - §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
-- §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo… (amended by §1853)
+- §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo… (amended by §1853, §1872)
 - §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet…
 - §1826 — Export shows the key once it lands on one network, and says which network and step it is on while it adds the rest
 - §1827 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swip…
@@ -2313,6 +2313,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1869 — Every Move verb opens whole, and Buy's Network row says the network it will use
 - §1870 — Spending is a row in Home's Wallet section, under the Watchlist
 - §1871 — Spending is a card on the iPad's and Mac's Home, between Risks and Watchlist
+- §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another s…
 
 ## Dead rulings → what replaced them (generated)
 

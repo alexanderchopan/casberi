@@ -166,4 +166,48 @@ grep -q '.onChange(of: verb, initial: true) { _, _ in if inTray { chrome.moveTal
 grep -q 'if verb == .deposit, b.names == .depositNetwork { continue }' "$MS" \
   && grep -q 'value: picked ? network.name : pick, opens: .depositNetwork' "$MS" \
   || { echo "✗ Buy's Network row reads the sentence's report again, which arrives before its one network is picked"; exit 1; }
+
+# §1872 — the Move walk's fixes (user, 2026-11-18).
+# 1. No word alone on a clause's last line: the line-breaking rule, run.
+TMPL=$(mktemp -d "${TMPDIR:-/tmp}/clause-lines.XXXXXX")
+{ echo 'import Foundation'; echo 'enum L {'
+  awk '/static func lines\(_ widths: \[CGFloat\], limit: CGFloat, spacing: CGFloat\) -> \[\[Int\]\] \{/,/^    }$/' "$MS"
+  echo '}'
+  cat <<'SWIFT'
+var bad = 0
+func expect(_ got: [[Int]], _ want: [[Int]], _ why: String) { if got != want { print("✗ \(why): \(got)"); bad += 1 } }
+// "from your private balance" at 34pt in a 338pt line: 60, 75, 120, 130.
+expect(L.lines([60, 75, 120, 130], limit: 338, spacing: 10), [[0, 1], [2, 3]], "balance stood alone under from your private")
+expect(L.lines([60, 75, 120], limit: 338, spacing: 10), [[0, 1, 2]], "a clause that fits was broken")
+expect(L.lines([300, 200], limit: 338, spacing: 10), [[0], [1]], "a line gave away its only piece")
+expect(L.lines([100, 100, 100, 300], limit: 338, spacing: 10), [[0, 1, 2], [3]], "a piece too wide to join was pulled down")
+exit(bad == 0 ? 0 : 1)
+SWIFT
+} > "$TMPL/main.swift"
+xcrun swiftc -o "$TMPL/lines" "$TMPL/main.swift" 2>"$TMPL/err" && "$TMPL/lines" \
+  || { cat "$TMPL/err"; echo "✗ a clause can leave one word alone on its last line again (prd §1872)"; rm -rf "$TMPL"; exit 1; }
+rm -rf "$TMPL"
+grep -q 'let lines = Self.lines(pieces.map(\\.1.width), limit: limit + Self.slack, spacing: spacing)' "$MS" \
+  || { echo "✗ the clause layout no longer breaks through its no-word-alone rule (prd §1872)"; exit 1; }
+# 2. Add another stands from the start; an early tap opens what is missing.
+grep -q 'if verb == .send || verb == .swap, !nothingToMove,$' "$MS" \
+  || { echo "✗ Add another waits for a whole line again, where nobody finds it (prd §1872)"; exit 1; }
+grep -q 'if let row = missingRow { tapBlank(row) }' "$MS" \
+  || { echo "✗ an early Add no longer opens the row it needs"; exit 1; }
+# 3. Into your private account: from where, and which tokens.
+AZP="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
+grep -q 'value: String(localized: "Your public account"), fixed: true) {})' "$AZP" \
+  && grep -q 'Text("USDC or ETH only.")' "$AZP" \
+  && grep -q 'value: move.mode == .deposit ? String(localized: "Ethereum to Aztec") : String(localized: "Aztec"),' "$AZP" \
+  || { echo "✗ Send to your private account no longer says where from and what goes (prd §1872)"; exit 1; }
+# Spacing: a line under the rows, and a head, at the rows' pitch; a place's
+# line on Receive wraps, never shrinks.
+grep -q '        .frame(minHeight: MoveChoiceRowLabel.height)$' "$MS" \
+  && [ "$(grep -c '.frame(minHeight: MoveChoiceRowLabel.height, alignment: .leading)' "$MS")" -ge 2 ] \
+  || { echo "✗ a ledger line or a head is off the rows' pitch again (prd §1872)"; exit 1; }
+grep -q 'Text(verbatim: fact).dsText(.body17).foregroundStyle(factInk).lineLimit(1).minimumScaleFactor' "$MS" \
+  && { echo "✗ a place's line on Receive shrinks again (prd §1872)"; exit 1; }
+# The relayer's quote is a 201 (measured 2026-11-18).
+grep -q 'guard (200..<300).contains(http.statusCode),' Casberi/Casberi/Model/PrivateMove.swift \
+  || { echo "✗ a private send's quote takes only a 200 again: every quote reads refused (prd §1872)"; exit 1; }
 true

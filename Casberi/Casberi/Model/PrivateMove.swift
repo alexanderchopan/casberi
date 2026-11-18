@@ -423,7 +423,9 @@ final class PrivateMove {
             answer = await IngestSupport.sendRequest(request, service: PrivacyEngine.service)
         }
         guard let (data, http) = answer else { return .unanswered }
-        guard http.statusCode == 200,
+        // The relayer answers a quote 201 Created (measured 2026-11-18;
+        // every quote read "refused" while this asked for 200).
+        guard (200..<300).contains(http.statusCode),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let shares = json["feeAmount"] as? String, shares.allSatisfy(\.isNumber), !shares.isEmpty else { return .refused }
         guard let rate = PrivateMoneyStore.shared.rates[pool.share.lowercased()] else { return .fee(shares) }

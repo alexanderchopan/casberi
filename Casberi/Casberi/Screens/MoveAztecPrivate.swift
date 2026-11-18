@@ -606,6 +606,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         .foregroundStyle(DS.aztecInk)
                         .padding(.top, DS.Space.s2)
                 }
+                // What goes in, said where the rule stands (prd §1872, user:
+                // "i'm really unclear what you can send to your aztec
+                // account"): Shield carries these two; the From and Network
+                // rows say where from.
+                if move.mode == .deposit, !isDone {
+                    Text("USDC or ETH only.")
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.aztecInk)
+                        .padding(.top, DS.Space.s2)
+                }
                 Group {
                     // A row's choices are a menu on the row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -909,13 +919,20 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         var rows: [MoveChoiceRow] = []
         if move.mode == .deposit {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours, ink: DS.aztecInk) { leave(.pickRecipient) })
+            // Where it comes from, fixed (prd §1872): money goes in only from
+            // your public account, across from Ethereum.
+            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"),
+                                      value: String(localized: "Your public account"), fixed: true) {})
         } else {
             rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
                                       value: move.recipient.map { AddressTail.short($0) } ?? "", empty: move.recipient == nil) { toggle(.recipient) })
             rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours, ink: DS.aztecInk) { leave(.switchOff) })
         }
-        // Its one network, said as a row and fixed (prd §1802).
-        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Aztec"), fixed: true) {})
+        // Its one network, said as a row and fixed (prd §1802); a deposit
+        // crosses from Ethereum (prd §1872).
+        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
+                                  value: move.mode == .deposit ? String(localized: "Ethereum to Aztec") : String(localized: "Aztec"),
+                                  fixed: true) {})
         // The token before its amount (prd §1789).
         rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
         // Its sums are a menu, and any other is typed in the row (prd §1802).

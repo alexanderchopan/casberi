@@ -56,8 +56,10 @@ grep -q 'AztecStakeWire.merged(await registryRollups())' "$APP" \
   || { echo "✗ the Rollups are no longer asked of the Registry: an upgrade's stakes go unseen (prd §1446)"; exit 1; }
 grep -q 'd.set(walked, forKey: key("cursorSet", withdrawer))' "$APP" \
   || { echo "✗ a stake walk no longer restarts when a Rollup is added (prd §1446)"; exit 1; }
-grep -q 'if ZkMoney.hasDeposited, let wallet = addresses.first, let up = await upcomingUpgrade()' "$APP" \
-  || { echo "✗ the upgrade warning no longer lands for someone with money in zk.money (prd §1446)"; exit 1; }
+grep -q 'if ZkMoney.hasDeposited || accountHolds, let wallet = addresses.first, let up = await upcomingUpgrade()' "$APP" \
+  || { echo "✗ the upgrade warning no longer lands for someone with money in zk.money or their own Aztec account (prd §1446, §1872)"; exit 1; }
+grep -q 'let accountHolds = !DemoMode.isActive && AztecAccountStore.shared.snapshot.holdings.contains(where: \\.isHeld)' "$APP" \
+  || { echo "✗ the upgrade warning no longer asks whether your own Aztec account holds money (prd §1872)"; exit 1; }
 grep -q 'AztecStakeWire.registry, AztecStakeWire.getCanonicalRollup' "$APP" \
   || { echo "✗ the canonical Rollup is no longer asked of the Registry"; exit 1; }
 grep -q 'if let b = beneficiary, AztecStakeWire.address(reply: b) != address { continue }' "$APP" \
@@ -276,6 +278,7 @@ check(AztecStakeWire.upgradeWaiting(ref: ref, now: Date(timeIntervalSince1970: 1
       && !AztecStakeWire.upgradeWaiting(ref: ref, now: Date(timeIntervalSince1970: 1_793_000_000)),
       "it waits on you until it can execute")
 check(AztecStakeWire.upgradeTitle(v6!).hasSuffix("take your money out of zk.money first"), "its row")
+check(AztecStakeWire.upgradeTitleForAccount(v6!).hasSuffix("move your private account's money out first"), "its row for your own Aztec account (prd §1872)")
 check(AztecStakeWire.merged(["0x603bb2c05d474794ea97805e8de69bccfb3bca12", "0xABC"]).last == "0xabc"
       && AztecStakeWire.merged([]).count == AztecStakeWire.rollups.count,
       "the Registry's Rollups join the known ones, once each")

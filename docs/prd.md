@@ -73982,3 +73982,24 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** This is it: the iPad and the Mac. The phone's door is §1870's row.
 
 **Checks.** Not built: written in a session with no Swift toolchain. Needs `scripts/verify.sh` (it gates `verify-mac.sh`) and a look at Home on the Mac over the demo.
+
+## §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another stands from the start, a deposit into your private account says where from and what goes, the rows keep one pitch, and an Aztec upgrade warns a holder of your own Aztec account, once by notification (amends §1501, §1781, §1799, §1824, §1446; user, 2026-11-18, walking Move on build 1039: "is Privacy Pools minimum 10$", "should we make our sentence font smaller so more of it fits on line and doesn't wrap weird", "'card taken by stripe' is close to the line above it", "the 'pay with' line is close to network but not merchant", "'base robinhood ethereum only' font size isn't same size", "i'm really unclear what you can send to your aztec account", "it's not clear you can do batch"; over the canvas "Move walk fixes": 1C, "2. good", 3A and 3B "should we do both? … i don't want ethereum word as an orphan", of the upgrade "how will we know?", then "ok on all") — BUILT
+
+**What was found.**
+1. **"0xBow's relayer refused to quote" was ours.** The relayer answers a quote `201 Created`; `PrivateMove.relayerQuote` took only a `200`, so every private send from the balance read refused. Measured that day: a 0.01 ETH quote came back 201 with a 0.0006 ETH fee (gas 0.56 gwei). There is no minimum on a send; a move in has the pool's own, and its amount list already starts there.
+2. "from your private balance" broke as "from your private / balance": a clause wider than a line filled each line greedily (`MoveClauseLayout`).
+3. Add another appeared only once a line could be kept, so batching was never seen.
+
+**Ruling.**
+1. **A quote is any 2xx.**
+2. **The sentence stays one size (§1501), and no clause ends on a word alone.** `MoveClauseLayout.lines` fills each line, then gives the last line the line before's last piece when the last would stand alone and the two fit: "from your / private balance". Every clause, every verb.
+3. **Add another is a row from the start** on Send and Swap (still not on an order, a tag paid from elsewhere, or a swap to another network). Before the line is whole a tap says what it needs and opens that row, so it is never dead (§83).
+4. **Into your private account** (Send › To › Your private account): a fixed From row, "Your public account"; Network "Ethereum to Aztec"; and "USDC or ETH only." in Aztec's ink where a send's "Aztec to Aztec only." stands.
+5. **One pitch.** A line under the rows ("Arrives in", "Card taken by", fees) and a head ("Pay with", a swap's "To") stand at the rows' 44pt, so each sits as far from the row above as from the next. Receive's place lines wrap and never shrink ("Base, Ethereum, Robinhood only" drew smaller).
+6. **An Aztec upgrade warns your own Aztec account too.** §1446's row (a governance proposal in states 0–3 whose payload calls the Registry's `addRollup`, executable at creation + 12 days) now also lands when your Aztec account holds anything (`accountHolds`), worded "Aztec upgrades from <day>: move your private account's money out first", its door the proposal. It **notifies once, as it lands** (`NotifyKind.networkUpgrade`, stands alone, severity 75); §306's deadline scan still reminds three days out. Fee Juice never comes back to Ethereum, and Shield's portals are pinned to the V6 Rollup (measured 2026-11-18). Today: seven proposals, none open.
+
+**Not done.** The upgrade sheet the canvas drew (4B: the day, what you hold, gas staying behind, "Move it to your public account") is not built; the row opens the proposal.
+
+**Mac half (§1402).** The tray is the Mac's and iPad's Move; every item reaches them unchanged. The notification is the phone's and the Mac's alike.
+
+**Checks.** `move-details-selftest.sh` runs `MoveClauseLayout.lines` on four cases (mutated: caught) and greps the rest; `notify-selftest.sh` classifies `aztec:upgrade:` as `networkUpgrade` and counts six stand-alone kinds; `aztec-stake-selftest.sh` holds the gate and the account's words.

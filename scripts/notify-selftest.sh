@@ -573,8 +573,8 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
 // prd §1081 adds the fifth: a price alert you set names its own moment, and
 // the digest would deliver it hours after the level it was set to catch.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
-   [.disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .priceAlert],
-   "exactly five kinds stand alone; everything else waits for the digest")
+   [.disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .priceAlert],
+   "exactly six kinds stand alone; everything else waits for the digest (prd §1872 adds a network upgrade)")
 ok(Set(ts).isSubset(of: Set(NotifyKind.allCases.filter(\.standsAlone))),
    "a kind that pierces a Focus never waits for the evening slot")
 ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
@@ -883,11 +883,11 @@ mutate "a kind loses its headline, so a notification arrives with an empty title
 
 # ── the digest (prd §770) ───────────────────────────────────────────────────
 mutate "money arriving stands alone again, one buzz per transfer" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .priceAlert, .moneyIn:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .priceAlert, .moneyIn:/'
 mutate "a price alert you set waits for the evening digest (prd §1081)" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded:/'
 mutate "a Safe signature waits for the evening digest" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .priceAlert:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .priceAlert:/'
 mutate "every app folds into one notification again" \
        's/Dictionary\(grouping: queue, by: \\\.seat\)/Dictionary(grouping: queue, by: { _ in "" })/'
 mutate "a batch counts instead of naming its newest thing" \
@@ -1084,6 +1084,8 @@ func runFixtures() {
 
     // ── Aztec mainnet staking (prd §1279): money ready and a stopped sequencer
     //    notify; an Aztec vote stays a row ──
+    ok(NotifySweep.classify(row(ref: "aztec:upgrade:0xe37a:1795000000"), now: now) == .networkUpgrade,
+       "an Aztec upgrade while you hold money there notifies once, as it lands (prd §1872)")
     ok(NotifySweep.classify(row(ref: "aztec:exit:0x6f6cab6575da907fe9d035093b214b3c7eddb460:6197"), now: now) == .poolCleared,
        "staked AZTEC that can be withdrawn notifies as money ready for you")
     ok(NotifySweep.classify(row(ref: "aztec:stake:0x70df6cd7e15ca8633ceb17786d2c504c1e53e5f1:stopped:125119"), now: now) == .nodeDown,

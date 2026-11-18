@@ -45,6 +45,10 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// into `NotifySweep.classify`, so none of them ever reached a lock
     /// screen.)
     case positionAtRisk
+    /// A network your money sits on is moving to a new version, and what is
+    /// left behind may not move after (prd §1872): Aztec's upgrade proposal,
+    /// told once when it is first seen, twelve days or more ahead.
+    case networkUpgrade
     case approvalGranted
     case poolProofNeeded
     case poolCleared
@@ -128,7 +132,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
 
     var cls: NotifyClass {
         switch self {
-        case .disputeOpened, .deadlineNear, .positionAtRisk, .approvalGranted,
+        case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose, .priceAlert,
              .appRejected, .runningLow, .safeSignatureNeeded,
              .walletIncident, .chainReset, .nodeDown, .connectionBroken:
@@ -163,6 +167,10 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // disclosed risk that may never be exploited against you.
         case .walletIncident:   return 82
         case .approvalGranted:  return 80    // something CAN take funds
+        // Money that may be stranded, with a clock days away (prd §1872):
+        // under an approval (something can take funds now), over a Safe
+        // signature (one transaction waiting).
+        case .networkUpgrade:   return 75
         // Action required, no clock stated — the exact shape of
         // `poolProofNeeded` below, ranked one above it: a Safe signature
         // blocks a specific, already-decided transaction from a co-signer
@@ -226,7 +234,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// Safe signature have no clock, but neither keeps until then.
     var standsAlone: Bool {
         switch self {
-        case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded, .priceAlert:
+        case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .priceAlert:
             return true
         default:
             return false
@@ -256,6 +264,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // already leads with Walletbeat's own severity word and the incident's
         // own title, so repeating either here would say one thing twice.
         case .walletIncident:   return String(localized: "Security problem in a wallet you use")
+        case .networkUpgrade:   return String(localized: "A network you use is upgrading")
         case .poolProofNeeded:  return String(localized: "Privacy Pools needs a response")
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")
@@ -296,6 +305,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .approvalGranted:     return String(localized: "new approval")
         case .safeSignatureNeeded: return String(localized: "sign to continue")
         case .walletIncident:      return String(localized: "security problem")
+        case .networkUpgrade:      return String(localized: "network upgrade")
         case .poolProofNeeded:     return String(localized: "needs a response")
         case .poolCleared:         return String(localized: "clear to withdraw")
         case .paymentsSilent:      return String(localized: "payments went quiet")
@@ -346,6 +356,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .approvalGranted:     (one, many) = (String(localized: "approval"), String(localized: "approvals"))
         case .safeSignatureNeeded: (one, many) = (String(localized: "signature needed"), String(localized: "signatures needed"))
         case .walletIncident:      (one, many) = (String(localized: "wallet incident"), String(localized: "wallet incidents"))
+        case .networkUpgrade:      (one, many) = (String(localized: "network upgrade"), String(localized: "network upgrades"))
         case .poolProofNeeded:     (one, many) = (String(localized: "proof needed"), String(localized: "proofs needed"))
         case .poolCleared:         (one, many) = (String(localized: "withdrawal ready"), String(localized: "withdrawals ready"))
         case .paymentsSilent:      (one, many) = (String(localized: "quiet account"), String(localized: "quiet accounts"))
