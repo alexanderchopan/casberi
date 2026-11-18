@@ -810,6 +810,43 @@ let awayTampered = String(awayData.dropLast(64)) + String(repeating: "0", count:
 check(!away(FreshTx.awaySpoke, awayTampered, "0x11c37937e08000"), "an away deposit's message pays someone other than its fallback")
 check(!home(homeBase.spoke, awayData, "0x11c37937e08000"), "an away deposit passes as a home deposit")
 check(!made(FreshTx.awaySpoke, awayData, "0x11c37937e08000"), "an away deposit passes as a router's deposit")
+// §1880: dollars — the SpokePool's approval, a home deposit into the pool, a fresh sender's dollar to Base or Robinhood.
+func dollar(_ chain: Int, _ to: String, _ data: String, _ value: String = "0x0", from: String = homeMe) -> Bool {
+    FreshTx.Tx(dollar: chain, from: from, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x2", gas: "0x30d40",
+               to: to, value: value, data: data) != nil
+}
+let baseApprove = "0x" + FreshTx.approveData(spender: homeBase.spoke, amount: "20000000")!
+check(dollar(8453, homeBase.dollar, baseApprove), "a fresh address cannot approve Base's SpokePool for its USDC")
+check(!dollar(8453, homeBase.dollar, "0x" + FreshTx.approveData(spender: "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", amount: "20000000")!),
+      "a fresh address approves anyone but the SpokePool for its dollar")
+check(!dollar(4663, homeBase.dollar, baseApprove), "Base's USDC is approved on Robinhood")
+check(!dollar(8453, homeBase.dollar, baseApprove, "0x1"), "a dollar's approval carries ETH")
+let routerCall = "0xc63148e8" + String(repeating: "ab", count: 300)
+let dollarHome = FreshTx.homeDollarDeposit(homeBase, address: homeMe, input: "20000000", output: "19900000", routerDeposit: routerCall,
+                                           relayer: zeroRelayer, quoteTimestamp: 1_763_400_000, fillDeadline: 1_763_407_200, exclusivity: 0)!
+check(dollar(8453, homeBase.spoke, dollarHome), "a fresh address cannot send its Base USDC home into the pool")
+check(!dollar(8453, homeBase.spoke, dollarHome, "0x1"), "a dollar's home deposit carries ETH")
+check(!dollar(8453, homeBase.spoke, dollarHome, from: "0x2222222222222222222222222222222222222222"), "a dollar goes home for another address")
+check(!dollar(1, homeBase.spoke, dollarHome), "a dollar's home deposit is signed on Ethereum")
+let otherRouter = FreshTx.instructions([(FreshTx.homeUSDC, FreshTx.approveData(spender: "0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", amount: "19900000")!),
+                                        ("0x4a1a2b3c4d5e6f708192a3b4c5d6e7f809102030", routerCall),
+                                        (FreshTx.awayHandler, "")], fallback: zeroRelayer)!
+let swappedMessage = String(dollarHome.prefix(10 + 12 * 64)) + PrivateYield.uint(String(otherRouter.count / 2))! + otherRouter
+check(!dollar(8453, homeBase.spoke, swappedMessage), "a dollar's message runs a router other than ppUSDC's")
+let notDeposit = FreshTx.homeDollarDeposit(homeBase, address: homeMe, input: "20000000", output: "19900000",
+                                           routerDeposit: "0x12345678" + String(repeating: "ab", count: 300), relayer: zeroRelayer,
+                                           quoteTimestamp: 1, fillDeadline: 2, exclusivity: 0)
+check(notDeposit == nil, "a dollar's message calls the router's other functions")
+let usdcAway = FreshTx.awayDollarDeposit(to: 4663, sender: homeMe, payee: awayPayee, input: "20000000", output: "19979136",
+                                         relayer: zeroRelayer, quoteTimestamp: 1_763_400_000, fillDeadline: 1_763_407_200, exclusivity: 0)!
+check(dollar(1, FreshTx.awaySpoke, usdcAway), "a fresh sender cannot send USDC to Robinhood")
+check(dollar(1, FreshTx.homeUSDC, "0x" + FreshTx.approveData(spender: FreshTx.awaySpoke, amount: "20000000")!),
+      "a fresh sender cannot approve Ethereum's SpokePool for its USDC")
+check(!dollar(1, FreshTx.awaySpoke, usdcAway, from: awayPayee), "a dollar send is signed by an address it does not name")
+check(!dollar(8453, FreshTx.awaySpoke, usdcAway), "a dollar send leaves from Base")
+let usdcAwayMessage = String(usdcAway.dropLast(64)) + PrivateYield.uint("32")! + String(repeating: "ab", count: 32)
+check(!dollar(1, FreshTx.awaySpoke, usdcAwayMessage), "a dollar send carries a message")
+check(!home(homeBase.spoke, dollarHome, "0x0") && !away(FreshTx.awaySpoke, usdcAway, "0x0"), "a dollar's deposit passes as ETH's")
 // §1724: Railgun, Ethereum only — a listed token's approval of the proxy, the proxy's shield, no ETH.
 let dai = FreshTx.railgunToken(symbol: "DAI")!
 let railApprove = FreshTx.railgunApproval(dai, amount: "400000000000000000000")!

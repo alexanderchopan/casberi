@@ -31,6 +31,10 @@ enum PrivateSendAway {
         let chainId: Int
         let payee: String
         let withdrawal: String
+        /// "USDC" for a dollar send (prd §1880); nil for ETH.
+        var symbol: String? = nil
+        /// A dollar send's gas, withdrawn in ETH beside it.
+        var gasWithdrawal: String? = nil
     }
 
     private static let pendingKey = "privateAway.pending.v1"
@@ -76,10 +80,13 @@ enum PrivateSendAway {
     /// Sends `amount` (wei) of your private ETH to `payee` on `chainId`.
     /// Face ID for the withdrawal (`PrivateOnEthereum.send`). Returns the
     /// sender's Across deposit.
-    static func send(amount: String, to chainId: Int, payee: String,
+    static func send(amount: String, symbol: String = "ETH", to chainId: Int, payee: String,
                      stage: @escaping @MainActor (String) -> Void) async throws -> String {
         guard let network = PrivacyNetwork.forChain(FreshTx.homeChain),
               FreshTx.homeOrigins.contains(where: { $0.chainId == chainId }), PrivateMoney.isAddress(payee) else { throw Failure.notServed }
+        if let p = pending, (p.symbol ?? "ETH") != symbol { throw Failure.earlierSend }
+        if symbol == "USDC" { return try await sendDollar(amount: amount, to: chainId, payee: payee, network: network, stage: stage) }
+        guard symbol == "ETH" else { throw Failure.notServed }
         let sender: (index: UInt32, address: String, root: String)
         let withdrawn: String
         if let p = pending {
@@ -130,6 +137,113 @@ enum PrivateSendAway {
                                                   root: sender.root, from: sender.address, network: network,
                                                   gas: FreshTx.awayGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in keep(nil) }
         NSLog("privateAway| sent | %@ | to %@ on %d", hash, YourAccount.short(payee), chainId)
+        return hash
+    }
+
+    // MARK: - Dollars (prd §1880)
+
+    /// The gas a fresh sender's dollar approval and deposit may use on Ethereum.
+    static let dollarApproveGas = 80_000
+    static let dollarDepositGas = 150_000
+
+    /// Across's terms for `amount` of Ethereum's USDC to `payee` as the
+    /// network's dollar, no message, through Tor.
+    private static func quoteDollar(amount: String, to chainId: Int, sender: String, payee: String) async -> YourAccountAcross.Fees? {
+        guard let origin = FreshTx.homeOrigins.first(where: { $0.chainId == chainId }) else { return nil }
+        var parts = URLComponents(string: YourAccountAcross.feesEndpoint)
+        parts?.queryItems = [URLQueryItem(name: "inputToken", value: FreshTx.homeUSDC), URLQueryItem(name: "outputToken", value: origin.dollar),
+                             URLQueryItem(name: "originChainId", value: String(FreshTx.homeChain)),
+                             URLQueryItem(name: "destinationChainId", value: String(chainId)),
+                             URLQueryItem(name: "amount", value: amount),
+                             URLQueryItem(name: "depositor", value: sender.lowercased()),
+                             URLQueryItem(name: "recipient", value: payee.lowercased())]
+        guard let url = parts?.url,
+              let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: "Your account"), http.statusCode == 200,
+              let fees = YourAccountAcross.fees(try? JSONSerialization.jsonObject(with: data), from: FreshTx.homeChain), !fees.tooLow
+        else { return nil }
+        return fees
+    }
+
+    /// **A PRIVATE DOLLAR TO BASE OR ROBINHOOD (prd §1880).** `amount` of
+    /// your private USDC and its gas in your private ETH, both withdrawn to a
+    /// fresh sender; then the sender's approval of Ethereum's SpokePool and
+    /// its deposit straight to `payee` as the network's dollar. What arrives
+    /// is the amount less Across's fee.
+    private static func sendDollar(amount: String, to chainId: Int, payee: String, network: PrivacyNetwork,
+                                   stage: @escaping @MainActor (String) -> Void) async throws -> String {
+        let sender: (index: UInt32, address: String, root: String)
+        var outs: [String]
+        if let p = pending {
+            guard p.chainId == chainId, p.payee.lowercased() == payee.lowercased() else { throw Failure.earlierSend }
+            sender = (p.index, p.address, p.root)
+            outs = [p.withdrawal] + (p.gasWithdrawal.map { [$0] } ?? [])
+            NSLog("privateAway| finishing an earlier dollar send | %@", YourAccount.short(p.address))
+        } else {
+            sender = try RailgunPocket.senderAddress()
+            guard let first = await quoteDollar(amount: amount, to: chainId, sender: sender.address, payee: payee),
+                  FreshTx.homeWorthIt(input: amount, output: first.outputAmount, floor: "1") else {
+                throw Failure.across(String(localized: "Across won't carry this amount"))
+            }
+            // Its gas, half again, in your private ETH (the Railgun sender's way, §1726).
+            let fees = try await PrivateRPC.fees(network)
+            var gas = Decimal(dollarApproveGas + dollarDepositGas) * Decimal(fees.maxFee) * Decimal(3) / Decimal(2), up = Decimal()
+            NSDecimalRound(&up, &gas, 0, .up)
+            guard let ethPool = network.yieldPool(for: PrivateMove.eth),
+                  let fee = Decimal(string: await PrivateMove.relayerFee(ethPool, network: network, to: sender.address) ?? ""), fee > 0,
+                  (Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0) >= up + fee else {
+                throw Failure.across(String(localized: "Its gas needs a little private ETH"))
+            }
+            await stage(String(localized: "Sending from your private balance…"))
+            let gasOut = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(up), to: sender.address)
+            RailgunPocket.senderUsed(sender)
+            keep(Pending(index: sender.index, address: sender.address, root: sender.root, chainId: chainId, payee: payee,
+                         withdrawal: gasOut, symbol: "USDC", gasWithdrawal: nil))
+            let usdc = try await PrivateOnEthereum.send(token: FreshTx.homeUSDC, amount: amount, to: sender.address)
+            keep(Pending(index: sender.index, address: sender.address, root: sender.root, chainId: chainId, payee: payee,
+                         withdrawal: usdc, symbol: "USDC", gasWithdrawal: gasOut))
+            outs = [usdc, gasOut]
+            NSLog("privateAway| dollar withdrawn to sender | %@ | %@ USDC units + %@ wei gas", YourAccount.short(sender.address),
+                  amount, PrivateMoney.plain(up))
+        }
+        await stage(String(localized: "Waiting for Ethereum…"))
+        for out in outs { guard try await FreshSigner.landed(out, on: network, seconds: 600) else { throw Failure.onItsWay(out) } }
+        let node = network.rpcUrl, name = network.name
+        let held = try await PrivateRPC.tokenBalance(network, token: FreshTx.homeUSDC, of: sender.address)
+        guard held != "0" else { throw Failure.across(String(localized: "Across didn't answer. Your USDC waits at a one-time address.")) }
+        let fees = try await PrivateRPC.fees(network)
+        // The approval, unless the SpokePool may already take it.
+        let allowanceData = "0xdd62ed3e" + String(repeating: "0", count: 24) + sender.address.dropFirst(2).lowercased()
+            + String(repeating: "0", count: 24) + FreshTx.awaySpoke.dropFirst(2)
+        let allowed = ((try? await PrivateRPC.call(network, "eth_call", [["to": FreshTx.homeUSDC, "data": allowanceData], "latest"])) as? String)
+            .flatMap { PrivateYield.word($0, 0) } ?? "0"
+        if (Decimal(string: allowed) ?? 0) < (Decimal(string: held) ?? 0) {
+            guard let approval = FreshTx.approveData(spender: FreshTx.awaySpoke, amount: held) else { throw Failure.gas }
+            await stage(String(localized: "Moving it with Across…"))
+            let hash = try await FreshSigner.sendDollar(chainId: FreshTx.homeChain, node: node, name: name, to: FreshTx.homeUSDC,
+                                                        data: "0x" + approval, index: sender.index, root: sender.root,
+                                                        from: sender.address, gas: dollarApproveGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in }
+            try await PrivateRPC.waitFor(hash, on: network)
+        }
+        guard let quote = await quoteDollar(amount: held, to: chainId, sender: sender.address, payee: payee),
+              FreshTx.homeWorthIt(input: held, output: quote.outputAmount, floor: "1") else {
+            throw Failure.across(String(localized: "Across didn't answer. Your USDC waits at a one-time address."))
+        }
+        let now = Int(Date().timeIntervalSince1970)
+        guard quote.fillDeadline > now, quote.fillDeadline <= now + YourAccountAcross.maxDeadlineSeconds,
+              let data = FreshTx.awayDollarDeposit(to: chainId, sender: sender.address, payee: payee, input: held,
+                                                   output: quote.outputAmount, relayer: quote.exclusiveRelayer,
+                                                   quoteTimestamp: quote.quoteTimestamp, fillDeadline: quote.fillDeadline,
+                                                   exclusivity: quote.exclusivity) else { throw Failure.across(String(localized: "Across's terms changed")) }
+        let estimate = Int(try await PrivateRPC.decimal(network, "eth_estimateGas",
+                                                        [["from": sender.address, "to": FreshTx.awaySpoke, "data": data, "value": "0x0"]])) ?? 0
+        NSLog("privateAway| dollar deposit | %@ leaves, %@ arrives on %d | estimate %d of %d", held, quote.outputAmount, chainId,
+              estimate, dollarDepositGas)
+        guard estimate > 0, estimate <= dollarDepositGas else { throw Failure.gas }
+        await stage(String(localized: "Moving it with Across…"))
+        let hash = try await FreshSigner.sendDollar(chainId: FreshTx.homeChain, node: node, name: name, to: FreshTx.awaySpoke, data: data,
+                                                    index: sender.index, root: sender.root, from: sender.address,
+                                                    gas: dollarDepositGas, tip: fees.tip, maxFee: fees.maxFee) { _, _ in keep(nil) }
+        NSLog("privateAway| dollar sent | %@ | to %@ on %d", hash, YourAccount.short(payee), chainId)
         return hash
     }
 }

@@ -359,7 +359,9 @@ struct MovePrivateSentence<Head: View>: View {
             : String(localized: "zk.money keeps about $\(ZkMoneyWire.payFeeUSD.formatted(.number.precision(.fractionLength(2))))")
         // The relayer refused Tor and was asked directly (`TorFallback`).
         // To Base or Robinhood, Across and a one-time sender's gas follow (prd §1879).
-        let away = move.away ? String(localized: "Across and gas keep about 1–2%") : nil
+        let away = !move.away ? nil : move.symbol == "USDC"
+            ? String(localized: "Its gas from your private ETH · Across keeps about 0.1%")
+            : String(localized: "Across and gas keep about 1–2%")
         let parts = [fee, away ?? zkFee ?? String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
         return parts.compactMap { $0 }.joined(separator: " · ")
     }

@@ -28,4 +28,21 @@ struct FreshAwayTests {
         }
         #expect(FreshTx.homeSelector == "0x" + SafeCalldata.selector(YourAccountAcross.depositSignature).dropFirst(2).lowercased())
     }
+
+    /// prd §1880: a dollar's home message is round-ups' own (§1574), drained
+    /// to the address; the dollars are the account's networks' own.
+    @Test func theDollarMessageIsRoundUpsOwn() throws {
+        let router = try #require(FreshTx.homeRouter)
+        let deposit = "0xc63148e8" + String(repeating: "ab", count: 300)
+        let depositBytes = try #require(SafeABI.hexBytes(deposit))
+        let roundUps = try #require(PrivateBridge.message(router: router, deposit: depositBytes, budget: "19900000", account: payee))
+        let fresh = try #require(FreshTx.bridgeMessage(router: router, deposit: deposit, budget: "19900000", drainTo: payee))
+        #expect(SafeABI.hex(roundUps).dropFirst(2).lowercased() == fresh)
+        for origin in FreshTx.homeOrigins {
+            let net = try #require(YourAccountOp.networks.first { $0.chainId == origin.chainId })
+            #expect(net.dollar.lowercased() == origin.dollar)
+            #expect(net.dollarSymbol == origin.dollarSymbol)
+        }
+        #expect(YourAccountOp.ethereum.dollar.lowercased() == FreshTx.homeUSDC)
+    }
 }

@@ -191,14 +191,23 @@ enum FreshTx {
         /// Across's SpokePool there (`YourAccountAcross.spokes`, held equal
         /// by `private-money-selftest.sh`).
         let spoke: String
+        /// The network's dollar (prd §1880): USDC on Base, USDG on Robinhood,
+        /// both 6 decimals (`YourAccountOp`'s, held equal by `FreshAwayTests`).
+        let dollar: String
+        let dollarSymbol: String
     }
 
     static let homeOrigins: [HomeOrigin] = [
         .init(name: "Base", chainId: 8453, weth: "0x4200000000000000000000000000000000000006",
-              spoke: "0x09aea4b2242abc8bb4bb78d537a67a245a7bec64"),
+              spoke: "0x09aea4b2242abc8bb4bb78d537a67a245a7bec64",
+              dollar: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", dollarSymbol: "USDC"),
         .init(name: "Robinhood", chainId: 4663, weth: "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
-              spoke: "0xd29c85f15df544ba632c9e25829fd29d767d7978"),
+              spoke: "0xd29c85f15df544ba632c9e25829fd29d767d7978",
+              dollar: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", dollarSymbol: "USDG"),
     ]
+
+    /// Ethereum's USDC: what a dollar arrives as, and leaves as.
+    static let homeUSDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
 
     /// Ethereum's WETH: what the deposit names as its output.
     static let homeWETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
@@ -367,7 +376,176 @@ extension FreshTx {
     }
 }
 
+// MARK: - Dollars home and away (prd §1880)
+
+extension FreshTx {
+    /// **DOLLARS, BOTH WAYS (prd §1880).** USDC paid on Base or USDG on
+    /// Robinhood goes home in one Across deposit whose message lands it
+    /// straight in the ppUSDC pool for your private account: the handler
+    /// approves the router, runs the deposit this phone proved, and drains
+    /// what is left to the same address on Ethereum (§1574's message, the
+    /// drain to the address, never your account). A private USDC send to
+    /// Base or Robinhood leaves from a fresh sender: its approval of
+    /// Ethereum's SpokePool, then its deposit straight to the recipient as
+    /// the network's dollar, no message.
+
+    /// `abi.encode(Instructions)`: `(Call[] calls, address fallback)`, a
+    /// call `(address target, bytes callData, uint256 value)`. Hex, no 0x.
+    static func instructions(_ calls: [(target: String, data: String)], fallback: String) -> String? {
+        guard PrivateMoney.isAddress(fallback), calls.allSatisfy({ PrivateMoney.isAddress($0.target) }) else { return nil }
+        func n(_ v: Int) -> String { PrivateYield.uint(String(v)) ?? "" }
+        let bodies: [String] = calls.map { c in
+            let d = c.data.hasPrefix("0x") ? String(c.data.dropFirst(2)).lowercased() : c.data.lowercased()
+            let bytes = d.count / 2
+            let pad = String(repeating: "0", count: ((bytes + 31) / 32 * 32 - bytes) * 2)
+            return addressWord(c.target) + n(0x60) + n(0) + n(bytes) + d + pad
+        }
+        var offsets: [String] = []
+        var at = calls.count * 32
+        for b in bodies { offsets.append(n(at)); at += b.count / 2 }
+        return n(0x20) + n(0x40) + addressWord(fallback) + n(calls.count) + offsets.joined() + bodies.joined()
+    }
+
+    /// `approve(address,uint256)` as hex, no 0x.
+    static func approveData(spender: String, amount: String) -> String? {
+        guard PrivateMoney.isAddress(spender), let word = PrivateYield.uint(amount) else { return nil }
+        return String(approve.dropFirst(2)) + addressWord(spender) + word
+    }
+
+    /// The message a dollar carries home: approve the ppUSDC router for
+    /// `budget`, run `deposit` (the router's `depositExactShares`), drain
+    /// Ethereum's USDC left to `drainTo`; no fallback, so a call that fails
+    /// reverts the fill and the deposit is refunded where it left.
+    static func bridgeMessage(router: String, deposit: String, budget: String, drainTo: String) -> String? {
+        let d = deposit.lowercased().hasPrefix("0x") ? deposit.lowercased() : "0x" + deposit.lowercased()
+        guard d.hasPrefix(tokenDeposit), PrivateMoney.isAddress(drainTo),
+              let approval = approveData(spender: router, amount: budget) else { return nil }
+        let drain = selector("drainLeftoverTokens(address,address)") + addressWord(homeUSDC) + addressWord(drainTo)
+        return instructions([(homeUSDC, approval), (router, d), (awayHandler, drain)],
+                            fallback: "0x" + String(repeating: "0", count: 40))
+    }
+
+    /// Ethereum's ppUSDC router: the only router a dollar's message runs.
+    static var homeRouter: String? {
+        PrivacyNetwork.ethereum.yield.first { !$0.native }?.router.lowercased()
+    }
+
+    /// The home deposit of a dollar: the address the depositor (its
+    /// refund), the handler the recipient, its dollar in, Ethereum's USDC out.
+    static func homeDollarDeposit(_ origin: HomeOrigin, address: String, input: String, output: String, routerDeposit: String,
+                                  relayer: String, quoteTimestamp: Int, fillDeadline: Int, exclusivity: Int) -> String? {
+        guard let router = homeRouter,
+              let message = bridgeMessage(router: router, deposit: routerDeposit, budget: output, drainTo: address) else { return nil }
+        return across(depositor: address, recipient: awayHandler, input: origin.dollar, output: homeUSDC, inAmount: input,
+                      outAmount: output, to: homeChain, relayer: relayer, quoteTimestamp: quoteTimestamp,
+                      fillDeadline: fillDeadline, exclusivity: exclusivity, message: message)
+    }
+
+    /// A fresh sender's dollar to `payee` on Base or Robinhood, no message.
+    static func awayDollarDeposit(to chainId: Int, sender: String, payee: String, input: String, output: String,
+                                  relayer: String, quoteTimestamp: Int, fillDeadline: Int, exclusivity: Int) -> String? {
+        guard let origin = homeOrigins.first(where: { $0.chainId == chainId }), PrivateMoney.isAddress(payee) else { return nil }
+        return across(depositor: sender, recipient: payee, input: homeUSDC, output: origin.dollar, inAmount: input,
+                      outAmount: output, to: chainId, relayer: relayer, quoteTimestamp: quoteTimestamp,
+                      fillDeadline: fillDeadline, exclusivity: exclusivity, message: "")
+    }
+
+    /// Across's `deposit` with any message (hex, no 0x).
+    private static func across(depositor: String, recipient: String, input: String, output: String, inAmount: String,
+                               outAmount: String, to chainId: Int, relayer: String, quoteTimestamp: Int, fillDeadline: Int,
+                               exclusivity: Int, message: String) -> String? {
+        guard PrivateMoney.isAddress(depositor), PrivateMoney.isAddress(recipient), PrivateMoney.isAddress(relayer),
+              let i = PrivateYield.uint(inAmount), let o = PrivateYield.uint(outAmount),
+              let a = Decimal(string: inAmount), let b = Decimal(string: outAmount), b > 0, b <= a,
+              quoteTimestamp > 0, fillDeadline > 0, exclusivity >= 0, message.count % 64 == 0,
+              (exclusivity == 0) == (relayer.lowercased() == "0x" + String(repeating: "0", count: 40)) else { return nil }
+        func n(_ v: Int) -> String { PrivateYield.uint(String(v)) ?? "" }
+        let words = [addressWord(depositor), addressWord(recipient), addressWord(input), addressWord(output), i, o,
+                     n(chainId), addressWord(relayer), n(quoteTimestamp), n(fillDeadline), n(exclusivity), n(12 * 32),
+                     n(message.count / 2)]
+        guard words.allSatisfy({ $0.count == 64 }) else { return nil }
+        return homeSelector + words.joined() + message.lowercased()
+    }
+
+    /// A deposit's 13 head words and its message, or nil.
+    private static func acrossParts(_ data: String) -> (words: [String], message: String)? {
+        let d = data.lowercased()
+        guard d.hasPrefix(homeSelector), d.count >= 10 + 13 * 64, (d.count - 10) % 64 == 0 else { return nil }
+        let words = (0..<13).map { i in String(d.dropFirst(10 + i * 64).prefix(64)) }
+        guard words[11] == PrivateYield.uint(String(12 * 32)),
+              let length = Int(PrivateMoney.decimal(hex: "0x" + words[12])), d.count == 10 + 13 * 64 + length * 2 else { return nil }
+        return (words, String(d.dropFirst(10 + 13 * 64)))
+    }
+
+    private static func wordAddress(_ w: String) -> String? {
+        w.hasPrefix(String(repeating: "0", count: 24)) ? "0x" + w.dropFirst(24) : nil
+    }
+
+    private static func wordInt(_ w: String) -> Int? { Int(PrivateMoney.decimal(hex: "0x" + w)) }
+
+    /// What a dollar's approval on `chainId` may be: the network's dollar
+    /// (Ethereum's USDC there) approving that network's SpokePool.
+    static func dollarApprovalAllowed(to: String, data: String, value: String, chainId: Int) -> Bool {
+        let token: String, spoke: String
+        if chainId == homeChain { (token, spoke) = (homeUSDC, awaySpoke) }
+        else if let origin = homeOrigins.first(where: { $0.chainId == chainId }) { (token, spoke) = (origin.dollar, origin.spoke) }
+        else { return false }
+        guard to.lowercased() == token, let carried = TestnetTx.quantity(value), carried.isEmpty else { return false }
+        let d = data.lowercased()
+        return d.hasPrefix(approve) && d.count == 2 + 8 + 128 && wordAddress(String(d.dropFirst(10).prefix(64))) == spoke
+    }
+
+    /// Whether `from` may send this home deposit of a dollar on `chainId`:
+    /// read back word by word, its message rebuilt from the router call it
+    /// carries and compared whole.
+    static func homeDollarAllowed(to: String, data: String, value: String, chainId: Int, from: String) -> Bool {
+        guard let origin = homeOrigins.first(where: { $0.chainId == chainId }), to.lowercased() == origin.spoke,
+              PrivateMoney.isAddress(from), let carried = TestnetTx.quantity(value), carried.isEmpty,
+              let (w, message) = acrossParts(data), let relayer = wordAddress(w[7]),
+              let q = wordInt(w[8]), let f = wordInt(w[9]), let x = wordInt(w[10]) else { return false }
+        // The router call is the message's second call: found by its offset
+        // (array data starts at byte 128), its length, then its bytes.
+        func word(_ i: Int) -> String? { message.count >= (i + 1) * 64 ? String(message.dropFirst(i * 64).prefix(64)) : nil }
+        guard let offset = word(5).flatMap(wordInt), offset % 32 == 0 else { return false }
+        let first = (128 + offset) / 32
+        guard let length = word(first + 3).flatMap(wordInt), message.count >= (first + 4) * 64 + length * 2 else { return false }
+        let routerData = String(message.dropFirst((first + 4) * 64).prefix(length * 2))
+        guard let want = homeDollarDeposit(origin, address: from.lowercased(), input: PrivateMoney.decimal(hex: "0x" + w[4]),
+                                           output: PrivateMoney.decimal(hex: "0x" + w[5]), routerDeposit: routerData,
+                                           relayer: relayer, quoteTimestamp: q, fillDeadline: f, exclusivity: x) else { return false }
+        return want == data.lowercased()
+    }
+
+    /// Whether a fresh sender may send this dollar deposit on Ethereum: to
+    /// Base or Robinhood, the network's dollar, any recipient, no message.
+    static func awayDollarAllowed(to: String, data: String, value: String, chainId: Int, from: String) -> Bool {
+        guard chainId == homeChain, to.lowercased() == awaySpoke, PrivateMoney.isAddress(from),
+              let carried = TestnetTx.quantity(value), carried.isEmpty,
+              let (w, message) = acrossParts(data), message.isEmpty,
+              let dest = wordInt(w[6]), let payee = wordAddress(w[1]), let relayer = wordAddress(w[7]),
+              let q = wordInt(w[8]), let f = wordInt(w[9]), let x = wordInt(w[10]),
+              let want = awayDollarDeposit(to: dest, sender: from.lowercased(), payee: payee,
+                                           input: PrivateMoney.decimal(hex: "0x" + w[4]), output: PrivateMoney.decimal(hex: "0x" + w[5]),
+                                           relayer: relayer, quoteTimestamp: q, fillDeadline: f, exclusivity: x) else { return false }
+        return want == data.lowercased()
+    }
+}
+
 extension FreshTx.Tx {
+    /// A dollar's move: its approval of a SpokePool, a home deposit on Base
+    /// or Robinhood, or a fresh sender's deposit on Ethereum (prd §1880);
+    /// nil for anything else.
+    init?(dollar chainId: Int, from: String, nonce: String, maxPriorityFeePerGas: String, maxFeePerGas: String,
+          gas: String, to: String, value: String, data: String) {
+        guard FreshTx.dollarApprovalAllowed(to: to, data: data, value: value, chainId: chainId)
+            || FreshTx.homeDollarAllowed(to: to, data: data, value: value, chainId: chainId, from: from)
+            || FreshTx.awayDollarAllowed(to: to, data: data, value: value, chainId: chainId, from: from) else { return nil }
+        for q in [nonce, maxPriorityFeePerGas, maxFeePerGas, gas, value] where TestnetTx.quantity(q) == nil { return nil }
+        guard let address = TestnetTx.bytes(to), address.count == 20, TestnetTx.bytes(data) != nil else { return nil }
+        self.init(chainId: chainId, nonce: nonce, maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+                  gas: gas, to: to, value: value, data: data)
+    }
+
     /// An away deposit on Ethereum, nil unless `awayAllowed`.
     init?(away from: String, nonce: String, maxPriorityFeePerGas: String, maxFeePerGas: String,
           gas: String, to: String, value: String, data: String) {

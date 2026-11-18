@@ -278,9 +278,15 @@ struct MoveFreshSentence<Head: View>: View {
         } else if let failure = book.failure {
             Text(verbatim: failure).dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
+        } else if let entry, let waiting = book.homeNeedsGas[entry.id] {
+            // A dollar paid on Base or Robinhood with no ETH there for its move (prd §1880).
+            let parts = waiting.split(separator: "|").map(String.init)
+            Text("\(parts.first ?? "USDC") on \(parts.last ?? "Base") needs a little ETH sent there to move.")
+                .dsText(.body17).foregroundStyle(DS.attentionInk)
+                .fixedSize(horizontal: false, vertical: true)
         } else if let entry, let from = book.homeMoving[entry.id] {
             // Paid on Base or Robinhood, on its way to Ethereum (prd §1878).
-            Text("ETH on its way from \(from) to Ethereum.").dsText(.body17).foregroundStyle(DS.textSecondary)
+            Text("On its way from \(from) to Ethereum.").dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         } else if let entry, let said = words(entry.state, symbol: entry.token) {
             Text(verbatim: said.0).dsText(.body17).foregroundStyle(said.1)
@@ -293,7 +299,7 @@ struct MoveFreshSentence<Head: View>: View {
             // Robinhood goes home to Ethereum (prd §1878).
             Group {
                 if network.chainId == FreshTx.homeChain {
-                    Text("On Ethereum, Base or Robinhood. ETH sent on Base or Robinhood moves to Ethereum to earn. Any other token needs a little ETH sent with it.")
+                    Text("On Ethereum, Base or Robinhood. ETH and dollars sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it.")
                 } else {
                     Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
                 }

@@ -51,6 +51,9 @@ final class FreshReceive {
     /// The network an address's ETH is on its way home from, by entry id
     /// (prd §1878, `FreshReceive+Home`).
     var homeMoving: [String: String] = [:]
+    /// "<symbol>|<network>" for an address whose dollar there waits for a
+    /// little ETH to pay its move (prd §1880).
+    var homeNeedsGas: [String: String] = [:]
     @ObservationIgnored private var looking = false
     @ObservationIgnored private var looked: Date = .distantPast
     @ObservationIgnored private var walked: Set<String> = []
