@@ -574,7 +574,7 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
 // ending: each is its own news, never folded into an app's batch.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
    [.disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded,
-    .moveSent, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .orderFilled, .orderEnded, .moneyInPrivately],
+    .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .orderFilled, .orderEnded, .moneyInPrivately],
    "exactly these kinds stand alone; everything else goes one per app (prd §1872, §1881)")
 // Work's Needs you is asked of you, but it is an app's news: one per app.
 ok(!NotifyKind.needsYou.standsAlone && NotifyKind.needsYou.cls == .alarm,
@@ -889,7 +889,7 @@ mutate "a kind loses its headline, so a notification arrives with an empty title
 mutate "money arriving stands alone again, one buzz per transfer" \
        's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .moneyIn:/'
 mutate "a move that failed is folded into an app's batch (prd §1881)" \
-       's/case \.moveSent, \.moveFailed, \.moveArrived,/case .moveSent, .moveArrived,/'
+       's/case \.moveSent, \.moveSwapped, \.moveFailed, \.moveArrived,/case .moveSent, .moveSwapped, .moveArrived,/'
 mutate "a Safe signature waits for the evening digest" \
        's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade:/'
 mutate "every app folds into one notification again" \
@@ -929,7 +929,7 @@ mutate "the digest ranks by its least urgent thing" \
 mutate "a like outranks money in the summary" \
        's/case \.likesReceived:        return 3/case .likesReceived:        return 19/'
 mutate "an arrival outranks an alarm in the summary" \
-       's/\.orderFilled, \.moveSent: return 15/.orderFilled, .moveSent: return 25/'
+       's/\.orderFilled, \.moveSent, \.moveSwapped: return 15/.orderFilled, .moveSent, .moveSwapped: return 25/'
 mutate "the card draws every row, however many" \
        's/return Array\(out\.prefix\(cardRowCap\)\)/return out/'
 

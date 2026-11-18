@@ -782,7 +782,7 @@ final class RailgunMove {
     /// ID" leads them.
     private func started(_ plan: PrivateSendSteps.Plan, away: Bool = false) {
         unlockedFirst = true
-        PrivateSendSteps.shared.begin(.move, plan: plan)
+        PrivateSendSteps.shared.begin(.move, plan: plan, swap: mode == .swap)
         stage = .working(String(localized: "Sending…"))
         // Face ID was the last ask: the rest needs nobody, so the sheet
         // goes and the shell's capsule says the rest (prd §1806).

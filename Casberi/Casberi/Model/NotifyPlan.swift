@@ -130,6 +130,8 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// A private send went out (Railgun's broadcaster, a relayer, a fresh
     /// sender carried it).
     case moveSent
+    /// A swap inside your private balance went through (prd §1875).
+    case moveSwapped
     /// A move did not go through; the body says where the money is now.
     case moveFailed
     /// A move to another network or into Aztec arrived.
@@ -159,7 +161,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
              .moveFailed, .moveReturned, .orderEnded, .needsYou:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest,
-             .moveSent, .moveArrived, .readyToUse, .orderFilled, .moneyInPrivately:
+             .moveSent, .moveSwapped, .moveArrived, .readyToUse, .orderFilled, .moneyInPrivately:
             return .arrival
         }
     }
@@ -265,7 +267,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded:
             return true
         // Each of your own moves is its own news, said on its own (§1881).
-        case .moveSent, .moveFailed, .moveArrived, .moveReturned, .readyToUse,
+        case .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse,
              .orderFilled, .orderEnded, .moneyInPrivately:
             return true
         default:
@@ -321,6 +323,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .appWalletMade:    return String(localized: "New app account")
         case .digest:           return String(localized: "From your apps")
         case .moveSent:         return String(localized: "Sent privately")
+        case .moveSwapped:      return String(localized: "Swapped privately")
         case .moveFailed:       return String(localized: "Didn't go through")
         case .moveArrived:      return String(localized: "Arrived")
         case .moveReturned:     return String(localized: "Came back")
@@ -361,6 +364,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .appWalletMade:       return String(localized: "new app account")
         case .digest:              return String(localized: "updates")
         case .moveSent:            return String(localized: "sent privately")
+        case .moveSwapped:         return String(localized: "swapped privately")
         case .moveFailed:          return String(localized: "didn't go through")
         case .moveArrived:         return String(localized: "arrived")
         case .moveReturned:        return String(localized: "came back")
@@ -380,7 +384,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     var digestRank: Int {
         if severity > 0 { return severity }
         switch self {
-        case .moneyIn, .payoutPaid, .moneyInPrivately, .moveArrived, .readyToUse, .orderFilled, .moveSent: return 15
+        case .moneyIn, .payoutPaid, .moneyInPrivately, .moveArrived, .readyToUse, .orderFilled, .moveSent, .moveSwapped: return 15
         case .appWalletMade:        return 10
         case .repliesReceived:      return 8
         case .followersGained:      return 5
@@ -420,6 +424,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .appWalletMade:       (one, many) = (String(localized: "app account"), String(localized: "app accounts"))
         case .digest:              (one, many) = (String(localized: "update"), String(localized: "updates"))
         case .moveSent:            (one, many) = (String(localized: "private send"), String(localized: "private sends"))
+        case .moveSwapped:         (one, many) = (String(localized: "private swap"), String(localized: "private swaps"))
         case .moveFailed:          (one, many) = (String(localized: "move that failed"), String(localized: "moves that failed"))
         case .moveArrived:         (one, many) = (String(localized: "move arrived"), String(localized: "moves arrived"))
         case .moveReturned:        (one, many) = (String(localized: "move came back"), String(localized: "moves came back"))

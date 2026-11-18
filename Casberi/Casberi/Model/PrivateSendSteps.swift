@@ -87,6 +87,9 @@ final class PrivateSendSteps {
         var reason: String?
         /// The network took the transaction (a failure after that still reached it).
         var reachedNetwork = false
+        /// A swap inside your private balance (prd §1875): it is told as
+        /// swapped, never as sent (§1881).
+        var swap = false
 
         var isRunning: Bool { ended == nil }
 
@@ -108,13 +111,13 @@ final class PrivateSendSteps {
     }
 
     private(set) var run: Run? {
-        didSet { Self.announceEnd(from: oldValue, to: run, landed: nil) }
+        didSet { Self.announceEnd(from: oldValue, to: run) }
     }
 
     /// A send that just ended tells you, if you are away from Casberi (prd
-    /// §1881, `Notifications.outcome`): sent, or that it did not go through
-    /// and whether anything left. Said once, by when it started.
-    static func announceEnd(from old: Run?, to new: Run?, landed: String?) {
+    /// §1881, `Notifications.outcome`): sent or swapped, or that it did not
+    /// go through and whether anything left. Said once, by when it started.
+    static func announceEnd(from old: Run?, to new: Run?) {
         guard let old, old.isRunning, let new, !new.isRunning, new.started == old.started,
               let ok = new.ok else { return }
         // A private send is one this device PROVES (Aztec's, Railgun's): a
@@ -122,12 +125,14 @@ final class PrivateSendSteps {
         guard new.plan.steps.contains(where: { $0.key == .proving }) else { return }
         let place = new.plan.isAztec ? "Aztec" : "Railgun"
         let id = "send:\(Int(new.started.timeIntervalSince1970))"
+        // The body never repeats the headline: where it went, or where the
+        // money is now.
         let sent = new.plan.steps.last?.done ?? String(localized: "Sent")
-        let body = ok ? (landed ?? sent)
-            : new.reachedNetwork ? String(localized: "Open Casberi to see where it is")
-            : String(localized: "Nothing was sent")
-        Task { await Notifications.outcome(ok ? .moveSent : .moveFailed, id: id, place: place,
-                                           body: body, mark: place) }
+        let body = !ok ? (new.reachedNetwork ? String(localized: "Open Casberi to see where it is")
+                                             : String(localized: "Nothing was sent"))
+            : new.swap ? String(localized: "Inside your private balance") : sent
+        let kind: NotifyKind = !ok ? .moveFailed : new.swap ? .moveSwapped : .moveSent
+        Task { await Notifications.outcome(kind, id: id, place: place, body: body, mark: place) }
     }
 
     /// **A SEND THAT GOES ON BEHIND ITS SHEET (prd §1777, §1806).** Once
@@ -138,7 +143,7 @@ final class PrivateSendSteps {
     /// begins in `run` and cannot overwrite it, and its own engine's words
     /// still reach it (`received`, `mark(_:from:)`).
     private(set) var away: Run? {
-        didSet { Self.announceEnd(from: oldValue, to: away, landed: awayLanded) }
+        didSet { Self.announceEnd(from: oldValue, to: away) }
     }
     /// Whose engine is proving the send behind the sheet.
     private(set) var awayFrom: Source?
@@ -146,8 +151,8 @@ final class PrivateSendSteps {
     private(set) var awayLanded: String?
 
     /// The caller starts the clock at its tap, before a cold engine has said anything.
-    func begin(_ kind: Kind, plan: Plan) {
-        run = Run(kind: kind, plan: plan, started: .now)
+    func begin(_ kind: Kind, plan: Plan, swap: Bool = false) {
+        run = Run(kind: kind, plan: plan, started: .now, swap: swap)
     }
 
     /// Move's running send leaves its sheet. One at a time: false while
