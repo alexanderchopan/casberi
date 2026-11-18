@@ -1634,8 +1634,10 @@ struct MoveSentence: View {
         // was open closes, so a list never stands cut off in the short sheet.
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: focus) { _, now in if now != nil { chrome.moveTall = true } }
-        // Send opens whole, as the private sends do.
-        .onChange(of: verb, initial: true) { _, now in if now == .send, inTray { chrome.moveTall = true } }
+        // Every verb's page opens whole, as the private sends do (prd §1866
+        // for Send; prd §1869 for the rest: Buy's Amount row stood under its
+        // sentence in the short sheet).
+        .onChange(of: verb, initial: true) { _, _ in if inTray { chrome.moveTall = true } }
         // A price typed over is no longer the preset it started as (prd §1683).
         .onChange(of: priceText) { if focus == .price { whenPreset = nil } }
         .onChange(of: chrome.moveTall) { _, tall in
@@ -3658,6 +3660,12 @@ struct MoveSentence: View {
             // the first frame, picked or not.
             if verb == .swap, [.network, .with, .destination, .buy].contains(b.names) { continue }
             if b.names == .destination { continue }
+            // Buy's network is read off the pick, never the sentence's
+            // report (prd §1869): `enterDeposit` picks the one network a card
+            // can buy on after the sentence has reported its hole, and the
+            // report never came again, so the row said "Choose" under "on
+            // Ethereum".
+            if verb == .deposit, b.names == .depositNetwork { continue }
             // **A ROW ONLY WHERE THERE IS A CHOICE (prd §1805):** the one
             // network you hold anything on, and the one token there, are
             // said by the sentence and ask nothing.
@@ -3676,6 +3684,13 @@ struct MoveSentence: View {
             rows.append((Self.rowRank(b.names), row))
         }
         if verb == .swap { rows.append(contentsOf: swapPairRows) }
+        if verb == .deposit {
+            let picked = depositSeller != nil
+            var row = LedgerRow(id: "choicedepositNetwork", name: Self.rowName(.depositNetwork, verb: verb),
+                                value: picked ? network.name : pick, opens: .depositNetwork)
+            if picked { row.mark = rowMark(.depositNetwork) }
+            rows.append((Self.rowRank(.depositNetwork), row))
+        }
         // **WHEN IS A CHOICE (prd §1793).** "Now" until a price is picked,
         // there once the pair is known and not before: nothing is picked
         // for a swap that is not yet a swap.

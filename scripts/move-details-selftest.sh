@@ -156,4 +156,14 @@ grep -q 'case .lands:' "$DETAILS" && grep -q '"Lands as written"' "$DETAILS" \
 # The demo reaches nothing (§1475): its preview is its table's.
 awk '/static func preview\(/,/^    }$/' "$CHAINPREVIEW" | grep -q 'if YourAccountDemo.isDemo(account) { return demoPreview' \
   || { echo "✗ the demo's preview is no longer read off its table — the demo would reach a node"; exit 1; }
+# Every verb's page opens whole (prd §1866, §1869): in the short sheet Buy's
+# Amount row stood under its sentence and Receive hid both private places.
+MS="Casberi/Casberi/Screens/MoveSentence.swift"
+grep -q '.onChange(of: verb, initial: true) { _, _ in if inTray { chrome.moveTall = true } }' "$MS" \
+  || { echo "✗ a verb's page opens in the short sheet again, where its rows stand under the sentence"; exit 1; }
+# Buy's Network row is read off the pick, never the sentence's late report
+# (prd §1869): it said "Choose" under "on Ethereum".
+grep -q 'if verb == .deposit, b.names == .depositNetwork { continue }' "$MS" \
+  && grep -q 'value: picked ? network.name : pick, opens: .depositNetwork' "$MS" \
+  || { echo "✗ Buy's Network row reads the sentence's report again, which arrives before its one network is picked"; exit 1; }
 true

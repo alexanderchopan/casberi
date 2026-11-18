@@ -73938,3 +73938,22 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** Home's head is the phone's (§1843); iPad and Mac keep Home's cards. Nothing changes there.
 
 **Checks.** Built and seen on the iPhone 17 Pro simulator over the demo: the doors clear the panel, and the tail and copy end the row.
+
+## §1869 — Every Move verb opens whole, and Buy's Network row says the network it will use (amends §1866) (user, 2026-11-18: "i tried to send to my aztec account and didn't get that option. can you walk every move action and make sure they are working properly?") — BUILT; walked on the simulator over the demo
+
+**What the walk found (2026-11-18, iPhone 17 Pro simulator, demo account).**
+1. **Send to your Aztec account works**: Send › To › Private › "Your private account · Aztec to Aztec only" draws "Send 2 USDC to your private account on Aztec.", Powered by Shield. It is a To row, never a Network: the Network list holds Base, Ethereum and Robinhood.
+2. **Receive opened in the short sheet showed the Public account alone**: "From another wallet" faded at the fold, and Private balance and your Aztec account stood below it, out of sight.
+3. **Buy opened short too**: Tokens' Amount row and Gift cards' Merchant row stood under the sentence, and Arrives in and Card taken by were never seen.
+4. **Buy › Tokens said "Network · Choose" under "Buy USDC on Ethereum."** with Continue with Stripe live. `enterDeposit` picks the one network a card can buy on after the sentence has reported its hole, and that report never came again (seen in a DEBUG log: the last report carried `depositNetwork` empty).
+5. Swap, Sweep, Earn, gift cards' picks, Receive's two doors: as built.
+
+**Ruling.**
+1. **Every verb's page opens whole** in the tray (`onChange(of: verb, initial: true)` sets `moveTall`), as §1866 did for Send alone.
+2. **Buy's Network row is read off the pick** (`depositSeller`), never the sentence's report: the network's name and mark once a seller stands, "Choose" before.
+
+**Not walked.** A real send from the private balance or your Aztec account, Railgun's sentence and From another wallet's sheet: the demo refuses them before they act.
+
+**Mac half (§1402).** The tray is the Mac's and iPad's Move; both rulings reach them unchanged.
+
+**Checks.** `move-details-selftest.sh`: the verb change sets `moveTall` for every verb; Buy's Network row skips the reported blank and reads `depositSeller`. Both mutated back and caught.
