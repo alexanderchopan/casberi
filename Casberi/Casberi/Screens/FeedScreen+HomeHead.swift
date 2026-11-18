@@ -69,8 +69,10 @@ extension FeedScreen {
                 // Air between the groups (user: "there is enough room to have
                 // more padding between and make the sections feel separate",
                 // prd §1846): the lines stand a gap under the card.
+                // The doors stand clear of the feed's panel (prd §1868, user:
+                // "they are touching the feed right now").
                 .listRowInsets(.init(top: Self.homeLinesGap, leading: DSRoomChassis.rowInset,
-                                     bottom: 0, trailing: DSRoomChassis.rowInset))
+                                     bottom: Self.homeDoorsFoot, trailing: DSRoomChassis.rowInset))
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
@@ -229,6 +231,8 @@ extension FeedScreen {
     /// the circles takes `s6` (`ActivityWord`'s tight top).
     static let homeLinesGap: CGFloat = DS.Space.s2
     static let homeChipsGap: CGFloat = DS.Space.s8
+    /// The air under the doors, over the panel's curved edge (prd §1868).
+    static let homeDoorsFoot: CGFloat = DS.Space.s2
 
     /// The card's height while it has no balance to draw.
     static let homeStartHeight: CGFloat = 200
@@ -540,7 +544,11 @@ extension FeedScreen {
                 }
                 .buttonStyle(RowPress())
             }
-            // The address and its copy are Account's (prd §1862).
+            // **THE COPY IS BACK ON HOME (prd §1868, over §1862; user: "add
+            // the copy button back there too").** Account keeps its own.
+            if !bare, let yours, !pending {
+                HomeCopyAction(address: yours)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -660,5 +668,46 @@ extension FeedScreen {
     static func homeLeadAnchor(_ jumps: [String]) -> String? {
         guard !homeCircleNames(jumps).isEmpty, let first = jumps.first else { return nil }
         return scrollAnchor(first)
+    }
+}
+
+/// The address's copy on Home's row of doors (prd §1868, back from §1849):
+/// pressed, its word reads "Copied" and its glyph turns to a check for a
+/// moment (§867), in place of a toast.
+private struct HomeCopyAction: View {
+    let address: String
+    @State private var copied = false
+
+    var body: some View {
+        Button {
+            DSPasteboard.copy(address)
+            DSHaptic.selection()
+            copied = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                copied = false
+            }
+        } label: {
+            // Not a door: the address's tail, grey, and the copy's glyph in
+            // the chevron's place (prd §1850).
+            HStack(spacing: DS.Space.s1) {
+                Text(verbatim: copied ? String(localized: "Copied") : AddressTail.short(address))
+                    .dsText(.body17)
+                    .monospacedDigit()
+                    .foregroundStyle(copied ? DS.confirmInk : DS.textSecondary)
+                    .lineLimit(1)
+                    .contentTransition(.opacity)
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .dsGlyph(.subhead)
+                    .foregroundStyle(copied ? DS.confirm : DS.textSecondary)
+                    .contentTransition(.symbolEffect(.replace))
+                    .accessibilityHidden(true)
+            }
+            .frame(minHeight: DS.Hit.min)
+            .contentShape(Rectangle())
+            .animation(DS.Motion.standard, value: copied)
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text("Copy address"))
     }
 }

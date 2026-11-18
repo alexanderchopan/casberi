@@ -73927,3 +73927,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The Mac has no menu over the page; Move's tray opens on its verbs as before. Nothing changes there.
 
 **Checks.** Not built or seen: this session ran in a Linux container with no Xcode. Unseen: fill a Send, close, pick Buy within five minutes; then pick Send and see the kept sentence.
+
+## §1868 — Home's doors stand clear of the feed, and the address's copy is back on their row (amends §1862 for the address; extends §1858, §1850) (user, 2026-11-17: "move the activity, risks and apps buttons a tiny bit up b/c they are touching the feed right now. also add the copy button back there too")
+
+§1862 moved the address and its copy to Account, as a try ("people want to copy their address often … but ok lets try it"). The try is over: the copy is wanted on Home.
+
+1. **Air under the doors.** The row of doors keeps 8pt under it (`FeedScreen.homeDoorsFoot`), so its words stand off the panel's curved edge (§1858).
+2. **The copy is on Home again.** After Apps: the address's tail and the copy glyph (`HomeCopyAction`), "Copied" in its own place for 1.2s (§867), drawn once your account is set up. Account keeps its own address and copy.
+
+**Mac half (§1402).** Home's head is the phone's (§1843); iPad and Mac keep Home's cards. Nothing changes there.
+
+**Checks.** Built and seen on the iPhone 17 Pro simulator over the demo: the doors clear the panel, and the tail and copy end the row.
