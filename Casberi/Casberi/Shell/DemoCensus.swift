@@ -184,13 +184,15 @@ enum DemoCensus {
         })
 
         // ── Widgets / notify ──────────────────────────────────────────────
-        // The wallet widget's flow is COMPOSED here and never published:
-        // nothing the demo makes reaches a Home Screen (§217 doctrine,
+        // The Feed tile's rows are COMPOSED here and never published: nothing
+        // the demo makes reaches a Home Screen (§217 doctrine,
         // `WidgetPublish.publishAll` returns under the demo). What is judged is
-        // what the tile WOULD draw. The Today and kept-ask tiles' rows went
-        // with the ask (2026-10-01).
-        out.append(Surface(name: "widget.flow", gate: .required) {
-            WidgetPublish.flow(things: surfaced) != nil ? .ok("composed") : .empty("no flow band")
+        // what the tile WOULD draw (prd §1881). Ranked, not required: a run
+        // past midnight has no today (the wallet's flow it replaced went with
+        // the line, §1881).
+        out.append(Surface(name: "widget.feed", gate: .ranked) {
+            let feed = WidgetPublish.feed(things: surfaced)
+            return feed.rows.isEmpty ? .empty("nothing today") : .ok("\(feed.rows.count) rows, \(feed.more) more")
         })
         out.append(Surface(name: "notify.plans", gate: .required) {
             let things = WalletBackgroundRefresh.sweepCorpus(context) ?? []

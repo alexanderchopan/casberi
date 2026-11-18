@@ -2142,6 +2142,11 @@ struct FeedScreen: View {
                 // switcher capsule (prd §159).
                 chrome.pourHue = selectedWallet.map(WalletFace.tint)
             }
+        }
+        // The Wallet tile is Home's figures, handed over as Home draws them
+        // (prd §1881).
+        .onChange(of: homeWidgetFigures, initial: true) { _, figures in
+            if isActive || roomBoxPlace == .paneBox { publishHomeWidget(figures) }
         })
     }
 

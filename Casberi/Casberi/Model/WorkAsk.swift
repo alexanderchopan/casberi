@@ -63,3 +63,14 @@ enum WorkAsk {
         return false
     }
 }
+
+extension WorkAsk {
+    /// Whether a landed thing is a Work ask of you, for the notification sweep
+    /// (prd §1881): the rule Home's "Needs you" reads (`FeedScreen+Scroll`),
+    /// over a Work app's rows only.
+    @MainActor
+    static func asks(_ thing: Thing, now: Date) -> Bool {
+        guard BridgeCatalog.category(forSource: thing.source) == RoomAccounts.workRoom else { return false }
+        return needsYou(WorkStage.Row(thing), at: thing.capturedAt, now: now)
+    }
+}

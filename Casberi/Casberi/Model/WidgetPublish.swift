@@ -1,14 +1,15 @@
 import Foundation
 import SwiftData
 import WidgetKit
+import SwiftUI
 
-/// Fills the app group the widgets read from (2026-08-14, prd §382): the
-/// wallet's line and flow, your newest notes, the Feed's contents (§1210) and
-/// the Markets watchlist (§1223).
+/// Fills the app group the widgets read from (2026-08-14, prd §382): Home's
+/// balance (§1881, published by Home), your newest notes, today's Feed as
+/// Home's Activity rows and the Watchlist (§1881).
 ///
-/// Everything here already existed as a reading the app computes on every
-/// foreground anyway — the wallet series the balance card draws, the week's
-/// flow — and was simply never handed across the process boundary. So this
+/// Everything here already existed as a reading the app computes anyway —
+/// the figures Home prints, the Watchlist's prices — and was simply never
+/// handed across the process boundary. So this
 /// adds no computation of its own; it is a publication step, not a feature
 /// that runs work.
 ///
@@ -28,29 +29,17 @@ enum WidgetPublish {
         guard !DemoMode.isActive else { return }
         guard let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
         let things = things.live
-        var stale = false
-
-        if WidgetPayload.write(flow(things: things), key: WidgetWallet.flowKey,
-                               stampKey: WidgetWallet.flowStampKey, defaults: group) {
-            stale = true
-        }
-        if WidgetPayload.write(wallet(), key: WidgetWallet.key,
-                               stampKey: WidgetWallet.stampKey, defaults: group) {
-            stale = true
-        }
-
-        // The accent every tile draws with is NOT written here — `ThemeStore`
-        // already publishes it to the same app group on init, and a second
-        // writer for one key is how the two spellings of a colour start
-        // disagreeing about which is current.
-
-        if stale { WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind) }
+        // The Wallet tile is Home's own figures, published by Home as it
+        // draws them (`home(_:)`, prd §1881), never re-derived here.
+        watchlist(group)
 
         if WidgetPayload.write(notes(context: context), key: WidgetNotes.key,
                                stampKey: WidgetNotes.stampKey, defaults: group) {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetNotes.kind)
         }
-        if WidgetPayload.write(feed(things: things), key: WidgetFeedTile.key,
+        let today = feed(things: things)
+        drawMarks(for: today.rows.map(\.source))
+        if WidgetPayload.write(today, key: WidgetFeedTile.key,
                                stampKey: WidgetFeedTile.stampKey, defaults: group) {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetFeedTile.kind)
         }
@@ -72,8 +61,14 @@ enum WidgetPublish {
                               "widget.people", "widget.peopleAt",
                               // The Category widget's shelves (§1210).
                               "widget.shelves", "widget.shelvesAt",
-                              // The Watchlist widget, gone with Markets (§1529).
+                              // The Watchlist widget, gone with Markets (§1529);
+                              // it came back on `widget.watch` (§1881).
                               "widget.watchlist", "widget.watchlistAt",
+                              // The wallet's line and week's flow, and the
+                              // Feed's counts, replaced by Home's figures and
+                              // Activity's rows (§1881).
+                              "widget.wallet", "widget.walletAt", "widget.flow", "widget.flowAt",
+                              "widget.feed", "widget.feedAt",
                               // The Daily Brief quick action's and the brief
                               // control's flag, left by an older build.
                               "brief.request"]
@@ -108,30 +103,29 @@ enum WidgetPublish {
                            glyph: "note.text", rows: rows(notes, stamp: { $0.capturedAt }))
     }
 
-    /// The Feed widget's contents (prd §1210): every category with something
-    /// today, in Feed order (`CategoryOrder.current`, Settings › Feed order),
-    /// and how many came today — the Feed's glance tiles (§1208d) as one tile.
-    ///
-    /// Counted over the caller's newest-600 slice, the same slice the Feed's
-    /// day reads. No money (§1208 item 7): the Wallet, Markets and Testnets
-    /// are left out, so Hide balances (§374) has nothing to withhold here.
+    /// The Feed tile's rows (prd §1881, after §1864): each app's newest thing
+    /// today, newest first, as Home's Activity draws it, and how many more
+    /// came. Over the caller's newest-600 slice, the slice the Feed's day
+    /// reads. No money (§1208 item 7): the Wallet, Markets and Testnets are
+    /// left out, so Hide balances (§374) has nothing to withhold here; a thing
+    /// with no category (a note of yours) is the Notes tile's.
     static func feed(things: [Thing], now: Date = .now) -> WidgetFeed {
         let calendar = Calendar.current
         let money: Set<String> = ["Wallet", "Markets", "Testnets"]
-        var today: [String: Int] = [:]
+        var items: [WidgetFeed.Row] = []
         for thing in things where calendar.isDate(thing.capturedAt, inSameDayAs: now) {
             guard let category = BridgeCatalog.category(forSource: thing.source),
                   !money.contains(category) else { continue }
-            today[category, default: 0] += 1
+            let words = thing.title.split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+            guard !words.isEmpty else { continue }
+            items.append(WidgetFeed.Row(id: thing.id.uuidString, source: thing.source,
+                                        title: String(words.prefix(140)), at: thing.capturedAt))
         }
-        let order = CategoryOrder.current
-        let known = order.filter { today[$0] != nil }
-        let unknown = today.keys.filter { !order.contains($0) }
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-        let sections = (known + unknown).map {
-            WidgetFeed.Section(room: $0, today: today[$0] ?? 0)
-        }
-        return WidgetFeed(day: calendar.startOfDay(for: now), sections: sections)
+        let cut = WidgetFeedTile.rows(items)
+        return WidgetFeed(day: calendar.startOfDay(for: now), rows: cut.rows, more: cut.more)
     }
 
     private static func rows(_ things: [Thing], stamp: (Thing) -> Date) -> [WidgetShelf.Row] {
@@ -146,66 +140,53 @@ enum WidgetPublish {
         }
     }
 
-    /// The week's money in against money out.
-    ///
-    /// Reads `WalletFlowSource.band`, the wallet room's own reading.
-    ///
-    /// **Nothing is gated here**: `WalletFlow.band` already declines on an
-    /// unpriceable window, on fewer than two lanes, and on lanes too thin to
-    /// draw honestly. Re-deciding any of that would be a second opinion that
-    /// could disagree with the room's.
-    ///
-    /// The LANES are dropped — the widget draws totals and a ratio, never
-    /// counterparties (see `WidgetFlowBand`) — but their COUNTS are kept, because
-    /// they are what says how much of the week is actually in the bars.
-    static func flow(things: [Thing], now: Date = .now) -> WidgetFlowBand? {
-        // `span` is a DURATION, not a date — passing it straight through would
-        // silently ask for a window starting at 1970.
-        let span = WalletRange.week.span
-        guard let band = WalletFlowSource.band(from: things,
-                                               since: now.addingTimeInterval(-span))
-        else { return nil }
-        let priced = (band.inLanes + band.outLanes).reduce(0) { $0 + $1.count }
-        let hidden = BalancePrivacy.shared.hidden
-        // The weights are computed HERE, from the real figures, and travel
-        // whether or not the figures do — §374 rule 3: figures go, shapes stay.
-        let weights = WidgetFlowBand.weights(inUSD: band.inUSD, outUSD: band.outUSD)
-        return WidgetFlowBand(inWeight: weights.0, outWeight: weights.1,
-                              inUSD: hidden ? nil : band.inUSD,
-                              outUSD: hidden ? nil : band.outUSD,
-                              unpriced: band.unpricedCount,
-                              predating: band.predatingCount,
-                              priced: priced,
-                              hidden: hidden)
+    /// Draws each app's icon, as the app draws it (`BridgeIcon`), into the app
+    /// group for the Feed tile, which cannot see the app's asset catalogue.
+    /// Once a week per app, so an icon that changed is drawn again.
+    static func drawMarks(for sources: [String]) {
+        guard let dir = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroup)?
+            .appendingPathComponent(WidgetFeedTile.marksFolder, isDirectory: true) else { return }
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        for source in Set(sources) {
+            let file = dir.appendingPathComponent(WidgetFeedTile.markFile(source))
+            let made = (try? FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate]) as? Date
+            if let made, Date().timeIntervalSince(made) < 7 * 86_400 { continue }
+            let renderer = ImageRenderer(content: BridgeIcon(name: source, size: 40))
+            renderer.scale = 2
+            guard let data = renderer.uiImage?.pngData() else { continue }
+            try? data.write(to: file, options: .atomic)
+        }
     }
 
-    /// The combined value line, reduced to what a sparkline needs.
-    ///
-    /// Reads `WalletStore.combinedValueSamples()` — the same forward-only,
-    /// never-back-filled, alignment-guarded series the app's own balance card
-    /// draws — rather than re-deriving one, so the widget's curve and the app's
-    /// curve can never disagree about history. Empty until that series exists at
-    /// all (it needs two aligned points across every watched wallet, §77), and
-    /// nil here means the tile declines rather than inventing a flat line.
-    static func wallet(now: Date = .now) -> WidgetWalletLine? {
-        let samples = WalletStore.shared.combinedValueSamples()
-        guard samples.count >= 2, let last = samples.last else { return nil }
-        let trimmed = samples.suffix(WidgetWallet.pointCap)
-        let points = trimmed.map(\.usd)
-
-        // Nil, never zero, when the window's opening value is zero — a percent
-        // change against nothing is a division, not a reading (§83).
-        var changePct: Double?
-        if let first = points.first, first > 0 {
-            changePct = (last.usd - first) / first * 100
+    /// Home's balance for the Wallet tile (prd §1881), handed over by Home
+    /// from the figures it draws (`FeedScreen.homeWidgetFigures`), so the tile
+    /// and Home can never state two totals. Reloads only on a change.
+    static func home(_ figures: WidgetWalletHome?) {
+        guard !DemoMode.isActive, let figures,
+              let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
+        if WidgetPayload.write(figures, key: WidgetWallet.key,
+                               stampKey: WidgetWallet.stampKey, defaults: group) {
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind)
         }
+    }
 
-        let hidden = BalancePrivacy.shared.hidden
-        return WidgetWalletLine(points: points,
-                                total: hidden ? nil : last.usd,
-                                changePct: hidden ? nil : changePct,
-                                hidden: hidden,
-                                asOf: last.at)
+    /// Your first four watched tokens and the day's move of each (prd §1881),
+    /// read off what Home's Watchlist row reads. Called on every foreground
+    /// and again when the prices land (`WatchlistPrices.refreshIfStale`).
+    static func watchlist(_ group: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup)) {
+        guard !DemoMode.isActive, let group else { return }
+        // Prices live in memory: before this launch has read them, publishing
+        // would blank every move the tile already holds.
+        guard WatchlistPrices.shared.readAt != nil || Watchlist.shared.tokens.isEmpty else { return }
+        let quotes = WatchlistPrices.shared.quotes
+        let rows = Watchlist.shared.tokens.prefix(WidgetWatchlist.rowCap).map {
+            WidgetWatch.Row(symbol: $0.symbol.uppercased(), dayPct: quotes[$0.id]?.change)
+        }
+        if WidgetPayload.write(WidgetWatch(rows: Array(rows)), key: WidgetWatchlist.key,
+                               stampKey: WidgetWatchlist.stampKey, defaults: group) {
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetWatchlist.kind)
+        }
     }
 
     #if DEBUG
@@ -221,16 +202,25 @@ enum WidgetPublish {
         let things = Corpus.surfaced((try? context.fetch(d)) ?? [])
         publishAll(things: things, context: context)
 
-        if let line = WidgetWallet.published(defaults: group) {
-            let age = Date.now.timeIntervalSince(line.asOf) / 3600
-            NSLog("[Casberi] widgetWallet| points=%d total=%@ change=%@ hidden=%@ age=%.1fh stamped=%@",
-                  line.points.count,
-                  line.total.map { String(format: "%.2f", $0) } ?? "withheld",
-                  line.changePct.map { String(format: "%+.2f%%", $0) } ?? "unknown",
-                  line.hidden ? "YES" : "no", age,
-                  age * 3600 > WidgetWallet.stampAfter ? "YES" : "no")
+        if let home = WidgetWallet.published(defaults: group) {
+            let age = Date.now.timeIntervalSince(home.asOf) / 3600
+            NSLog("[Casberi] widgetWallet| total=%@ day=%@ public=%@ private=%@ hidden=%@ age=%.1fh",
+                  home.total.map { String(format: "%.2f", $0) } ?? "withheld",
+                  home.dayPct.map { String(format: "%+.2f%%", $0) } ?? "unknown",
+                  home.publicUSD.map { String(format: "%.2f", $0) } ?? "none",
+                  home.privateUSD.map { String(format: "%.2f", $0) } ?? "none",
+                  home.hidden ? "YES" : "no", age)
         } else {
-            NSLog("[Casberi] widgetWallet| none — no watched wallet, or fewer than two aligned samples")
+            NSLog("[Casberi] widgetWallet| none — Home has not drawn a balance on All")
+        }
+        if let watch = WidgetWatchlist.published(defaults: group) {
+            NSLog("[Casberi] widgetWatchlist| rows=%d", watch.rows.count)
+            for row in watch.rows {
+                NSLog("[Casberi] widgetWatchlist| %@ %@", row.symbol,
+                      row.dayPct.map { String(format: "%+.2f%%", $0) } ?? "unread")
+            }
+        } else {
+            NSLog("[Casberi] widgetWatchlist| none")
         }
 
         if let shelf = WidgetNotes.published(defaults: group) {
@@ -240,26 +230,16 @@ enum WidgetPublish {
             NSLog("[Casberi] widgetNotes| none")
         }
         if let feed = WidgetFeedTile.published(defaults: group) {
-            NSLog("[Casberi] widgetFeed| current=%@ sections=%d",
-                  feed.isCurrent() ? "YES" : "no", feed.sections.count)
-            for section in feed.sections {
-                NSLog("[Casberi] widgetFeed| %@ today=%d", section.room, section.today)
+            NSLog("[Casberi] widgetFeed| current=%@ rows=%d more=%d",
+                  feed.isCurrent() ? "YES" : "no", feed.rows.count, feed.more)
+            for row in feed.rows {
+                NSLog("[Casberi] widgetFeed| %@ | %@ | mark=%@", row.source, row.title,
+                      FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroup)
+                        .map { FileManager.default.fileExists(atPath: $0.appendingPathComponent(WidgetFeedTile.marksFolder)
+                            .appendingPathComponent(WidgetFeedTile.markFile(row.source)).path) } == true ? "YES" : "no")
             }
         } else {
             NSLog("[Casberi] widgetFeed| none")
-        }
-        // The week's flow. `none` is the HEALTHY answer for most weeks — the
-        // band declines on an unpriceable window, on fewer than two lanes, and
-        // on lanes too thin to draw honestly — so the line names which, and
-        // `priced/total` is the disclosure the bars themselves carry.
-        if let band = WidgetWallet.flow(defaults: group) {
-            NSLog("[Casberi] widgetFlow| in=%@ out=%@ weights=%.2f/%.2f priced=%d of %d note=%@",
-                  band.inUSD.map { String(format: "%.2f", $0) } ?? "withheld",
-                  band.outUSD.map { String(format: "%.2f", $0) } ?? "withheld",
-                  band.inWeight, band.outWeight, band.priced, band.total,
-                  band.owesDisclosure ? "OWED" : "(complete)")
-        } else {
-            NSLog("[Casberi] widgetFlow| none — nothing priced this week, or fewer than two lanes survived")
         }
     }
     #endif

@@ -669,6 +669,33 @@ enum Notifications {
         await submit([plan])
     }
 
+    // MARK: - Your own moves, ending
+
+    /// One of your own moves ended (prd §1881): sent privately, arrived,
+    /// came back, ready to use, an order filled or ended; and two kinds of
+    /// money news no row carries (money at a private address, a subscription
+    /// that went up on a card other than Apple Wallet's). Under the Wallet
+    /// switch, once per `id`, ever.
+    ///
+    /// **Only while you are away from Casberi** (`awayOnly`): a move you are
+    /// watching finish on Move is not news, and a banner over the screen that
+    /// already says it is the same thing said twice. Money someone else sent
+    /// you is news either way and passes `awayOnly: false`.
+    static func outcome(_ kind: NotifyKind, id: String, place: String, body: String,
+                        mark: String? = nil, awayOnly: Bool = true) async {
+        if awayOnly, UIApplication.shared.applicationState == .active { return }
+        let plan = NotifyPlan(
+            id: "move:" + id, kind: kind,
+            title: kind.headline,
+            body: body,
+            link: "casberi://home",
+            occurredAt: .now,
+            source: CategoryFold.walletRoom,
+            place: place,
+            mark: mark)
+        await submit([plan])
+    }
+
     // MARK: - The retired whisper
 
     /// The daily whisper (§165) was a one-shot re-scheduled by every sweep, so

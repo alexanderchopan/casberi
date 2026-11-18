@@ -107,6 +107,8 @@ final class WatchlistPrices {
         quotes.merge(read) { $1 }
         readAt = .now
         readIDs = ids
+        // The Watchlist tile reads these same moves (prd §1881).
+        WidgetPublish.watchlist()
     }
 
     /// Prices and the day's change for the ids, keyless; `[:]` on failure.

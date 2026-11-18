@@ -44,6 +44,25 @@ final class SubscriptionsReading {
         await refresh(context)
     }
 
+    /// A subscription that went up, from any card (prd §1881; Apple Wallet's
+    /// own row already says it, `NotifySweep`'s `.priceRose`): told once per
+    /// new price, only while the rise is fresh (`was`, `creepFreshDays`).
+    static func announceRises(_ items: [Subscriptions.Item]) {
+        for item in items where !item.foundIn.contains(AppleWalletBridge.sourceName) {
+            guard let was = item.was, let now = item.amount, now > was else { continue }
+            let f = NumberFormatter()
+            f.numberStyle = .currency
+            f.currencyCode = item.currency
+            guard let from = f.string(from: NSNumber(value: was)), let to = f.string(from: NSNumber(value: now)) else { continue }
+            let monthly = item.cadenceDays.map(Subscriptions.monthlyDays.contains) ?? false
+            let body = item.isYearly ? String(localized: "\(from) to \(to) a year")
+                : monthly ? String(localized: "\(from) to \(to) a month")
+                : String(localized: "\(from) to \(to)")
+            Task { await Notifications.outcome(.priceRose, id: "price:\(item.id):\(now)", place: item.name,
+                                               body: body, mark: item.name, awayOnly: false) }
+        }
+    }
+
     func refresh(_ context: ModelContext, now: Date = .now) async {
         let members = Self.sources
         let d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { members.contains($0.source) },
@@ -58,6 +77,7 @@ final class SubscriptionsReading {
         let sum = Subscriptions.total(composed) { WalletCash.usd($0, $1, rates: rates) }
         let offered = SubscriptionsSource.suggestions(from: things, tracked: Set(composed.map(\.id)), now: now)
         if composed != items { items = composed }
+        Self.announceRises(composed)
         if offered != suggestions { suggestions = offered }
         if sum != total { total = sum }
         if rates != self.rates { self.rates = rates }

@@ -46,7 +46,7 @@ enum PrivateWatchTask {
     static func schedule() {
         guard PrivateMove.available, !DemoMode.isActive,
               !FreshReceive.shared.entries.isEmpty || PrivateMoney.anyWaiting(PrivateMoneyStore.shared.notes)
-                || !PrivatePending.shared.ops.isEmpty else { return }
+                || !PrivatePending.shared.ops.isEmpty || !YourAccountOrders.open.isEmpty else { return }
         let request = BGAppRefreshTaskRequest(identifier: taskID)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         try? BGTaskScheduler.shared.submit(request)
@@ -104,6 +104,9 @@ enum PrivateWatch {
         NSLog("privateWatch| start | %@ | budget %.0f s | %d roots | %d notes | %d fresh addresses | tor %@",
               why, budget, roots.count, store.notes.count, fresh.entries.count, String(describing: TorStatus.shared.state))
         guard !DemoMode.isActive else { NSLog("privateWatch| demo | nothing asked"); return true }
+        // Your open limit orders (prd §1881): CoW's word on each, told when
+        // one filled or ended (`YourAccountChain.refreshOrders`).
+        if !YourAccountOrders.open.isEmpty { await YourAccountChain.refreshOrders() }
         guard !roots.isEmpty || !store.notes.isEmpty || !fresh.entries.isEmpty else {
             NSLog("privateWatch| nothing private on this phone")
             return true
@@ -135,10 +138,28 @@ enum PrivateWatch {
         // The walk took 13 s through Tor for twenty-one addresses (measured):
         // in a 25 s background pass it waits for a later one or the foreground.
         if left() > 15, !Task.isCancelled { await fresh.restore() }
+        let before = Dictionary(fresh.entries.map { ($0.id, $0.state) }, uniquingKeysWith: { a, _ in a })
         if left() > 5, !Task.isCancelled { await fresh.check(context: context, force: why != "background") }
+        announceArrivals(before: before, after: fresh.entries)
         NSLog("privateWatch| done | %@ | %.1f s of %.0f | %d notes | %d fresh addresses", why,
               Date().timeIntervalSince(started), budget, store.notes.count, fresh.entries.count)
         return !Task.isCancelled
+    }
+
+    /// Money that reached one of your private receive addresses since the last
+    /// look (prd §1881): someone paid you, so it is news whether or not you
+    /// are in Casberi. Once per address.
+    static func announceArrivals(before: [String: FreshAddress.State], after: [FreshAddress.Entry]) {
+        for entry in after where before[entry.id] == .waiting {
+            switch entry.state {
+            case .moving, .moved:
+                Task { await Notifications.outcome(.moneyInPrivately, id: "fresh:\(entry.id)", place: "Privacy Pools",
+                                                   body: String(localized: "\(entry.token) at your private address"),
+                                                   mark: entry.token, awayOnly: false) }
+            default:
+                continue
+            }
+        }
     }
 
     #if DEBUG

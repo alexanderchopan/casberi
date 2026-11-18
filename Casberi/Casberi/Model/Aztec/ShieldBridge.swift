@@ -294,6 +294,10 @@ extension ShieldBridge {
                 let out = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex, AztecGas.unminted]) as? [String: Any]
                 AztecGas.spent(by: out)
                 AztecAccountStore.shared.markShieldClaimed(d.nonce)
+                // Told when you are away from Casberi (prd §1881).
+                let arrived = String(localized: "\(AztecAccountStore.figure(d)) from Ethereum")
+                Task { await Notifications.outcome(.moveArrived, id: "aztec:\(d.nonce)", place: "Aztec",
+                                                   body: arrived, mark: "Aztec") }
                 // It arrived: one Activity row by the deposit's transaction,
                 // Etherscan its door (prd §1700ac).
                 if let context = SharedStore.live?.mainContext {

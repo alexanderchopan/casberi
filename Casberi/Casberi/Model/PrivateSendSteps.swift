@@ -107,7 +107,28 @@ final class PrivateSendSteps {
         var total: Int? { ended.map { max(1, Int($0.timeIntervalSince(started).rounded())) } }
     }
 
-    private(set) var run: Run?
+    private(set) var run: Run? {
+        didSet { Self.announceEnd(from: oldValue, to: run, landed: nil) }
+    }
+
+    /// A send that just ended tells you, if you are away from Casberi (prd
+    /// §1881, `Notifications.outcome`): sent, or that it did not go through
+    /// and whether anything left. Said once, by when it started.
+    static func announceEnd(from old: Run?, to new: Run?, landed: String?) {
+        guard let old, old.isRunning, let new, !new.isRunning, new.started == old.started,
+              let ok = new.ok else { return }
+        // A private send is one this device PROVES (Aztec's, Railgun's): a
+        // move-in or an Aave loan is signed on Ethereum, and is no private send.
+        guard new.plan.steps.contains(where: { $0.key == .proving }) else { return }
+        let place = new.plan.isAztec ? "Aztec" : "Railgun"
+        let id = "send:\(Int(new.started.timeIntervalSince1970))"
+        let sent = new.plan.steps.last?.done ?? String(localized: "Sent")
+        let body = ok ? (landed ?? sent)
+            : new.reachedNetwork ? String(localized: "Open Casberi to see where it is")
+            : String(localized: "Nothing was sent")
+        Task { await Notifications.outcome(ok ? .moveSent : .moveFailed, id: id, place: place,
+                                           body: body, mark: place) }
+    }
 
     /// **A SEND THAT GOES ON BEHIND ITS SHEET (prd §1777, §1806).** Once
     /// every ask is answered a private send (within Aztec, or from Railgun
@@ -116,7 +137,9 @@ final class PrivateSendSteps {
     /// (`MoveStepCapsule`). Its own slot: a second move started meanwhile
     /// begins in `run` and cannot overwrite it, and its own engine's words
     /// still reach it (`received`, `mark(_:from:)`).
-    private(set) var away: Run?
+    private(set) var away: Run? {
+        didSet { Self.announceEnd(from: oldValue, to: away, landed: awayLanded) }
+    }
     /// Whose engine is proving the send behind the sheet.
     private(set) var awayFrom: Source?
     /// What the toast says once it lands (prd §1806).

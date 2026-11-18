@@ -132,11 +132,7 @@ extension FeedScreen {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let shown = portfolioShown, shown.totalUSD > 0 {
-                let worth = shown.foldingPrivate(walletPrivateByToken).sectionWorth(appsApart: walletOnAll)
-                let moves = walletHoldingMoves
-                let day = Self.homeDay(HoldingMoves.dayChange(Self.homeDayCells(worth).map {
-                    (usd: $0.value, move: $0.key == HoldingsTreemapLayout.otherID ? nil : moves[HoldingMoves.key($0.key)])
-                }))
+                let day = Self.homeDay(homeDayChange(shown))
                 // A last reading says when it was read (§825, §1593).
                 let stamp = WalletIngest.subline(totalUSD: shown.totalUSD, tokenCount: 0, stale: shown.asOf)
                 Button { homeOpen(.holdings) } label: {
@@ -187,6 +183,47 @@ extension FeedScreen {
                 HStack { Spacer(minLength: 0); homeWhoseMenu }
             }
         }
+    }
+
+    /// The day's move of what Home shows, as a fraction: its five biggest
+    /// and the rest as Other, as the pill reads it. One rule for the pill
+    /// and the Wallet tile (prd §1881).
+    func homeDayChange(_ shown: WalletPortfolio) -> Double? {
+        let worth = shown.foldingPrivate(walletPrivateByToken).sectionWorth(appsApart: walletOnAll)
+        let moves = walletHoldingMoves
+        return HoldingMoves.dayChange(Self.homeDayCells(worth).map {
+            (usd: $0.value, move: $0.key == HoldingsTreemapLayout.otherID ? nil : moves[HoldingMoves.key($0.key)])
+        })
+    }
+
+    /// Home's figures for the Wallet tile (prd §1881): the balance, the day,
+    /// and Public and Private as Home heads them, from the very numbers Home
+    /// draws, so the tile and Home never state two totals. Only on All, where
+    /// Home's total is the whole Wallet; never a followed wallet or an app's
+    /// pick. `asOf` is the reading's own stamp, or `distantFuture` for a live
+    /// one, which the publish dates (a live `.now` here would differ on every
+    /// pass and republish on each).
+    var homeWidgetFigures: WidgetWalletHome? {
+        guard walletReadsHere, walletOnAll, selectedWallet == nil, !walletOnFollowing,
+              let shown = portfolioShown, shown.totalUSD > 0 else { return nil }
+        let asOf = shown.asOf ?? .distantFuture
+        if BalancePrivacy.shared.hidden { return .withheld(asOf: asOf) }
+        let priv = walletShowsPrivatePlaces ? min(shown.totalUSD, walletPrivateUSD) : 0
+        let pub = walletPublicUSD
+        return WidgetWalletHome(total: shown.totalUSD,
+                                dayPct: homeDayChange(shown).map { $0 * 100 },
+                                publicUSD: pub >= 0.01 ? pub : nil,
+                                privateUSD: priv >= 0.01 ? priv : nil,
+                                asOf: asOf)
+    }
+
+    /// Hands Home's figures to the Wallet tile, a live reading dated now.
+    func publishHomeWidget(_ figures: WidgetWalletHome?) {
+        guard let figures else { return }
+        guard figures.asOf == .distantFuture else { WidgetPublish.home(figures); return }
+        WidgetPublish.home(WidgetWalletHome(total: figures.total, dayPct: figures.dayPct,
+                                            publicUSD: figures.publicUSD, privateUSD: figures.privateUSD,
+                                            hidden: figures.hidden, asOf: .now))
     }
 
     /// The day on its pill: the move alone ("+0.9%"), in the day's ink; a

@@ -54,11 +54,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case poolCleared
     case paymentsSilent
     case priceRose
-    /// A price alert you set crossed (prd §1081): a level reached, or a day
-    /// move as large as you asked about. You named the condition yourself,
-    /// so it stands alone like a deadline — the digest would deliver it at
-    /// 18:00, hours after the level it was set to catch.
-    case priceAlert
     /// App Store Connect turned your release down (2026-08-06, prd §324).
     /// Only the ALARMING verdicts reach here — an approval is welcome news you
     /// will see the moment you open anything, and it already rains in-app.
@@ -129,15 +124,42 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// `NotifySweep.classify` never returns it; only `NotifyDigest.plan`
     /// composes it, and only when the queue holds more than one thing.
     case digest
+    // — Your own moves, ending (prd §1881). You started each one; you did not
+    //   pick when it lands. Told only while you are away from Casberi, never
+    //   about a move you are watching (`Notifications.outcome`).
+    /// A private send went out (Railgun's broadcaster, a relayer, a fresh
+    /// sender carried it).
+    case moveSent
+    /// A move did not go through; the body says where the money is now.
+    case moveFailed
+    /// A move to another network or into Aztec arrived.
+    case moveArrived
+    /// A move to another network came back where it started (Across refunds
+    /// an order no one filled).
+    case moveReturned
+    /// Railgun's screening cleared: shielded money is spendable.
+    case readyToUse
+    /// A limit order filled.
+    case orderFilled
+    /// A limit order ended unfilled: expired or cancelled.
+    case orderEnded
+    /// Money landed at one of your private receive addresses.
+    case moneyInPrivately
+    // — Work's "Needs you" (prd §1881, §1080): a review asked of you, a build
+    //   that broke, an alarm, a payment that failed. Asked of YOU, never a
+    //   new item merely landing.
+    case needsYou
 
     var cls: NotifyClass {
         switch self {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .approvalGranted,
-             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose, .priceAlert,
+             .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
              .appRejected, .runningLow, .safeSignatureNeeded,
-             .walletIncident, .chainReset, .nodeDown, .connectionBroken:
+             .walletIncident, .chainReset, .nodeDown, .connectionBroken,
+             .moveFailed, .moveReturned, .orderEnded, .needsYou:
             return .alarm
-        case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest:
+        case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest,
+             .moveSent, .moveArrived, .readyToUse, .orderFilled, .moneyInPrivately:
             return .arrival
         }
     }
@@ -201,7 +223,13 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // machine you run; below a price rise, where money already left.
         case .connectionBroken: return 35
         case .priceRose:        return 40    // recurring money, already charged
-        case .priceAlert:       return 45    // a level you asked to hear about
+        // Your own money stopped short: it is safe where the body says, but
+        // the move you asked for did not happen.
+        case .moveFailed:       return 68
+        // Asked of you by name at work: a review, a broken build.
+        case .needsYou:         return 58
+        case .moveReturned:     return 48    // money back where it started
+        case .orderEnded:       return 25    // nothing moved; the order is over
         // The lowest alarm on purpose — "do this soon" rather than "something
         // is wrong right now". Ranked under a price rise (money already
         // left, so at least that one is definite) but still a real severity,
@@ -234,7 +262,11 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// Safe signature have no clock, but neither keeps until then.
     var standsAlone: Bool {
         switch self {
-        case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .priceAlert:
+        case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded:
+            return true
+        // Each of your own moves is its own news, said on its own (§1881).
+        case .moveSent, .moveFailed, .moveArrived, .moveReturned, .readyToUse,
+             .orderFilled, .orderEnded, .moneyInPrivately:
             return true
         default:
             return false
@@ -269,9 +301,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolCleared:      return String(localized: "Clear to withdraw")
         case .paymentsSilent:   return String(localized: "Payments went quiet")
         case .priceRose:        return String(localized: "A subscription went up")
-        // The row's own title says what crossed and where; this says it was
-        // the alert you set, which the row does not.
-        case .priceAlert:       return String(localized: "Your price alert")
         // Deliberately not "Rejected": the ROW's title already leads with the
         // exact verdict ("Metadata rejected · Casberi 1.4") and rides in the
         // body, so a headline repeating it would say one word twice. This says
@@ -291,6 +320,15 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .followersGained:  return String(localized: "New follower")
         case .appWalletMade:    return String(localized: "New app account")
         case .digest:           return String(localized: "From your apps")
+        case .moveSent:         return String(localized: "Sent privately")
+        case .moveFailed:       return String(localized: "Didn't go through")
+        case .moveArrived:      return String(localized: "Arrived")
+        case .moveReturned:     return String(localized: "Came back")
+        case .readyToUse:       return String(localized: "Ready to use")
+        case .orderFilled:      return String(localized: "Your order filled")
+        case .orderEnded:       return String(localized: "Your order ended")
+        case .moneyInPrivately: return String(localized: "Money arrived privately")
+        case .needsYou:         return String(localized: "Needs you")
         }
     }
 
@@ -310,7 +348,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolCleared:         return String(localized: "clear to withdraw")
         case .paymentsSilent:      return String(localized: "payments went quiet")
         case .priceRose:           return String(localized: "a price went up")
-        case .priceAlert:          return String(localized: "price alert")
         case .appRejected:         return String(localized: "App Review said no")
         case .runningLow:          return String(localized: "running low")
         case .chainReset:          return String(localized: "devnet reset")
@@ -323,6 +360,15 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .followersGained:     return String(localized: "new followers")
         case .appWalletMade:       return String(localized: "new app account")
         case .digest:              return String(localized: "updates")
+        case .moveSent:            return String(localized: "sent privately")
+        case .moveFailed:          return String(localized: "didn't go through")
+        case .moveArrived:         return String(localized: "arrived")
+        case .moveReturned:        return String(localized: "came back")
+        case .readyToUse:          return String(localized: "ready to use")
+        case .orderFilled:         return String(localized: "order filled")
+        case .orderEnded:          return String(localized: "order ended")
+        case .moneyInPrivately:    return String(localized: "money arrived privately")
+        case .needsYou:            return String(localized: "needs you")
         }
     }
 
@@ -334,7 +380,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     var digestRank: Int {
         if severity > 0 { return severity }
         switch self {
-        case .moneyIn, .payoutPaid: return 15
+        case .moneyIn, .payoutPaid, .moneyInPrivately, .moveArrived, .readyToUse, .orderFilled, .moveSent: return 15
         case .appWalletMade:        return 10
         case .repliesReceived:      return 8
         case .followersGained:      return 5
@@ -361,7 +407,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .poolCleared:         (one, many) = (String(localized: "withdrawal ready"), String(localized: "withdrawals ready"))
         case .paymentsSilent:      (one, many) = (String(localized: "quiet account"), String(localized: "quiet accounts"))
         case .priceRose:           (one, many) = (String(localized: "price rise"), String(localized: "price rises"))
-        case .priceAlert:          (one, many) = (String(localized: "price alert"), String(localized: "price alerts"))
         case .appRejected:         (one, many) = (String(localized: "rejection"), String(localized: "rejections"))
         case .runningLow:          (one, many) = (String(localized: "running low"), String(localized: "running low"))
         case .chainReset:          (one, many) = (String(localized: "reset"), String(localized: "resets"))
@@ -374,6 +419,15 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .followersGained:     (one, many) = (String(localized: "new follower"), String(localized: "new followers"))
         case .appWalletMade:       (one, many) = (String(localized: "app account"), String(localized: "app accounts"))
         case .digest:              (one, many) = (String(localized: "update"), String(localized: "updates"))
+        case .moveSent:            (one, many) = (String(localized: "private send"), String(localized: "private sends"))
+        case .moveFailed:          (one, many) = (String(localized: "move that failed"), String(localized: "moves that failed"))
+        case .moveArrived:         (one, many) = (String(localized: "move arrived"), String(localized: "moves arrived"))
+        case .moveReturned:        (one, many) = (String(localized: "move came back"), String(localized: "moves came back"))
+        case .readyToUse:          (one, many) = (String(localized: "ready to use"), String(localized: "ready to use"))
+        case .orderFilled:         (one, many) = (String(localized: "order filled"), String(localized: "orders filled"))
+        case .orderEnded:          (one, many) = (String(localized: "order ended"), String(localized: "orders ended"))
+        case .moneyInPrivately:    (one, many) = (String(localized: "private arrival"), String(localized: "private arrivals"))
+        case .needsYou:            (one, many) = (String(localized: "ask"), String(localized: "asks"))
         }
         return n.formatted() + " " + (n == 1 ? one : many)
     }

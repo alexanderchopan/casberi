@@ -16,7 +16,7 @@ struct FeedWidget: Widget {
                 .containerBackground(for: .widget) { WidgetField() }
         }
         .configurationDisplayName("Feed")
-        .description("What came today, in your Feed order.")
+        .description("The newest from your apps today.")
         .supportedFamilies([.systemSmall])
     }
 }
@@ -37,8 +37,8 @@ struct FeedProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<FeedEntry>) -> Void) {
-        // Two entries: now, and midnight, where the counts stop being today's.
-        // The app reloads this kind whenever the counts change, which a new
+        // Two entries: now, and midnight, where the rows stop being today's.
+        // The app reloads this kind whenever the rows change, which a new
         // day always does.
         let now = Date.now
         let calendar = Calendar.current
@@ -53,18 +53,10 @@ struct FeedProvider: TimelineProvider {
 struct FeedWidgetView: View {
     let entry: FeedEntry
 
-    /// Today's sections, or nil when the counts are not today's.
-    private var sections: [WidgetFeed.Section]? {
+    /// Today's rows, or nil once the day they were for has passed.
+    private var feed: WidgetFeed? {
         guard let feed = entry.feed, feed.isCurrent(now: entry.date) else { return nil }
-        return feed.sections
-    }
-
-    /// The rows the tile has room for. Past the cap the last row says how
-    /// many more there are, so the tile never drops a category silently.
-    private func shown(_ all: [WidgetFeed.Section]) -> (rows: [WidgetFeed.Section], more: Int) {
-        guard all.count > WidgetFeedTile.rowCap else { return (all, 0) }
-        let rows = Array(all.prefix(WidgetFeedTile.rowCap - 1))
-        return (rows, all.count - rows.count)
+        return feed
     }
 
     var body: some View {
@@ -76,27 +68,27 @@ struct FeedWidgetView: View {
                     .widgetAccentable()
                 WidgetLabel(text: String(localized: "Feed"))
             }
-            if let sections {
-                if sections.isEmpty {
+            if let feed {
+                if feed.rows.isEmpty {
                     line(String(localized: "Nothing yet today"))
                 } else {
-                    let cut = shown(sections)
-                    ForEach(cut.rows, id: \.room) { section in
-                        HStack(spacing: 6) {
-                            Text(verbatim: section.room)
-                                .dsText(.widgetTitle14)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Spacer(minLength: 4)
-                            Text(verbatim: "\(section.today)")
+                    // Home's Activity at tile size (§1864): the app's icon and
+                    // its newest thing, one line, no name.
+                    ForEach(Array(feed.rows.prefix(WidgetFeedTile.rowCap)), id: \.id) { row in
+                        HStack(spacing: 7) {
+                            mark(row.source)
+                            Text(verbatim: row.title)
                                 .dsText(.widgetSubline12)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
                         }
                     }
-                    if cut.more > 0 {
-                        line(String(localized: "\(cut.more) more"))
+                    Spacer(minLength: 0)
+                    if feed.more > 0 {
+                        Text("\(feed.more) more today")
+                            .dsText(.widgetSubline11)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                 }
             } else {
@@ -106,6 +98,27 @@ struct FeedWidgetView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(URL(string: "casberi://feed"))
+    }
+
+    /// The app's icon as the app drew it into the app group
+    /// (`WidgetFeedTile.marksFolder`); a blank square while it has not.
+    @ViewBuilder
+    private func mark(_ source: String) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 5, style: .continuous)
+        if let image = Self.markImage(source) {
+            Image(uiImage: image).resizable().scaledToFill()
+                .frame(width: 20, height: 20).clipShape(shape)
+        } else {
+            shape.fill(.secondary.opacity(0.3)).frame(width: 20, height: 20)
+        }
+    }
+
+    static func markImage(_ source: String) -> UIImage? {
+        guard let dir = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroup)?
+            .appendingPathComponent(WidgetFeedTile.marksFolder, isDirectory: true)
+        else { return nil }
+        return UIImage(contentsOfFile: dir.appendingPathComponent(WidgetFeedTile.markFile(source)).path)
     }
 
     private func line(_ text: String) -> some View {

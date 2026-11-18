@@ -99,6 +99,7 @@ extension YourAccountChain {
         for placed in YourAccountOrders.all where placed.state == .open {
             if placed.validTo < UInt32(Date().timeIntervalSince1970) {
                 YourAccountOrders.update(placed.uid) { $0.state = .expired }
+                announce(placed, state: .expired, paid: nil)
                 continue
             }
             guard let (state, paid) = await orderStanding(placed), state != .open else { continue }
@@ -107,8 +108,27 @@ extension YourAccountChain {
                 if let paid { $0.paidUnits = paid }
                 $0.settledAt = .now
             }
+            announce(placed, state: state, paid: paid)
         }
         return YourAccountOrders.all
+    }
+
+    /// A limit order that filled or ended, told when you are away from
+    /// Casberi (prd §1881): "0.5 ETH for 1,612 USDC", or what stayed put.
+    private static func announce(_ placed: YourAccountOrders.Placed, state: YourAccountOrders.State, paid: String?) {
+        let sold = YourAccountOrders.words(placed.sellUnits, decimals: placed.sellDecimals) + " " + placed.sellSymbol
+        let body: String
+        let kind: NotifyKind
+        if state == .filled {
+            let got = YourAccountOrders.words(paid ?? placed.buyUnits, decimals: placed.buyDecimals) + " " + placed.buySymbol
+            body = String(localized: "\(sold) for \(got)")
+            kind = .orderFilled
+        } else {
+            body = String(localized: "\(sold) stayed in your account")
+            kind = .orderEnded
+        }
+        Task { await Notifications.outcome(kind, id: "order:" + placed.uid, place: "CoW Swap",
+                                           body: body, mark: "CoW Swap") }
     }
 }
 
@@ -166,6 +186,18 @@ enum YourAccountOrders {
             self.validTo = validTo
             placedAt = .now
         }
+    }
+
+    /// Base units as a person reads them: "0.5", "1,612.04", at most four
+    /// places after the point.
+    static func words(_ units: String, decimals: Int) -> String {
+        guard let raw = Decimal(string: units) else { return units }
+        var scale = Decimal(1)
+        for _ in 0..<max(0, decimals) { scale *= 10 }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 4
+        return f.string(from: NSDecimalNumber(decimal: raw / scale)) ?? units
     }
 
     static let key = "move.orders.v1"

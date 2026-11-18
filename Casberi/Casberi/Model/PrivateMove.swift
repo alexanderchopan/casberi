@@ -552,7 +552,8 @@ final class PrivateMove {
                 }
                 stage = .opening
                 let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
-                                                            balanceToBalance: tag == nil && balanceToBalance == true)
+                                                            balanceToBalance: tag == nil && balanceToBalance == true,
+                                                            announce: true)
                 stage = .done(hash)
             } else {
                 stage = .preparing

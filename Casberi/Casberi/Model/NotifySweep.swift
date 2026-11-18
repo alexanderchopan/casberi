@@ -54,11 +54,18 @@ enum NotifySweep {
         // feed is showing.
         let watchedWallets = Set(live.compactMap { WalletbeatWatch.walletID(from: $0) })
 
-        for thing in fresh {
+        // One Work ask per app and title in a sweep (prd §1881): an alarm that
+        // flaps lands a row per evaluation, and "AWS · Needs you · 23 more"
+        // would count one alarm 24 times.
+        var asked: Set<String> = []
+        for thing in fresh.sorted(by: { $0.capturedAt > $1.capturedAt }) {
             guard let kind = classify(thing, now: now, watchedWallets: watchedWallets) else { continue }
             guard let id = thing.sourceRef else { continue }
+            if kind == .needsYou, !asked.insert(thing.source + "\u{1F}" + thing.title).inserted { continue }
             out.append(NotifyPlan(
-                id: "row:" + id,
+                // A Work ask is told once a day by what it says, not once per
+                // row: an alarm that flaps lands a new row each evaluation.
+                id: kind == .needsYou ? "ask:\(thing.source):\(thing.title):\(Self.dayKey(now))" : "row:" + id,
                 kind: kind,
                 title: headline(kind),
                 body: words?(thing) ?? thing.title,
@@ -184,6 +191,12 @@ enum NotifySweep {
     /// so declines every Walletbeat incident. That default is deliberate and
     /// fail-safe in the direction that matters: a caller who forgets it gets
     /// silence rather than an alarm about a wallet somebody does not use.
+    /// The day a Work ask is told on, for its once-a-day id.
+    static func dayKey(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+    }
+
     static func classify(_ thing: Thing, now: Date,
                          watchedWallets: Set<String> = []) -> NotifyKind? {
         guard let ref = thing.sourceRef else { return nil }
@@ -322,6 +335,17 @@ enum NotifySweep {
         //   prefix test for it would swallow the other two shapes. Expiry is
         //   ruled out first, by name, and everything else under `peer:` is a
         //   settled trade.
+        // — Across, a move to another network (prd §1881): told when it
+        //   arrives or comes back. The row's state is its own unlocalized tag
+        //   (`YourAccountAcross`, `WalletAcross.sync`), and `capturedAt` moves
+        //   to the settle, so the row re-enters the news window then. Waiting
+        //   says nothing: you just sent it.
+        if ref.hasPrefix("wallet:across:") {
+            if thing.tags.contains("filled") { return .moveArrived }
+            if thing.tags.contains("refunded") { return .moveReturned }
+            return nil
+        }
+
         if ref.hasPrefix("peer:expired:") { return nil }
         if ref.hasPrefix("peer:") { return .moneyIn }
         // — Privy (prd §803c): an app row lands dated the day its wallet was
@@ -418,6 +442,12 @@ enum NotifySweep {
             // announced as good news when it FAILED is exactly the §83 fake
             // status, so neither fires until the shape carries a marker.
         }
+        // — Work's "Needs you" (prd §1881, §1080): a review, assignment or
+        //   mention asked of you, a build that broke, an alarm, a payment that
+        //   failed — `WorkAsk`, the rule Home's Needs you reads. Never a new
+        //   item merely landing (user, 2026-11-18: "what i don't want is a
+        //   notification for every new item in the feed").
+        if WorkAsk.asks(thing, now: now) { return .needsYou }
         return nil
     }
 

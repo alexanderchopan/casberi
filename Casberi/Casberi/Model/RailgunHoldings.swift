@@ -141,6 +141,7 @@ final class RailgunHoldings {
                 held.append(Held(contract: b.token, symbol: symbol, decimals: decimals,
                                  amount: amount, spendable: PrivateMoney.decimal(hex: b.spendable)))
             }
+            announceReady(was: reading, now: held)
             reading = held
             readAt = .now
             if let data = try? JSONEncoder().encode(Reading(account: account, held: held, at: .now)) {
@@ -152,6 +153,22 @@ final class RailgunHoldings {
             // The last reading stands: a sync the roots did not confirm, or
             // a node that did not answer, shows nothing new as yours.
             NSLog("railgunHoldings| read failed | %@", String(describing: error))
+        }
+    }
+
+    /// Money that was still in Railgun's screening and now is spendable: told
+    /// when you are away from Casberi (prd §1881), one per token per reading.
+    private func announceReady(was old: [Held], now new: [Held]) {
+        for h in new {
+            guard let before = old.first(where: { $0.id == h.id }),
+                  (Decimal(string: before.pending) ?? 0) > 0,
+                  let gained = Optional((Decimal(string: h.spendable) ?? 0) - (Decimal(string: before.spendable) ?? 0)),
+                  gained > 0 else { continue }
+            let units = NSDecimalNumber(decimal: gained).stringValue
+            let body = usd(h, units: units).map { String(localized: "\(WalletValue.money($0)) of \(h.symbol) is in your private balance") }
+                ?? String(localized: "Your \(h.symbol) is in your private balance")
+            Task { await Notifications.outcome(.readyToUse, id: "railgun:ready:\(h.id):\(h.spendable)",
+                                               place: "Railgun", body: body, mark: "Railgun") }
         }
     }
 

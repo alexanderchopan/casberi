@@ -136,7 +136,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A mutation that changed nothing is not a passing mutation — it is one that did not run (scripts/mutation-liveness-audit.py)** → docs/verify.md · prd §627
 - **A fetch or a Keychain read belongs in `onAppear`/`.task`, never in a body or a computed property a body reads (build 525)** → docs/verify.md · prd §628
 - `-notifyProbe` — what would notify, WITHOUT notifying (prd §306, 2026-08-05, Model/NotifySweep.swift + Model/NotifyPlan.swift) → docs/hooks/system.md · prd §306
-- **Notifications are two switches, Wallet and Feed, sent as Casberi finds them, one per app ("Bluesky" / "Ana replied · 4 more"); `NotifyKind.standsAlone` goes on its own; no digest** → prd §1237
+- **Notifications are two switches, Wallet and Feed, sent as Casberi finds them, one per app ("Bluesky" / "Ana replied · 4 more"); `NotifyKind.standsAlone` goes on its own; no digest. Never one per new Feed item: only what is asked of you (Work's Needs you, §1881). Your own moves ending (sent privately, arrived, came back, ready to use, an order filled or ended) speak only while you are away (`Notifications.outcome`)** → prd §1237 · §1881
 - **L2BEAT — the rails your money sits on, reviewed by somebody independent** → docs/hooks/bridges.md · prd §428
 - **The Safe CO-SIGNER — a key that can sign and can never spend** (`-signerProbe`) → docs/hooks/wallet.md · prd §425
 - **The signer's four doors, no funded wallet (prd §913)** → docs/hooks/wallet.md · prd §913
@@ -267,4 +267,4 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|X>/<handle>`.
 
-- **Three widgets, each a small tile (prd §1210, §1223; the Watchlist went with Markets, §1529): Notes (two newest), Wallet, Feed (today's count per category in Feed order, no money, blank past midnight); the Category widget is deleted. `WidgetPublish` publishes `WidgetNotes`, `WidgetFeedTile` and sweeps retired payloads; `-widgetProbe YES` logs `widgetNotes|`, `widgetFeed|`.**
+- **Four widgets, each a small tile (prd §1210, §1881): Notes (two newest), Wallet (Home's balance, its day, Public and Private, published BY HOME, `homeWidgetFigures`), Feed (each app's newest thing today as Activity draws it, icons drawn into the app group, blank past midnight), Watchlist (first four, the day's move). `-widgetProbe YES` logs `widgetWallet|`, `widgetWatchlist|`, `widgetNotes|`, `widgetFeed|`.**

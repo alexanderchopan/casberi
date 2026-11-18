@@ -261,10 +261,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2059 of 2133 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2060 of 2134 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758)
+- §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
 - §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
 - §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a)
@@ -1613,7 +1613,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1208m — One rule on the phone: Settings, Sources and Addresses rise as a sheet too
 - §1209 — Generative search, v1: words become a page, with no model (amended by §1589)
 - §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins (amended by §1208l)
-- §1210 — Three widgets, each a small tile: Notes, Wallet, Feed (amended by §1223)
+- §1210 — Three widgets, each a small tile: Notes, Wallet, Feed (amended by §1223, §1881)
 - §1211 — Search finds what things SAY, teaches when empty, and reaches iOS (amended by §1589)
 - §1212 — The pill above the Feed takes you to its top (amended by §1208l)
 - §1213 — Logos chat says who, then what (amended by §1214, §1615)
@@ -1640,7 +1640,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1234 — The catalogue is Sources › Apps; the Apps screen is deleted
 - §1235 — Notes holds everything you write: your notes, Obsidian, Apple Journal, Day One and Notion
 - §1236 — See the demo leaves Settings
-- §1237 — Notifications are two switches, Wallet and Feed, sent as Casberi finds them
+- §1237 — Notifications are two switches, Wallet and Feed, sent as Casberi finds them (amended by §1881)
 - §1238 — One sheet at a time: inside a sheet, the next step pushes (amended by §1304)
 - §1239 — Day files under Life; the Day button stays its screen
 - §1240 — One sheet at a time, the rest
@@ -1925,7 +1925,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1526 — Yours · Everything: one switch in the Wallet's boxes (amended by §1587, §1590, §1591)
 - §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column
 - §1528 — Logos, the record to 2026-10-25: a chat nobody is known in can be named, and the Observer becomes a Basecamp module (…
-- §1529 — Markets is deleted (reverses §1000, §1081, §1082, §1167, §1250, §1467, §1498, §1519, §1527 item 1's Markets; amends §…
+- §1529 — Markets is deleted (reverses §1000, §1081, §1082, §1167, §1250, §1467, §1498, §1519, §1527 item 1's Markets; amends §… (amended by §1881)
 - §1530 — Under You and Following, Holdings' Tokens door is All tokens
 - §1531 — Your own model is always asked, and a reply that is only its marker is not an answer (amends §1478)
 - §1532 — Move offers the tokens you would know, and asks a failed network again (amends §1438, §1440)
@@ -2322,6 +2322,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1878 — Receive on Base or Robinhood, earn on Ethereum
 - §1879 — Send from your private balance to Base or Robinhood
 - §1880 — Dollars on Base and Robinhood, both ways
+- §1881 — Notifications and widgets for today's app: your own moves ending notify while you are away, Work's Needs you joins th…
 
 ## Dead rulings → what replaced them (generated)
 

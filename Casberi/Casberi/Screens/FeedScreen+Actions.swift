@@ -438,6 +438,9 @@ extension FeedScreen {
                 if let at = reading.readAt, !DemoMode.isActive {
                     WalletLastReading.remember(read.portfolio, scope: scopeKey, wallets: watched, at: at)
                 }
+                // A read that found the same figures still dates the Wallet
+                // tile now (prd §1881): `onChange` only fires on a change.
+                publishHomeWidget(homeWidgetFigures)
             } else if reading.failed, portfolio != nil, portfolioScope == scopeKey {
                 // A read that could not look keeps the map this scope already
                 // drew (prd §825): a rate-limited pass is not an empty wallet.

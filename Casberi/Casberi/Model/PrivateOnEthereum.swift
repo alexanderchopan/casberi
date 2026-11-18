@@ -169,10 +169,36 @@ enum PrivateOnEthereum {
     /// hash. The whole of it runs alone through the engine (finding 8): no
     /// other flow can open another account between the proof and the relay.
     static func send(token: String, amount: String, to: String, balanceToBalance: Bool = false,
-                     reason: String = String(localized: "Send from your private balance")) async throws -> String {
+                     reason: String = String(localized: "Send from your private balance"),
+                     announce: Bool = false) async throws -> String {
         guard network.yieldPool(for: token) != nil, PrivateMoney.isAddress(to), let hex = PrivateMoney.hex(amount) else { throw Failure.noPool }
         guard let account = PrivateRootKey.currentID else { throw Failure.noRoot }
-        return try await PrivacyEngine.exclusive {
+        // Told when you are away from Casberi (prd §1881): the relayer took
+        // it, or nothing left (every throw here comes before the relay
+        // answers). Only a send you asked for (`announce`): the gas a Railgun
+        // send or a private address tops up through here is its own move's
+        // part, never news of its own.
+        let started = Int(Date().timeIntervalSince1970)
+        guard announce else {
+            return try await relayedSend(account: account, token: token, hex: hex, to: to,
+                                         balanceToBalance: balanceToBalance, reason: reason, amount: amount)
+        }
+        do {
+            let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount)
+            Task { await Notifications.outcome(.moveSent, id: "pools:" + tx, place: "Privacy Pools",
+                                               body: String(localized: "Sent on Ethereum"), mark: "Privacy Pools") }
+            return tx
+        } catch {
+            Task { await Notifications.outcome(.moveFailed, id: "pools:\(started)", place: "Privacy Pools",
+                                               body: String(localized: "Nothing was sent"), mark: "Privacy Pools") }
+            throw error
+        }
+    }
+
+    private static func relayedSend(account: String, token: String, hex: String, to: String,
+                                    balanceToBalance: Bool, reason: String, amount: String) async throws -> String {
+        try await PrivacyEngine.exclusive {
             try await open(account, reason: reason)
             let engine = PrivacyEngine.shared
             PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)

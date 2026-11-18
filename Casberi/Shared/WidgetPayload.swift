@@ -10,11 +10,11 @@ import Foundation
 /// writes anymore.
 ///
 /// THE RULE THIS FILE EXISTS TO ENCODE: a widget may never show a stale
-/// READING. A reading — a balance, a week's flow — is a measurement with a
+/// READING. A reading — a balance, a day's move — is a measurement with a
 /// shelf life, and a widget has no choice but to persist it, so instead it
 /// DROPS it once it ages out. The tile gets quieter, never wrong.
 ///
-/// Four widgets read this, each a small tile (prd §1210, §1223): Notes,
+/// Four widgets read this, each a small tile (prd §1210, §1881): Notes,
 /// Wallet, the Feed and the Watchlist. The Today widget and the kept-ask
 /// widget went with the ask (2026-10-01), the Category widget with §1210, and
 /// their payloads with them.
@@ -89,95 +89,6 @@ enum WidgetPayload {
     }
 }
 
-// MARK: - The flow band
-
-/// A week of money in against money out (2026-08-14, prd §382b) —
-/// `WalletFlow.Band` reduced to what a tile can draw.
-///
-/// A sparkline answers "did the total move". This answers "what moved it",
-/// which is the question the curve raises and cannot settle.
-///
-/// **NO COUNTERPARTY NAMES, by ruling** (user: "we don't need counterparties
-/// b/c i dunno how it would fit"). The room's band names every lane; at 170pt
-/// a name is a truncation, and dropping them also settles the §374-adjacent
-/// question a lock screen would otherwise raise — who you pay is arguably more
-/// exposing than what you hold, and this way the tile never says.
-///
-/// **What could NOT be dropped with them is the disclosure.** `WalletFlow.Band`
-/// carries two counts on purpose and its own header states the rule: "a band
-/// drawn from 6 of 9 moves is a different claim from one drawn from all 9, and
-/// the no-silent-caps rule says the drawing has to say so". Losing the lane
-/// names loses detail; losing the disclosure would make the bars claim a
-/// completeness they don't have. So the counts travel, and the tile says
-/// "6 of 9 priced" whenever there is a gap.
-struct WidgetFlowBand: Codable, Equatable {
-    /// The two bar widths, 0…1 of the wider side. ALWAYS present, because a
-    /// ratio is a shape and §374 rule 3 keeps shapes — and because deriving
-    /// them from the dollar figures would mean withholding the figures kills
-    /// the bars, which is the trap the first draft of this walked into.
-    let inWeight: Double
-    let outWeight: Double
-    /// The figures, or nil when withheld (§374) — the same shape as
-    /// `WidgetWalletLine.total`, and withheld for the same reason: a Home
-    /// Screen is the most stood-next-to surface the OS has, and a figure that
-    /// was never written cannot be leaked by a rendering bug.
-    let inUSD: Double?
-    let outUSD: Double?
-    /// Legs that reached us with no price — they COULD have been priced and
-    /// weren't. Kept apart from `predating` because only this one says
-    /// anything about how well the read is working.
-    let unpriced: Int
-    /// Legs older than price data itself, which never can be priced. A
-    /// different fact, disclosed for the same reason.
-    let predating: Int
-    /// How many legs are actually IN the bars.
-    let priced: Int
-    /// Hide wallet balances (§374). The figures are withheld exactly as the
-    /// wallet line's are — and the bars keep their proportions, because a
-    /// ratio is a shape.
-    var hidden: Bool = false
-}
-
-extension WidgetFlowBand {
-    /// The two bar widths as 0…1 of the wider side, so the larger flow fills
-    /// the track and the smaller reads against it.
-    ///
-    /// A side of zero draws NOTHING rather than a hairline: "no money went out
-    /// this week" and "a sliver went out" are different weeks, and at this size
-    /// a minimum-width stub is how they start looking the same.
-    ///
-    /// Computed once by the publisher and carried, never recomputed from the
-    /// figures — see `inWeight`.
-    static func weights(inUSD: Double, outUSD: Double) -> (Double, Double) {
-        let scale = max(inUSD, outUSD)
-        guard scale > 0 else { return (0, 0) }
-        return (inUSD / scale, outUSD / scale)
-    }
-
-    /// Every leg the window held, priced or not.
-    var total: Int { priced + unpriced + predating }
-
-    /// Whether the bars are drawn from less than the whole window — the one
-    /// thing the tile must say out loud.
-    var isPartial: Bool { unpriced + predating > 0 }
-
-    /// Whether the tile owes a "6 of 9 priced" line.
-    ///
-    /// The FACT lives here and the SENTENCE lives in the widget (see
-    /// `WalletWidgetView.pricedNote`) — deliberately, because this file compiles
-    /// into the app and the share extension as well as the extension that draws
-    /// tiles, and a `String(localized:)` here puts a widget-only sentence into
-    /// all three string catalogs, where two of them can never show it.
-    ///
-    /// It is the one piece of the room's band that could NOT be dropped along
-    /// with the lane names. `WalletFlow.Band`'s own header states the rule:
-    /// "a band drawn from 6 of 9 moves is a different claim from one drawn from
-    /// all 9, and the no-silent-caps rule says the drawing has to say so".
-    /// Losing the names loses detail; losing this would make two bars claim a
-    /// completeness they don't have.
-    var owesDisclosure: Bool { isPartial && total > 0 }
-}
-
 // MARK: - The dated rail
 
 /// Deadlines on a rail (2026-08-14, prd §382 amendment). Born for the Today
@@ -224,115 +135,99 @@ enum WidgetRunway {
 
 // MARK: - Wallet
 
-/// The combined wallet line, as a widget draws it.
+/// Home's balance, as the Wallet widget draws it (prd §1881, amends §1210
+/// item 2): the figure Home prints, its day, and Public and Private as Home's
+/// two sections head them. Published BY HOME (`FeedScreen.homeWidgetFigures`),
+/// from the very numbers it draws, so the tile and Home can never state two
+/// totals; the line and the week's In and Out it drew before read the
+/// followed addresses alone and are deleted.
 ///
-/// `points` is `WalletStore.combinedValueSamples()` reduced to plain USD
-/// figures — the same forward-only, never-back-filled series the app's own
-/// balance card draws, so the widget's curve and the app's curve can never
-/// disagree about history.
-struct WidgetWalletLine: Codable, Equatable {
-    /// Oldest first. Never more than `WidgetWallet.pointCap` — a home-screen
-    /// sparkline is ~150pt wide and anything past that is bytes nobody can see.
-    let points: [Double]
-    /// The latest figure, or nil when it is WITHHELD — see `hidden`. Carried
-    /// explicitly rather than read back out of `points` because the tile prints
-    /// it, and taking it from the array at three call sites is how the printed
-    /// number and the drawn curve end up describing different moments.
+/// Under Hide balances (§374) the figures are NOT PUBLISHED AT ALL: a Home
+/// Screen tile is the most stood-next-to surface the OS has, and a figure that
+/// was never written cannot leak through a rendering bug in a mask.
+struct WidgetWalletHome: Codable, Equatable {
+    /// Home's balance, or nil when withheld.
     let total: Double?
-    /// Percent change across the drawn window, or nil when there aren't two
-    /// points to difference (or it is withheld). Nil is NOT zero: zero has a
-    /// meaning ("it didn't move") and claiming it when we don't know is §83's
-    /// fake status.
-    var changePct: Double?
-    /// Hide wallet balances is on (§374).
-    ///
-    /// The figures are not merely masked at draw time here — they are NOT
-    /// PUBLISHED AT ALL, which is a deliberate divergence from §374's rule 1
-    /// ("mask at the render boundary and nowhere else"). That rule exists
-    /// because masking inside `TokenStats.compact`/`WalletIngest.format` would
-    /// write `••••` into PERSISTED, CLOUDKIT-SYNCED model data, where it would
-    /// survive the toggle being turned back off. This payload is neither: it is
-    /// a transport, republished from scratch on every foreground, so withholding
-    /// costs exactly one republish and removes the leak path completely. And
-    /// the leak path is the point — §374's threat is what somebody standing
-    /// next to you can read, and a Home Screen tile is the most stood-next-to
-    /// surface the OS has. A rendering bug in a mask cannot expose a figure that
-    /// was never written.
-    ///
-    /// §374 rule 3 still holds exactly: figures go, SHAPES stay. `points` is
-    /// published either way and the curve draws either way — nobody reads a net
-    /// worth off an unlabelled line, and blanking it would leave the tile empty
-    /// rather than private.
+    /// The day's move in percent, or nil: unknown, or withheld. Nil is not
+    /// zero (§83).
+    let dayPct: Double?
+    /// Home's Public head, or nil when withheld or when Home draws none.
+    let publicUSD: Double?
+    /// Home's Private head, or nil when withheld or when Home draws none.
+    let privateUSD: Double?
     var hidden: Bool = false
-    /// When the last point was sampled. The tile stamps this whenever it is old
-    /// enough to matter — "$12,480" and "$12,480 · as of 5h ago" are different
-    /// claims and only one of them is true after five hours.
+    /// When the reading behind the figure was taken.
     let asOf: Date
-}
 
-extension WidgetWalletLine {
-    /// The curve as 0…1, oldest first, for a sparkline to draw.
-    ///
-    /// A FLAT series returns 0.5 for every point, and that is the whole reason
-    /// this is a named function with a test rather than two lines inside a
-    /// `Path`. The obvious normalization divides by the range, which for a flat
-    /// series is zero — so the naive guard against dividing by zero returns 0,
-    /// which draws the line along the FLOOR of the tile. A wallet that did
-    /// nothing then reads as a wallet that went to zero: the most alarming
-    /// possible way to say nothing happened. `AgentPanel` has carried this rule
-    /// (and a mutation test for it) since §334; this is the same rule at the one
-    /// place the app draws a curve in another process.
-    var normalizedPoints: [Double] { WidgetCurve.normalized(points) }
-}
-
-/// The flat-series rule, once, for every curve a tile draws (the wallet's
-/// line and the watchlist's sparklines): 0…1 by the series' own range, and a
-/// series that did not move draws down the middle, never along the floor.
-enum WidgetCurve {
-    static func normalized(_ points: [Double]) -> [Double] {
-        guard let low = points.min(), let high = points.max() else { return [] }
-        let span = high - low
-        guard span > 0 else { return points.map { _ in 0.5 } }
-        return points.map { ($0 - low) / span }
+    /// The figures Hide balances keeps off the Home Screen.
+    static func withheld(asOf: Date) -> WidgetWalletHome {
+        WidgetWalletHome(total: nil, dayPct: nil, publicUSD: nil, privateUSD: nil,
+                         hidden: true, asOf: asOf)
     }
 }
 
 enum WidgetWallet {
     static let kind = "casberi.wallet"
-    static let key = "widget.wallet"
-    static let stampKey = "widget.walletAt"
-    static let flowKey = "widget.flow"
-    static let flowStampKey = "widget.flowAt"
-
-    /// The week's flow band (§382b), or nil when there isn't a fresh one. Shares the
-    /// line's own freshness window: both are readings about the same wallet at
-    /// the same moment, and a band that outlived the figure above it would be
-    /// describing a week the total no longer belongs to.
-    static func flow(now: Date = .now,
-                     defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
-    -> WidgetFlowBand? {
-        WidgetPayload.read(WidgetFlowBand.self, key: flowKey, stampKey: flowStampKey,
-                           freshness: freshness, now: now, defaults: defaults)
-    }
+    static let key = "widget.home"
+    static let stampKey = "widget.homeAt"
 
     /// Money is the payload with the shortest honest life. Past this the tile
     /// declines rather than showing a two-day-old balance in the largest type
     /// on the screen — the one place §83 is most expensive to break.
     static let freshness: TimeInterval = 36 * 3600
 
-    /// How old the last sample may be before the tile stamps it. Wallet
-    /// sampling is throttled to one point per four hours (`recordSample`), so
-    /// anything under that is simply the normal cadence and stamping it would
-    /// cry wolf on every tile, all day.
+    /// How old the reading may be before the tile says when it was read.
     static let stampAfter: TimeInterval = 4 * 3600
-
-    static let pointCap = 60
 
     static func published(now: Date = .now,
                           defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
-    -> WidgetWalletLine? {
-        WidgetPayload.read(WidgetWalletLine.self, key: key, stampKey: stampKey,
+    -> WidgetWalletHome? {
+        WidgetPayload.read(WidgetWalletHome.self, key: key, stampKey: stampKey,
                            freshness: freshness, now: now, defaults: defaults)
+    }
+}
+
+// MARK: - Watchlist
+
+/// Your first four watched tokens and the day's move of each, as the
+/// Watchlist widget draws them (prd §1881; the Watchlist went with Markets,
+/// §1529, and came back on Home, §1632). Prices, never balances, so Hide
+/// balances has nothing here to withhold.
+struct WidgetWatch: Codable, Equatable {
+    let rows: [Row]
+
+    struct Row: Codable, Equatable {
+        let symbol: String
+        /// The day's move in percent, or nil when unread.
+        let dayPct: Double?
+    }
+}
+
+enum WidgetWatchlist {
+    static let kind = "casberi.watchlist"
+    static let key = "widget.watch"
+    static let stampKey = "widget.watchAt"
+    /// A day's move is a day's reading: a day and a half, as the wallet's.
+    static let freshness: TimeInterval = 36 * 3600
+    /// The small tile's rows.
+    static let rowCap = 4
+
+    static func published(now: Date = .now,
+                          defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetWatch? {
+        WidgetPayload.read(WidgetWatch.self, key: key, stampKey: stampKey,
+                           freshness: freshness, now: now, defaults: defaults)
+    }
+
+    /// The day's move as the tile prints it, and its direction: Home's
+    /// Watchlist rule (`WatchlistRules.change`), spelled again here because
+    /// the widget target cannot see the app's model. A move that rounds to
+    /// zero has no sign and no colour (§83).
+    static func change(_ percent: Double) -> (words: String, up: Bool?) {
+        let tenths = (percent * 10).rounded()
+        guard tenths != 0, percent.isFinite else { return ("0.0%", nil) }
+        let magnitude = String(format: "%.1f%%", abs(tenths) / 10)
+        return tenths > 0 ? ("+" + magnitude, true) : ("\u{2212}" + magnitude, false)
     }
 }
 
@@ -380,27 +275,30 @@ enum WidgetNotes {
 
 // MARK: - The Feed
 
-/// The Feed's contents in Feed order, for the Feed widget (prd §1210): each
-/// category with something today, in `CategoryOrder.current` (Settings › Feed
-/// order), and how many came today. The Feed's glance tiles (§1208d) at the
-/// size of one Home Screen tile.
+/// Today's Feed as Home's Activity draws it (prd §1881, amends §1210 item 3,
+/// after §1864): each app's newest thing today, newest first, its icon and
+/// its line, no name; then how many more came today. No money (§1208 item 7).
 ///
-/// A count of today is a DATE's reading, so the payload carries the day it
-/// counted. The widget draws the counts only on that day and says so once it
-/// has passed; it never shows yesterday's counts as today's.
+/// A today is a DATE's reading, so the payload carries its day. The widget
+/// draws the rows only on that day and says so once it has passed; it never
+/// shows yesterday's as today's.
 struct WidgetFeed: Codable, Equatable {
-    /// The start of the day the counts are for.
+    /// The start of the day the rows are for.
     let day: Date
-    let sections: [Section]
+    let rows: [Row]
+    /// Everything else that came today, past the rows.
+    let more: Int
 
-    struct Section: Codable, Equatable {
-        /// The category's name.
-        let room: String
-        /// How many came today.
-        let today: Int
+    struct Row: Codable, Equatable {
+        /// `Thing.id`, for `casberi://thing/<id>`.
+        let id: String
+        /// The app, whose icon leads (`WidgetFeedTile.markFile`).
+        let source: String
+        let title: String
+        let at: Date
     }
 
-    /// Whether the counts are for the day `now` is in.
+    /// Whether the rows are for the day `now` is in.
     func isCurrent(now: Date = .now, calendar: Calendar = .current) -> Bool {
         calendar.isDate(day, inSameDayAs: now)
     }
@@ -408,13 +306,36 @@ struct WidgetFeed: Codable, Equatable {
 
 enum WidgetFeedTile {
     static let kind = "casberi.feed"
-    static let key = "widget.feed"
-    static let stampKey = "widget.feedAt"
+    static let key = "widget.feedRows"
+    static let stampKey = "widget.feedRowsAt"
     /// Two days: long enough to say "open Casberi for today" the morning after,
-    /// short enough that a week-old order is not kept.
+    /// short enough that a week-old row is not kept.
     static let freshness: TimeInterval = 48 * 3600
     /// The small tile's rows.
-    static let rowCap = 4
+    static let rowCap = 3
+    /// The app icons the rows lead with, drawn by the app (the widget cannot
+    /// see its asset catalogue) into this app-group folder.
+    static let marksFolder = "WidgetMarks"
+
+    /// The file an app's icon is drawn to, by a name safe on disk.
+    static func markFile(_ source: String) -> String {
+        let safe = source.lowercased().unicodeScalars
+            .map { CharacterSet.alphanumerics.contains($0) ? String($0) : "-" }.joined()
+        return safe + ".png"
+    }
+
+    /// Each app's newest thing, newest first, `rowCap` of them, and the count
+    /// of everything else today. `items` are today's things, any order.
+    static func rows(_ items: [WidgetFeed.Row]) -> (rows: [WidgetFeed.Row], more: Int) {
+        var newest: [String: WidgetFeed.Row] = [:]
+        for item in items where (newest[item.source]?.at ?? .distantPast) < item.at {
+            newest[item.source] = item
+        }
+        let rows = Array(newest.values
+            .sorted { $0.at != $1.at ? $0.at > $1.at : $0.id < $1.id }
+            .prefix(rowCap))
+        return (rows, items.count - rows.count)
+    }
 
     static func published(now: Date = .now,
                           defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
@@ -423,5 +344,3 @@ enum WidgetFeedTile {
                            freshness: freshness, now: now, defaults: defaults)
     }
 }
-
-

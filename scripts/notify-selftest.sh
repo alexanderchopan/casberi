@@ -570,11 +570,15 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
 // the same things told twice, a digest at 03:00, a category switched off that
 // still speaks, two categories folded into one, or a second delivery in a day
 // the settings footnote promised would not come.
-// prd §1081 adds the fifth: a price alert you set names its own moment, and
-// the digest would deliver it hours after the level it was set to catch.
+// prd §1881 retires the price alert with Markets and adds your own moves
+// ending: each is its own news, never folded into an app's batch.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
-   [.disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .priceAlert],
-   "exactly six kinds stand alone; everything else waits for the digest (prd §1872 adds a network upgrade)")
+   [.disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded,
+    .moveSent, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .orderFilled, .orderEnded, .moneyInPrivately],
+   "exactly these kinds stand alone; everything else goes one per app (prd §1872, §1881)")
+// Work's Needs you is asked of you, but it is an app's news: one per app.
+ok(!NotifyKind.needsYou.standsAlone && NotifyKind.needsYou.cls == .alarm,
+   "a Work ask goes in its app's notification, as an alarm (prd §1881)")
 ok(Set(ts).isSubset(of: Set(NotifyKind.allCases.filter(\.standsAlone))),
    "a kind that pierces a Focus never waits for the evening slot")
 ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
@@ -883,11 +887,11 @@ mutate "a kind loses its headline, so a notification arrives with an empty title
 
 # ── the digest (prd §770) ───────────────────────────────────────────────────
 mutate "money arriving stands alone again, one buzz per transfer" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .priceAlert, .moneyIn:/'
-mutate "a price alert you set waits for the evening digest (prd §1081)" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded, .moneyIn:/'
+mutate "a move that failed is folded into an app's batch (prd §1881)" \
+       's/case \.moveSent, \.moveFailed, \.moveArrived,/case .moveSent, .moveArrived,/'
 mutate "a Safe signature waits for the evening digest" \
-       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .priceAlert:/'
+       's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.networkUpgrade, \.safeSignatureNeeded:/case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade:/'
 mutate "every app folds into one notification again" \
        's/Dictionary\(grouping: queue, by: \\\.seat\)/Dictionary(grouping: queue, by: { _ in "" })/'
 mutate "a batch counts instead of naming its newest thing" \
@@ -925,7 +929,7 @@ mutate "the digest ranks by its least urgent thing" \
 mutate "a like outranks money in the summary" \
        's/case \.likesReceived:        return 3/case .likesReceived:        return 19/'
 mutate "an arrival outranks an alarm in the summary" \
-       's/case \.moneyIn, \.payoutPaid: return 15/case .moneyIn, .payoutPaid: return 25/'
+       's/\.orderFilled, \.moveSent: return 15/.orderFilled, .moveSent: return 25/'
 mutate "the card draws every row, however many" \
        's/return Array\(out\.prefix\(cardRowCap\)\)/return out/'
 
@@ -992,6 +996,9 @@ enum ASCVersionState: String {
     var alarming: Bool { self == .rejected || self == .metadataRejected || self == .invalidBinary }
 }
 enum WalletIngest { static let holdingFloor: Double = 1.0 }
+// Work's Needs you (prd §1881): the stub answers by a tag, so the harness
+// asserts the sweep ASKS, not `WorkAsk`'s own rule (`work-ask-selftest.sh`).
+enum WorkAsk { static func asks(_ thing: Thing, now: Date) -> Bool { thing.tags.contains("ask") } }
 enum StripeWatch { static let source = "Stripe" }
 enum AppleWalletBridge { static let sourceName = "Apple Wallet" }
 
@@ -1092,6 +1099,33 @@ func runFixtures() {
        "a staked sequencer that stopped attesting notifies")
     ok(NotifySweep.classify(row(ref: "aztec:vote:6"), now: now) == nil,
        "an Aztec vote stays a row")
+
+    // ── prd §1881: a move to another network, told when it settles ──────
+    ok(NotifySweep.classify(row(ref: "wallet:across:0xabc", tags: ["Across", "filled"]), now: now) == .moveArrived,
+       "an Across move that filled is told as arrived")
+    ok(NotifySweep.classify(row(ref: "wallet:across:0xabc", tags: ["Across", "refunded"]), now: now) == .moveReturned,
+       "an Across move refunded is told as came back")
+    ok(NotifySweep.classify(row(ref: "wallet:across:0xabc", tags: ["Across", "waiting"]), now: now) == nil,
+       "an Across move still waiting says nothing: you just sent it")
+    // ── prd §1881: Work's Needs you, never a new item merely landing ─────
+    ok(NotifySweep.classify(row(ref: "github:notif:1", source: "GitHub", tags: ["ask"]), now: now) == .needsYou,
+       "a Work ask of you is told")
+    ok(NotifySweep.classify(row(ref: "github:notif:2", source: "GitHub", tags: []), now: now) == nil,
+       "a Work row that asks nothing of you stays a row")
+    // One alarm that flaps lands a row per evaluation: one ask per sweep.
+    let flaps = (0..<5).map { i -> Thing in
+        let t = row(ref: "aws:alarm:api:ALARM:\(i)", source: "AWS", tags: ["ask"])
+        t.title = "prod-api-5xx"
+        t.capturedAt = now.addingTimeInterval(Double(-i * 60))
+        return t
+    }
+    let other = row(ref: "aws:alarm:db:ALARM:1", source: "AWS", tags: ["ask"])
+    other.title = "db-cpu"
+    other.capturedAt = now
+    let asks = NotifySweep.plans(things: flaps + [other], now: now).plans.filter { $0.kind == .needsYou }
+    ok(asks.count == 2, "one ask per alarm in a sweep, not one per evaluation (got \(asks.count))")
+    ok(asks.contains { $0.id == "ask:AWS:prod-api-5xx:" + NotifySweep.dayKey(now) },
+       "an ask is told once a day by what it says, so the next evaluation's row is not news")
 
     // ── Safe config (prd §1249): a new fallback handler or new code is the
     //    "Module added" news one step over; an owner change alone stays a row ──

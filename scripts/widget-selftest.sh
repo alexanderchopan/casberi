@@ -4,13 +4,14 @@
 #
 #   Casberi/Shared/WidgetPayload.swift
 #     — WidgetPayload.write/read   (the publish round trip, and the reload budget)
-#     — WidgetWalletLine.normalizedPoints  (a flat curve draws down the MIDDLE)
-#     — WidgetFlowBand             (the week's flow, and its disclosure)
+#     — WidgetWalletHome           (Home's figures; withheld under Hide balances)
+#     — WidgetFeedTile.rows        (each app's newest thing today, and the rest)
+#     — WidgetWatchlist.change     (a move that rounds to zero has no sign)
 #     — WidgetRunway.positions     (the dated rail's window always contains now)
 #
-# One widget since the ask retired (2026-10-01): the wallet. The Today and
-# kept-ask tiles, and the asks, deadlines, Safe-call, requests and people
-# payloads they read, went with it; the publisher clears what they left.
+# Four small tiles (prd §1210, §1881): Notes, Wallet (Home's figures), Feed
+# (Home's Activity rows) and Watchlist. The Today and kept-ask tiles and their
+# payloads went with the ask (2026-10-01); the publisher clears what they left.
 #   Casberi/Shared/MoneyFormat.swift
 #     — compactUSD / isFlatPercent / percentLabel
 #
@@ -20,12 +21,10 @@
 # looked at it until today, the screen sweep drives the app and not the Home
 # Screen, and no probe can attach to another process's timeline. So:
 #
-#   • **A FLAT WALLET CURVE DRAWN ALONG THE FLOOR.** The obvious normalization
-#     divides by a range that is zero for a flat series, and the obvious guard
-#     against dividing by zero returns 0 — which draws a wallet that did nothing
-#     as a wallet that went to zero, the most alarming possible way to say
-#     nothing happened. `AgentPanel` has carried this rule since §334; this is
-#     the same rule in another process.
+#   • **THE TILE AND HOME STATING TWO TOTALS (prd §1881).** The tile drew the
+#     followed addresses' line, a different sum from Home's. Home now hands
+#     the tile the figures it draws; a publisher that re-derives them is how
+#     the two drift apart again.
 #   • **A stale READING printed as a current one.** A widget has no choice but
 #     to persist its readings, so the freshness window is the only thing
 #     standing between a tile and a stale number in the largest type on the
@@ -128,9 +127,24 @@ grep -q 'kind: WidgetWallet.kind' "$TMP/walletw.nc" \
        print -u2 "  every tile would be stale in whichever configuration is missing it."; exit 1; }
 
 # Reload only what changed. See `WidgetPayload.write`'s own note.
-grep -q 'if stale { WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind) }' "$TMP/publish.nc" \
-  || { print -u2 "✗ publishAll no longer reloads only when a payload changed — it would spend the"; \
-       print -u2 "  system's refresh budget rewriting identical bytes on every foreground."; exit 1; }
+grep -q 'if WidgetPayload.write(figures, key: WidgetWallet.key,' "$TMP/publish.nc" \
+  || { print -u2 "✗ the Wallet tile no longer reloads only when Home's figures changed — it would spend the"; \
+       print -u2 "  system's refresh budget rewriting identical bytes on every pass."; exit 1; }
+# The Wallet tile is Home's figures, handed over by Home (prd §1881): never
+# re-derived in the publisher, or the tile and Home state two totals.
+FEEDSCREEN="Casberi/Casberi/Screens/FeedScreen.swift"
+HOMEHEAD="Casberi/Casberi/Screens/FeedScreen+HomeHead.swift"
+strip_comments "$FEEDSCREEN" > "$TMP/feedscreen.nc"
+strip_comments "$HOMEHEAD" > "$TMP/homehead.nc"
+grep -q '.onChange(of: homeWidgetFigures, initial: true)' "$TMP/feedscreen.nc" \
+  || { print -u2 "✗ Home no longer hands its figures to the Wallet tile (prd §1881)"; exit 1; }
+grep -q 'total: shown.totalUSD,' "$TMP/homehead.nc" \
+  || { print -u2 "✗ the Wallet tile's total is no longer the balance Home prints (prd §1881)"; exit 1; }
+grep -qE 'combinedValueSamples|WidgetWalletLine' "$TMP/publish.nc" \
+  && { print -u2 "✗ the publisher derives a wallet figure of its own again — the tile and Home would state two totals"; exit 1; }
+# The Watchlist tile is republished when its prices land, not only on a foreground.
+grep -q 'WidgetPublish.watchlist()' Casberi/Casberi/Model/Watchlist.swift \
+  || { print -u2 "✗ the Watchlist tile is no longer republished when its prices land"; exit 1; }
 # What the retired tiles left in the app group is cleared on every pass
 # (2026-10-01) — a payload with no reader is a stale reading kept forever.
 grep -q 'sweepRetired(group)' "$TMP/publish.nc" \
@@ -143,10 +157,8 @@ done
 # §374, and the reason it is a WITHHOLD rather than a mask: a Home Screen is the
 # most stood-next-to surface the OS has, and the threat §374 exists for is
 # exactly somebody standing next to you.
-grep -q 'hidden ? nil : last.usd' "$TMP/publish.nc" \
-  || { print -u2 "✗ the wallet payload no longer withholds the total under Hide account balances (§374)"; exit 1; }
-grep -q 'points: points' "$TMP/publish.nc" \
-  || { print -u2 "✗ the wallet payload no longer publishes the curve — §374 rule 3 keeps the SHAPE"; exit 1; }
+grep -q 'if BalancePrivacy.shared.hidden { return .withheld(asOf: asOf) }' "$TMP/homehead.nc" \
+  || { print -u2 "✗ Home's figures no longer withhold the balance under Hide account balances (§374)"; exit 1; }
 
 # The import Live Activity must end on BOTH exits. Ending only on success
 # leaves a lock-screen count frozen forever after a failed import, with no way
@@ -164,14 +176,14 @@ grep -qE '\$%\.1fK' "$TMP/panel.nc" \
 
 # Every tile the bundle declares must actually be in the bundle. A widget
 # struct that compiles and is never listed is invisible with no error anywhere.
-for w in NotesWidget WalletWidget FeedWidget ComposeControl NoteControl; do
+for w in NotesWidget WalletWidget FeedWidget WatchlistWidget ComposeControl NoteControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
     || { print -u2 "✗ $w is not in the widget bundle — it would never appear in the gallery"; exit 1; }
 done
 # Three widgets, each a small tile (prd §1210). The Category widget went with it.
 grep -q "        CategoryWidget()" "$TMP/bundle.nc" \
   && { print -u2 "✗ CategoryWidget is back in the bundle — §1210 replaced it with Notes and Feed"; exit 1; }
-for wf in WalletWidget NotesWidget FeedWidget; do
+for wf in WalletWidget NotesWidget FeedWidget WatchlistWidget; do
   f="Casberi/CasberiWidgets/$wf.swift"
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
   strip_comments "$f" > "$TMP/$wf.nc"
@@ -182,19 +194,21 @@ grep -q 'kind: WidgetNotes.kind' "$TMP/NotesWidget.nc" \
   || { print -u2 "✗ the Notes widget no longer uses WidgetNotes.kind"; exit 1; }
 grep -q 'kind: WidgetFeedTile.kind' "$TMP/FeedWidget.nc" \
   || { print -u2 "✗ the Feed widget no longer uses WidgetFeedTile.kind"; exit 1; }
-# The Watchlist widget and the pinned price left with Markets (prd §1529).
-grep -qE "        (WatchlistWidget|PriceActivity)\(\)" "$TMP/bundle.nc" \
-  && { print -u2 "✗ the Watchlist widget or the pinned price is back in the bundle (prd §1529)"; exit 1; }
+grep -q 'kind: WidgetWatchlist.kind' "$TMP/WatchlistWidget.nc" \
+  || { print -u2 "✗ the Watchlist widget no longer uses WidgetWatchlist.kind"; exit 1; }
+# The pinned price left with Markets (prd §1529); the Watchlist tile came back (§1881).
+grep -qE "        PriceActivity\(\)" "$TMP/bundle.nc" \
+  && { print -u2 "✗ the pinned price is back in the bundle (prd §1529)"; exit 1; }
 # A count of today is a DATE's reading: the tile draws it only on that day.
 grep -q 'feed.isCurrent(now: entry.date)' "$TMP/FeedWidget.nc" \
   || { print -u2 "✗ the Feed widget draws its counts without asking whether they are today's"; exit 1; }
 # The Feed holds no money (§1208 item 7), so neither does its tile.
 grep -q '"Wallet", "Markets", "Testnets"' "$TMP/publish.nc" \
   || { print -u2 "✗ the Feed widget's payload no longer leaves the money categories out"; exit 1; }
-# The flow band's disclosure is the one piece the tile may not drop (WidgetFlowBand.owesDisclosure).
-grep -q 'pricedNote(flow)' "$TMP/walletw.nc" \
-  || { print -u2 "✗ the wallet tile no longer says how much of the week its bars are drawn from"; exit 1; }
-for k in widget.shelves widget.shelvesAt; do
+# A reading past the normal cadence says when it was read (§825).
+grep -q 'WidgetStamp.text(for: home.asOf' "$TMP/walletw.nc" \
+  || { print -u2 "✗ the wallet tile no longer stamps an old reading"; exit 1; }
+for k in widget.shelves widget.shelvesAt widget.wallet widget.flow widget.feed; do
   grep -q "\"$k\"" "$TMP/publish.nc" \
     || { print -u2 "✗ the retired payload $k is no longer cleared"; exit 1; }
 done
@@ -234,88 +248,62 @@ let d = UserDefaults(suiteName: suiteName)!
 // ── the publish round trip ──────────────────────────────────────────────────
 // The encode and the decode are the one place the two processes can silently
 // disagree; a payload that fails to decode looks exactly like one never sent.
-let bands = [WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: 2400, outUSD: 1200,
-                            unpriced: 0, predating: 0, priced: 9),
-             WidgetFlowBand(inWeight: 0.25, outWeight: 1, inUSD: 300, outUSD: 1200,
-                            unpriced: 1, predating: 0, priced: 3)]
-check(WidgetPayload.write(bands, key: "k", stampKey: "kAt", defaults: d),
+let now = Date()
+let homes = [WidgetWalletHome(total: 52_600, dayPct: 0.9, publicUSD: 41_300, privateUSD: 11_300, asOf: now),
+             WidgetWalletHome(total: 900, dayPct: nil, publicUSD: 900, privateUSD: nil, asOf: now)]
+check(WidgetPayload.write(homes, key: "k", stampKey: "kAt", defaults: d),
       "a first publish reports a change")
-let back = WidgetPayload.read([WidgetFlowBand].self, key: "k", stampKey: "kAt",
+let back = WidgetPayload.read([WidgetWalletHome].self, key: "k", stampKey: "kAt",
                               freshness: 3600, defaults: d)
 eq(back?.count, 2, "the payload round-trips")
-eq(back?[0].inUSD, 2400, "a reading survives the round trip")
-eq(back?[1].unpriced, 1, "the disclosure count survives the round trip")
+eq(back?[0].total, 52_600, "a reading survives the round trip")
+eq(back?[0].privateUSD, 11_300, "the Private head survives the round trip")
+check(back?[1].privateUSD == nil, "a side Home draws none of stays absent")
 
 // THE RELOAD BUDGET. Publishing identical bytes must report no change.
-check(!WidgetPayload.write(bands, key: "k", stampKey: "kAt", defaults: d),
+check(!WidgetPayload.write(homes, key: "k", stampKey: "kAt", defaults: d),
       "republishing identical bytes reports NO change")
-// ...and the stamp must move anyway, or a payload republished unchanged would
-// age out while the app is being used every day.
 let stampAfter = d.double(forKey: "kAt")
 check(stampAfter > 0, "the stamp is written even when the bytes did not change")
 
-var changed = bands
-changed[0] = WidgetFlowBand(inWeight: 1, outWeight: 0.6, inUSD: 2400, outUSD: 1440,
-                            unpriced: 0, predating: 0, priced: 9)
+var changed = homes
+changed[0] = WidgetWalletHome(total: 52_700, dayPct: 1.0, publicUSD: 41_400, privateUSD: 11_300, asOf: now)
 check(WidgetPayload.write(changed, key: "k", stampKey: "kAt", defaults: d),
       "a different reading reports a change")
 
 // Clearing.
-check(WidgetPayload.write(Optional<[WidgetFlowBand]>.none, key: "k", stampKey: "kAt", defaults: d),
+check(WidgetPayload.write(Optional<[WidgetWalletHome]>.none, key: "k", stampKey: "kAt", defaults: d),
       "clearing a published payload reports a change")
-check(!WidgetPayload.write(Optional<[WidgetFlowBand]>.none, key: "k", stampKey: "kAt", defaults: d),
+check(!WidgetPayload.write(Optional<[WidgetWalletHome]>.none, key: "k", stampKey: "kAt", defaults: d),
       "clearing an already-empty payload reports NO change")
-check(WidgetPayload.read([WidgetFlowBand].self, key: "k", stampKey: "kAt",
+check(WidgetPayload.read([WidgetWalletHome].self, key: "k", stampKey: "kAt",
                          freshness: 3600, defaults: d) == nil,
       "a cleared payload reads as nothing")
 
 // ── freshness ───────────────────────────────────────────────────────────────
-_ = WidgetPayload.write(bands, key: "f", stampKey: "fAt", defaults: d)
-let now = Date()
-check(WidgetPayload.read([WidgetFlowBand].self, key: "f", stampKey: "fAt",
+_ = WidgetPayload.write(homes, key: "f", stampKey: "fAt", defaults: d)
+check(WidgetPayload.read([WidgetWalletHome].self, key: "f", stampKey: "fAt",
                          freshness: 3600, now: now, defaults: d) != nil,
       "a fresh payload reads")
-check(WidgetPayload.read([WidgetFlowBand].self, key: "f", stampKey: "fAt",
+check(WidgetPayload.read([WidgetWalletHome].self, key: "f", stampKey: "fAt",
                          freshness: 3600, now: now.addingTimeInterval(7200),
                          defaults: d) == nil,
       "a payload past its freshness window reads as nothing")
-// A payload with NO stamp at all must not read — the pre-stamp legacy case,
-// and the shape a partial write would leave behind.
 d.set(d.data(forKey: "f"), forKey: "nostamp")
-check(WidgetPayload.read([WidgetFlowBand].self, key: "nostamp", stampKey: "missingAt",
+check(WidgetPayload.read([WidgetWalletHome].self, key: "nostamp", stampKey: "missingAt",
                          freshness: 3600, defaults: d) == nil,
       "an unstamped payload reads as nothing")
 
-// ── the wallet curve ────────────────────────────────────────────────────────
-// THE ONE THAT MATTERS MOST: a flat series draws down the MIDDLE. Along the
-// floor it reads as a wallet that went to zero.
-let flat = WidgetWalletLine(points: [500, 500, 500, 500], total: 500,
-                            changePct: 0, hidden: false, asOf: now)
-eq(flat.normalizedPoints, [0.5, 0.5, 0.5, 0.5],
-   "a FLAT curve normalizes to the middle, never the floor")
-
-let rising = WidgetWalletLine(points: [100, 150, 200], total: 200,
-                              changePct: 100, hidden: false, asOf: now)
-eq(rising.normalizedPoints, [0, 0.5, 1], "a rising curve spans the full height")
-let falling = WidgetWalletLine(points: [200, 100], total: 100,
-                               changePct: -50, hidden: false, asOf: now)
-eq(falling.normalizedPoints, [1, 0], "a falling curve starts high and ends low")
-let empty = WidgetWalletLine(points: [], total: nil, changePct: nil, hidden: false, asOf: now)
-check(empty.normalizedPoints.isEmpty, "an empty series normalizes to nothing")
-// A zero-valued flat line is the case where the naive guard and the correct one
-// give different answers AND the naive one looks plausible.
-let zeroes = WidgetWalletLine(points: [0, 0], total: 0, changePct: nil, hidden: false, asOf: now)
-eq(zeroes.normalizedPoints, [0.5, 0.5], "a flat line AT zero still draws down the middle")
-
-// §374: figures go, shapes stay.
-let hidden = WidgetWalletLine(points: [100, 200], total: nil, changePct: nil,
-                              hidden: true, asOf: now)
-check(hidden.total == nil, "a hidden line carries no figure")
-check(hidden.changePct == nil, "a hidden line carries no percent either")
-eq(hidden.normalizedPoints, [0, 1], "a hidden line still carries its SHAPE")
+// ── Hide balances (§374): the figures are never published ───────────────────
+let hidden = WidgetWalletHome.withheld(asOf: now)
+check(hidden.hidden, "a withheld reading says it is hidden")
+check(hidden.total == nil && hidden.publicUSD == nil && hidden.privateUSD == nil && hidden.dayPct == nil,
+      "a withheld reading carries no figure at all")
 _ = WidgetPayload.write(hidden, key: WidgetWallet.key, stampKey: WidgetWallet.stampKey, defaults: d)
 check(WidgetWallet.published(now: now, defaults: d)?.total == nil,
       "the withheld figure is still absent after a round trip")
+check(WidgetWallet.published(now: now, defaults: d)?.hidden == true,
+      "and the tile still knows to draw it as hidden, never as zero")
 
 // ── the runway ──────────────────────────────────────────────────────────────
 // THE INVARIANT: the window always CONTAINS now. Get it wrong and late items
@@ -327,88 +315,62 @@ if let rail = WidgetRunway.positions(for: [hourAgo, inThree], now: now) {
     check(rail.dots[1] > rail.now, "a future one sits right of it")
     check(rail.dots.allSatisfy { $0 >= 0 && $0 <= 1 }, "every dot is on the track")
     check(rail.now > 0 && rail.now < 1, "and so is the marker")
-    // The ends are PADDED, so a dot at either extreme isn't clipped in half by
-    // the track it sits on. Without this the earliest would sit at exactly 0
-    // and render as a half-moon against the tile's edge.
     check(abs(rail.dots[0] - WidgetRunway.pad) < 0.0001,
           "the earliest deadline sits at the pad, not at the very edge")
     check(abs(rail.dots[1] - (1 - WidgetRunway.pad)) < 0.0001,
           "and the latest at one pad in from the other end")
     check(WidgetRunway.pad > 0, "the padding is real")
 } else { check(false, "a two-deadline rail should place") }
-
-// Every date in the past: now is still on the rail, at the far right.
 if let allLate = WidgetRunway.positions(for: [now.addingTimeInterval(-7200), hourAgo], now: now) {
     check(allLate.dots.allSatisfy { $0 < allLate.now },
           "when everything is overdue, now is the right-hand end — nothing draws ahead of it")
     check(allLate.now <= 1, "and the marker is still on the track")
 } else { check(false, "an all-overdue rail should place") }
-
-// Every date in the future: now anchors the left.
 if let allAhead = WidgetRunway.positions(for: [inThree, now.addingTimeInterval(9 * 3600)], now: now) {
     check(allAhead.dots.allSatisfy { $0 > allAhead.now },
           "when nothing is late, now is the left-hand end")
 } else { check(false, "an all-ahead rail should place") }
-
 check(WidgetRunway.positions(for: [], now: now) == nil, "no deadlines, no rail")
 check(WidgetRunway.positions(for: [now], now: now) == nil,
       "a zero-width window has no shape to draw — the rows say it instead")
 
-// ── the flow band ───────────────────────────────────────────────────────────
-// Two bars, no counterparty names (the user's ruling) — but the DISCLOSURE
-// could not be dropped with them: `WalletFlow.Band` states that a band drawn
-// from 6 of 9 moves is a different claim from one drawn from all 9.
-let full = WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: 2400, outUSD: 1200,
-                          unpriced: 0, predating: 0, priced: 9)
-check(!full.owesDisclosure, "a complete band says nothing — there is no gap to disclose")
-check(!full.isPartial, "…and knows it isn't partial")
-eq(full.total, 9, "a complete band's total is its priced legs")
+// ── the Feed tile (§1881): each app's newest thing today ────────────────────
+func item(_ id: String, _ source: String, _ minutes: Double) -> WidgetFeed.Row {
+    WidgetFeed.Row(id: id, source: source, title: id, at: now.addingTimeInterval(-minutes * 60))
+}
+let today = [item("a1", "Bluesky", 5), item("a2", "Bluesky", 1), item("g1", "GitHub", 3),
+             item("x1", "X", 10), item("r1", "RSS", 20), item("a3", "Bluesky", 30)]
+let cut = WidgetFeedTile.rows(today)
+eq(cut.rows.map(\.id), ["a2", "g1", "x1"], "one row per app, its NEWEST, newest first, three at most")
+eq(cut.more, 3, "the rest of today is counted, every thing not drawn")
+eq(WidgetFeedTile.rows([]).more, 0, "an empty day counts nothing")
+eq(WidgetFeedTile.markFile("Apple Wallet"), "apple-wallet.png", "an app's icon file is a safe name")
 
-let partial = WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: 2400, outUSD: 1200,
-                             unpriced: 2, predating: 1, priced: 6)
-check(partial.isPartial, "a band missing legs is partial")
-eq(partial.total, 9, "the total counts unpriced AND predating legs, not just drawn ones")
-check(partial.owesDisclosure, "…and SAYS so — the no-silent-caps rule")
-
-// The weights are the shape, and they survive §374 losing the figures.
-let (wIn, wOut) = WidgetFlowBand.weights(inUSD: 2400, outUSD: 1200)
-eq(wIn, 1.0, "the larger side fills the track")
-eq(wOut, 0.5, "and the smaller reads against it")
-let (zIn, zOut) = WidgetFlowBand.weights(inUSD: 0, outUSD: 0)
-eq(zIn, 0.0, "a week with no priced flow draws nothing")
-eq(zOut, 0.0, "…on both sides")
-let (oIn, oOut) = WidgetFlowBand.weights(inUSD: 0, outUSD: 900)
-eq(oIn, 0.0, "a side of ZERO draws nothing, never a hairline —")
-eq(oOut, 1.0, "…while the other still fills the track")
-
-let hiddenBand = WidgetFlowBand(inWeight: 1, outWeight: 0.5, inUSD: nil, outUSD: nil,
-                                unpriced: 0, predating: 0, priced: 4, hidden: true)
-check(hiddenBand.inUSD == nil && hiddenBand.outUSD == nil,
-      "§374 withholds the flow figures, exactly as it withholds the total")
-eq(hiddenBand.inWeight, 1.0, "…and the RATIO stays, because a ratio is a shape")
-eq(hiddenBand.outWeight, 0.5, "…on both bars")
-_ = WidgetPayload.write(hiddenBand, key: WidgetWallet.flowKey,
-                        stampKey: WidgetWallet.flowStampKey, defaults: d)
-check(WidgetWallet.flow(now: now, defaults: d)?.inUSD == nil,
-      "the withheld figures are still absent after a round trip")
-eq(WidgetWallet.flow(now: now, defaults: d)?.outWeight, 0.5,
-   "…and the shape still arrives")
-
-// ── the Feed tile (§1210): today's counts are a DATE's reading ───────────────
 var cal = Calendar(identifier: .gregorian)
 cal.timeZone = TimeZone(identifier: "UTC")!
 let noon = Date(timeIntervalSince1970: 1_760_000_000)   // 2025-10-09 08:53 UTC
-let feed = WidgetFeed(day: cal.startOfDay(for: noon),
-                      sections: [WidgetFeed.Section(room: "Day", today: 4),
-                                 WidgetFeed.Section(room: "Social", today: 12)])
-check(feed.isCurrent(now: noon, calendar: cal), "the counts are today's on the day they were counted")
+let feed = WidgetFeed(day: cal.startOfDay(for: noon), rows: cut.rows, more: cut.more)
+check(feed.isCurrent(now: noon, calendar: cal), "the rows are today's on the day they were read")
 check(!feed.isCurrent(now: noon.addingTimeInterval(24 * 3600), calendar: cal),
-      "the next day they are not — yesterday's counts never draw as today's")
+      "the next day they are not — yesterday's rows never draw as today's")
 check(!feed.isCurrent(now: noon.addingTimeInterval(-24 * 3600), calendar: cal),
       "nor the day before")
 _ = WidgetPayload.write(feed, key: WidgetFeedTile.key, stampKey: WidgetFeedTile.stampKey, defaults: d)
-eq(WidgetFeedTile.published(defaults: d)?.sections.map(\.room) ?? [], ["Day", "Social"],
-   "the Feed order survives the round trip")
+eq(WidgetFeedTile.published(defaults: d)?.rows.map(\.source) ?? [], ["Bluesky", "GitHub", "X"],
+   "the rows survive the round trip")
+
+// ── the Watchlist tile (§1881) ──────────────────────────────────────────────
+eq(WidgetWatchlist.change(2.44).words, "+2.4%", "a rise carries a plus")
+check(WidgetWatchlist.change(2.44).up == true, "and reads as up")
+eq(WidgetWatchlist.change(-1.75).words, "\u{2212}1.8%", "a fall carries a minus")
+check(WidgetWatchlist.change(-1.75).up == false, "and reads as down")
+eq(WidgetWatchlist.change(0.04).words, "0.0%", "a move that rounds to zero has no sign (§83)")
+check(WidgetWatchlist.change(0.04).up == nil, "and no direction")
+let watch = WidgetWatch(rows: [.init(symbol: "ETH", dayPct: 2.4), .init(symbol: "SOL", dayPct: nil)])
+_ = WidgetPayload.write(watch, key: WidgetWatchlist.key, stampKey: WidgetWatchlist.stampKey, defaults: d)
+eq(WidgetWatchlist.published(defaults: d)?.rows.map(\.symbol) ?? [], ["ETH", "SOL"],
+   "the watchlist survives the round trip, in its order")
+check(WidgetWatchlist.published(defaults: d)?.rows[1].dayPct == nil, "an unread move stays unread, never zero")
 
 // ── money ───────────────────────────────────────────────────────────────────
 eq(MoneyFormat.compactUSD(0), "$0", "zero")
@@ -479,11 +441,6 @@ print ""
 print "widget-selftest: mutation pass…"
 mfail=0
 
-# The headline bug this file exists for.
-mutate "a flat curve is drawn along the FLOOR instead of down the middle" \
-  WidgetPayload.swift \
-  'guard span > 0 else { return points.map { _ in 0.5 } }|||guard span > 0 else { return points.map { _ in 0 } }' || mfail=1
-
 # The reload budget.
 mutate "write always reports a change — every foreground would spend a reload" \
   WidgetPayload.swift \
@@ -514,19 +471,23 @@ mutate "the runway drops its end padding — a dot at either extreme is clipped 
   WidgetPayload.swift \
   'static let pad = 0.05|||static let pad = 0.0' || mfail=1
 
-# The flow band. Dropping the lane names was a ruling; dropping the disclosure
-# would make two bars claim a completeness they don't have.
-mutate "a partial band stops disclosing that legs are missing" \
+# The Feed tile: one row per app, and the rest counted.
+mutate "the Feed tile draws one app's things over and over" \
   WidgetPayload.swift \
-  'var owesDisclosure: Bool { isPartial && total > 0 }|||var owesDisclosure: Bool { false }' || mfail=1
-mutate "the total counts only the drawn legs, so the disclosure understates the gap" \
+  'for item in items where (newest[item.source]?.at ?? .distantPast) < item.at {
+            newest[item.source] = item
+        }|||for item in items { newest[item.id] = item }' || mfail=1
+mutate "the Feed tile's count of the rest leaves out what one app held back" \
   WidgetPayload.swift \
-  'var total: Int { priced + unpriced + predating }|||var total: Int { priced }' || mfail=1
-mutate "a zero side is drawn as a hairline instead of nothing" \
+  'return (rows, items.count - rows.count)|||return (rows, newest.count - rows.count)' || mfail=1
+# The Watchlist tile.
+mutate "a watchlist move that rounds to zero is given a sign (§83)" \
   WidgetPayload.swift \
-  'guard scale > 0 else { return (0, 0) }
-        return (inUSD / scale, outUSD / scale)|||guard scale > 0 else { return (0, 0) }
-        return (max(0.08, inUSD / scale), max(0.08, outUSD / scale))' || mfail=1
+  'guard tenths != 0, percent.isFinite else { return ("0.0%", nil) }|||guard percent.isFinite else { return ("0.0%", nil) }' || mfail=1
+# Hide balances.
+mutate "a withheld wallet reading still carries its total" \
+  WidgetPayload.swift \
+  'WidgetWalletHome(total: nil, dayPct: nil, publicUSD: nil, privateUSD: nil,|||WidgetWalletHome(total: 1, dayPct: nil, publicUSD: nil, privateUSD: nil,' || mfail=1
 
 # The Feed tile's day.
 mutate "the Feed tile's counts stay current past midnight" \
@@ -545,4 +506,4 @@ mutate "percentLabel drops the sign on a real move" \
   'return String(format: "%@%.1f%%", pct > 0 ? "+" : "−", abs(pct))|||return String(format: "%.1f%%", abs(pct))' || mfail=1
 
 [[ $mfail -eq 0 ]] || { print -u2 "widget-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-print "widget-selftest: OK — publish round trip, the freshness window, the flat curve, the flow band, the rail and the money table all pinned."
+print "widget-selftest: OK — publish round trip, the freshness window, Hide balances, the Feed and Watchlist tiles, the rail and the money table all pinned."
