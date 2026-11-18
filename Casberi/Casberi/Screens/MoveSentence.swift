@@ -50,7 +50,7 @@ struct MoveSentence: View {
         let railgun = RailgunPocket.available && mode == nil && aztec == nil ? railgunPrivately : nil
         let toFresh = PrivateMove.freshAvailable && receivePrivately && mode == nil && aztec == nil && railgun == nil
         let lends = AaveLend.on && lending != nil && mode == nil && aztec == nil && railgun == nil && !toFresh
-        _verb = State(initialValue: mode != nil || aztec != nil || railgun != nil ? .send : toFresh ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil ? .send : toFresh ? .receive : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
         _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
         _freshReceive = State(initialValue: toFresh)
         _fresh = State(initialValue: arrival != nil)
@@ -67,7 +67,7 @@ struct MoveSentence: View {
         let keptRailgun = railgun?.takeBack == true && railgun?.recipient != nil ? RailgunMove.kept : nil
         let railgunMove = keptRailgun ?? RailgunMove()
         if keptRailgun == nil {
-            railgunMove.mode = railgun?.takeBack == true ? .takeBack : .deposit
+            railgunMove.mode = railgun?.swap == true ? .swap : railgun?.takeBack == true ? .takeBack : .deposit
             railgunMove.wanted = railgun?.contract
             railgunMove.recipient = railgun?.recipient
         }
@@ -1484,7 +1484,7 @@ struct MoveSentence: View {
                             if why == .pickRecipient { search = "" }
                         }
                     }
-                }) { verbWord(title(.send)) }
+                }) { verbWord(title(railgunMove.mode == .swap ? .swap : .send)) }
                 .transition(.opacity)
             }
             if aztecReceive, privateMode == nil, open != .verb {
@@ -5312,7 +5312,20 @@ struct MoveSentence: View {
                     }
                 }
             }
-            if rows.isEmpty, verb != .send || privateWithRows(q).isEmpty {
+            // **A PRIVATE SWAP (prd §1875).** Swap's "what" lists the tokens
+            // your private balance holds on Railgun under the same header:
+            // picking one swaps it without it leaving your private balance.
+            if verb == .swap, !privateSwapRows(q).isEmpty {
+                listHeader(String(localized: "Private"))
+                ForEach(privateSwapRows(q), id: \.key) { p in
+                    listRow(p.symbol, sub: "\(p.network) · \(p.amount)", trailing: p.usd.map { Self.money($0) },
+                            mark: p.symbol) {
+                        pick {}
+                        p.act()
+                    }
+                }
+            }
+            if rows.isEmpty, verb != .send || privateWithRows(q).isEmpty, verb != .swap || privateSwapRows(q).isEmpty {
                 Text(verbatim: !heldEverywhere && (!networkPicked || heldBy[network.chainId] == nil) ? String(localized: "Reading…")
                      : !q.isEmpty ? String(localized: "You have no \(search.trimmingCharacters(in: .whitespaces).uppercased())")
                      : networkPicked && unread.contains(network.chainId) ? String(localized: "Couldn't read \(network.name)")
@@ -5375,6 +5388,19 @@ struct MoveSentence: View {
         }
         return out.filter { q.isEmpty || $0.symbol.lowercased().hasPrefix(q) }
             .sorted { ($0.usd ?? -1) > ($1.usd ?? -1) }
+    }
+
+    /// Your private tokens Swap can sell (prd §1875): what Railgun holds,
+    /// spendable now, biggest first, filtered as the list is.
+    private func privateSwapRows(_ q: String) -> [(key: String, symbol: String, network: String, amount: String, usd: Double?, act: () -> Void)] {
+        guard RailgunPocket.available else { return [] }
+        let railgun = RailgunHoldings.shared
+        return railgun.spendableShown.map { h in
+            ("railgun|" + h.id, h.symbol, "Ethereum", RailgunHoldings.figure(h.spendable, decimals: h.decimals),
+             railgun.usd(h, units: h.spendable), { [self] in goRailgun(.swap, contract: h.contract) })
+        }
+        .filter { q.isEmpty || $0.symbol.lowercased().hasPrefix(q) }
+        .sorted { ($0.usd ?? -1) > ($1.usd ?? -1) }
     }
 
     /// What For offers, on the picked network or on each: what you hold

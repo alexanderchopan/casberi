@@ -15,7 +15,8 @@ import Foundation
 enum RailgunEngineWire {
 
     enum Method: String, CaseIterable {
-        case info, open, sync, balances, prepareShield, prepareUnshield, broadcasters, quoteBroadcast, broadcastSend, close
+        case info, open, sync, balances, prepareShield, prepareUnshield, broadcasters, quoteBroadcast, broadcastSend,
+             quoteSwap, broadcastSwap, prepareSwap, close
     }
 
     struct Failure: Error, Equatable, Decodable {
@@ -109,6 +110,24 @@ enum RailgunEngineWire {
         var fee: String? = nil
     }
 
+    /// A private swap (prd §1875): `amount` of `token` out to the relay
+    /// adapter, `calls` made by it, `buyToken` back into the wallet.
+    struct Swap: Encodable, Equatable {
+        struct Call: Encodable, Equatable {
+            let to: String
+            let data: String
+            var value = "0x0"
+        }
+        let token: String
+        let amount: String
+        let buyToken: String
+        let calls: [Call]
+        var feeToken: String? = nil
+        var fee: String? = nil
+        var maxFeePerGas: String? = nil
+        var maxPriorityFeePerGas: String? = nil
+    }
+
     // MARK: - Replies
 
     struct Info: Decodable, Equatable {
@@ -136,6 +155,8 @@ enum RailgunEngineWire {
         let headBlock: Int
         let shieldFeeBps: String?
         let unshieldFeeBps: String?
+        /// The classic relay adapter a private swap goes through (prd §1875).
+        var relayAdapt: String? = nil
         let ms: Int
     }
 
@@ -252,6 +273,29 @@ enum RailgunEngineWire {
         let gasPrice: String
         let broadcaster: String
         let expiration: Double
+        let ms: Int
+    }
+
+    struct SwapQuote: Decodable, Equatable {
+        let token: String
+        let amount: String
+        let buyToken: String
+        let feeToken: String
+        let fee: String
+        let gasEstimate: String
+        let gasPrice: String
+        let broadcaster: String
+        let expiration: Double
+        let ms: Int
+    }
+
+    struct PreparedSwap: Decodable, Equatable {
+        let tx: Tx
+        let gasEstimate: String
+        let token: String
+        let amount: String
+        let buyToken: String
+        let proofMs: Int
         let ms: Int
     }
 

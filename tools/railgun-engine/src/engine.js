@@ -24,6 +24,7 @@ import {
   gasEstimateForUnprovenUnshield, generateUnshieldProof, populateProvedUnshield,
   gasEstimateForUnprovenUnshieldBaseToken, generateUnshieldBaseTokenProof, populateProvedUnshieldBaseToken,
   calculateBroadcasterFeeERC20Amount,
+  gasEstimateForUnprovenCrossContractCalls, generateCrossContractCallsProof, populateProvedCrossContractCalls,
 } from '@railgun-community/wallet';
 import { WakuBroadcasterClient, BroadcasterTransaction } from '@railgun-community/waku-broadcaster-client-web';
 import { NetworkName, NETWORK_CONFIG, TXIDVersion, EVMGasType } from '@railgun-community/shared-models';
@@ -39,6 +40,13 @@ const V2 = TXIDVersion.V2_PoseidonMerkle;
 const NETWORK = NetworkName.Ethereum;
 const CHAIN = NETWORK_CONFIG[NETWORK].chain;
 const PROXY = NETWORK_CONFIG[NETWORK].proxyContract;
+// The CLASSIC relay adapter: a private swap runs through it (prd §1875). The
+// screening node clears a shield it makes at once when the same transaction's
+// unshields are already valid (measured 2026-11-18 in the node's source,
+// `handleRelayAdaptUnknownShield`); its 7702 twin is not covered there, so the
+// swap never goes through that one. The SDK takes the classic one on Ethereum
+// while `relayAdaptContract` is set.
+const RELAY_ADAPT = NETWORK_CONFIG[NETWORK].relayAdaptContract;
 const ETH = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 // The screening node (§1713 item 5) and Railgun's indexer of the pool's trees.
 const POI_NODES = ['https://ppoi.fdi.network'];
@@ -209,6 +217,35 @@ async function balanceList() {
 // every socket goes through Swift, which refuses any other host).
 let broadcasting = null;
 let quoted = null;
+let quotedSwap = null;
+
+// A swap's parts, checked: the token out and its amount, the token back, and
+// the calls the adapter makes. No call may touch Railgun's own contracts or
+// carry ETH (the adapter holds none to give), and every call's target is a
+// contract address the caller named; what each call does is Swift's to write
+// and check (`RailgunSwap`).
+function swapParts(p) {
+  const amount = BigInt(p.amount);
+  if (amount <= 0n) throw new Error('amount must be positive');
+  const token = getAddress(p.token);
+  const buyToken = getAddress(p.buyToken);
+  if (token === buyToken) throw new Error('a swap needs two tokens');
+  if (!Array.isArray(p.calls) || p.calls.length === 0 || p.calls.length > 4) throw new Error('a swap is one to four calls');
+  const calls = p.calls.map((c) => {
+    const to = getAddress(c.to);
+    if (to === getAddress(PROXY) || to === getAddress(RELAY_ADAPT)) throw Object.assign(new Error('a swap call may not touch Railgun'), { name: 'NotRailgun' });
+    if (BigInt(c.value ?? 0) !== 0n) throw Object.assign(new Error('a swap call may not carry ETH'), { name: 'NotRailgun' });
+    if (!/^0x[0-9a-fA-F]{8,}$/.test(c.data)) throw new Error('a swap call needs data');
+    return { to, data: c.data, value: 0n };
+  });
+  return {
+    token, amount, buyToken, calls,
+    unshields: [{ tokenAddress: token, amount }],
+    shields: [{ tokenAddress: buyToken, recipientAddress: getRailgunAddress(walletID) }],
+  };
+}
+const swapKey = (p) => plainJSON([getAddress(p.token), BigInt(p.amount), getAddress(p.buyToken),
+  p.calls.map((c) => [getAddress(c.to), String(c.data).toLowerCase()])]);
 
 async function startBroadcasters() {
   broadcasting ??= WakuBroadcasterClient.start(CHAIN, {
@@ -284,7 +321,8 @@ const methods = {
     openedRandom = generated && storage === 'memory';
     const ut = getEngine().getUTXOMerkletree(V2, CHAIN);
     const kept = await ut.getTreeLength(4);
-    return { address: info.railgunAddress, walletID: info.id, loaded, generated, storage, keptLeaves: kept, headBlock: head, ...fees, ms: Math.round(now() - t) };
+    return { address: info.railgunAddress, walletID: info.id, loaded, generated, storage, keptLeaves: kept, headBlock: head, ...fees,
+      relayAdapt: getAddress(RELAY_ADAPT), ms: Math.round(now() - t) };
   },
 
   // Builds the trees from the checkpoint, scans the wallet, then checks every
@@ -491,8 +529,100 @@ const methods = {
     return { txHash, proofMs, ms: Math.round(now() - t) };
   },
 
+  // ---- A private swap (prd §1875): `amount` of `token` leaves the wallet to
+  // the classic relay adapter, the adapter makes `calls` (an exact approval
+  // and one exchange call, written in Swift with the adapter as receiver),
+  // and whatever `buyToken` it then holds goes back into this wallet, all in
+  // one transaction. Railgun takes its unshield fee on the way out and its
+  // shield fee on the way in; the calls swap what is left after the first.
+
+  // What the swap costs through the best broadcaster that carries relay-adapt
+  // sends and takes `feeToken`. Kept for `broadcastSwap`; nothing is proved.
+  async quoteSwap(p) {
+    requireOpen();
+    const t = now();
+    await startBroadcasters();
+    const s = swapParts(p);
+    const feeToken = getAddress(p.feeToken);
+    const selected = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, true);
+    if (!selected) throw Object.assign(new Error(`no broadcaster carries a swap for ${feeToken}`), { name: 'NoBroadcaster' });
+    const gasPrice = (BigInt(await rpc('eth_gasPrice', [])) * 4n) / 3n;
+    const feeTokenDetails = { tokenAddress: feeToken, feePerUnitGas: BigInt(selected.tokenFee.feePerUnitGas) };
+    const estimating = { evmGasType: EVMGasType.Type1, gasEstimate: 0n, gasPrice };
+    const est = await gasEstimateForUnprovenCrossContractCalls(V2, NETWORK, walletID, encryptionKey, s.unshields, [], s.shields, [],
+      s.calls, estimating, feeTokenDetails, false, undefined);
+    const details = { evmGasType: EVMGasType.Type1, gasEstimate: est.gasEstimate, gasPrice };
+    const fee = calculateBroadcasterFeeERC20Amount(feeTokenDetails, details).amount;
+    quotedSwap = { ...s, key: swapKey(p), feeToken, fee, details, gasPrice, selected };
+    return {
+      token: s.token, amount: hex(s.amount), buyToken: s.buyToken, feeToken, fee: hex(fee),
+      gasEstimate: hex(est.gasEstimate), gasPrice: hex(gasPrice), broadcaster: selected.railgunAddress,
+      expiration: Number(selected.tokenFee.expiration ?? 0), ms: Math.round(now() - t),
+    };
+  },
+
+  // Proves the quoted swap and hands it to its broadcaster, which sends it to
+  // the relay adapter. Refuses anything but the swap quoted.
+  async broadcastSwap(p) {
+    requireOpen();
+    const t = now();
+    const q = quotedSwap;
+    if (!q || swapKey(p) !== q.key || getAddress(p.feeToken) !== q.feeToken || BigInt(p.fee) !== q.fee) {
+      throw Object.assign(new Error('the swap is not the one quoted'), { name: 'NotQuoted' });
+    }
+    if (q.selected.tokenFee.expiration && Date.now() > Number(q.selected.tokenFee.expiration)) {
+      throw Object.assign(new Error('the broadcaster offer expired'), { name: 'QuoteExpired' });
+    }
+    const feeRecipient = { tokenAddress: q.feeToken, amount: q.fee, recipientAddress: q.selected.railgunAddress };
+    const pt = now();
+    say('step proving');
+    await generateCrossContractCallsProof(V2, NETWORK, walletID, encryptionKey, q.unshields, [], q.shields, [], q.calls,
+      feeRecipient, false, q.gasPrice, undefined, () => {});
+    const proofMs = Math.round(now() - pt);
+    const populated = await populateProvedCrossContractCalls(V2, NETWORK, walletID, q.unshields, [], q.shields, [], q.calls,
+      feeRecipient, false, q.gasPrice, q.details);
+    const tx = populated.transaction;
+    if (getAddress(tx.to) !== getAddress(RELAY_ADAPT)) throw Object.assign(new Error(`swap goes to ${tx.to}, not the relay adapter`), { name: 'NotRailgun' });
+    const sending = await BroadcasterTransaction.create(V2, tx.to, tx.data, q.selected.railgunAddress, q.selected.tokenFee.feesID,
+      CHAIN, populated.nullifiers ?? [], q.gasPrice, true, populated.preTransactionPOIsPerTxidLeafPerList ?? {});
+    let txHash;
+    say('step sent');
+    try {
+      txHash = await sending.send();
+    } catch (e) {
+      quotedSwap = null;
+      throw Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
+    }
+    quotedSwap = null;
+    return { txHash, proofMs, ms: Math.round(now() - t) };
+  },
+
+  // The same swap, proved for a public sender (a fresh address of yours,
+  // prd §1726): no broadcaster, no fee inside Railgun; the transaction to the
+  // relay adapter comes back for Swift to send.
+  async prepareSwap(p) {
+    requireOpen();
+    const t = now();
+    const s = swapParts(p);
+    const est = await gasEstimateForUnprovenCrossContractCalls(V2, NETWORK, walletID, encryptionKey, s.unshields, [], s.shields, [],
+      s.calls, gasDetails(p), undefined, true, undefined);
+    const pt = now();
+    say('step proving');
+    await generateCrossContractCallsProof(V2, NETWORK, walletID, encryptionKey, s.unshields, [], s.shields, [], s.calls,
+      undefined, true, undefined, undefined, () => {});
+    const proofMs = Math.round(now() - pt);
+    const { transaction } = await populateProvedCrossContractCalls(V2, NETWORK, walletID, s.unshields, [], s.shields, [], s.calls,
+      undefined, true, undefined, gasDetails(p, est.gasEstimate));
+    if (getAddress(transaction.to) !== getAddress(RELAY_ADAPT)) throw Object.assign(new Error(`swap goes to ${transaction.to}, not the relay adapter`), { name: 'NotRailgun' });
+    return {
+      tx: { to: getAddress(transaction.to), data: transaction.data, value: hex(transaction.value ?? 0n) },
+      gasEstimate: hex(est.gasEstimate), token: s.token, amount: hex(s.amount), buyToken: s.buyToken, proofMs, ms: Math.round(now() - t),
+    };
+  },
+
   async close() {
     quoted = null;
+    quotedSwap = null;
     if (walletID && openedRandom) await deleteWalletByID(walletID).catch(() => {});
     if (walletID) unloadWalletByID(walletID);
     walletID = null;

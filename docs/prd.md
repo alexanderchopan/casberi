@@ -74036,3 +74036,29 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** Move's tray on the iPad and Mac: unchanged reach.
 
 **Checks.** `zkmoney-selftest.sh`: the tag goes as a tag (mutated: caught), the fresh lookup, USDC and the limits, never balance to balance, Ethereum only.
+
+## §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's classic relay adapter, sent by a broadcaster or a fresh sender, your account nowhere; Swap's token list shows them under Private; ETH and USDC stay in Privacy Pools, earning, and are not swapped privately (extends §1713, §1721, §1723, §1726; builds the canvas "Railgun private swaps and sends", rows 1A–1D) (user, 2026-11-18: "how else could we use railgun? are we using its features to fullest extent?", then "mock railgun private swaps and private sends", "ok do it"; after 0xBow told the user "we generally don't accept railgun funds": "i don't want to leave privacy pools and come back in") — BUILT; seen on the simulator in the demo, NOT run with real money
+
+**Measured first (2026-11-18, read-only, no money moved).**
+1. **No hour for a swap's output, through the classic adapter.** The screening node's public source (`Railgun-Community/private-proof-of-innocence`, `list-provider.ts`, `handleRelayAdaptUnknownShield`) allows a shield at once when its transaction goes to a historical RelayAdapt (`0xAc9f…D405`) and every unshield in it is already valid. The 7702 adapter (`0x1F74…497e`) is not covered by that source, so the swap never goes through it; Railgun's SDK (wallet 11.3.0) takes the classic adapter on Ethereum while `relayAdaptContract` is set.
+2. **Real use.** 17 hours of mainnet: 317 Railgun transactions, 2 private swaps (both 7702), about 2.25M gas each.
+3. **Railgun takes 0.25% out and 0.25% back in** (`unshieldFee`, `shieldFee` on the proxy), so a swap pays 0.5% plus gas; the SDK floors a relay-adapt call's gas at 3,200,000.
+4. **The one broadcaster carries it.** It advertises both relay adapters, reliability 0.75, its fee seen in WETH.
+5. **Uniswap answers directly** (QuoterV2): DAI→WBTC best through WETH, DAI→USDC through the 0.01% pool.
+6. **0xBow does not accept Railgun's funds** (the user, told by 0xBow): a swap into ETH or USDC cannot land in Privacy Pools. 0xBow has its own swap (`PoolSessionReshield`, through LI.FI, which the engine shims out, §1539); not used.
+
+**Ruling.**
+1. **One sentence: "Swap 400 DAI for WBTC in your private balance."** The place is named once, as public Swap names its network once. Rows: From · Network · Swap · For · Amount · You get. The verb is Swap, the act Swap, the line one cost ("Costs about $1.06 · your account isn't on it"), its parts a tap down ("Railgun, out and back in · 0.5%", the broadcaster's fee or the fresh sender's gas), "Powered by Railgun".
+2. **What is sold: Swap's token list lists Railgun's spendable tokens under "Private"**, after the public ones, as Send's does (§1719). Picking one opens Railgun's sentence in its swap mode (`RailgunMove.Mode.swap`).
+3. **What is bought: Railgun's listed tokens on Ethereum** (`FreshTx.railgunTokens`: DAI, USDT, WBTC, WETH, LINK, UNI, AAVE), never ETH or USDC. Private ETH and USDC stay in Privacy Pools, earning; nothing leaves Privacy Pools to come back in.
+4. **The calls are public Swap's** (`YourAccountChain.swapQuote`, Ethereum's book), written for what reaches the adapter after Railgun's unshield fee, the adapter selling and receiving, and checked before anything is proved (`RailgunSwap.checked`): exactly an exact approval (v4: an exact transfer) of the sold token to a router in Ethereum's book, then that router, no ETH, naming the adapter. The engine refuses any call touching Railgun's own contracts or carrying ETH, and any transaction not to the classic adapter.
+5. **Carried as a send to someone is (§1723, §1726):** a broadcaster that carries relay-adapt sends, paid inside Railgun in a token it takes that you hold; else a fresh sender, its gas your private ETH (`FreshTx.railgunSwapGas` 3,600,000). Face ID once; the steps are the shared rows (§1700x), the sheet goes behind its capsule (§1806); done reads "Swapped privately · N s".
+6. **Engine** (`tools/railgun-engine/src/engine.js`): `quoteSwap`, `broadcastSwap`, `prepareSwap` over the SDK's classic cross-contract calls; `open` names the adapter.
+
+**Not built.** Private sends to a private address and Receive's private address (the canvas's rows 2–3), next. The canvas's rows 1E–1F and 2E (routes out of and into Privacy Pools): dropped.
+
+**Hook.** `-moveRailgun swap` opens the swap in the demo (it buys WBTC at the demo's prices; nothing is sent).
+
+**Mac half (§1402).** Move's tray on the iPad and Mac: the same sentence and rows.
+
+**Checks.** `railgun-selftest.sh`: the fee arithmetic and the call check compiled against stubs (an approval of more, a router paying anyone but the adapter, a router outside the book, ETH carried, a third call, another token: each refused); every swap transaction held to the classic adapter, no 7702 import, the broadcaster told it goes through the relay adapter, the swap never through your account, the bundle carries it. **Seen** on the iPhone 17 Pro simulator (demo): Swap's list with DAI under Private, the swap's rows, sentence, You get and cost.

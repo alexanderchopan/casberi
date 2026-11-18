@@ -283,15 +283,15 @@ enum RailgunPocket {
 
     /// The fresh sender's gas at today's price: `railgunSendGas` at the cap,
     /// in wei, and what Privacy Pools' relayer takes to bring it.
-    static func senderGasCost() async -> (need: Decimal, network: PrivacyNetwork)? {
+    static func senderGasCost(gas: Int = FreshTx.railgunSendGas) async -> (need: Decimal, network: PrivacyNetwork)? {
         guard let network = PrivacyNetwork.forChain(FreshTx.railgunChain),
               let fees = try? await PrivateRPC.fees(network) else { return nil }
-        return (Decimal(FreshTx.railgunSendGas) * Decimal(fees.maxFee), network)
+        return (Decimal(gas) * Decimal(fees.maxFee), network)
     }
 
     /// Whether your private ETH can pay a fresh sender's gas and the relayer.
-    static func privateGasCovers() async -> Bool {
-        guard let (need, network) = await senderGasCost(), let ethPool = network.yieldPool(for: PrivateMove.eth),
+    static func privateGasCovers(gas: Int = FreshTx.railgunSendGas) async -> Bool {
+        guard let (need, network) = await senderGasCost(gas: gas), let ethPool = network.yieldPool(for: PrivateMove.eth),
               let sender = try? senderAddress() else { return false }
         let store = PrivateMoneyStore.shared
         await store.readYield()
@@ -386,6 +386,119 @@ enum RailgunPocket {
                                                            reason: String(localized: "Move to private"), stage: stage)
         let hash = landed(sent)
         NSLog("railgunPocket| fees added | %@ | %@ wei", hash ?? "not yet seen", wei)
+        return hash
+    }
+
+    // MARK: - Swap inside your private balance (prd §1875)
+
+    /// A private swap ready to go: the engine's swap, the route it takes, and
+    /// how it is carried.
+    struct SwapPlan: Equatable, Sendable {
+        let wire: RailgunEngineWire.Swap
+        let quote: YourAccountSwap.Quote
+        /// The broadcaster's quote, or nil: a fresh sender carries it (§1726).
+        let broadcast: RailgunEngineWire.SwapQuote?
+        /// What comes back into the wallet after Railgun's shield fee.
+        let buyBack: String
+    }
+
+    /// Prices a swap of `amount` (base units, decimal) of `sell` for `buy`
+    /// inside your Railgun wallet: the wallet synced and every root checked,
+    /// the route asked of Ethereum's pools for what reaches the adapter after
+    /// Railgun's unshield fee, its calls checked (`RailgunSwap.checked`), and
+    /// the broadcaster's fee quoted, or the fresh sender's gas found. Reads
+    /// only: nothing is proved or sent, no Face ID.
+    static func quoteSwap(sell: YourAccountOp.Token, buy: YourAccountOp.Token, amount: String) async throws -> SwapPlan {
+        guard let sellToken = sell.contract?.lowercased(), let buyToken = buy.contract?.lowercased(), sellToken != buyToken,
+              let wanted = Decimal(string: amount), wanted > 0, let hexAmount = PrivateMoney.hex(amount) else { throw Failure.notWritten }
+        let opened = try await open(reason: nil)
+        guard let adapter = opened.relayAdapt?.lowercased(), PrivateMoney.isAddress(adapter) else { throw Failure.notRailgun }
+        let synced = try await sync()
+        var spendable: [String: Decimal] = [:]
+        for b in synced.balances { spendable[b.token.lowercased()] = Decimal(string: PrivateMoney.decimal(hex: b.spendable)) ?? 0 }
+        guard wanted <= spendable[sellToken] ?? 0 else { throw Failure.nothingSpendable }
+        guard let outBps = unshieldFeeBps, let inBps = shieldFeeBps,
+              let net = RailgunSwap.afterFee(amount, bps: outBps) else { throw Failure.notWritten }
+        let quote = try await YourAccountChain.swapQuote(accountNetwork, sell: sell, buy: buy, amount: net, account: adapter)
+        guard RailgunSwap.checked(quote.calls, sell: sellToken, amount: net, adapter: adapter),
+              let back = RailgunSwap.afterFee(quote.buyAmount, bps: inBps) else { throw Failure.notRailgun }
+        var wire = RailgunEngineWire.Swap(token: sellToken, amount: hexAmount, buyToken: buyToken, calls: RailgunSwap.wire(quote.calls))
+        // A broadcaster that carries relay-adapt sends, paid in a token it
+        // takes that you hold; else a fresh sender, its gas your private ETH.
+        var broadcast: RailgunEngineWire.SwapQuote?
+        if let taken = try? await RailgunEngine.shared.broadcasters(), !taken.isEmpty,
+           let feeToken = RailgunRouting.feeToken(sending: sellToken, taken: taken.map(\.token), spendable: spendable) {
+            var asked = wire
+            asked.feeToken = feeToken
+            if let q = try? await RailgunEngine.shared.quoteSwap(asked),
+               RailgunRouting.covers(amount: wanted, of: sellToken, fee: Decimal(string: PrivateMoney.decimal(hex: q.fee)) ?? 0,
+                                     in: feeToken, spendable: spendable) {
+                asked.fee = q.fee
+                wire = asked
+                broadcast = q
+            }
+        }
+        if broadcast == nil, !(await privateGasCovers(gas: FreshTx.railgunSwapGas)) { throw Failure.noPrivateGas }
+        NSLog("railgunPocket| swap quoted | %@ of %@ for %@ of %@ | %@", amount, sellToken, back, buyToken,
+              broadcast.map { "fee \(PrivateMoney.decimal(hex: $0.fee)) of \($0.feeToken)" } ?? "fresh sender")
+        return SwapPlan(wire: wire, quote: quote, broadcast: broadcast, buyBack: back)
+    }
+
+    /// Sends the quoted swap through its broadcaster: Face ID, then the proof
+    /// made on this phone pays the broadcaster inside Railgun. Your account
+    /// signs nothing and appears nowhere. Returns the transaction's hash.
+    static func swap(_ plan: SwapPlan, unlocked: @MainActor () -> Void = {}) async throws -> String {
+        guard YourAccountKey.address != nil else { throw Failure.noAccount }
+        guard plan.broadcast != nil, plan.wire.fee != nil else { throw Failure.noBroadcaster }
+        try await PrivateRootKey.unlock(reason: String(localized: "Swap in your private balance"))
+        unlocked()
+        let sent = try await RailgunEngine.shared.broadcastSwap(plan.wire)
+        NSLog("railgunPocket| swapped | %@ | %@ for %@ | proof %d ms", sent.txHash, plan.wire.token, plan.wire.buyToken, sent.proofMs)
+        return sent.txHash
+    }
+
+    /// The same swap with no broadcaster: a fresh sender, its gas a relayed
+    /// withdrawal of your private ETH, sends the proved call to the relay
+    /// adapter. Face ID for the proof and the gas; a new sender after each.
+    static func swapFromFresh(_ plan: SwapPlan, unlocked: @MainActor () -> Void = {},
+                              stage: @escaping @MainActor (String) -> Void) async throws -> String {
+        guard YourAccountKey.address != nil else { throw Failure.noAccount }
+        guard let (need, network) = await senderGasCost(gas: FreshTx.railgunSwapGas),
+              let ethPool = network.yieldPool(for: PrivateMove.eth) else { throw Failure.noPrivateGas }
+        let sender = try senderAddress()
+        try await PrivateRootKey.unlock(reason: String(localized: "Swap in your private balance"))
+        unlocked()
+        let held = Decimal(string: try await PrivateRPC.decimal(network, "eth_getBalance", [sender.address, "latest"])) ?? 0
+        if held < need {
+            let short = need - held
+            let fee = Decimal(string: await PrivateMove.relayerFee(ethPool, network: network, to: sender.address) ?? "") ?? 0
+            let spendable = Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0
+            guard fee > 0, spendable >= short + fee else { throw Failure.noPrivateGas }
+            stage(String(localized: "Paying its gas from your private ETH…"))
+            let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(short), to: sender.address,
+                                                      reason: String(localized: "Swap in your private balance"))
+            guard try await FreshSigner.landed(tx, on: network) else { throw Failure.gasOnItsWay }
+        }
+        stage(String(localized: "Proving on this iPhone…"))
+        let opened = try await open(reason: nil)
+        guard let adapter = opened.relayAdapt?.lowercased() else { throw Failure.notRailgun }
+        var wire = plan.wire
+        wire.feeToken = nil
+        wire.fee = nil
+        let p = try await RailgunEngine.shared.prepareSwap(wire)
+        guard p.tx.to.lowercased() == adapter, PrivateMoney.decimal(hex: p.tx.value) == "0" else { throw Failure.notRailgun }
+        let fees = try await PrivateRPC.fees(network)
+        let estimate = Int(try await PrivateRPC.decimal(network, "eth_estimateGas",
+                                                        [["from": sender.address, "to": p.tx.to, "data": p.tx.data, "value": "0x0"]])) ?? 0
+        guard estimate > 0, estimate <= FreshTx.railgunSwapGas else { throw Failure.notRailgun }
+        stage(String(localized: "Sending…"))
+        PrivateSendSteps.shared.mark(.sent, from: .railgun)
+        let hash = try await FreshSigner.send(to: p.tx.to, data: p.tx.data, value: "0x0", index: sender.index, root: sender.root,
+                                              from: sender.address, network: network, gas: FreshTx.railgunSwapGas,
+                                              tip: fees.tip, maxFee: fees.maxFee) { _, _ in
+            UserDefaults.standard.set(Int(sender.index - FreshAddress.senderBase) + 1, forKey: senderKey(sender.root))
+        }
+        NSLog("railgunPocket| swapped from a fresh sender | %@ | %@ for %@ | proof %d ms", hash, wire.token, wire.buyToken, p.proofMs)
         return hash
     }
 

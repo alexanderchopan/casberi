@@ -254,6 +254,27 @@ final class RailgunEngine: NSObject {
                        as: Wire.Broadcasted.self)
     }
 
+    // MARK: - A private swap (prd §1875)
+
+    /// What the swap costs through a broadcaster that carries relay-adapt
+    /// sends and takes `feeToken`; kept in the page for `broadcastSwap`.
+    func quoteSwap(_ swap: Wire.Swap) async throws -> Wire.SwapQuote {
+        try await relaysReady()
+        return try await call(.quoteSwap, swap, as: Wire.SwapQuote.self)
+    }
+
+    /// Proves the quoted swap and hands it to its broadcaster; the page
+    /// refuses any swap or fee but the quote's.
+    func broadcastSwap(_ swap: Wire.Swap) async throws -> Wire.Broadcasted {
+        try await call(.broadcastSwap, swap, as: Wire.Broadcasted.self)
+    }
+
+    /// The swap proved for a public sender, its transaction to the relay
+    /// adapter handed back to send.
+    func prepareSwap(_ swap: Wire.Swap) async throws -> Wire.PreparedSwap {
+        try await call(.prepareSwap, swap, as: Wire.PreparedSwap.self)
+    }
+
     /// The relays the broadcasters are reached through: their `NetworkReach`
     /// entry's.
     static let broadcasterService = "Railgun broadcasters"

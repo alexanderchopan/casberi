@@ -126,6 +126,11 @@ enum FreshTx {
     /// The most a fresh sender's unshield may use (measured 516,069 from a
     /// plain key, §1713 item 8), with room; estimated each time and held to it.
     static let railgunSendGas = 900_000
+    /// The most a fresh sender's private swap may use (prd §1875): Railgun's
+    /// SDK floors a relay-adapt call's limit at 3,200,000
+    /// (`MINIMUM_RELAY_ADAPT_CROSS_CONTRACT_CALLS_GAS_LIMIT_V2`); real swaps
+    /// used 2.23–2.29M (mainnet, 2026-11-18). Estimated each time, held here.
+    static let railgunSwapGas = 3_600_000
     /// The most a fresh address's shield may use; estimated each time and
     /// held to this.
     static let railgunShieldGas = 600_000

@@ -135,8 +135,8 @@ use "$SENT" 'where [.noFeeToken, .feeTokenPending, .noBroadcaster].contains(fail
 # §1725: the relays through Tor on the phone, never a direct socket instead.
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'guard let tor = await TorClient.shared.session(isolation: Self.circuit) else { return nil }' "a relay socket rides Tor, or does not open"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'engine?.toPage(socket: id, "error", "Tor did not connect")' "no Tor, no socket: the page hears an error, never a direct socket"
-[[ $(grep -c 'try await relaysReady()' Casberi/Casberi/Model/RailgunEngine.swift) == 2 ]] \
-  && echo "  ✓ Tor is up before Waku dials, for the broadcasters and the quote" \
+[[ $(grep -c 'try await relaysReady()' Casberi/Casberi/Model/RailgunEngine.swift) == 3 ]] \
+  && echo "  ✓ Tor is up before Waku dials, for the broadcasters, a send's quote and a swap's (§1875)" \
   || { echo "  ✗ Waku can dial before Tor is up (§1725)"; fail=1; }
 
 # §1721 item 3: one door to RailgunPocket.send, and its recipient is your account.
@@ -190,12 +190,100 @@ use "$MOVEF" "PrivateStepRows(run: run, confirmed: move.unlockedFirst" "the step
 use "$MOVEF" "steps.fail(Self.words(error))" "a failure stays on the step it reached"
 use "$MOVEF" "steps.begin(.move, plan: .signed(.ethereum))" "a move-in's rows are signed, as Aztec's Shield deposit's"
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'PrivateSendSteps.shared.mark(key, from: .railgun)' "the engine's step lines move the rows"
-[[ $(grep -c "say('step proving')" "$ENGINE") == 3 && $(grep -c "say('step sent')" "$ENGINE") == 1 ]] \
+[[ $(grep -c "say('step proving')" "$ENGINE") == 5 && $(grep -c "say('step sent')" "$ENGINE") == 2 ]] \
   && echo "  ✓ every proof says it starts, and the broadcaster's hand-over says it left" \
   || { echo "  ✗ a Railgun proof or hand-over no longer says its step (§1728 item 5)"; fail=1; }
 grep -q "step proving" Casberi/Casberi/Resources/railgun-engine.js \
   && echo "  ✓ the bundled engine carries the step lines" \
   || { echo "  ✗ the bundled engine was not rebuilt with the step lines"; fail=1; }
+
+# §1875: a swap inside your private balance, through the CLASSIC relay adapter only.
+echo "railgun-selftest: the private swap (§1875)"
+SWAP="Casberi/Casberi/Model/RailgunSwap.swift"
+mkdir -p "$TMP/swap"
+cat > "$TMP/swap/stubs.swift" <<'SWIFT'
+import Foundation
+enum SafeABI {
+    static func word(uint256 s: String) -> [UInt8]? {
+        guard let d = Decimal(string: s), s.allSatisfy(\.isNumber) else { return nil }
+        var n = d, out = [UInt8](repeating: 0, count: 32), i = 31
+        while n > 0, i >= 0 {
+            var q = n / 256, f = Decimal(); NSDecimalRound(&f, &q, 0, .down)
+            let r = n - f * 256
+            out[i] = UInt8(NSDecimalNumber(decimal: r).intValue); n = f; i -= 1
+        }
+        return out
+    }
+    static func word(address a: String) -> [UInt8]? {
+        let h = a.lowercased().replacingOccurrences(of: "0x", with: "")
+        guard h.count == 40 else { return nil }
+        var b = [UInt8](repeating: 0, count: 12), idx = h.startIndex
+        while idx < h.endIndex { let n = h.index(idx, offsetBy: 2); b.append(UInt8(h[idx..<n], radix: 16)!); idx = n }
+        return b
+    }
+    static func hex(_ b: [UInt8]) -> String { "0x" + b.map { String(format: "%02x", $0) }.joined() }
+}
+enum YourAccountSwap {
+    struct Call: Equatable { let to: String; let value: String; let data: [UInt8] }
+    static let approveSelector: [UInt8] = [0x09, 0x5e, 0xa7, 0xb3]
+    static let transferSelector: [UInt8] = [0xa9, 0x05, 0x9c, 0xbb]
+    static func routers(_ c: Int) -> Set<String> { ["0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45"] }
+}
+enum RailgunEngineWire { struct Swap { struct Call { let to: String; let data: String } } }
+SWIFT
+cat > "$TMP/swap/main.swift" <<'SWIFT'
+import Foundation
+var bad = 0
+func check(_ ok: Bool, _ what: String) { if ok { print("  ✓ \(what)") } else { print("  ✗ \(what)"); bad += 1 } }
+let dai = "0x6b175474e89094c44da98b954eedeac495271d0f"
+let router = "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45"
+let adapter = "0xac9f360ae85469b27aeddeafc579ef2d052ad405"
+check(RailgunSwap.fee("400000000000000000000", bps: 25) == "1000000000000000000", "Railgun keeps 0.25% of 400 DAI: 1 DAI")
+check(RailgunSwap.afterFee("400000000000000000000", bps: 25) == "399000000000000000000", "399 DAI reaches the adapter")
+check(RailgunSwap.fee("399", bps: 25) == "0", "the fee rounds down, as the contract does")
+check(RailgunSwap.afterFee("0", bps: 25) == nil && RailgunSwap.afterFee("1e18", bps: 25) == nil, "nothing, or no whole number, is no swap")
+let net = "399000000000000000000"
+let hand = YourAccountSwap.Call(to: dai, value: "0",
+    data: YourAccountSwap.approveSelector + SafeABI.word(address: router)! + SafeABI.word(uint256: net)!)
+let swap = YourAccountSwap.Call(to: router, value: "0", data: [0x5a, 0xe4, 0x01, 0xdc] + SafeABI.word(address: adapter)! + [1, 2, 3])
+check(RailgunSwap.checked([hand, swap], sell: dai, amount: net, adapter: adapter), "an exact approval then the router, paying the adapter, passes")
+let elsewhere = YourAccountSwap.Call(to: router, value: "0", data: [0x5a, 0xe4, 0x01, 0xdc] + SafeABI.word(address: "0x000000000000000000000000000000000000dead")! )
+check(!RailgunSwap.checked([hand, elsewhere], sell: dai, amount: net, adapter: adapter), "a router call paying anyone but the adapter is refused")
+let more = YourAccountSwap.Call(to: dai, value: "0",
+    data: YourAccountSwap.approveSelector + SafeABI.word(address: router)! + SafeABI.word(uint256: "400000000000000000000")!)
+check(!RailgunSwap.checked([more, swap], sell: dai, amount: net, adapter: adapter), "an approval of more than reaches the adapter is refused")
+let stranger = YourAccountSwap.Call(to: "0x1111111111111111111111111111111111111111", value: "0", data: swap.data)
+check(!RailgunSwap.checked([hand, stranger], sell: dai, amount: net, adapter: adapter), "a router not in Ethereum's book is refused")
+let paid = YourAccountSwap.Call(to: router, value: "1", data: swap.data)
+check(!RailgunSwap.checked([hand, paid], sell: dai, amount: net, adapter: adapter), "a call carrying ETH is refused")
+check(!RailgunSwap.checked([hand, swap, swap], sell: dai, amount: net, adapter: adapter), "a third call is refused")
+check(!RailgunSwap.checked([hand, swap], sell: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", amount: net, adapter: adapter), "an approval on another token than the one sold is refused")
+if bad > 0 { exit(1) }
+SWIFT
+if ! xcrun swiftc -O -o "$TMP/swap/run" "$SWAP" "$TMP/swap/stubs.swift" "$TMP/swap/main.swift" 2> "$TMP/swap/err"; then
+  echo "  ✗ RailgunSwap.swift does not compile alone"; cat "$TMP/swap/err" | head -20; fail=1
+elif ! "$TMP/swap/run"; then fail=1; fi
+[[ $(grep -c 'getAddress(RELAY_ADAPT)' "$ENGINE") -ge 3 ]] \
+  && echo "  ✓ every swap transaction must go to the classic relay adapter" \
+  || { echo "  ✗ a swap transaction is no longer held to the classic relay adapter"; fail=1; }
+grep -q "7702" <(grep -E "^import|from '@railgun-community/wallet'|CrossContractCalls7702" "$ENGINE") \
+  && { echo "  ✗ the engine imports a 7702 cross-contract call: its shield may wait the hour"; fail=1; } \
+  || echo "  ✓ the engine never imports the 7702 relay adapter's calls"
+use "$ENGINE" "q.selected.tokenFee.feesID,
+      CHAIN, populated.nullifiers ?? [], q.gasPrice, true," "the broadcaster is told the swap goes through the relay adapter"
+use "$ENGINE" "WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, true)" "a swap's broadcaster is one that carries relay-adapt sends"
+use "$POCKET" "guard RailgunSwap.checked(quote.calls, sell: sellToken, amount: net, adapter: adapter)," "every swap's calls are checked before anything is proved"
+use "$POCKET" "YourAccountChain.swapQuote(accountNetwork, sell: sell, buy: buy, amount: net, account: adapter)" "the route sells what reaches the adapter, the adapter receiving"
+swaprun=$(awk '/case \.swap where viaFresh:/{on=1} on&&/case \.takeBack:/{exit} on' "$MOVEF")
+if [[ -z "$swaprun" ]] || printf '%s' "$swaprun" | grep -q "RailgunPocket.send(token:" \
+   || ! printf '%s' "$swaprun" | grep -q "RailgunPocket.swap(plan" || ! printf '%s' "$swaprun" | grep -q "RailgunPocket.swapFromFresh(plan"; then
+  echo "  ✗ a private swap reaches your account's send"; fail=1
+else
+  echo "  ✓ a private swap never goes through your account"
+fi
+grep -q "quoteSwap" Casberi/Casberi/Resources/railgun-engine.js \
+  && echo "  ✓ the bundled engine carries the swap" \
+  || { echo "  ✗ the bundled engine was not rebuilt with the swap"; fail=1; }
 
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

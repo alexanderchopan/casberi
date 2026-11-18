@@ -89,14 +89,16 @@ struct MoveTrayPresenter: ViewModifier {
         }
         // `-moveRailgun in|back` raises Railgun's sentence (prd §1721): `in`
         // as a non-ETH/USDC token sent to your private balance on Ethereum,
-        // `back` as a Railgun row in Holdings.
+        // `back` as a Railgun row in Holdings, `swap` as a private token
+        // picked in Swap (prd §1875).
         .task {
-            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), ["in", "back", "send"].contains(how) else { return }
+            guard let how = UserDefaults.standard.string(forKey: "moveRailgun"), ["in", "back", "send", "swap"].contains(how) else { return }
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] moveRailgun: raised %@", how)
             // `send`: out to someone else, a broadcaster's send (§1721 item 3).
             chrome.moveRailgun = .init(contract: nil, takeBack: how != "in",
-                                       recipient: how == "send" ? "0x8ba1f109551bd432803012645ac136ddd64dba72" : nil)
+                                       recipient: how == "send" ? "0x8ba1f109551bd432803012645ac136ddd64dba72" : nil,
+                                       swap: how == "swap")
             chrome.moveTray = true
         }
         // `-moveToAztec YES` raises Send onto your private account on Aztec,

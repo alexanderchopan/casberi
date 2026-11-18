@@ -22,7 +22,18 @@ import SwiftUI
 @MainActor
 @Observable
 final class RailgunMove {
-    enum Mode: Equatable { case deposit, takeBack }
+    enum Mode: Equatable { case deposit, takeBack, swap }
+
+    /// What a private swap buys (prd §1875): a token Railgun holds on
+    /// Ethereum, never ETH or USDC, which are Privacy Pools' (§1713).
+    struct Buy: Equatable, Identifiable {
+        let contract: String
+        let symbol: String
+        let decimals: Int
+        var id: String { contract.lowercased() }
+    }
+
+    static let buyable: [Buy] = FreshTx.railgunTokens.map { Buy(contract: $0.contract, symbol: $0.symbol, decimals: $0.decimals) }
 
     /// What opened the sentence: a token, and which way.
     struct Opening: Equatable {
@@ -30,6 +41,8 @@ final class RailgunMove {
         var takeBack: Bool
         /// Out to someone else; nil is your account.
         var recipient: String? = nil
+        /// A swap inside your private balance (prd §1875).
+        var swap = false
     }
 
     enum Stage: Equatable {
@@ -108,6 +121,20 @@ final class RailgunMove {
     static var landedWords: String { String(localized: "Sent privately") }
     /// The broadcaster's terms for the picked amount.
     private(set) var quote: RailgunEngineWire.Quote?
+    /// A private swap's (prd §1875): what it buys, and its plan once priced.
+    var buy: Buy?
+    private(set) var swapPlan: RailgunPocket.SwapPlan?
+    /// The demo's swap: what comes back, priced off its own numbers.
+    private(set) var demoBack: String?
+    /// What For offers: every listed token but the one sold.
+    var buyChoices: [Buy] { Self.buyable.filter { $0.contract.lowercased() != token?.lowercased() } }
+    /// "about 0.0063 WBTC": what comes back into your private balance.
+    var getsWords: String? {
+        guard let buy else { return nil }
+        if let demoBack { return String(localized: "about \(demoBack) \(buy.symbol)") }
+        guard let plan = swapPlan else { return nil }
+        return String(localized: "about \(RailgunHoldings.figure(plan.buyBack, decimals: buy.decimals)) \(buy.symbol)")
+    }
     /// The fee token's symbol and decimals, for the line.
     private var feeToken: (symbol: String, decimals: Int)?
     /// No broadcaster can carry it (none answered, or nothing to pay one
@@ -173,12 +200,16 @@ final class RailgunMove {
     func amountChanged() {
         quoteTask?.cancel()
         quote = nil
+        swapPlan = nil
+        demoBack = nil
         switch stage {
         case .quoting, .needsFees, .failed: stage = .ready
         case .ready: break
         default: return
         }
-        guard toSomeoneElse, amountOK else { return }
+        // A swap is priced once what it buys is picked, as a send to
+        // someone else is once typing pauses.
+        guard toSomeoneElse || (mode == .swap && buy != nil), amountOK else { return }
         stage = .quoting
         quoteTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(700))
@@ -237,7 +268,7 @@ final class RailgunMove {
                 found.append(Holding(contract: contract, symbol: h.token.symbol, decimals: h.token.decimals,
                                      units: h.units, price: price))
             }
-        case .takeBack:
+        case .takeBack, .swap:
             let store = RailgunHoldings.shared
             // Prices for the dollars and the cost, never a sync (prd §1728).
             await store.readPrices()
@@ -252,6 +283,8 @@ final class RailgunMove {
             ?? found.first
         token = keep?.contract
         if DemoMode.isActive, amount.isEmpty { amount = "25" }
+        // The demo's swap buys WBTC, so its sentence reads whole (prd §1875).
+        if DemoMode.isActive, mode == .swap, buy == nil { buy = Self.buyable.first { $0.symbol == "WBTC" } }
         stage = keep == nil ? .nothing : .ready
         amountChanged()
         #if DEBUG
@@ -264,6 +297,7 @@ final class RailgunMove {
     /// Asks a broadcaster what sending the picked amount costs. The demo
     /// asks nothing: its fee is 0.14 USDC.
     func requote() async {
+        if mode == .swap { await requoteSwap(); return }
         guard let picked, let to = recipient, toSomeoneElse else { return }
         quote = nil
         viaFresh = false
@@ -308,6 +342,54 @@ final class RailgunMove {
             }
         } catch {
             guard self.picked == picked else { return }
+            stage = .failed(Self.words(error))
+        }
+    }
+
+    /// Prices the swap (prd §1875): the route for what reaches the adapter,
+    /// what comes back after Railgun's two fees, and who carries it. The
+    /// demo prices it off its own numbers and sends nothing.
+    private func requoteSwap() async {
+        guard let picked, let buy else { return }
+        swapPlan = nil
+        demoBack = nil
+        viaFresh = false
+        stage = .quoting
+        if DemoMode.isActive {
+            // The demo's own prices (2026-11-18's), less Railgun's two fees.
+            let prices: [String: Double] = ["DAI": 1, "USDT": 1, "WBTC": 63_300, "WETH": 1_768, "LINK": 14.5, "UNI": 7.2, "AAVE": 160]
+            if let sell = prices[picked.symbol], let get = prices[buy.symbol],
+               let sold = Double(picked.units).map({ $0 / pow(10, Double(picked.decimals)) }) {
+                demoBack = (sold * sell / get * 0.995).formatted(.number.precision(.significantDigits(1...4)))
+            }
+            stage = .ready
+            return
+        }
+        do {
+            let plan = try await RailgunPocket.quoteSwap(
+                sell: YourAccountOp.Token(symbol: picked.symbol, decimals: picked.decimals, contract: picked.contract),
+                buy: YourAccountOp.Token(symbol: buy.symbol, decimals: buy.decimals, contract: buy.contract),
+                amount: picked.units)
+            guard self.picked == picked, self.buy == buy else { return }
+            if let b = plan.broadcast {
+                if let held = RailgunHoldings.shared.shown.first(where: { $0.id == b.feeToken.lowercased() }) {
+                    feeToken = (held.symbol, held.decimals)
+                } else if let listed = await YourAccountTokens.lookUp(b.feeToken, on: YourAccountOp.ethereum) {
+                    feeToken = (listed.token.symbol, listed.token.decimals)
+                } else {
+                    feeToken = nil
+                }
+                feePriceUSD = nil
+                if let symbol = feeToken?.symbol.lowercased(), symbol != "weth" {
+                    let prices = await MainnetPrices.prices(for: [symbol])
+                    feePriceUSD = prices[symbol] ?? prices[symbol.uppercased()]
+                }
+            }
+            viaFresh = plan.broadcast == nil
+            swapPlan = plan
+            stage = !viaFresh && feeToken == nil ? .failed(String(localized: "Railgun did not answer. Nothing was sent.")) : .ready
+        } catch {
+            guard self.picked == picked, self.buy == buy else { return }
             stage = .failed(Self.words(error))
         }
     }
@@ -426,6 +508,21 @@ final class RailgunMove {
             guard let gas = gasUSD(RailgunPocket.unshieldGas) else { return nil }
             usd += gas
             parts.append(.init(words: String(localized: "Gas, from your account"), figure: String(localized: "about \(Self.usd(gas))")))
+        case .swap:
+            // Railgun takes its fee twice: out to the exchange and back in.
+            usd *= 2
+            parts[0] = .init(words: String(localized: "Railgun, out and back in"),
+                             figure: RailgunPocket.percent(bps: bps * 2))
+            if viaFresh {
+                guard let gas = gasUSD(FreshTx.railgunSwapGas, plus: RailgunPocket.lastRelayerFeeWei ?? 0) else { return nil }
+                usd += gas
+                parts.append(.init(words: String(localized: "A new address of yours sends it, its gas from your private ETH"),
+                                   figure: String(localized: "about \(Self.usd(gas))")))
+            } else {
+                guard let feeWords, let feeUSD = broadcasterFeeUSD else { return nil }
+                usd += feeUSD
+                parts.append(.init(words: String(localized: "A Railgun broadcaster sends it"), figure: feeWords))
+            }
         }
         return PrivateCost(usd: usd, parts: parts)
     }
@@ -433,20 +530,23 @@ final class RailgunMove {
     /// The broadcaster's fee in dollars: WETH at ETH's price, any other fee
     /// token at its own (`feePriceUSD`, read with the quote).
     private var broadcasterFeeUSD: Double? {
-        if DemoMode.isActive, toSomeoneElse { return 0.14 }
-        guard let q = quote, let feeToken else { return nil }
+        if DemoMode.isActive, toSomeoneElse || mode == .swap { return mode == .swap ? 0.93 : 0.14 }
+        guard let fee = broadcastFee, let feeToken else { return nil }
         let price = feeToken.symbol.uppercased() == "WETH" ? ethUSD : feePriceUSD
         guard let price else { return nil }
-        return YourAccountOp.dollars(PrivateMoney.decimal(hex: q.fee), decimals: feeToken.decimals, price: price)
+        return YourAccountOp.dollars(PrivateMoney.decimal(hex: fee), decimals: feeToken.decimals, price: price)
     }
     private var feePriceUSD: Double?
 
     /// The broadcaster's fee as the line says it: "0.14 USDC".
     var feeWords: String? {
-        if DemoMode.isActive, toSomeoneElse { return "0.14 USDC" }
-        guard let q = quote, let feeToken else { return nil }
-        return RailgunHoldings.figure(PrivateMoney.decimal(hex: q.fee), decimals: feeToken.decimals) + " " + feeToken.symbol
+        if DemoMode.isActive, toSomeoneElse || mode == .swap { return mode == .swap ? "0.00053 WETH" : "0.14 USDC" }
+        guard let fee = broadcastFee, let feeToken else { return nil }
+        return RailgunHoldings.figure(PrivateMoney.decimal(hex: fee), decimals: feeToken.decimals) + " " + feeToken.symbol
     }
+
+    /// The broadcaster's fee, hex base units: a send's or a swap's.
+    private var broadcastFee: String? { quote?.fee ?? swapPlan?.broadcast?.fee }
 
     /// About $10 of ETH, as WETH, for broadcasters' fees.
     func addFees() async {
@@ -499,7 +599,7 @@ final class RailgunMove {
     /// Moves it: in through your account's shield, or back to your account.
     func run() async {
         guard let picked, amountOK, !DemoMode.isActive else { return }
-        guard mode != .takeBack || !anotherIsGoing else { stage = .failed(String(localized: "A send is still on its way")); return }
+        guard mode == .deposit || !anotherIsGoing else { stage = .failed(String(localized: "A send is still on its way")); return }
         let steps = PrivateSendSteps.shared
         // Last send's rows go; this send's start with it.
         steps.forget(.move)
@@ -527,6 +627,19 @@ final class RailgunMove {
                 quote = nil
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
+            case .swap where viaFresh:
+                guard let plan = swapPlan else { return }
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) }) { _ in }
+                finishSteps()
+                stage = .done(String(localized: "Swapped privately."))
+            case .swap:
+                guard let plan = swapPlan else { return }
+                stage = .working(String(localized: "Confirm with Face ID"))
+                _ = try await RailgunPocket.swap(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
+                swapPlan = nil
+                finishSteps()
+                stage = .done(String(localized: "Swapped privately."))
             case .takeBack:
                 guard let account = YourAccountKey.address else { stage = .failed(String(localized: "No account on this iPhone")); return }
                 stage = .working(String(localized: "Confirm with Face ID"))
@@ -683,6 +796,8 @@ struct MoveRailgunSentence<Head: View>: View {
     @State private var open = false
     /// The amount's menu is up (prd §1802).
     @State private var amountOpen = false
+    /// What a swap buys: its menu is up (prd §1875).
+    @State private var buyOpen = false
     @FocusState private var typing: Bool
     @Environment(ShellChrome.self) private var chrome
 
@@ -697,9 +812,9 @@ struct MoveRailgunSentence<Head: View>: View {
                     // The tokens are a menu on their row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
                         MoveChoiceRows(rows: choiceRows,
-                                       open: Binding(get: { open && picking ? "token" : amountOpen ? "amount" : nil },
-                                                     set: { if $0 == nil { open = false; amountOpen = false } })) { id in
-                            if id == "amount" { amountMenu } else { tokens }
+                                       open: Binding(get: { open && picking ? "token" : amountOpen ? "amount" : buyOpen ? "buy" : nil },
+                                                     set: { if $0 == nil { open = false; amountOpen = false; buyOpen = false } })) { id in
+                            if id == "amount" { amountMenu } else if id == "buy" { buyList } else { tokens }
                         }
                         line
                     }
@@ -773,6 +888,7 @@ struct MoveRailgunSentence<Head: View>: View {
             } else {
                 MovePhrase(move.mode == .deposit
                            ? String(localized: "Moving to your private balance takes $10 or more.")
+                           : move.mode == .swap ? String(localized: "Nothing private to swap yet.")
                            : String(localized: "Nothing private to take back yet."), ink: DS.textSecondary)
             }
         default:
@@ -789,7 +905,7 @@ struct MoveRailgunSentence<Head: View>: View {
                     .accessibilityHint(Text("Picks the token"))
                 }
             } else {
-                MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
+                MoveClause(glue: isDone ? (move.mode == .swap ? String(localized: "Swapped") : String(localized: "Sent")) : nil) {
                     MoveWord(figure, ink: DS.textPrimary)
                         .accessibilityLabel(Text("Amount, \(figure)"))
                 }
@@ -813,6 +929,17 @@ struct MoveRailgunSentence<Head: View>: View {
                                 ink: DS.textPrimary,
                                 action: { if picking { leave(.pickRecipient) } },
                                 hint: Text("Picks who it goes to"))
+            case .swap:
+                // One place, named once (prd §1875): "Swap 400 DAI for WBTC
+                // in your private balance."
+                MoveWordsClause(glue: String(localized: "for"), words: move.buy?.symbol ?? String(localized: "what"),
+                                ink: move.buy == nil ? DS.textSecondary : DS.textPrimary,
+                                action: { if picking { toggleBuy() } },
+                                hint: Text("Picks what it buys"))
+                MoveWordsClause(glue: String(localized: "in"), words: String(localized: "your private balance."),
+                                ink: DS.textPrimary,
+                                action: { if move.stage == .ready { leave(.switchOff) } },
+                                hint: Text("Picks where it comes from"))
             }
         }
     }
@@ -894,6 +1021,7 @@ struct MoveRailgunSentence<Head: View>: View {
         case .deposit: String(localized: "private in about an hour")
         case .takeBack where move.toSomeoneElse: String(localized: "your account isn't on it")
         case .takeBack: nil
+        case .swap: String(localized: "your account isn't on it")
         }
     }
 
@@ -913,7 +1041,8 @@ struct MoveRailgunSentence<Head: View>: View {
 
     /// The line under a finished send: how long it took, tap to block.
     private func doneLine(_ words: String) -> String {
-        guard let total = stepsRun?.total, move.mode == .takeBack else { return words }
+        guard let total = stepsRun?.total, move.mode != .deposit else { return words }
+        if move.mode == .swap { return String(localized: "Swapped privately · \(total) s") }
         return move.toSomeoneElse ? String(localized: "Sent privately · \(total) s")
             : String(localized: "Back in your account · \(total) s")
     }
@@ -931,6 +1060,10 @@ struct MoveRailgunSentence<Head: View>: View {
             return [fee, move.feeWords.map { String(localized: "\($0) to the broadcaster") }].compactMap { $0 }.joined(separator: " · ")
         case .takeBack:
             return [fee, String(localized: "gas from your account")].compactMap { $0 }.joined(separator: " · ")
+        case .swap:
+            let both = move.feeBps.map { String(localized: "Railgun takes \(RailgunPocket.percent(bps: $0 * 2))") }
+            return [both, move.viaFresh ? String(localized: "gas from your private ETH")
+                    : move.feeWords.map { String(localized: "\($0) to the broadcaster") }].compactMap { $0 }.joined(separator: " · ")
         }
     }
 
@@ -966,18 +1099,61 @@ struct MoveRailgunSentence<Head: View>: View {
                 leave(.pickRecipient)
             })
             rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
+        case .swap:
+            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
         }
         // Its one network, said as a row and fixed (prd §1802).
         rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Ethereum"),
                                   mark: MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) }, fixed: true) {})
         // The token before its amount (prd §1789).
-        rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.holding?.symbol ?? "") { toggle() })
+        rows.append(MoveChoiceRow(id: "token", name: move.mode == .swap ? String(localized: "Swap") : String(localized: "Token"),
+                                  value: move.holding?.symbol ?? "") { toggle() })
+        if move.mode == .swap {
+            rows.append(MoveChoiceRow(id: "buy", name: String(localized: "For"), value: move.buy?.symbol ?? String(localized: "Choose"),
+                                      empty: move.buy == nil) { toggleBuy() })
+        }
         // Its sums are a menu, and any other is typed in the row (prd §1802).
         rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
                                   field: AnyView(amountField), typing: typing) {
-            withAnimation(DS.Motion.standard) { open = false; amountOpen.toggle() }
+            withAnimation(DS.Motion.standard) { open = false; buyOpen = false; amountOpen.toggle() }
         })
+        // What comes back, after Railgun's two fees (prd §1875).
+        if move.mode == .swap, let gets = move.getsWords {
+            rows.append(MoveChoiceRow(id: "gets", name: String(localized: "You get"), value: gets, fixed: true) {})
+        }
         return rows
+    }
+
+    private func toggleBuy() {
+        typing = false
+        withAnimation(DS.Motion.standard) { open = false; amountOpen = false; buyOpen.toggle() }
+        DSHaptic.selection()
+    }
+
+    /// What a swap can buy: Railgun's listed tokens on Ethereum.
+    private var buyList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(move.buyChoices) { b in
+                let picked = b == move.buy
+                Button {
+                    withAnimation(DS.Motion.standard) { move.buy = b; buyOpen = false }
+                    move.amountChanged()
+                    DSHaptic.selection()
+                } label: {
+                    HStack(spacing: DS.Space.s3) {
+                        AssetMark(name: b.symbol, size: DS.Face.list)
+                        Text(verbatim: b.symbol).dsText(.body17)
+                            .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                    }
+                    .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityAddTraits(picked ? [.isSelected] : [])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The amount's menu: what you have, the sums, and the keys.
@@ -1069,6 +1245,7 @@ struct MoveRailgunSentence<Head: View>: View {
     private var ready: Bool {
         move.stage == .ready && move.amountOK && !DemoMode.isActive
             && (!move.toSomeoneElse || move.viaFresh || (move.quote != nil && move.feeWords != nil))
+            && (move.mode != .swap || (move.swapPlan != nil && (move.viaFresh || move.feeWords != nil)))
     }
 
     /// The cost stands over the verb while there is something to cost.
@@ -1145,7 +1322,7 @@ struct MoveRailgunSentence<Head: View>: View {
 
     private var footVerb: String {
         if case .working(let words) = move.stage { return words }
-        return String(localized: "Send")
+        return move.mode == .swap ? String(localized: "Swap") : String(localized: "Send")
     }
 
     private var credit: some View {
