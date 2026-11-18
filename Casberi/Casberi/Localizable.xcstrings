@@ -88052,30 +88052,30 @@
         }
       }
     },
-    "Ethereum only · new each time" : {
+    "Ethereum network · new each time" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Solo Ethereum · nueva cada vez"
+            "value" : "Red Ethereum · nueva cada vez"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereumのみ · 毎回新しい"
+            "value" : "Ethereumネットワーク · 毎回新しい"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum만 · 매번 새 주소"
+            "value" : "Ethereum 네트워크 · 매번 새 주소"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "仅限 Ethereum · 每次都是新的"
+            "value" : "Ethereum 网络 · 每次都是新的"
           }
         }
       }
@@ -138131,34 +138131,6 @@
         }
       }
     },
-    "On %@ only. Any token but ETH needs a little ETH sent with it." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Solo en %@. Cualquier token que no sea ETH necesita un poco de ETH enviado con él."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ のみ。ETH 以外のトークンには少しの ETH を一緒に送る必要があります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@에서만. ETH 외의 토큰은 약간의 ETH를 함께 보내야 합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "仅限 %@。ETH 以外的代币需要随附少量 ETH。"
-          }
-        }
-      }
-    },
     "On %@ · %@ pool fee" : {
       "localizations" : {
         "es" : {
@@ -139091,6 +139063,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "屏幕上"
+          }
+        }
+      }
+    },
+    "On the %@ network only. Any token but ETH needs a little ETH sent with it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo en la red %@. Cualquier token que no sea ETH necesita un poco de ETH enviado con él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ネットワークのみ。ETH 以外のトークンには少しの ETH を一緒に送る必要があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 네트워크에서만. ETH 외의 토큰은 약간의 ETH를 함께 보내야 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 %@ 网络。ETH 以外的代币需要随附少量 ETH。"
           }
         }
       }

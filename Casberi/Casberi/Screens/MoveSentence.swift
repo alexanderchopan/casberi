@@ -2489,7 +2489,7 @@ struct MoveSentence: View {
                 // Its copy opens its page too: only there is the address
                 // watched, and only there is its rule said (prd §1779).
                 receivePlace(String(localized: "Private balance"), marks: [Self.networkMark(chainId: 1)].compactMap { $0 },
-                             fact: String(localized: "Ethereum only · new each time"), factInk: DS.textPrimary, place: "fresh",
+                             fact: String(localized: "Ethereum network · new each time"), factInk: DS.textPrimary, place: "fresh",
                              open: { goFresh() },
                              copy: {
                                  if !DemoMode.isActive {

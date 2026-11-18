@@ -1198,7 +1198,7 @@ use "Casberi/Casberi/Screens/MoveScreen.swift" 'chrome.moveFreshReceive = false;
 use "Casberi/Casberi/Model/FreshReceive.swift" 'failure = Self.words(error, step: .gas, network: network)' "a token's gas failure no longer names its step (prd §1823)"
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'if let mended = AddressSafety.pasted(text) {' "Send's To no longer mends an address read off a picture (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("On \(network.name) only. Any token but ETH needs a little ETH sent with it.")' "the private address no longer says what it takes before it is copied (prd §1779)"
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")' "the private address no longer says what it takes before it is copied (prd §1779)"
 use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule on Receive (prd §1779)"
 use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),' "Your account lost its private balance row (prd §1779)"

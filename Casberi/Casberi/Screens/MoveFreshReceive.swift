@@ -211,7 +211,7 @@ struct MoveFreshSentence<Head: View>: View {
             // one, good on every network of its kind, and only this network
             // is watched. And a token cannot pay its own gas: sent alone it
             // waits (a tester's 1,000 USDC, 2026-11-13).
-            Text("On \(network.name) only. Any token but ETH needs a little ETH sent with it.")
+            Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
                 .dsText(.body17).foregroundStyle(DS.attentionInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
