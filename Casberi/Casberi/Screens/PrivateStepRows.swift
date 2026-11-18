@@ -51,7 +51,7 @@ struct PrivateStepRows: View {
         }
         let words = switch phase {
         case .done: step.done
-        case .failed: run.reason ?? String(localized: "Not sent")
+        case .failed: run.reason ?? (run.swap ? String(localized: "Not swapped") : String(localized: "Not sent"))
         case .now, .next: step.running
         }
         line(phase, words: words, time: time)
@@ -153,7 +153,7 @@ struct StepCapsuleLabel: View {
             }
             // A send on Aztec wears its ink (prd §1779); one on Ethereum
             // and a failure keep the page's (prd §1806).
-            Text(verbatim: failed ? String(localized: "Not sent") : run.ended == nil ? step.running : step.done)
+            Text(verbatim: failed ? (run.swap ? String(localized: "Not swapped") : String(localized: "Not sent")) : run.ended == nil ? step.running : step.done)
                 .dsText(.body17).foregroundStyle(failed || !run.plan.isAztec ? DS.textPrimary : DS.aztecInk).lineLimit(1)
             if !failed {
                 Text(verbatim: "· " + PrivateStepRows.seconds(run.started, run.ended ?? now))
@@ -178,6 +178,7 @@ struct StepCapsuleLabel: View {
 /// Mounted on the shell, and it ticks only while there is a send to draw.
 struct MoveStepCapsule: View {
     @State private var steps = PrivateSendSteps.shared
+    @State private var railgunSync = RailgunSync.shared
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -198,6 +199,13 @@ struct MoveStepCapsule: View {
             steps.clearAway()
             chrome.flash(words)
             NSLog("moveStepCapsule| landed | %@", words)
+        }
+        // The first Railgun sync on this phone finished (prd §1885): said
+        // where Move is not open; open, its row already turned to the price.
+        .onChange(of: railgunSync.firstReady) { _, _ in
+            guard !chrome.moveTray else { return }
+            chrome.flash(String(localized: "Your private balance is ready"))
+            NSLog("railgunSync| first sync ready")
         }
     }
     /// Clear of the tab bar (62 pt and its gap), under the toast's line.

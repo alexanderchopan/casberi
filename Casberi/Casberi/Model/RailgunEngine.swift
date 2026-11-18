@@ -155,6 +155,8 @@ final class RailgunEngine: NSObject {
         if line.hasPrefix("step "), let key = PrivateSendSteps.Key(rawValue: String(line.dropFirst(5))) {
             PrivateSendSteps.shared.mark(key, from: .railgun)
         }
+        // The scan's progress, for the waiting row (prd §1885).
+        if line.hasPrefix("progress ") { RailgunSync.shared.heard(line) }
         NSLog("railgunEngine| page | %@", line)
     }
 

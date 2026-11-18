@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2063 of 2137 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2064 of 2138 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2165,7 +2165,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1725 — Railgun's broadcaster relays are reached through Tor on the phone, one circuit, Tor up before Waku dials, never direc…
 - §1726 — When no broadcaster can carry a Railgun send, a fresh sender does: a new address of yours, its gas a relayed withdraw… (amended by §1877)
 - §1727 — Your private balance on Ethereum takes any amount of a Railgun token, typed, from $10 worth; the line says the minimu…
-- §1728 — Railgun's Move says dollars: the amount in dollars with the floor beside it and $10 · Half · All, under the floor you…
+- §1728 — Railgun's Move says dollars: the amount in dollars with the floor beside it and $10 · Half · All, under the floor you… (amended by §1885)
 - §1729 — Needs you, Permissions and Threats stand on Wallet Home while empty: Needs you at 0, Permissions "None", Threats "Uns…
 - §1730 — Railgun's sends show their steps in Move's foot with Aztec's rows: a move-in Checking · Signing · Sent on Ethereum, a…
 - §1731 — The Wallet stands on one left edge and draws every chart in one ink, its picker line at one height; Move's sentence i… (amended by §1754)
@@ -2220,7 +2220,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 - §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar…
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
-- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823)
+- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
 - §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872)
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
@@ -2316,7 +2316,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another s…
 - §1873 — Helper text fits one line
 - §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fres…
-- §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c…
+- §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c… (amended by §1885)
 - §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired
 - §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva…
 - §1878 — Receive on Base or Robinhood, earn on Ethereum
@@ -2326,6 +2326,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1882 — What Across gives back comes back to you
 - §1883 — Receive names the tokens, never "dollars"
 - §1884 — An address is one quiet line
+- §1885 — The first Railgun sync says it is the first, how far it is, and that only leaving Casberi stops it; a toast says when…
 
 ## Dead rulings → what replaced them (generated)
 

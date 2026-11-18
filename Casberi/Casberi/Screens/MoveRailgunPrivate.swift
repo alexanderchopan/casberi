@@ -368,6 +368,16 @@ final class RailgunMove {
         demoBack = nil
         viaFresh = false
         stage = .quoting
+        #if DEBUG
+        // `-railgunFirstSyncPreview <percent>` (prd §1885): the first sync's
+        // row in the demo, held there; nothing syncs.
+        if DemoMode.isActive, let shown = UserDefaults.standard.string(forKey: "railgunFirstSyncPreview") {
+            RailgunSync.shared.since = .now.addingTimeInterval(-95)
+            RailgunSync.shared.firstTime = true
+            RailgunSync.shared.heard("progress utxo Scanning \(Int(shown) ?? 40)%")
+            return
+        }
+        #endif
         if DemoMode.isActive {
             // The demo's own prices (2026-11-18's), less Railgun's two fees.
             let prices: [String: Double] = ["DAI": 1, "USDT": 1, "WBTC": 63_300, "WETH": 1_768, "LINK": 14.5, "UNI": 7.2, "AAVE": 160]
@@ -642,6 +652,11 @@ final class RailgunMove {
     /// engine says when a proof starts and a send leaves (`step` lines);
     /// your account's stages say the signing.
     static let takeBackPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, .signing, .sent(.ethereum)])
+    /// A swap's (prd §1875): said as swapped, never as sent.
+    static let swapStepsPlan = PrivateSendSteps.Plan(steps: [
+        .checking, .proving,
+        PrivateSendSteps.Step(key: .sent, running: String(localized: "Swapping on Ethereum"), done: String(localized: "Swapped on Ethereum")),
+    ])
 
     /// Moves it: in through your account's shield, or back to your account.
     func run() async {
@@ -690,13 +705,13 @@ final class RailgunMove {
             case .swap where viaFresh:
                 guard let plan = swapPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) }) { _ in }
+                _ = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(Self.swapStepsPlan, away: true) }) { _ in }
                 finishSteps()
                 stage = .done(String(localized: "Swapped privately."))
             case .swap:
                 guard let plan = swapPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.swap(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
+                _ = try await RailgunPocket.swap(plan, unlocked: { [weak self] in self?.started(Self.swapStepsPlan, away: true) })
                 swapPlan = nil
                 finishSteps()
                 stage = .done(String(localized: "Swapped privately."))
@@ -1073,7 +1088,7 @@ struct MoveRailgunSentence<Head: View>: View {
     @ViewBuilder private var costLine: some View {
         if move.stage == .quoting {
             if let since = RailgunSync.shared.since {
-                PrivateWarmingRow(since: since)
+                PrivateWarmingRow(since: since, firstTime: RailgunSync.shared.firstTime, percent: RailgunSync.shared.percent)
             } else {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .small)

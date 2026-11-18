@@ -177,14 +177,29 @@ struct PrivateCostNote: View {
 /// Railgun's §1728 words).
 struct PrivateWarmingRow: View {
     let since: Date
+    /// The first sync on this phone (prd §1885): it builds what later syncs
+    /// keep, so it says so, how far it is, and that only leaving the app
+    /// stops it (iOS pauses the engine in the background, never a sheet).
+    var firstTime = false
+    var percent: Int? = nil
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            HStack(spacing: DS.Space.s2) {
-                DSSpinner(size: .small)
-                Text(verbatim: String(localized: "Getting your private balance ready · \(max(0, Int(context.date.timeIntervalSince(since).rounded()))) s"))
-                    .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
-                Spacer(minLength: 0)
+            let seconds = max(0, Int(context.date.timeIntervalSince(since).rounded()))
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner(size: .small)
+                    Text(verbatim: firstTime
+                         ? (percent.map { String(localized: "Setting up your private balance · \($0)%") }
+                            ?? String(localized: "Setting up your private balance · \(seconds) s"))
+                         : String(localized: "Getting your private balance ready · \(seconds) s"))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+                    Spacer(minLength: 0)
+                }
+                if firstTime {
+                    Text("Only once. Close this, not Casberi.")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
             }
             .frame(minHeight: DS.Hit.min)
         }

@@ -62345,6 +62345,62 @@
         }
       }
     },
+    "Base, Ethereum, or Robinhood" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum o Robinhood"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum 또는 Robinhood"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum 或 Robinhood"
+          }
+        }
+      }
+    },
+    "Base, Ethereum, or Robinhood only, new each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo Base, Ethereum o Robinhood, nueva cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood のみ、毎回新しい"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum 또는 Robinhood만, 매번 새 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 Base、Ethereum 或 Robinhood，每次都是新的"
+          }
+        }
+      }
+    },
     "Base." : {
       "localizations" : {
         "es" : {
@@ -131727,6 +131783,34 @@
         }
       }
     },
+    "Not swapped" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No intercambiado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交換されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "교환되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未兑换"
+          }
+        }
+      }
+    },
     "Not traded" : {
       "localizations" : {
         "es" : {
@@ -139005,6 +139089,34 @@
         }
       }
     },
+    "On Base, Ethereum, or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En Base, Ethereum o Robinhood. El ETH, USDC y USDG enviados en Base o Robinhood pasan a Ethereum para generar rendimiento. Todo lo que no sea ETH necesita un poco de ETH enviado con ello."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood で受け取れます。Base や Robinhood で送られた ETH、USDC、USDG は Ethereum に移って利回りを得ます。ETH 以外には少しの ETH を一緒に送る必要があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum 또는 Robinhood에서 받을 수 있습니다. Base나 Robinhood로 보낸 ETH, USDC, USDG는 Ethereum으로 옮겨져 이자를 받습니다. ETH가 아닌 것은 약간의 ETH를 함께 보내야 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可在 Base、Ethereum 或 Robinhood 上接收。在 Base 或 Robinhood 上发送的 ETH、USDC 和 USDG 会转到 Ethereum 赚取收益。ETH 以外的资产需要随附少量 ETH。"
+          }
+        }
+      }
+    },
     "On Ethereum, Base or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it." : {
       "localizations" : {
         "es" : {
@@ -141335,6 +141447,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅保存在此手机上。对方重启 Basecamp 后地址会改变。"
+          }
+        }
+      }
+    },
+    "Only once. Close this, not Casberi." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo una vez. Cierra esto, no Casberi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "初回のみ。これは閉じても、Casberi は閉じないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "처음 한 번만. 이 창은 닫아도 Casberi는 닫지 마세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅此一次。可以关闭这里，但不要关闭 Casberi。"
           }
         }
       }
@@ -177177,6 +177317,62 @@
         }
       }
     },
+    "Setting up your private balance · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preparando tu saldo privado · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高を準備中 · %lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액 설정 중 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在设置你的私密余额 · %lld 秒"
+          }
+        }
+      }
+    },
+    "Setting up your private balance · %lld%%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preparando tu saldo privado · %lld %%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高を準備中 · %lld%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액 설정 중 · %lld%%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在设置你的私密余额 · %lld%%"
+          }
+        }
+      }
+    },
     "Setting up, %lld of 2…" : {
       "localizations" : {
         "es" : {
@@ -189144,6 +189340,34 @@
         }
       }
     },
+    "Swapped on Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiado en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum で交換済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 교환함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 Ethereum 上兑换"
+          }
+        }
+      }
+    },
     "Swapped privately" : {
       "localizations" : {
         "es" : {
@@ -189252,6 +189476,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "兑换中"
+          }
+        }
+      }
+    },
+    "Swapping on Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiando en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum で交換中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 교환 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 Ethereum 上兑换"
           }
         }
       }
@@ -232187,6 +232439,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的私密余额"
+          }
+        }
+      }
+    },
+    "Your private balance is ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu saldo privado está listo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高の準備ができました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액이 준비되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的私密余额已就绪"
           }
         }
       }

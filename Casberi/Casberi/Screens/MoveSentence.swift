@@ -2488,8 +2488,12 @@ struct MoveSentence: View {
             if PrivateMove.freshAvailable {
                 // Its copy opens its page too: only there is the address
                 // watched, and only there is its rule said (prd §1779).
-                receivePlace(String(localized: "Private balance"), marks: [Self.networkMark(chainId: 1)].compactMap { $0 },
-                             fact: String(localized: "Ethereum, Base or Robinhood · new each time"), factInk: DS.textPrimary, place: "fresh",
+                // Its three networks, in the public row's order (user,
+                // 2026-11-18: "alphebatized like it is in pubic account").
+                let privateNets = receiveNetworks.filter { ["Base", "Ethereum", "Robinhood"].contains($0.name) }
+                receivePlace(String(localized: "Private balance"),
+                             marks: (privateNets.isEmpty ? [Self.networkMark(chainId: 1)] : privateNets.map { Self.networkMark($0) }).compactMap { $0 },
+                             fact: String(localized: "Base, Ethereum, or Robinhood only, new each time"), factInk: DS.textPrimary, place: "fresh",
                              open: { goFresh() },
                              copy: {
                                  if !DemoMode.isActive {

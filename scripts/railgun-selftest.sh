@@ -321,5 +321,11 @@ grep -q "broadcastTransfer" Casberi/Casberi/Resources/railgun-engine.js \
   && echo "  ✓ the bundled engine carries the private send" \
   || { echo "  ✗ the bundled engine was not rebuilt with the private send"; fail=1; }
 
+# §1885: the first sync says so and how far it is; a swap is said as swapped.
+echo "railgun-selftest: the first sync and a swap's words (§1885)"
+use "$POCKET" "RailgunSync.shared.firstTime = opened.keptLeaves == 0" "the first sync is known by the engine's kept leaves"
+use "Casberi/Casberi/Model/RailgunEngine.swift" 'if line.hasPrefix("progress ") { RailgunSync.shared.heard(line) }' "Railgun's own scan progress reaches the row"
+use "Casberi/Casberi/Screens/PrivateStepRows.swift" ".onChange(of: railgunSync.firstReady)" "a first sync that finishes says so in a toast"
+use "$MOVEF" "self?.started(Self.swapStepsPlan, away: true)" "a swap's steps say swapping and swapped, never sent"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

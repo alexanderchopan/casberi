@@ -107,6 +107,8 @@ enum RailgunPocket {
                                            creationBlock: checkpointBlock)
         UserDefaults.standard.set(opened.walletID, forKey: walletKey(id))
         noteFees(opened)
+        // Nothing kept on this phone: the sync that follows builds the trees.
+        RailgunSync.shared.firstTime = opened.keptLeaves == 0
         return opened
     }
 
@@ -138,13 +140,17 @@ enum RailgunPocket {
         let task = Task { @MainActor () throws -> RailgunEngineWire.Synced in
             let synced = try await RailgunEngine.shared.sync()
             guard RailgunEngineWire.trusted(synced) else { throw Failure.untrusted }
+            if RailgunSync.shared.firstTime { RailgunSync.shared.firstReady += 1 }
             return synced
         }
         running = task
         RailgunSync.shared.since = .now
+        RailgunSync.shared.reset()
         defer {
             running = nil
             RailgunSync.shared.since = nil
+            RailgunSync.shared.firstTime = false
+            RailgunSync.shared.reset()
         }
         return try await task.value
     }
@@ -631,4 +637,25 @@ enum RailgunPocket {
 final class RailgunSync {
     static let shared = RailgunSync()
     var since: Date?
+    /// No trees are kept on this phone yet (the engine's `keptLeaves` is 0):
+    /// this sync builds them, the slow one, once (prd §1885).
+    var firstTime = false
+    /// Railgun's own scan, 0–100: the slower of its two trees.
+    var percent: Int?
+    /// Bumped when a first sync finishes, trusted: the shell's toast says so.
+    var firstReady = 0
+    private var trees: [String: Int] = [:]
+
+    /// A scan line from the page: "progress utxo <status> <n>%".
+    func heard(_ line: String) {
+        let parts = line.split(separator: " ")
+        guard parts.count >= 4, parts[0] == "progress", let n = Int(parts.last!.dropLast()) else { return }
+        trees[String(parts[1])] = max(0, min(100, n))
+        percent = trees.values.min()
+    }
+
+    func reset() {
+        trees = [:]
+        percent = nil
+    }
 }

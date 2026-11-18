@@ -74183,3 +74183,15 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 ## §1884
 
 **An address is one quiet line** (user, 2026-11-18, testing 1042: "i think the issue is that the way the address looks makes it read busy", then "i like B" over `mockups/receive-address/receive-address-options.png`). Amends §1586: no "0x" column, no groups of five, no bright first and last. `AddressLine` draws the whole address in the secondary ink: an EVM address shrinks to stay on one line, Aztec's 64 digits take two. Every Receive (public, the private one-time address, your Aztec address) and Your account's box draw it; `MoveSentence.addressGroups` and `MoveAztecReceive.groups` are deleted with the grid. Seen on the iPhone 17 Pro simulator (demo): public Receive one line, Aztec two.
+
+## §1885 — The first Railgun sync says it is the first, how far it is, and that only leaving Casberi stops it; a toast says when it is ready; a private swap's steps say swapped, never sent; Receive's private balance names Base, Ethereum, or Robinhood in the public row's order (amends §1728's warming row, §1875's steps, §1779's networks line) (user, 2026-11-18, testing the first swap on the phone: "we need text to tell user that is there a way for the app to knwo when the first sync is?", "also say user can close the sheet but not close the app", "will i get a toast when it is done?", "it shouldnt say sent either if i was swapping"; of Receive: "we need it to be alphebatized like it is in pubic account … base, ethereum, or robinhood only, new each time") — BUILT; seen on the simulator
+
+1. **The first sync is known.** The engine's `open` says how many of tree 4's leaves are kept on this phone; none (`keptLeaves == 0`) means the sync that follows builds the trees (`RailgunSync.firstTime`). Railgun's own scan reports its percentage per tree; the row shows the slower one.
+2. **Its row:** "Setting up your private balance · 40%" (seconds until a percentage is heard), and under it "Only once. Close this, not Casberi.": the engine runs outside the sheet, and iOS pauses it only when Casberi leaves. Every later sync keeps "Getting your private balance ready · N s".
+3. **A toast when it is ready:** "Your private balance is ready", when the first sync ends trusted and Move is not open (open, its row already turns to the price).
+4. **A swap is said as swapped:** its steps are Checking · Proving on this iPhone · Swapping on Ethereum (done: Swapped on Ethereum); a failure reads "Not swapped" in the sheet and the capsule.
+5. **Receive's private balance:** "Base, Ethereum, or Robinhood only, new each time", with the three networks' marks in the public row's order; its page says "On Base, Ethereum, or Robinhood".
+
+**Seen** on the iPhone 17 Pro simulator (`-railgunFirstSyncPreview 40`, demo): the row and its line; Receive's two rows. **Not seen:** a real first sync's percentage moving, the toast after one.
+
+**Checks.** `railgun-selftest.sh`: the first sync known from the kept leaves, the scan's progress reaching the row, the toast, a swap's steps never "sent".

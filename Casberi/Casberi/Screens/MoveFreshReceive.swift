@@ -252,7 +252,7 @@ struct MoveFreshSentence<Head: View>: View {
     /// A one-time address on Ethereum takes ETH on Base and Robinhood too (prd §1878).
     private var shownNetwork: String {
         if fromPrivate { return String(localized: "Ethereum") }
-        return network.chainId == FreshTx.homeChain ? String(localized: "Ethereum, Base or Robinhood") : network.name
+        return network.chainId == FreshTx.homeChain ? String(localized: "Base, Ethereum, or Robinhood") : network.name
     }
 
     /// The address in one quiet line, as public Receive shows yours; a tap
@@ -307,7 +307,7 @@ struct MoveFreshSentence<Head: View>: View {
             // Robinhood goes home to Ethereum (prd §1878).
             Group {
                 if network.chainId == FreshTx.homeChain {
-                    Text("On Ethereum, Base or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it.")
+                    Text("On Base, Ethereum, or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it.")
                 } else {
                     Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
                 }
