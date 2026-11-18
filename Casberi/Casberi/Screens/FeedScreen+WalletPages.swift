@@ -370,8 +370,8 @@ extension FeedScreen {
 
     // MARK: - Home's cards
 
-    /// **HOME'S SIX CARDS, A–Z (prd §1807, §1809).** Account, Activity,
-    /// Apps, Holdings, Risks, Watchlist: each a button onto its place, its
+    /// **HOME'S SIX CARDS, A–Z (prd §1807, §1809, §1871).** Account, Activity,
+    /// Apps, Risks, Spending, Watchlist: each a button onto its place, its
     /// state on its top edge. Activity is a card since §1809; Permissions
     /// is inside Risks.
     @ViewBuilder
@@ -387,6 +387,10 @@ extension FeedScreen {
         let mover = WatchlistRules.biggestMover(tokens, quotes: WatchlistPrices.shared.quotes)
         // The apps you have connected, never the catalogue's size.
         let apps = bridges.connectedCount
+        // Spending's total, read by Home's own task (`walletSpendingKey`).
+        let spending = SpendingReading.shared
+        let spent = !(spending.page.places.isEmpty && spending.page.subscriptions.isEmpty)
+        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         // The phone's cards share the screen's height (prd §1808); beside a
         // pane they keep the standard one.
         let cardHeight = roomSizeClass == .compact
@@ -442,6 +446,18 @@ extension FeedScreen {
                        figureTone: unseen > 0 ? DS.attentionInk : DS.textSecondary,
                        height: cardHeight) {
                 chrome.walletSection = .threats
+            }
+            // **SPENDING IS A CARD (prd §1871, user: "yes" to a card for
+            // iPad and Mac).** Its page had no door since §1807: the
+            // window's total, or nothing until read; Hide balances masks it.
+            DSHomeCard(glyph: WalletSection.spending.glyph, name: WalletSection.spending.label,
+                       figure: spent ? (mask ?? AppleWalletRoom.money(spending.page.total, "USD")) : nil,
+                       height: cardHeight) {
+                chrome.walletSection = .spending
+            }
+            // Whose money Home shows, as the page reads it (prd §1524).
+            .onChange(of: walletSpendingScope, initial: true) { _, scope in
+                SpendingReading.shared.narrow(scope)
             }
             DSHomeCard(glyph: WalletSection.watchlist.glyph, name: WalletSection.watchlist.label,
                        figure: tokens.isEmpty ? nil

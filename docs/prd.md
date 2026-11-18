@@ -73971,3 +73971,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** iPad and Mac keep Home's cards (§1843), which carry no Spending card; nothing changes there, and Spending has no door on them yet.
 
 **Checks.** Not built: written in a session with no Swift toolchain. Needs `scripts/verify.sh` and a look at Home over the demo.
+
+## §1871 — Spending is a card on the iPad's and Mac's Home, between Risks and Watchlist (amends §1807 item 3, §1843; completes §1870's Mac half) (user, 2026-11-18: "yes", to a Spending card for iPad and Mac) — BUILT; not yet built or seen on a simulator
+
+**Ruling.**
+1. **Home's cards are six again, A–Z: Account, Activity, Apps, Risks, Spending, Watchlist** (`walletHomeCards`). Spending's card wears its glyph and name, and the window's total in its corner once read; nothing spent or unread, no figure. Hide balances masks it.
+2. **The tap opens Spending** (`chrome.walletSection = .spending`), in the list column as every Wallet page does.
+3. The card narrows the reading to `walletSpendingScope` (§1524); Home's own task reads it (`walletSpendingKey`).
+
+**Mac half (§1402).** This is it: the iPad and the Mac. The phone's door is §1870's row.
+
+**Checks.** Not built: written in a session with no Swift toolchain. Needs `scripts/verify.sh` (it gates `verify-mac.sh`) and a look at Home on the Mac over the demo.
