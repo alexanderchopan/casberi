@@ -316,22 +316,86 @@ extension FeedScreen {
                 .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.symbol < $1.symbol }
                 .prefix(count))
         let priv = hidden < 0.01 ? []
-            : Array(homePrivateByToken.filter { $0.value > 0 }
-                .sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            : Array(homePrivateEntries.filter { $0.usd > 0 }
+                .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.id < $1.id }
                 .prefix(count))
+        let moves = walletHoldingMoves
         if !pub.isEmpty {
             homeSideHead(String(localized: "Public"), mask ?? WalletValue.money(total - hidden))
-            walletTokenPreview(pub, mask: mask) { walletOpenToken($0) }
+            ForEach(pub) { token in
+                // Ethereum disagreed twice in a row (prd §1825): said in
+                // amber where the networks stand, as on Holdings.
+                let differs = HoldingsCheckStore.shared.mismatched(token)
+                homeTokenRow(token.symbol,
+                             line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
+                             lineInk: differs ? DS.attentionInk : DS.textSecondary,
+                             figure: mask ?? WalletValue.money(token.usd),
+                             move: moves[HoldingMoves.key(token.symbol)]) { walletOpenToken(token) }
+                    .contextMenu { TokenHideMenu(position: token) { walletSetHidden($0, hidden: $1) } }
+            }
         }
         if !priv.isEmpty {
             homeSideHead(String(localized: "Private"), mask ?? WalletValue.money(hidden))
-            ForEach(priv, id: \.key) { held in
-                walletPreviewRow(held.key, figure: mask ?? WalletValue.money(held.value),
-                                 act: { homeOpen(.holdings) }) {
-                    AssetMark(name: held.key, size: DS.Mark.badge)
+            ForEach(priv) { held in
+                homeTokenRow(held.symbol, line: held.line, lineInk: DS.textSecondary,
+                             figure: mask ?? WalletValue.money(held.usd),
+                             move: moves[HoldingMoves.key(held.symbol)]) {
+                    // What the row does on Holdings (prd §1859): Privacy
+                    // Pools opens Send, Railgun its take-back; your Aztec
+                    // account's rows open nothing there, so Holdings.
+                    switch held.place {
+                    case .pools: walletOpenPrivate(.send)
+                    case .railgun(let contract):
+                        chrome.moveRailgun = .init(contract: contract, takeBack: true)
+                        chrome.moveTray = true
+                    case .aztec: homeOpen(.holdings)
+                    }
                 }
             }
         }
+    }
+
+    /// **A TOKEN ON HOME (prd §1859).** The feed's row height, the token's
+    /// mark in the rows' lead column; its name over where it is; its dollars
+    /// over its day, in the day's ink (flat in grey, §83).
+    private func homeTokenRow(_ symbol: String, line: String?, lineInk: Color, figure: String,
+                              move: Double?, act: @escaping () -> Void) -> some View {
+        let day = move.map { WatchlistRules.change($0 * 100) }
+        return Button {
+            DSHaptic.selection()
+            act()
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                AssetMark(name: symbol, size: DS.Mark.row)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: symbol).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                    if let line, !line.isEmpty {
+                        Text(verbatim: line).dsText(.subhead12).foregroundStyle(lineInk).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                VStack(alignment: .trailing, spacing: 2) {
+                    walletRowFigure(figure)
+                    if let day {
+                        Text(verbatim: day.words)
+                            .dsText(.subhead12)
+                            .monospacedDigit()
+                            .foregroundStyle(day.tone == .up ? DS.confirmInk
+                                             : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .frame(minHeight: DSFeed.headHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text(verbatim: [symbol, line, figure, day?.words].compactMap { $0 }.joined(separator: ". ")))
+        .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
     }
 
     /// A side's name and its total: a label, never a door.
@@ -350,15 +414,42 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    /// Your private balance by token, with your Aztec account's private
-    /// tokens beside Privacy Pools' and Railgun's: every part of the
-    /// "Private" figure on the line above (`walletPrivateUSD`).
-    var homePrivateByToken: [String: Double] {
-        var out = walletPrivateByToken
+    /// One private holding on Home: a token in one place.
+    struct HomePrivateEntry: Identifiable {
+        enum Place { case pools, railgun(contract: String), aztec }
+        let id: String
+        let symbol: String
+        let usd: Double
+        let line: String
+        let place: Place
+    }
+
+    /// Your private money by token and place, every part of the "Private"
+    /// figure (`walletPrivateUSD`): Privacy Pools' held notes, Railgun's
+    /// tokens and your Aztec account's private ones, each with the line its
+    /// row wears on Holdings.
+    var homePrivateEntries: [HomePrivateEntry] {
+        var out: [HomePrivateEntry] = []
+        let pools = PrivateMoneyStore.shared
+        for row in pools.rows where row.kind == .held {
+            if let usd = PrivateMoney.rowUSD(row, prices: pools.shownPrices) {
+                out.append(.init(id: "pools:" + row.id, symbol: row.symbol, usd: usd,
+                                 line: pools.heldLine(row), place: .pools))
+            }
+        }
+        let railgun = RailgunHoldings.shared
+        for held in railgun.spendableShown {
+            if let usd = railgun.usd(held, units: held.spendable) {
+                out.append(.init(id: "railgun:" + held.id, symbol: held.symbol, usd: usd,
+                                 line: String(localized: "Ethereum · Railgun"), place: .railgun(contract: held.contract)))
+            }
+        }
         let aztec = AztecAccountStore.shared
         if aztec.isShown {
             for held in aztec.privateHeld {
-                if let usd = aztec.usd(held, units: held.privateUnits) { out[held.name.uppercased(), default: 0] += usd }
+                if let usd = aztec.usd(held, units: held.privateUnits) {
+                    out.append(.init(id: "aztec:" + held.id, symbol: held.name, usd: usd, line: "Aztec", place: .aztec))
+                }
             }
         }
         return out

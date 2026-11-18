@@ -73799,3 +73799,15 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The phone's Home only (`homeHeadShown`).
 
 **Checks.** None new. **Seen** on the simulator with the demo: the head, the panel at rest, and the fade still moving with the page after its cap row had scrolled away.
+
+## §1859 — Home's token rows take the feed's row height and say where the token is and how its day went; a private row does what it does on Holdings (amends §1858 items 1 and 2) (user, 2026-11-17, of the build on TestFlight: "I LOVE THE DESIGN it looks great on testflight. how would you improve it", of the three changes: "build it and ship it")
+
+**Why.** §1858's rows were Holdings' preview rows: 60pt apart, dollars only, and a private one opened the Holdings page while a public one opened its token. The mocks the design was settled on had shown each token's day and place at the feed's pitch.
+
+1. **A token row is 44pt** (`homeTokenRow`, `DSFeed.headHeight`), its mark at a row's size in the rows' lead column. Under its name, where it is: a public token's networks (amber "Doesn't match Ethereum" as on Holdings, §1825), a private one's Holdings line ("Ethereum · 1.5% on Aave · Privacy Pools", "Ethereum · Railgun", "Aztec"). Under its dollars, its day in the day's ink; flat in grey (§83).
+2. **Private money is listed by token and place** (`homePrivateEntries`), the biggest first, so one token in two places is two rows, as on Holdings.
+3. **A private row does what its row does on Holdings**: Privacy Pools opens Send, Railgun its take-back. Your Aztec account's rows open nothing on Holdings, so here they open Holdings.
+
+**Mac half (§1402).** The phone's Home only.
+
+**Checks.** None new. **Seen** on the simulator with the demo: two private rows with their lines and days, the panel about 30pt higher. Not seen: a public row, the no-feed layout.
