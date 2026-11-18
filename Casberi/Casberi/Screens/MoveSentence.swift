@@ -2623,24 +2623,16 @@ struct MoveSentence: View {
         }
     }
 
-    /// **THE ADDRESS, READABLE (prd §1586, user: "five digits per section
-    /// that doesn't lead to a wrap").** "0x" stands apart; the forty
-    /// characters are eight groups of five, two rows of four, the first and
-    /// last bright — the ones a person checks. A tap copies it, as the foot does.
+    /// **THE ADDRESS, ONE QUIET LINE (prd §1884, amending §1586; user: "the
+    /// way the address looks makes it read busy").** A tap copies it, as the
+    /// foot does.
     private func addressBlock(_ address: String) -> some View {
-        Button { copy() } label: { AddressGroupsGrid(address: address) }
+        Button { copy() } label: { AddressLine(address: address) }
         .buttonStyle(RowPress())
         .accessibilityLabel(Text(verbatim: address))
         .accessibilityHint(Text("Copies the address"))
     }
 
-    /// An EVM address's forty characters in eight groups of five; empty for
-    /// anything else.
-    static func addressGroups(_ address: String) -> [String] {
-        guard address.count == 42, address.lowercased().hasPrefix("0x") else { return [] }
-        let hex = Array(address.dropFirst(2))
-        return stride(from: 0, to: 40, by: 5).map { String(hex[$0..<$0 + 5]) }
-    }
 
     /// Receive's one blank (prd §1486): the list it opens is your own
     /// networks, then every network Relay takes deposits on.
@@ -8932,31 +8924,21 @@ struct MovePhrase: View {
     }
 }
 
-/// **THE WHOLE ADDRESS, READABLE (prd §1586):** "0x" apart, eight groups of
-/// five in two rows of four, the first and last bright. Receive's sentence
-/// and Your account's box draw it; anything not an EVM address is one line.
-struct AddressGroupsGrid: View {
+/// **THE WHOLE ADDRESS, ONE QUIET LINE (prd §1884, amending §1586):** in
+/// the secondary ink, no groups, no bright first and last: the groups read
+/// busy (user, 2026-11-18). An EVM address shrinks to stay on one line; a
+/// longer one (Aztec's 64 digits) takes two. Every Receive and Your
+/// account's box draw it.
+struct AddressLine: View {
     let address: String
 
     var body: some View {
-        let groups = MoveSentence.addressGroups(address)
-        if groups.count == 8 {
-            Grid(alignment: .leading, horizontalSpacing: DS.Space.s3, verticalSpacing: DS.Space.s1) {
-                ForEach(0..<2, id: \.self) { row in
-                    GridRow {
-                        Text(verbatim: row == 0 ? "0x" : "").foregroundStyle(DS.textSecondary)
-                        ForEach(0..<4, id: \.self) { col in
-                            let n = row * 4 + col
-                            Text(verbatim: groups[n]).foregroundStyle(n == 0 || n == 7 ? DS.textPrimary : DS.textSecondary)
-                        }
-                    }
-                }
-            }
-            .dsText(.mono17)
-        } else {
-            Text(verbatim: address).dsText(.mono17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        let long = address.count > 42
+        Text(verbatim: address).dsText(.mono17).foregroundStyle(DS.textSecondary)
+            .lineLimit(long ? 2 : 1)
+            .minimumScaleFactor(long ? 0.7 : 0.6)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

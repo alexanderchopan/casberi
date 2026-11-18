@@ -1359,7 +1359,7 @@ struct WalletYourAccountFigure: View {
                             .lineLimit(2)
                             .truncationMode(.middle)
                     } else {
-                        AddressGroupsGrid(address: address)
+                        AddressLine(address: address)
                     }
                 }
                     .buttonStyle(RowPress())

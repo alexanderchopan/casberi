@@ -9,7 +9,7 @@ import SwiftUI
 ///
 /// ("your private balance" goes back to the list; the tail copies), one line
 /// only when there is something to say (what arrived, moving in, waiting
-/// for approval), then the address in groups of five, as public Receive
+/// for approval), then the address in one quiet line, as public Receive
 /// shows yours (a tap copies the whole; no QR, user: "i don't know why we
 /// need the qr code"), and the foot: "New address" grey at the leading
 /// edge, "Share" pink at the trailing. No helper text.
@@ -255,10 +255,10 @@ struct MoveFreshSentence<Head: View>: View {
         return network.chainId == FreshTx.homeChain ? String(localized: "Ethereum, Base or Robinhood") : network.name
     }
 
-    /// The address in groups of five, as public Receive shows yours; a tap
+    /// The address in one quiet line, as public Receive shows yours; a tap
     /// copies the whole (prd §1719: no QR).
     private func code(_ address: String) -> some View {
-        Button { copy(address) } label: { AddressGroupsGrid(address: address) }
+        Button { copy(address) } label: { AddressLine(address: address) }
             .buttonStyle(RowPress())
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityLabel(Text(verbatim: address))

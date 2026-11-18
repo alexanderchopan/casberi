@@ -201,7 +201,7 @@ struct MoveKeysWalk: View {
             }
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 Text("Public address").dsText(.body17).foregroundStyle(DS.textSecondary)
-                Button { copyAddress() } label: { AddressGroupsGrid(address: account) }
+                Button { copyAddress() } label: { AddressLine(address: account) }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Your address, \(account)"))
                     .accessibilityHint(Text("Copies your address"))

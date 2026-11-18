@@ -257,7 +257,7 @@ use "$SENT" 'let receivesPools = PrivateMove.freshAvailable' "your private balan
 use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
 use "$FRESHV" 'MovePhrase(YourAccount.short(shown) + ".", glue: String(localized: "at"), ink: DS.textPrimary)' "the fresh address is no longer said by its tail"
 use "$FRESHV" 'private var shownAddress: String? { fromPrivate ? privateAddress : entry?.address }' "From › Anyone no longer says the one-time address (prd §1877)"
-use "$FRESHV" 'Button { copy(address) } label: { AddressGroupsGrid(address: address) }' "the fresh address is no longer drawn whole, in groups (prd §1719: no QR)"
+use "$FRESHV" 'Button { copy(address) } label: { AddressLine(address: address) }' "the fresh address is no longer drawn whole, one quiet line (prd §1719: no QR; §1884)"
 use "$FRESHV" 'MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise")' "New address is not a row over the foot (prd §1803)"
 use "$FRESHV" 'ShareLink(item: entry.address) {' "Share no longer shares the whole address"
 use "$FRESHV" 'MoveBackCard(act: leave, disabled: moving)' "the fresh page's back no longer returns to Receive's addresses (prd §1803)"

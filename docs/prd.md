@@ -74179,3 +74179,7 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 ## §1883
 
 **Receive names the tokens, never "dollars"** (user, 2026-11-18, testing build 1042: "on receive it said 'dollars' but should say 'usdc'"). Amends §1880 item 4: the line before anything arrives reads "On Ethereum, Base or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it." USDG is Robinhood's dollar (§1880), so it is named beside USDC rather than folded into it.
+
+## §1884
+
+**An address is one quiet line** (user, 2026-11-18, testing 1042: "i think the issue is that the way the address looks makes it read busy", then "i like B" over `mockups/receive-address/receive-address-options.png`). Amends §1586: no "0x" column, no groups of five, no bright first and last. `AddressLine` draws the whole address in the secondary ink: an EVM address shrinks to stay on one line, Aztec's 64 digits take two. Every Receive (public, the private one-time address, your Aztec address) and Your account's box draw it; `MoveSentence.addressGroups` and `MoveAztecReceive.groups` are deleted with the grid. Seen on the iPhone 17 Pro simulator (demo): public Receive one line, Aztec two.

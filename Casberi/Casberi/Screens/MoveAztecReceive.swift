@@ -6,7 +6,7 @@ import SwiftUI
 ///     Receive to your private balance on Aztec at …596a.
 ///
 /// ("your private balance" goes back to the list; the tail copies), then
-/// your Aztec address in eight groups, as public Receive groups yours (a tap
+/// your Aztec address in one quiet line, as every Receive draws one (a tap
 /// copies the whole, no QR), and the foot: "Copy" grey at the leading edge,
 /// "Share" pink at the trailing. It is your account's one address, the same
 /// every time; anyone on Aztec pays it privately.
@@ -87,37 +87,9 @@ struct MoveAztecReceive<Head: View>: View {
         .onAppear { chrome.moveTall = true }
     }
 
-    /// An Aztec address's 64 hex digits in eight groups of eight, two rows,
-    /// the first and last group in the primary ink — the shape public
-    /// Receive gives an Ethereum address (`AddressGroupsGrid`).
-    static func groups(_ address: String) -> [String] {
-        let hex = Array(address.lowercased().hasPrefix("0x") ? address.dropFirst(2) : Substring(address))
-        guard hex.count == 64 else { return [] }
-        return stride(from: 0, to: 64, by: 8).map { String(hex[$0..<$0 + 8]) }
-    }
-
-    @ViewBuilder static func grid(_ address: String) -> some View {
-        let groups = groups(address)
-        if groups.count == 8 {
-            Grid(alignment: .leading, horizontalSpacing: DS.Space.s3, verticalSpacing: DS.Space.s1) {
-                ForEach(0..<2, id: \.self) { row in
-                    GridRow {
-                        Text(verbatim: row == 0 ? "0x" : "").foregroundStyle(DS.textSecondary)
-                        ForEach(0..<4, id: \.self) { col in
-                            let n = row * 4 + col
-                            Text(verbatim: groups[n]).foregroundStyle(n == 0 || n == 7 ? DS.textPrimary : DS.textSecondary)
-                        }
-                    }
-                }
-            }
-            .dsText(.mono17)
-            .minimumScaleFactor(0.7)
-            .lineLimit(1)
-        } else {
-            Text(verbatim: address).dsText(.mono17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
+    /// Your Aztec address as every Receive draws one: one quiet line
+    /// (`AddressLine`, prd §1884).
+    static func grid(_ address: String) -> some View { AddressLine(address: address) }
 
     private func copy(_ address: String) {
         DSPasteboard.copy(address)
