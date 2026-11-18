@@ -50,11 +50,6 @@ struct SettingsRows: View {
             .map { String(localized: String.LocalizationValue($0)) }
         return ListFormatter.localizedString(byJoining: on)
     }
-    @State private var avatarPickerOpen = false
-    @State private var profileDialogOpen = false
-    @State private var avatarSelection: PhotosPickerItem?
-    @State private var nameEditorOpen = false
-    @State private var nameDraft = ""
 
     /// A row's page: in the Accounts pane where the shell has one (prd §876),
     /// else the sheet it has always raised. One decision, read by six rows.
@@ -109,65 +104,6 @@ struct SettingsRows: View {
                 presented(AccountDetailSheet(detail: $0))
             }
             .sheet(isPresented: $languageOpen) { presented(LanguagePickerSheet()) }
-            .photosPicker(isPresented: $avatarPickerOpen,
-                          selection: $avatarSelection, matching: .images)
-            // A set photo can come off, not just be replaced — every setting
-            // can be undone.
-            // The one row's one question (prd §1835): the name or the photo.
-            .confirmationDialog("Name", isPresented: $profileDialogOpen, titleVisibility: .hidden) {
-                Button(ProfileStore.shared.name == nil ? "Add name" : "Change name") {
-                    // The draft opens on what's stored, so Save on an
-                    // untouched field is a no-op rather than a wipe.
-                    nameDraft = ProfileStore.shared.name ?? ""
-                    nameEditorOpen = true
-                }
-                Button(ProfileStore.shared.avatar == nil ? "Add photo" : "Change photo") { avatarPickerOpen = true }
-                if ProfileStore.shared.avatar != nil {
-                    Button("Remove photo", role: .destructive) {
-                        DSHaptic.tap()
-                        withAnimation(DS.Motion.standard) { ProfileStore.shared.avatar = nil }
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-            // The name, in the same grammar as the photo above it — one field,
-            // one Save, and a Remove that only exists once there is something
-            // to remove (§83: a control that can't do anything isn't offered).
-            // An alert rather than a tray: this is the address-book rename's
-            // exact shape, for the same reason it's used there — one short
-            // string, typed once, with nothing else on the screen to decide.
-            .alert("Your name", isPresented: $nameEditorOpen) {
-                TextField(String(localized: "Name"), text: $nameDraft)
-                    .textInputAutocapitalization(.words)
-                    .textContentType(.givenName)
-                Button(String(localized: "Save")) {
-                    DSHaptic.tap()
-                    withAnimation(DS.Motion.standard) {
-                        ProfileStore.shared.name = ProfileStore.preparedName(nameDraft)
-                    }
-                }
-                if ProfileStore.shared.name != nil {
-                    Button(String(localized: "Remove"), role: .destructive) {
-                        DSHaptic.tap()
-                        withAnimation(DS.Motion.standard) { ProfileStore.shared.name = nil }
-                    }
-                }
-                Button(String(localized: "Cancel"), role: .cancel) {}
-            } message: {
-                // The honest fact, where it's asked for rather than in a
-                // privacy screen nobody opens while typing.
-                Text("Only used to greet you. It stays on \(DS.device).")
-            }
-            .onChange(of: avatarSelection) { _, item in
-                guard let item else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        ProfileStore.shared.avatar = ProfileStore.prepared(image)
-                    }
-                    avatarSelection = nil
-                }
-            }
             #if DEBUG
             // Debug hook: `simctl launch ... -deeplink casberi://account
             // -accountDetail data` opens that detail sheet for screenshots.
@@ -290,16 +226,10 @@ struct SettingsRows: View {
     /// Group one — your things and their state. A–Z.
     private var primaryRows: [RowSpec] {
         [
-            // NAME AND PHOTO ARE ONE ROW (prd §1835, user: "avatar and name
-            // tho can be combined"): the photo is the row's lead (it is also
-            // Move's face, §1741), the name its fact, and one tap asks which
-            // to change. Unset, the value is empty (prd §784): no name is a
-            // complete state. Never two doors in one row (§1826).
-            RowSpec(title: "Name",
-                    value: ProfileStore.shared.name ?? "",
-                    avatar: ProfileStore.shared.avatar,
-                    avatarSeat: true,
-                    action: { profileDialogOpen = true }),
+            // NO NAME ROW (prd §1860, user: "if we add it to the account page
+            // should we remove it from settings?"): these rows close Account's
+            // page, whose box above is the face and the name, and a tap there
+            // asks §1835's question. One page, one door.
             // "Data" (user ruling 2026-08-24, reversing the 2026-07-24 ruling
             // that made it "Privacy") — still the ONE home for all of it: where
             // your things live (on device / iCloud + ADP), what leaves this

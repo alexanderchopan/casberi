@@ -73811,3 +73811,15 @@ Seven verbs at one size, four of them starting with S, asked for a read of the w
 **Mac half (§1402).** The phone's Home only.
 
 **Checks.** None new. **Seen** on the simulator with the demo: two private rows with their lines and days, the panel about 30pt higher. Not seen: a public row, the no-feed layout.
+
+## §1860 — Account's face and name are a door: one tap asks the name-and-photo question, and Settings' Name row is deleted (amends §1835 item 2; extends §1487, §1480 item 6) (user, 2026-11-17: "on your account page user should be able to tap to add their name and avatar just like in settings"; then "if we add it to the account page should we remove it from settings?")
+
+**Why.** Account's box drew your face and a name, and neither answered a touch: the one place that shows who the account is could not be told who you are. Settings' Name row could, from the bottom of the same page.
+
+1. **The face and the name are one button** on Account's box (`WalletYourAccountFigure`). A tap asks §1835's question: Add name or Change name, Add photo or Change photo, Remove photo once there is one.
+2. **Settings' Name row is deleted** (amends §1835 item 2). Settings' rows close the same Account page, so the row was a second door to the box above it. The question lives in one modifier (`ProfileEditing`, `.profileEditing(isPresented:)`).
+3. **The name you gave leads the box**, else the account's label ("You"); the address, the networks and Copy are unchanged.
+
+**Mac half (§1402).** The same box on Catalyst's Account page.
+
+**Checks.** None new.

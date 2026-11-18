@@ -1257,6 +1257,7 @@ struct WalletYourAccountFigure: View {
     let address: String?
     @Environment(ShellChrome.self) private var chrome
     @State private var copied = false
+    @State private var profileOpen = false
 
     var body: some View {
         // The account picked under Your account (prd §1700f item 2): the
@@ -1264,13 +1265,27 @@ struct WalletYourAccountFigure: View {
         let aztec = chrome.yourAccountShowsAztec ? AztecAccountStore.shared.shown.address : nil
         if let address = aztec ?? address {
             VStack(spacing: DS.Space.s1) {
-                WalletFace(address: self.address ?? address, size: DS.Face.sheet, circular: true)
-                Text(verbatim: aztec != nil ? String(localized: "You on Aztec")
-                     : WalletStore.shared.displayName(forWatched: address) ?? WalletStore.yourAccountName)
-                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .padding(.top, DS.Space.s1)
-                    .contentTransition(.opacity)
+                // **THE FACE AND THE NAME ARE YOURS TO SET HERE (prd §1860,
+                // user: "on your account page user should be able to tap to
+                // add their name and avatar just like in settings").** One
+                // tap asks the name-and-photo question (`ProfileEditing`);
+                // the name you gave leads, else the account's label.
+                Button { profileOpen = true } label: {
+                    VStack(spacing: DS.Space.s1) {
+                        WalletFace(address: self.address ?? address, size: DS.Face.sheet, circular: true)
+                        Text(verbatim: aztec != nil ? String(localized: "You on Aztec")
+                             : ProfileStore.shared.name
+                                ?? WalletStore.shared.displayName(forWatched: address)
+                                ?? WalletStore.yourAccountName)
+                            .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .padding(.top, DS.Space.s1)
+                            .contentTransition(.opacity)
+                    }
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Changes your name or photo"))
+                .profileEditing(isPresented: $profileOpen)
                 // Beside the Aztec address wherever it can be copied (prd
                 // §1779): an Ethereum wallet refuses it, and this says why.
                 // Its 64 digits stand in Receive's two rows of eight, which
