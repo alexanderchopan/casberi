@@ -47,8 +47,10 @@ final class RailgunHoldings {
 
     private(set) var reading: [Held]
     private(set) var readAt: Date?
-    /// Dollars for one whole token, by symbol (upper case).
-    private(set) var prices: [String: Double] = [:]
+    /// Dollars for one whole token, by symbol (upper case). A launch starts
+    /// on the last read's (`LastPrices`).
+    private(set) var prices: [String: Double] = LastPrices.read(RailgunHoldings.pricesKey)
+    private static let pricesKey = "railgun.prices.v1"
     private(set) var syncing = false
 
     static let interval: TimeInterval = 10 * 60
@@ -158,8 +160,12 @@ final class RailgunHoldings {
         let symbols = Set(shown.map { $0.symbol.lowercased() })
         guard !symbols.isEmpty else { return }
         let found = await MainnetPrices.prices(for: Array(symbols))
-        let upper = Dictionary(uniqueKeysWithValues: found.map { ($0.key.uppercased(), $0.value) })
-        if upper != prices { prices = upper }
+        let upper = LastPrices.settled(Dictionary(uniqueKeysWithValues: found.map { ($0.key.uppercased(), $0.value) }),
+                                       over: prices)
+        if upper != prices {
+            prices = upper
+            LastPrices.keep(upper, key: Self.pricesKey)
+        }
     }
 
     /// The Wallet's number counts it once, as private money (§1713 item 1:

@@ -16,8 +16,11 @@ final class PrivateMoneyStore {
 
     private(set) var notes: [PrivateMoney.Note]
     /// USD per unit by lower-cased symbol, for notes on a network whose coins
-    /// have value (`MainnetPrices`); never asked for test money.
-    private(set) var prices: [String: Double] = [:]
+    /// have value (`MainnetPrices`); never asked for test money. A launch
+    /// starts on the last read's (`LastPrices`), so Home's Private stands
+    /// with the total from the first frame.
+    private(set) var prices: [String: Double] = LastPrices.read(PrivateMoneyStore.pricesKey)
+    private static let pricesKey = "privateMoney.prices.v1"
     /// Each yield share's exchange rate (the token's units per whole share)
     /// and the yearly rate it earns, read live (prd §1563), by lower-cased
     /// share. Never kept: a launch reads them again.
@@ -238,11 +241,17 @@ final class PrivateMoneyStore {
     func walletHolding() async -> [(symbol: String, usd: Double, holderID: String, label: String)] {
         let real = notes.filter { $0.status == .approved && !PrivateMoney.testnets.contains($0.chainId) }
         guard !real.isEmpty else { return [] }
-        let found = await MainnetPrices.prices(for: real.map(\.symbol))
-        if found != prices { prices = found }
+        let found = LastPrices.settled(await MainnetPrices.prices(for: real.map(\.symbol)), over: prices)
+        if found != prices {
+            prices = found
+            LastPrices.keep(found, key: Self.pricesKey)
+        }
         await readYield()
-        let usd = PrivateMoney.worthUSD(notes, prices: found, rates: rates)
-        NSLog("privateMoney| worth | $%.2f | %d prices", usd, found.count)
+        // The store's prices, never this call's own answer: two reads run at
+        // once (Home and Holdings), and the one whose price read failed
+        // counted nothing while the other had just priced the same notes.
+        let usd = PrivateMoney.worthUSD(notes, prices: prices, rates: rates)
+        NSLog("privateMoney| worth | $%.2f | %d prices", usd, prices.count)
         return usd > 0 ? [(symbol: PrivateMoney.walletSymbol, usd: usd, holderID: PrivateMoney.holderID,
                            label: String(localized: "Private"))] : []
     }

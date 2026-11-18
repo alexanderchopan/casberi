@@ -177,8 +177,10 @@ final class AztecAccountStore {
     static let walletSymbol = "Aztec"
     static let holderID = "aztec"
 
-    /// USD per coin, by the coin's mainnet symbol, from the last read.
-    private(set) var prices: [String: Double] = [:]
+    /// USD per coin, by the coin's mainnet symbol, from the last read. A
+    /// launch starts on them (`LastPrices`).
+    private(set) var prices: [String: Double] = LastPrices.read(AztecAccountStore.pricesKey)
+    private static let pricesKey = "aztec.prices.v1"
 
     /// A holding's worth in dollars, or nil when it has no price.
     func usd(_ holding: Holding) -> Double? {
@@ -234,8 +236,11 @@ final class AztecAccountStore {
         let coins = shown.holdings.filter(\.isHeld).compactMap { Self.priced[$0.address.lowercased()] }
             + arriving.map { $0.symbol.lowercased() }.filter { Self.priced.values.contains($0) }
         guard !coins.isEmpty else { return [] }
-        let found = await MainnetPrices.prices(for: coins)
-        if found != prices { prices = found }
+        let found = LastPrices.settled(await MainnetPrices.prices(for: coins), over: prices)
+        if found != prices {
+            prices = found
+            LastPrices.keep(found, key: Self.pricesKey)
+        }
         let total = shown.holdings.compactMap(usd).reduce(0, +)
         NSLog("aztecEngine| worth | $%.2f | %d prices", total, found.count)
         return total > 0 ? [(symbol: Self.walletSymbol, usd: total, holderID: Self.holderID,
