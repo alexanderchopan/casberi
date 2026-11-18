@@ -230,7 +230,12 @@ struct MovePrivateSentence<Head: View>: View {
                 // Nobody picked is not said (prd §1791): no "to address".
                 MoveClause(glue: String(localized: "to")) { recipientWord }
             }
-            MovePhrase(move.onEthereum ? String(localized: "Ethereum.") : String(localized: "Sepolia."), glue: String(localized: "on"))
+            // Where it arrives (prd §1879): Base or Robinhood once picked.
+            // With no one picked yet it goes "to Base", never "your private
+            // balance on Base" (the balance stays on Ethereum).
+            MovePhrase(move.away ? Self.networkName(move.destination) + "."
+                       : move.onEthereum ? String(localized: "Ethereum.") : String(localized: "Sepolia."),
+                       glue: move.away && move.recipient == nil ? String(localized: "to") : String(localized: "on"))
         }
     }
 
