@@ -108185,6 +108185,34 @@
         }
       }
     },
+    "It failed on Ethereum. Your tokens did not move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Falló en Ethereum. Tus tokens no se movieron."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum で失敗しました。トークンは移動していません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 실패했습니다. 토큰은 이동하지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ethereum 上失败了。你的代币没有移动。"
+          }
+        }
+      }
+    },
     "It goes back to %@ on Sepolia, in public." : {
       "localizations" : {
         "es" : {
@@ -130631,6 +130659,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Open Food Facts 中未找到。"
+          }
+        }
+      }
+    },
+    "Not in a block after four minutes. Check Activity before you try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No está en un bloque tras cuatro minutos. Revisa Actividad antes de volver a intentarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "4 分たってもブロックに入っていません。再試行する前にアクティビティを確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "4분이 지나도 블록에 포함되지 않았습니다. 다시 시도하기 전에 활동을 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "四分钟后仍未进入区块。重试前请先查看活动。"
           }
         }
       }
@@ -195506,30 +195562,30 @@
         }
       }
     },
-    "The broadcaster turned it down. Nothing was sent." : {
+    "The broadcaster turned it down. Nothing was sent. The next try goes another way." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "El broadcaster lo rechazó. No se envió nada."
+            "value" : "El broadcaster lo rechazó. No se envió nada. El próximo intento irá por otra vía."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ブロードキャスターが拒否しました。何も送信されていません。"
+            "value" : "ブロードキャスターが拒否しました。何も送信されていません。次は別の方法で送ります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "브로드캐스터가 거절했습니다. 아무것도 전송되지 않았습니다."
+            "value" : "브로드캐스터가 거절했습니다. 아무것도 전송되지 않았습니다. 다음 시도는 다른 방법으로 진행됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "广播者拒绝了它。未发送任何内容。"
+            "value" : "广播者拒绝了它。未发送任何内容。下次尝试将换一种方式。"
           }
         }
       }

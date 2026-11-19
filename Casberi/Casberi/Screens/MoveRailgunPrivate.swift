@@ -687,40 +687,46 @@ final class RailgunMove {
             case .takeBack where toPrivate && viaFresh:
                 guard let plan = transferPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.transferFromFresh(plan, unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
+                let hash = try await RailgunPocket.transferFromFresh(plan, unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
+                try await Self.mined(hash)
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toPrivate:
                 guard let plan = transferPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.transfer(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
+                let hash = try await RailgunPocket.transfer(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
                 transferPlan = nil
+                try await Self.mined(hash)
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse && viaFresh:
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
+                let hash = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
                                                           unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
+                try await Self.mined(hash)
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse:
                 guard let q = quote else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.send(q, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
+                let hash = try await RailgunPocket.send(q, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) })
                 quote = nil
+                try await Self.mined(hash)
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .swap where viaFresh:
                 guard let plan = swapPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(Self.swapFreshPlan, away: true) }) { _ in }
+                let hash = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(Self.swapFreshPlan, away: true) }) { _ in }
+                try await Self.mined(hash)
                 finishSteps()
                 stage = .done(String(localized: "Swapped privately."))
             case .swap:
                 guard let plan = swapPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.swap(plan, unlocked: { [weak self] in self?.started(Self.swapStepsPlan, away: true) })
+                let hash = try await RailgunPocket.swap(plan, unlocked: { [weak self] in self?.started(Self.swapStepsPlan, away: true) })
                 swapPlan = nil
+                try await Self.mined(hash)
                 finishSteps()
                 stage = .done(String(localized: "Swapped privately."))
             case .takeBack:
@@ -742,6 +748,29 @@ final class RailgunMove {
             if Self.kept === self, steps.away != nil { steps.failAway(Self.words(error)) } else { steps.fail(Self.words(error)) }
             stage = .failed(Self.words(error))
             if Self.kept === self { DSHaptic.failure() }
+            // A broadcaster that turned it down sent nothing, and the engine
+            // passes it over now: priced again at once, the next way and its
+            // cost are on the sheet, so the next tap is the one that goes
+            // (user, 2026-11-18: "fix the two taps"; prd §1895).
+            if (error as? RailgunEngineWire.Failure)?.name == "BroadcastRefused" {
+                if mode == .swap { await requoteSwap() }
+                else if toPrivate { await requoteTransfer() }
+                else if toSomeoneElse { await requote() }
+            }
+        }
+    }
+
+    /// **"SWAPPED" IS SAID ONCE IT IS IN A BLOCK (prd §1895).** A send was
+    /// called done when it was handed over; MEV Blocker kept one it could
+    /// never mine and the sheet said "Swapped" (2026-11-18). Its receipt is
+    /// waited for: a revert is a failure, and four minutes with no block is
+    /// said as such, never as done.
+    static func mined(_ hash: String) async throws {
+        guard let network = PrivacyNetwork.forChain(FreshTx.railgunChain) else { return }
+        do {
+            guard try await FreshSigner.landed(hash, on: network) else { throw RailgunPocket.Failure.notMined }
+        } catch FreshSigner.Failure.reverted {
+            throw RailgunPocket.Failure.failedOnChain
         }
     }
 
@@ -845,6 +874,12 @@ final class RailgunMove {
         if (error as? RailgunEngineWire.Failure)?.name == "BroadcastUnconfirmed" {
             return String(localized: "The broadcaster did not confirm. Check Activity before sending again.")
         }
+        if case .notMined? = error as? RailgunPocket.Failure {
+            return String(localized: "Not in a block after four minutes. Check Activity before you try again.")
+        }
+        if case .failedOnChain? = error as? RailgunPocket.Failure {
+            return String(localized: "It failed on Ethereum. Your tokens did not move.")
+        }
         // Gas rose past what the new address was given: never signed.
         if case .refused(let why)? = error as? FreshSigner.Failure, why.hasPrefix("its gas rose") {
             return String(localized: "Gas rose while it was paid. Nothing was sent. Try again.")
@@ -855,7 +890,7 @@ final class RailgunMove {
         }
         // It answered, and refused: nothing went out (prd §1887).
         if (error as? RailgunEngineWire.Failure)?.name == "BroadcastRefused" {
-            return String(localized: "The broadcaster turned it down. Nothing was sent.")
+            return String(localized: "The broadcaster turned it down. Nothing was sent. The next try goes another way.")
         }
         if let failure = error as? YourAccountChain.Failure { return failure.message }
         if error is PrivateRootKey.Failure {

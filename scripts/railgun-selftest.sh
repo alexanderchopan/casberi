@@ -347,5 +347,8 @@ use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" '"BroadcastRefused"' "a r
 use "Casberi/Casberi/Model/FreshSigner.swift" "if to.lowercased() == FreshTx.railgunRelayAdapt {" "a Railgun relay is run before it is signed (§1894)"
 use "Casberi/Casberi/Model/FreshSigner.swift" "let fits = (held - carried) / UInt64(gas)" "a new address's fee fits what it holds"
 use "Casberi/Casberi/Model/FreshSigner.swift" "guard fits >= max(price, tip) else {" "and under the price now it is not sent"
+[[ $(grep -c "try await Self.mined(hash)" Casberi/Casberi/Screens/MoveRailgunPrivate.swift) -ge 6 ]] && echo "  ✓ every Railgun send waits for its block before it is done (§1895)" || { echo "  ✗ a Railgun send is called done when handed over"; fail=1; }
+use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" 'guard try await FreshSigner.landed(hash, on: network) else { throw RailgunPocket.Failure.notMined }' "four minutes with no block is said, never as done"
+use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" 'if mode == .swap { await requoteSwap() }' "a refusal prices the swap again past that broadcaster"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

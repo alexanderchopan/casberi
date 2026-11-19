@@ -37,6 +37,10 @@ enum RailgunPocket {
 
     enum Failure: Error, Equatable {
         case noAccount, noRoot, curve
+        /// Handed over and not in a block after four minutes (prd §1895).
+        case notMined
+        /// In a block, and reverted: nothing moved but its gas.
+        case failedOnChain
         /// A sync the roots did not confirm: nothing is spent from it.
         case untrusted
         /// A prepared call that is not your account's plain call to Railgun.

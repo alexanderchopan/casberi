@@ -74309,3 +74309,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Not done:** "Swapped" still means handed over, not mined; the gas left on a new address that sent nothing is not swept back.
 
 **Checks.** `railgun-selftest.sh`: the dry run, the ceiling to the balance, the refusal under the price.
+
+## §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once (amends §1875, §1877, §1891) (user, 2026-11-18, after a swap the sheet called "Swapped" was never mined and every swap took two taps: "i thought we tested everything", then "Yes, fix both") — BUILT
+
+1. **Done means mined.** Every Railgun send that a broadcaster or a new address of yours carries (a swap, a send to a private address, a send to someone) waits for its receipt before its steps finish and the sheet says Swapped or Sent (`MoveRailgunPrivate.mined`). A revert reads "It failed on Ethereum. Your tokens did not move."; four minutes with no block reads "Not in a block after four minutes. Check Activity before you try again.", never as done.
+2. **A refusal prices the move again at once.** A broadcaster that turned it down sent nothing and is passed over (§1891), so the sheet asks for a new price straight away: the next way and its cost stand on the sheet, and the next tap is the one that goes. The refusal reads "The broadcaster turned it down. Nothing was sent. The next try goes another way."
+
+**Measured, the test that led here:** with Ophis passed over, the swap went from a new address and was mined (0x21c277e9…bf63, block 26446450, 1.81M gas).
+
+**Not done:** gas left on a new address that sent nothing (`...5eea`, about $2) is not swept back.
+
+**Checks.** `railgun-selftest.sh`: every Railgun send waits for its block, no block is never done, a refusal prices the swap again.
