@@ -38,7 +38,7 @@ enum MoveDeck {
     /// A row of a step's list.
     static let rowHeight: CGFloat = 48
     /// A row's lead: a mark, a face or a glyph.
-    static let lead: CGFloat = 30
+    static let lead: CGFloat = DS.Face.row
     /// Between a row's lead and its words.
     static let leadGap: CGFloat = 14
     /// How long the act's word is held before it acts (prd §1897 item 7).

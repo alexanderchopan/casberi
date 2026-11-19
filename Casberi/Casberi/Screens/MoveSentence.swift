@@ -2777,7 +2777,7 @@ struct MoveSentence: View {
     /// figure at `price17`, so a token reads here as it does in Holdings.
     static let choiceRung: DSTextStyle = .heading17
     /// A choice's mark: the Wallet's list size (prd §1681, was 44).
-    static let listMark: CGFloat = MoveDeck.lead
+    static let listMark: CGFloat = DS.Face.row
     /// A choice's row, at least: the word and its line with air (prd §1681).
     static let listRowHeight: CGFloat = 48
     /// The space between a phrase's words, as a share of the size: Figtree's
@@ -5637,7 +5637,7 @@ struct MoveSentence: View {
     private func personTile(_ name: String, address: String?, mark: String?, act: @escaping () -> Void) -> some View {
         MoveDeckTile(title: name, act: act) {
             if let address {
-                WalletFace(address: address, size: DSHomeCircleMetrics.face, circular: true)
+                WalletFace(address: address, size: DS.Face.seat, circular: true)
             } else {
                 MoveRowMark(token: mark ?? name, size: DSHomeCircleMetrics.face)
             }
@@ -9241,7 +9241,7 @@ struct MoveSentence: View {
             Task { await chooseProduct(p) }
         } face: {
             if let brand = Self.merchantMark(name) {
-                BridgeIcon(name: brand, size: DSHomeCircleMetrics.face, circular: true)
+                BridgeIcon(name: brand, size: DS.Face.seat, circular: true)
             } else {
                 MoveRowMark(token: name, size: DSHomeCircleMetrics.face)
             }
