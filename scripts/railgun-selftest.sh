@@ -333,7 +333,9 @@ grep -q 'railgunRelayAdapt = "0xac9f360ae85469b27aeddeafc579ef2d052ad405"' Casbe
   && echo "  ✓ that adapter is the classic one, never its 7702 twin" \
   || { echo "  ✗ the new address's swap is not held to the classic relay adapter"; fail=1; }
 use "$MOVEF" "RailgunHoldings.shared.afterMove()" "a move done reads the private balance again as it lands (§1887)"
-use "Casberi/Casberi/Model/RailgunHoldings.swift" "for wait in [20, 45, 90] {" "the re-reads wait for the block, three at most"
+use "Casberi/Casberi/Model/RailgunHoldings.swift" "for wait in [20, 45, 90, 180, 300] {" "the re-reads wait for the block and the screening node, five at most"
+use "tools/railgun-engine/src/engine.js" "      await syncTxidTree();" "the sync ties our own transactions to their notes before the proofs we owe"
+use "tools/railgun-engine/src/engine.js" "if (validated == null || after >= validated || (round > 0 && after === before)) return;" "a TXID tree stuck short of the screening node fills its missing unshields, and stops when that does not move it"
 use "Casberi/Casberi/Screens/FeedScreen+Actions.swift" "Task { await RailgunHoldings.shared.refresh(force: true) }" "a pull on the Wallet forces Railgun's read"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

@@ -121,16 +121,17 @@ final class RailgunHoldings {
     /// A private move just left, and the chain has not mined it: a read now
     /// sees nothing new (2026-11-18, a swap's WETH missing after two pulls
     /// and a forced read that ran before the block). Read again as blocks
-    /// land, until the reading changes, three times at most.
+    /// land and the screening node hears our proofs, until the reading has
+    /// changed and nothing in it waits, five times at most (about 11 min).
     func afterMove() {
         guard !DemoMode.isActive else { return }
         let before = reading
         Task { @MainActor in
-            for wait in [20, 45, 90] {
+            for wait in [20, 45, 90, 180, 300] {
                 try? await Task.sleep(for: .seconds(wait))
                 while syncing { try? await Task.sleep(for: .seconds(2)) }
                 await refresh(force: true)
-                if reading != before { return }
+                if reading != before, !reading.contains(where: { (Decimal(string: $0.pending) ?? 0) > 0 }) { return }
             }
         }
     }

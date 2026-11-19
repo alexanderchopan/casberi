@@ -29,7 +29,7 @@ import {
 } from '@railgun-community/wallet';
 import { WakuBroadcasterClient, BroadcasterTransaction } from '@railgun-community/waku-broadcaster-client-web';
 import { NetworkName, NETWORK_CONFIG, TXIDVersion, EVMGasType } from '@railgun-community/shared-models';
-import { RailgunEngine, Merkletree } from '@railgun-community/engine';
+import { RailgunEngine, Merkletree, TokenType, ByteUtils, ByteLength } from '@railgun-community/engine';
 import memdown from 'memdown';
 import leveljs from 'level-js';
 import axios from 'axios';
@@ -156,10 +156,10 @@ async function startOnce(persist) {
   if (started) return;
   patchTreesForCheckpoint();
   setLoggers(
-    (m) => { if (/invalid|incomplete|merkleroot|error|quick ?sync|fail/i.test(String(m))) say(`sdk ${String(m).slice(0, 300)}`); },
+    (m) => { if (/invalid|incomplete|merkleroot|error|quick ?sync|fail|missing|stopping/i.test(String(m))) say(`sdk ${String(m).slice(0, 300)}`); },
     (e) => say(`sdkError ${String(e?.message ?? e).slice(0, 300)}`),
   );
-  await startRailgunEngine('casberi', persist ? leveljs('casberi-railgun') : memdown(), false, store, false, false, POI_NODES);
+  await startRailgunEngine('casberi', persist ? leveljs('casberi-railgun') : memdown(), true, store, false, false, POI_NODES);
   storage = persist ? 'indexeddb' : 'memory';
   getProver().setSnarkJSGroth16(snarkjs.groth16);
   // A line whenever a tree's status changes or it moves 5%, so a sync that
@@ -190,6 +190,41 @@ const poi = async (method, params) => {
   return res.result;
 };
 
+// The TXID tree, caught up to the screening node. Railgun's sync stops for
+// good at the first transaction whose unshield this phone never stored, and
+// says so only in its debug log (measured 2026-11-18: the tree stuck at
+// 151,233 since Nov 13 on one missing unshield, so no proof was made for any
+// later move of ours). A stuck tree takes the unshields from that block on
+// from the indexer, as Railgun's quick sync stores them, and syncs again.
+const squidQuery = async (query) => (await (await fetch(SQUID, { method: 'POST', headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ query }) })).json()).data;
+async function syncTxidTree() {
+  const engine = getEngine();
+  const ut = engine.getUTXOMerkletree(V2, CHAIN);
+  const at = async () => (await engine.getLatestRailgunTxidData(V2, CHAIN)).txidIndex;
+  for (let round = 0; round < 4; round++) {
+    const before = await at();
+    await engine.syncRailgunTransactionsV2(CHAIN, 'casberi sync');
+    const after = await at();
+    const validated = (await poi('ppoi_validated_txid', { chainType: String(CHAIN.type), chainID: String(CHAIN.id), txidVersion: V2 }))?.validatedTxidIndex;
+    if (validated == null || after >= validated || (round > 0 && after === before)) return;
+    const next = (await squidQuery(`{ transactions(orderBy: id_ASC, offset: ${after + 1}, limit: 1) { blockNumber } }`))?.transactions?.[0];
+    if (!next) return;
+    const unshields = (await squidQuery(`{ unshields(orderBy: [blockNumber_ASC, eventLogIndex_ASC], where: { blockNumber_gte: "${next.blockNumber}" }, limit: 10000) {
+      blockNumber to transactionHash fee blockTimestamp amount eventLogIndex token { tokenType tokenSubID tokenAddress } } }`))?.unshields ?? [];
+    const kinds = { ERC20: TokenType.ERC20, ERC721: TokenType.ERC721, ERC1155: TokenType.ERC1155 };
+    await ut.addUnshieldEvents(unshields.map((u) => ({
+      txid: ByteUtils.formatToByteLength(u.transactionHash, ByteLength.UINT_256, false),
+      timestamp: Number(u.blockTimestamp), eventLogIndex: Number(u.eventLogIndex), toAddress: getAddress(u.to),
+      tokenType: kinds[u.token.tokenType], tokenAddress: getAddress(u.token.tokenAddress), tokenSubID: u.token.tokenSubID,
+      amount: hex(u.amount), fee: hex(u.fee), blockNumber: Number(u.blockNumber),
+      railgunTxid: undefined, poisPerList: undefined, blindedCommitment: undefined,
+    })));
+    engine.invalidateTXOsCacheAllWallets?.(CHAIN);
+    say(`txidSync stuck at ${after} of ${validated}: ${unshields.length} unshields from block ${next.blockNumber} filled in`);
+  }
+}
+
 // The proofs a move of ours owes the screening node (2026-11-18: a private
 // swap's WETH and its DAI change both read "about an hour", and no proof
 // reached the node). The SDK makes them after a scan, unawaited and silent;
@@ -197,6 +232,8 @@ const poi = async (method, params) => {
 async function reportPOIs() {
   try {
     const wallet = walletForID(walletID);
+    const tt = getEngine().getTXIDMerkletree(V2, CHAIN);
+    for (let i = 0; tt.isScanning && i < 60; i++) await new Promise((r) => setTimeout(r, 1000));
     await wallet.refreshPOIsForTXIDVersion(CHAIN, V2, true);
     const short = (v) => String(v ?? '').replace(/0x([0-9a-f]{6})[0-9a-f]{58}/gi, '0x$1…');
     const spent = await wallet.getTXOsSpentPOIStatusInfo(V2, CHAIN);
@@ -205,6 +242,15 @@ async function reportPOIs() {
     }
     const received = await wallet.getTXOsReceivedPOIStatusInfo(V2, CHAIN);
     for (const { strings: x } of received.slice(0, 4)) say(`pois received ${short(JSON.stringify(x))}`.slice(0, 600));
+    const engine = getEngine();
+    const ut = engine.getUTXOMerkletree(V2, CHAIN);
+    const local = await engine.getLatestRailgunTxidData(V2, CHAIN);
+    say(`pois txidTree ${local?.txidIndex}`);
+    for (const { strings: x } of received.slice(0, 2)) {
+      const c = await ut.getCommitmentSafe(x.tree, x.position);
+      const un = [...await ut.getAllUnshieldEventsForTxid(x.txid), ...await ut.getAllUnshieldEventsForTxid(`0x${x.txid}`)];
+      say(`pois note ${x.tree}:${x.position} railgunTxid ${c?.railgunTxid ? 'set' : 'none'} | unshields ${un.length} ${un.map((u) => `${short(u.toAddress)} ${u.amount}+${u.fee} ${u.tokenAddress} rg ${u.railgunTxid ? 'set' : 'none'}`).join(', ')}`.slice(0, 600));
+    }
   } catch (e) {
     say(`pois failed ${String(e?.message ?? e).slice(0, 200)} ${String(e?.cause?.message ?? '').slice(0, 300)}`);
   }
@@ -386,6 +432,17 @@ const methods = {
     clearInterval(settledTimer);
     const until = now() + cap;
     while (!complete() && now() < until) await new Promise((r) => setTimeout(r, 1000));
+    // The TXID tree ties a transaction of ours to its notes, and the proofs
+    // we owe the screening node need that tie. Railgun syncs the tree 10 s
+    // after a scan and makes the proofs before then, and nothing made them
+    // later: a private swap's DAI change and WETH waited for proofs that
+    // never came (measured on the phone, 2026-11-18). Sync it here, then
+    // the proofs.
+    try {
+      await syncTxidTree();
+    } catch (e) {
+      say(`txidSync failed ${String(e?.message ?? e).slice(0, 200)}`);
+    }
     const synced = Math.round(now() - t);
     reportPOIs();
 
