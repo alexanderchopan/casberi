@@ -122,7 +122,7 @@ use "$SENT" 'MoveDeckTile(title: balanceWord, sub: privateNet) {' "your private 
 use "$SENT" 'listRow(String(localized: "Your private account"), sub: Self.aztecRule, symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
 # No Private switch in Send (prd §1700f item 11), and no private "network"
 # either (prd §1719): private money is rows in Send's token list.
-use "$SENT" 'ForEach(balanceRows.filter { $0.network == net }, id: \.key) { p in' "private money is no longer tiles in Send's token list, under its network (prd §1719, §1904)"
+use "$SENT" 'MoveTokenPlace(id: "balance", title: String(localized: "Your private balance"),' "private money is no longer tiles in Send's token list, under its network (prd §1719, §1904, §1910)"
 ! grep -q 'localized: "Ethereum · Private"' "$SENT" || { echo "✗ a private place is a network in Send's list again (prd §1719)"; exit 1; }
 ! grep -q 'goPrivate(.send) } }))' "$SENT" \
     || { echo "✗ a Private switch came back to Send (prd §1700f item 11)"; exit 1; }

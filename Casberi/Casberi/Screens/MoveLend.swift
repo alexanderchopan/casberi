@@ -315,30 +315,26 @@ struct MoveLendSentence<Head: View>: View {
 
     /// **FROM IS A TOKEN ON A NETWORK (prd §1898 item 1):** every market Aave
     /// takes here, with what you have of it (or have earning), as Send's
-    /// From rows; one with nothing is dimmed, never hidden.
+    /// From rows; one with nothing is dimmed, never hidden. Move's one token
+    /// list (`MoveTokenGrid`, prd §1910): each network under its title.
     private var fromRows: some View {
-        // At Home's app-icon size, as Send's From is (prd §1904 item 11).
-        MoveDeckGrid {
-            ForEach(AaveLend.markets.filter { !move.refused.contains(LendMove.key($0)) }.map { (LendMove.key($0), $0) }, id: \.0) { _, m in
-                let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? ""
-                let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
-                let worth = move.available(m).flatMap { move.dollars($0, in: m) }
-                MoveDeckTile(title: m.symbol,
-                             sub: worth.map { MoveSentence.money($0, whole: true) } ?? PrivateMoney.figure(move.available(m) ?? "0", decimals: m.decimals, symbol: ""),
-                             picked: m.chainId == move.chainId && m.symbol == move.symbol, dim: have <= 0) {
-                    withAnimation(DS.Motion.standard) {
-                        move.chainId = m.chainId
-                        move.symbol = m.symbol
-                        move.pick(nil, all: false)
-                        move.settle()
-                        open = .amount
-                    }
-                } face: {
-                    MoveRowMark(token: m.symbol, network: MoveSentence.networkMark(chainId: m.chainId), size: DSHomeCircleMetrics.face)
+        let markets = AaveLend.markets.filter { !move.refused.contains(LendMove.key($0)) }
+        return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: markets.map { m in
+            let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? ""
+            let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
+            let worth = move.available(m).flatMap { move.dollars($0, in: m) }
+            return MoveTokenChoice(id: LendMove.key(m), symbol: m.symbol, network: name, badge: MoveSentence.networkMark(chainId: m.chainId),
+                                   sub: worth.map { MoveSentence.money($0, whole: true) } ?? PrivateMoney.figure(move.available(m) ?? "0", decimals: m.decimals, symbol: ""),
+                                   picked: m.chainId == move.chainId && m.symbol == move.symbol, dim: have <= 0) {
+                withAnimation(DS.Motion.standard) {
+                    move.chainId = m.chainId
+                    move.symbol = m.symbol
+                    move.pick(nil, all: false)
+                    move.settle()
+                    open = .amount
                 }
-                .accessibilityLabel(Text("\(m.symbol) on \(name)"))
             }
-        }
+        })])
     }
 
     /// Face ID has the act.

@@ -749,9 +749,10 @@ grep -q 'if sendsFromAztec, aztecCanPay {' "$SEND" \
 
 # Send's token list: your private account on Aztec is its own heading, in
 # Aztec's ink, and offered only where Aztec can pay the To (prd §1908).
-grep -q 'let aztecRows = aztecCanPay ? privateWithRows(q).filter { $0.key.hasPrefix("aztec|") } : \[\]' "$SEND" \
-  && grep -q 'placeHeader(String(localized: "Your private account"), ink: DS.aztecInk)' "$SEND" \
-  && grep -q 'let balanceRows = privateWithRows(q).filter { !$0.key.hasPrefix("aztec|") }' "$SEND" \
+# Drawn through Move's one token list since prd §1910.
+grep -q 'let aztec = aztecCanPay ? privateRows.filter { $0.key.hasPrefix("aztec|") } : \[\]' "$SEND" \
+  && grep -q 'MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecRule,' "$SEND" \
+  && grep -q 'let balance = privateRows.filter { !$0.key.hasPrefix("aztec|") }' "$SEND" \
   || { echo "✗ Send lists Aztec's tokens under Your private balance, or offers them to a To Aztec cannot pay (prd §1908)"; exit 1; }
 
 echo "✓ zk.money self-test passed"

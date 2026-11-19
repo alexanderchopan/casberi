@@ -1304,29 +1304,16 @@ struct MoveRailgunSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
-    /// What a swap can buy: Railgun's listed tokens on Ethereum.
+    /// What a swap can buy: Railgun's listed tokens on Ethereum, as Move's
+    /// one token list (prd §1910).
     private var buyList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(move.buyChoices) { b in
-                let picked = b == move.buy
-                Button {
-                    withAnimation(DS.Motion.standard) { move.buy = b; buyOpen = false }
-                    move.amountChanged()
-                    DSHaptic.selection()
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        AssetMark(name: b.symbol, size: DS.Face.list)
-                        Text(verbatim: b.symbol).dsText(.body17)
-                            .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
-                        Spacer(minLength: DS.Space.s2)
-                    }
-                    .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .accessibilityAddTraits(picked ? [.isSelected] : [])
+        MoveTokenGrid(places: [MoveTokenPlace(id: "railgun", choices: move.buyChoices.map { b in
+            MoveTokenChoice(id: b.symbol, symbol: b.symbol, network: "Ethereum", badge: MoveSentence.networkMark(chainId: 1),
+                            picked: b == move.buy) {
+                withAnimation(DS.Motion.standard) { move.buy = b; buyOpen = false }
+                move.amountChanged()
             }
-        }
+        })])
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -1389,30 +1376,15 @@ struct MoveRailgunSentence<Head: View>: View {
         }
     }
 
+    /// What your private balance holds on Railgun, as Move's one token list
+    /// (prd §1910).
     private var tokens: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(move.holdings) { h in
-                let picked = h == move.holding
-                Button {
-                    withAnimation(DS.Motion.standard) { move.pick(h); open = false }
-                    DSHaptic.selection()
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        AssetMark(name: h.symbol, size: DS.Face.list)
-                        Text(verbatim: h.symbol).dsText(.body17)
-                            .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
-                        Spacer(minLength: DS.Space.s2)
-                        Text(verbatim: RailgunHoldings.figure(h.units, decimals: h.decimals)).dsText(.body17)
-                            .foregroundStyle(DS.textSecondary).monospacedDigit()
-                    }
-                    .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .accessibilityAddTraits(picked ? [.isSelected] : [])
+        MoveTokenGrid(places: [MoveTokenPlace(id: "railgun-held", choices: move.holdings.map { h in
+            MoveTokenChoice(id: h.id, symbol: h.symbol, network: "Ethereum", badge: MoveSentence.networkMark(chainId: 1),
+                            sub: RailgunHoldings.figure(h.units, decimals: h.decimals), picked: h == move.holding) {
+                withAnimation(DS.Motion.standard) { move.pick(h); open = false }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        })])
     }
 
     // MARK: - The foot

@@ -985,28 +985,17 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     }
 
     /// The tokens there are to move, each with how much (prd §1700q).
+    /// Move's one token list (prd §1910): your private account's tokens, on
+    /// Aztec, as tiles.
     private var tokens: some View {
-        ForEach(move.holdings) { holding in
+        MoveTokenGrid(places: [MoveTokenPlace(id: "aztec", choices: move.holdings.map { holding in
             let places = holding.symbol == "USDC" ? 6 : 18
-            let shown = PrivateMoney.figure(holding.units, decimals: places, symbol: holding.symbol)
-            let picked = holding.symbol == move.symbol
-            Button {
+            return MoveTokenChoice(id: holding.symbol, symbol: holding.symbol, network: "Aztec", badge: "brand-aztec",
+                                   sub: PrivateMoney.figure(holding.units, decimals: places, symbol: ""),
+                                   picked: holding.symbol == move.symbol) {
                 withAnimation(DS.Motion.standard) { move.pick(holding.symbol); open = nil }
-                DSHaptic.selection()
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    AssetMark(name: holding.symbol, size: DS.Face.list)
-                    Text(verbatim: holding.symbol).dsText(.body17)
-                        .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
-                    Spacer(minLength: DS.Space.s2)
-                    Text(verbatim: shown).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
-                }
-                .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(RowPress())
-            .accessibilityAddTraits(picked ? [.isSelected] : [])
-        }
+        })])
     }
 
     /// An Aztec account (a private send) or an Ethereum address (out

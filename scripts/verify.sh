@@ -882,6 +882,16 @@ step "Address-tail audit"
 "$ROOT/scripts/address-tail-audit.py" || fail "an address is shortened somewhere other than AddressTail, or at both ends — see the output above"
 print -P "%F{green}✓ address-tail audit%f"
 
+# Every token list in Move is `MoveTokenGrid` (prd §1910): a token and its
+# network are one pick, drawn one way. A token tile or row drawn by hand on
+# one verb renders fine and looks different from every other, so only a
+# check sees it.
+step "Move token-grid audit"
+"$ROOT/scripts/move-token-grid-audit.py" --self-test >/dev/null \
+  || fail "the Move token-grid audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/move-token-grid-audit.py" || fail "a Move screen draws a token list by hand — see the output above"
+print -P "%F{green}✓ Move token-grid audit%f"
+
 # Every source room's head composes the shared chassis (prd §745). Twenty-two of
 # twenty-six heads were drawn by hand the day their source landed — one anatomy
 # at four gap rungs, two footnote rungs and ten copies of one row — and §495

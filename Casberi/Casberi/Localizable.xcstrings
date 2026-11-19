@@ -70794,6 +70794,34 @@
         }
       }
     },
+    "Choose a token first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige primero un token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先にトークンを選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 토큰 선택"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先选择代币"
+          }
+        }
+      }
+    },
     "Choose an address" : {
       "localizations" : {
         "es" : {
@@ -206577,6 +206605,34 @@
         }
       }
     },
+    "Through Relay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través de Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay経由"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay를 통해"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Relay"
+          }
+        }
+      }
+    },
     "Through Shield" : {
       "localizations" : {
         "es" : {
@@ -210880,6 +210936,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无限授权"
+          }
+        }
+      }
+    },
+    "Unlisted" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin listar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未掲載"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "미등록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未列出"
           }
         }
       }

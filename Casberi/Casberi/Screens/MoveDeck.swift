@@ -490,6 +490,86 @@ struct MoveDeckTile<Face: View>: View {
     }
 }
 
+/// One token a Move list offers: its symbol, the network it is on, what you
+/// hold of it, and the pick.
+struct MoveTokenChoice: Identifiable {
+    let id: String
+    let symbol: String
+    /// The network's name, the title it stands under.
+    let network: String
+    /// The network's bundled mark (`MoveSentence.networkMark`), the badge on
+    /// its face; nil draws none.
+    var badge: String?
+    /// The grey line under the symbol: dollars, else the amount.
+    var sub: String?
+    var subInk: Color = DS.textSecondary
+    var picked = false
+    var dim = false
+    let act: () -> Void
+}
+
+/// A place the money is in (Your public account, Your private balance, Your
+/// private account), its tokens under it.
+struct MoveTokenPlace: Identifiable {
+    let id: String
+    /// Drawn only when the list holds more than one place or network.
+    var title: String?
+    var ink: Color = DS.textPrimary
+    /// A line the place keeps under its title, whatever else is shown
+    /// ("Aztec to Aztec only", prd §1898 item 4).
+    var rule: String?
+    let choices: [MoveTokenChoice]
+}
+
+/// **EVERY TOKEN LIST IN MOVE IS THIS ONE (prd §1910, user, 2026-11-19: "make
+/// it consistent", "it shouldn't be hand rolled on any screen in move").** A
+/// token and its network are one pick: each place under its title, each
+/// network under its own, the tokens as tiles at Home's app-icon size, each
+/// face wearing its network's badge. No Move screen lays a token list out by
+/// hand (`move-token-grid-audit.py`).
+struct MoveTokenGrid: View {
+    let places: [MoveTokenPlace]
+
+    var body: some View {
+        let shown = places.filter { !$0.choices.isEmpty }
+        let networks = Set(shown.flatMap { $0.choices.map(\.network) })
+        // One place on one network needs no titles: the sentence says both.
+        let titled = shown.count > 1 || networks.count > 1
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(shown) { place in
+                if titled, let title = place.title {
+                    Text(verbatim: title)
+                        .dsText(.heading17)
+                        .foregroundStyle(place.ink)
+                        .frame(minHeight: 36, alignment: .bottomLeading)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                if let rule = place.rule { networkTitle(rule, ink: place.ink) }
+                let nets = place.choices.reduce(into: [String]()) { if !$0.contains($1.network) { $0.append($1.network) } }
+                ForEach(nets, id: \.self) { net in
+                    // A place's rule already names its one network.
+                    if titled, place.rule == nil || nets.count > 1 { networkTitle(net, ink: DS.textSecondary) }
+                    MoveDeckGrid {
+                        ForEach(place.choices.filter { $0.network == net }) { c in
+                            MoveDeckTile(title: c.symbol, sub: c.sub, subInk: c.subInk, picked: c.picked, dim: c.dim, act: c.act) {
+                                MoveRowMark(token: c.symbol, network: c.badge, size: DSHomeCircleMetrics.face)
+                            }
+                            .accessibilityLabel(Text("\(c.symbol) on \(c.network)"))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func networkTitle(_ text: String, ink: Color) -> some View {
+        Text(verbatim: text)
+            .dsText(.label12)
+            .foregroundStyle(ink)
+            .frame(minHeight: 32, alignment: .bottomLeading)
+    }
+}
+
 /// Five across, Home's app row folded into rows (prd §1904 item 11).
 struct MoveDeckGrid<Content: View>: View {
     @ViewBuilder let content: () -> Content

@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2089 of 2163 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2090 of 2164 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1866,7 +1866,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
 - §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469, §1480, §1524)
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then… (amended by §1480)
-- §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485)
+- §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485, §1910)
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 - §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
 - §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599, §1666, §1668, §1897)
@@ -1997,8 +1997,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
 - §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
-- §1599 — Buy is a card buying crypto; gift cards are Spend (amended by §1897)
-- §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o… (amended by §1754)
+- §1599 — Buy is a card buying crypto; gift cards are Spend (amended by §1897, §1910)
+- §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o… (amended by §1754, §1910)
 - §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609, §1644, §1687)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
 - §1603 — Deposit's proof, its first half: Peer's enclave key proven and the session sealed, in the app, before Peer answers
@@ -2339,9 +2339,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
 - §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898, §1900, §1901)
-- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904)
-- §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904, §1909)
-- §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900)
+- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904, §1910)
+- §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904, §1909, §1910)
+- §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900, §1910)
 - §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904, §1909)
 - §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902, §1903, §1904)
 - §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;… (amended by §1903)
@@ -2351,7 +2351,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1906 — A fake transfer is one somebody else sent
 - §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
 - §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte…
-- §1909 — Send's network and token are one step, With: To · With · Amount
+- §1909 — Send's network and token are one step, With: To · With · Amount (amended by §1910)
+- §1910 — Every token list in Move is one template, and a token and its network are one pick on every verb
 
 ## Dead rulings → what replaced them (generated)
 

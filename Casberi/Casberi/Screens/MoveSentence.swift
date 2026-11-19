@@ -943,10 +943,11 @@ struct MoveSentence: View {
     /// one holding the most first (§1442a: a token is tapped before a
     /// network as often as after).
     private var lookIn: [Op.Network] {
-        // **SEND'S WITH IS ONE LIST (prd §1909):** every network's tokens,
-        // whichever was picked last, so one pick answers both. Lines already
-        // kept hold it to their network: one transaction is one network.
-        if verb == .send, items.isEmpty { return networksByWorth }
+        // **A TOKEN'S LIST IS EVERY NETWORK'S (prd §1909, §1910):** Send's
+        // With, Swap's From and For, Spend's Pay with; one pick answers the
+        // network and the token. Lines already kept hold it to their
+        // network: one transaction is one network.
+        if verb == .send || verb == .swap || verb == .buy, items.isEmpty { return networksByWorth }
         return networkPicked ? [network] : networksByWorth
     }
     /// What For's search looks in: the network a swap arrives on, once
@@ -3777,7 +3778,7 @@ struct MoveSentence: View {
 
     /// The lists that lead with a search field.
     static func searches(_ which: Blank) -> Bool {
-        which == .with || which == .buy || which == .to || which == .arrives || which == .merchant
+        which == .with || which == .buy || which == .to || which == .arrives || which == .merchant || which == .elsewhere || which == .elsewhereCoin
     }
 
     /// One blank's list, wherever it is drawn.
@@ -3790,12 +3791,14 @@ struct MoveSentence: View {
         case .network: networkList
         case .destination: destinationList
         case .elsewhere: elsewhereList
-        case .elsewhereCoin: elsewhereCoinList
+        // One list for both (prd §1910).
+        case .elsewhereCoin: elsewhereList
         case .arrives: arrivesList
         case .group: groupList
         case .merchant: merchantList
         case .depositCoin: depositCoinList
-        case .depositNetwork: depositNetworkList
+        // One list for both (prd §1910).
+        case .depositNetwork: depositCoinList
         case .when: whenList
         case .until: untilList
         case .under: underList
@@ -3895,7 +3898,7 @@ struct MoveSentence: View {
             // (prd §1790).
             guard b.names != .verb else { continue }
             // Send's token row says its network: no row of its own does (§1909).
-            let folds = verb == .send
+            let folds = verb == .send || verb == .buy
             // **A SWAP IS TWO PAIRS (prd §1793, §1794):** each side a
             // network and its token, on one line. Its four rows are read
             // off the swap itself (`swapPairRows`), so each is there from
@@ -3908,18 +3911,23 @@ struct MoveSentence: View {
             // report never came again, so the row said "Choose" under "on
             // Ethereum".
             if verb == .deposit, b.names == .depositNetwork { continue }
+            // **WHAT THEY SEND IS ONE ROW (prd §1910):** Relay's networks
+            // list their tokens under them, one pick for both.
+            if b.names == .elsewhereCoin { continue }
             // **A ROW ONLY WHERE THERE IS A CHOICE (prd §1805):** the one
             // network you hold anything on, and the one token there, are
             // said by the sentence and ask nothing.
-            // **SEND ASKS NO NETWORK (prd §1909):** the token's list is every
-            // network's, each under its title, and a pick there is both.
-            if verb == .send, b.names == .network { continue }
+            // **NO NETWORK ROW (prd §1909, §1910):** Send's and Spend's token
+            // lists are every network's, each under its title, and a pick
+            // there is both.
+            if verb == .send || verb == .buy, b.names == .network { continue }
             if verb == .send, items.isEmpty, b.names == .with, onlyToken { continue }
             let id = "choice\(b.names)"
             guard seen.insert(id).inserted else { continue }
             var value = b.empty ? pick : Self.rowValue(b.text)
             if !b.empty, b.names == .with, folds, networkPicked { value += " · " + network.name }
             if !b.empty, b.names == .buy, folds, networkPicked { value += " · " + buyHome.name }
+            if !b.empty, b.names == .elsewhere, let route = elsewhere { value = "\(route.token.symbol) · \(route.from.name)" }
             if !b.empty, b.names == .amount, inDollars, let with, units != nil, let other = otherUnit(with) { value += " · " + other }
             var row = LedgerRow(id: id, name: Self.rowName(b.names, verb: verb), value: value, opens: b.opens)
             if !b.empty { row.mark = rowMark(b.names) }
@@ -3928,12 +3936,13 @@ struct MoveSentence: View {
             rows.append((Self.rowRank(b.names), row))
         }
         if verb == .swap { rows.append(contentsOf: swapPairRows) }
-        if verb == .deposit {
-            let picked = depositSeller != nil
-            var row = LedgerRow(id: "choicedepositNetwork", name: Self.rowName(.depositNetwork, verb: verb),
-                                value: picked ? network.name : pick, opens: .depositNetwork)
-            if picked { row.mark = rowMark(.depositNetwork) }
-            rows.append((Self.rowRank(.depositNetwork), row))
+        // **BUY'S TOKEN AND NETWORK ARE ONE ROW (prd §1910):** its list is
+        // each network a card buys on, its tokens under it.
+        if verb == .deposit, let at = rows.firstIndex(where: { $0.row.opens == .depositCoin }) {
+            var row = rows[at].row
+            row.value = depositSeller == nil ? pick : "\(depositCoin.symbol) · \(network.name)"
+            row.mark = depositSeller == nil ? nil : MoveRowMark(token: depositCoin.symbol, network: Self.networkMark(network))
+            rows[at].row = row
         }
         // **WHEN IS A CHOICE (prd §1793).** "Now" until a price is picked,
         // there once the pair is known and not before: nothing is picked
@@ -4061,15 +4070,15 @@ struct MoveSentence: View {
         let at = Self.rowRank(.network)
         // **FROM, TO, AMOUNT, WHEN (prd §1900 item 2):** what comes back is
         // picked before how much, so the amount's facts can say it.
-        var gets = row(.buy, at + 3, buy.map { crossBuy?.symbol ?? $0.token.symbol })
+        var gets = row(.buy, at + 3, buy.map { "\(crossBuy?.symbol ?? $0.token.symbol) · \(buyHome.name)" })
         // **WHAT COMES BACK, ON ITS ROW (prd §1896, retiring the ledger's
         // "You get" for a swap):** the quote is the To token's grey line.
         if let back = quoteFigure, !limiting, keptSwaps.isEmpty { gets.row = LedgerRow(id: gets.row.id, name: String(localized: "You get \(back)"),
                                                                        value: gets.row.value, opens: gets.row.opens,
                                                                        mark: gets.row.mark) }
-        return [row(.network, at, networkPicked ? network.name : nil),
-                row(.with, at + 1, with?.token.symbol),
-                row(.destination, at + 2, destinationShown ? buyHome.name : nil),
+        // **A TOKEN AND ITS NETWORK ARE ONE ROW (prd §1910):** From's list
+        // and For's are every network's, so each side asks once.
+        return [row(.with, at + 1, with.map { "\($0.token.symbol) · \(network.name)" }),
                 gets]
     }
 
@@ -4081,10 +4090,12 @@ struct MoveSentence: View {
         // network").** The Network row above it says where.
         switch which {
         // Send has no Network row (prd §1909): its token wears the badge.
-        case .with: return with.map { MoveRowMark(token: $0.token.symbol, network: verb == .send && networkPicked ? Self.networkMark(network) : nil) }
+        // No Network row in Send, Swap or Spend (prd §1909, §1910): a
+        // token wears its network's badge.
+        case .with: return with.map { MoveRowMark(token: $0.token.symbol, network: networkPicked ? Self.networkMark(network) : nil) }
         case .buy:
             guard verb == .swap, let buy else { return nil }
-            return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol)
+            return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol, network: Self.networkMark(buyHome))
         case .network, .depositNetwork: return networkPicked ? Self.networkMark(network).map { MoveRowMark(network: $0) } : nil
         case .destination: return destinationShown ? Self.networkMark(buyHome).map { MoveRowMark(network: $0) } : nil
         case .depositCoin: return MoveRowMark(token: depositCoin.symbol)
@@ -4324,11 +4335,11 @@ struct MoveSentence: View {
     @ViewBuilder private func currentBlock(_ rows: [LedgerRow], follows: Bool) -> some View {
         ForEach(rows) { r in
             // Both sides of a swap are named, alike (prd §1892).
-            if verb == .swap, r.opens == .network { sideHead(String(localized: "From")) }
-            if verb == .swap, r.opens == .destination { toHead }
+            if verb == .swap, r.opens == .with { sideHead(String(localized: "From")) }
+            if verb == .swap, r.opens == .buy { toHead }
             // "Pay with" heads Spend's network and token, as "To" heads a
             // swap's second side (prd §1799).
-            if verb == .buy, r.opens == .network { payHead }
+            if verb == .buy, r.opens == .with { payHead }
             if follows, r.opens == .from {
                 EmptyView()
             } else if follows, r.opens == .network || r.opens == .destination || (r.opens == .buy && verb == .swap) {
@@ -5645,9 +5656,8 @@ struct MoveSentence: View {
     private var withList: some View {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
         // Spend looks on every network (prd §1666): what pays is turned into
-        // USDC on Base first, wherever it is.
-        // The network decides the token (prd §1797): with one picked, what
-        // you hold there; with none, every network.
+        // USDC on Base first, wherever it is. Send, Swap and Spend list every
+        // network's tokens, one pick for both (prd §1909, §1910).
         let rows: [(key: String, net: Op.Network, held: Tokens.Held)] = lookIn.flatMap { n in
             (heldBy[n.chainId] ?? []).map { ("\(n.chainId)|\($0.id)", n, $0) }
         }
@@ -5658,118 +5668,72 @@ struct MoveSentence: View {
         .filter { row in verb != .buy || SpendTopUp.pays(row.held.token, on: row.net) }
         // Biggest first, whichever network it is on.
         .sorted { ($0.held.usd ?? -1) > ($1.held.usd ?? -1) }
+        // Networks in the order of their biggest token.
+        let order = rows.reduce(into: [Op.Network]()) { if !$0.contains($1.net) { $0.append($1.net) } }
+        let ordered = order.flatMap { n in rows.filter { $0.net == n } }
+        let publicPlace = MoveTokenPlace(id: "public", title: String(localized: "Your public account"), choices: ordered.map { row in
+            let h = row.held
+            return MoveTokenChoice(id: row.key, symbol: h.token.symbol, network: row.net.name, badge: Self.networkMark(row.net),
+                                   sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
+                                   picked: with?.id == h.id && networkPicked && row.net == network) {
+                pick { takeToken(h, on: row.net) }
+            }
+        })
+        // **TWO PRIVATE PLACES, TWO TITLES (prd §1908):** your private balance
+        // (Privacy Pools, Railgun) by network, then your private account on
+        // Aztec in its own ink, only where Aztec can pay the To (§1907).
+        let privateRows = verb == .send ? privateWithRows(q) : verb == .swap ? privateSwapRows(q) : []
+        func privateChoices(_ list: [(key: String, symbol: String, network: String, amount: String, usd: Double?, act: () -> Void)],
+                            badge: (String) -> String?) -> [MoveTokenChoice] {
+            list.map { p in
+                MoveTokenChoice(id: p.key, symbol: p.symbol, network: p.network, badge: badge(p.network),
+                                sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
+                    pick {}
+                    p.act()
+                }
+            }
+        }
+        let balance = privateRows.filter { !$0.key.hasPrefix("aztec|") }
+        let aztec = aztecCanPay ? privateRows.filter { $0.key.hasPrefix("aztec|") } : []
+        let places = [
+            publicPlace,
+            MoveTokenPlace(id: "balance", title: String(localized: "Your private balance"),
+                           choices: privateChoices(balance) { name in Op.networks.first { $0.name == name }.flatMap { Self.networkMark($0) } }),
+            MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecRule,
+                           choices: privateChoices(aztec) { _ in "brand-aztec" }),
+        ]
         return VStack(alignment: .leading, spacing: 0) {
-            // **TOKENS AT HOME'S APP-ICON SIZE (prd §1904 item 11):** each a
-            // face with its network's badge, the symbol, the dollars; under
-            // the place they are in, said in full (§1904 item 8).
-            let privateHere = (verb == .send && !privateWithRows(q).isEmpty) || (verb == .swap && !privateSwapRows(q).isEmpty)
-            // **THE NETWORK IS A TITLE (user, 2026-11-19: "you could if you
-            // needed put the networks like a section title underneath"):**
-            // the place, then each network it holds on, biggest first, its
-            // tokens under it; the badge stays on each face.
-            let nets: [Op.Network] = rows.reduce(into: []) { if !$0.contains($1.net) { $0.append($1.net) } }
-            if !rows.isEmpty, privateHere || nets.count > 1 { placeHeader(String(localized: "Your public account")) }
-            ForEach(nets, id: \.chainId) { net in
-                if nets.count > 1 || privateHere { listHeader(net.name) }
-                MoveDeckGrid {
-                    ForEach(rows.filter { $0.net == net }, id: \.key) { row in
-                        let h = row.held
-                        MoveDeckTile(title: h.token.symbol, sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
-                                     picked: with?.id == h.id && networkPicked && row.net == network) {
-                            pick {
-                                if !networkPicked || row.net != network { switchNetwork(row.net) }
-                                // Spend's amount is the card's value in dollars, whatever pays.
-                                if verb == .buy { with = h } else { choose(h) }
-                            }
-                        } face: {
-                            MoveRowMark(token: h.token.symbol, network: Self.networkMark(row.net), size: DSHomeCircleMetrics.face)
-                        }
-                        .accessibilityLabel(Text("\(h.token.symbol) on \(row.net.name)"))
-                    }
-                }
-            }
-            // **PRIVATE MONEY IS ROWS HERE (prd §1719).** Send's "what" lists
-            // your private tokens under one "Private" header, after the
-            // public ones: picking one is the whole choice ("Send 0.1 ETH
-            // from your private balance to …"). No switch, no network to
-            // pick first; network and token pin down the one place.
-            // **TWO PLACES, TWO HEADINGS (prd §1908, user: "it has from your
-            // private balance as a section but not private account. it just
-            // lists aztec token in the same group").** Your private balance
-            // (Privacy Pools, Railgun) under its own name, then your private
-            // account on Aztec under its own, in Aztec's ink, and only where
-            // Aztec can pay the To (`aztecCanPay`, prd §1907).
-            let balanceRows = privateWithRows(q).filter { !$0.key.hasPrefix("aztec|") }
-            let aztecRows = aztecCanPay ? privateWithRows(q).filter { $0.key.hasPrefix("aztec|") } : []
-            if verb == .send, !balanceRows.isEmpty {
-                placeHeader(String(localized: "Your private balance"))
-                let privateNets: [String] = balanceRows.reduce(into: []) { if !$0.contains($1.network) { $0.append($1.network) } }
-                ForEach(privateNets, id: \.self) { net in
-                listHeader(net)
-                MoveDeckGrid {
-                    ForEach(balanceRows.filter { $0.network == net }, id: \.key) { p in
-                        MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
-                            pick {}
-                            p.act()
-                        } face: {
-                            // Its network's badge, as a public token wears one.
-                            MoveRowMark(token: p.symbol,
-                                        network: Op.networks.first { $0.name == p.network }.flatMap { Self.networkMark($0) },
-                                        size: DSHomeCircleMetrics.face)
-                        }
-                        .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
-                    }
-                }
-                }
-            }
-            if verb == .send, !aztecRows.isEmpty {
-                placeHeader(String(localized: "Your private account"), ink: DS.aztecInk)
-                listHeader(Self.aztecRule)
-                MoveDeckGrid {
-                    ForEach(aztecRows, id: \.key) { p in
-                        MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
-                            pick {}
-                            p.act()
-                        } face: {
-                            MoveRowMark(token: p.symbol, network: "brand-aztec", size: DSHomeCircleMetrics.face)
-                        }
-                        .accessibilityLabel(Text("\(p.symbol), your private account, Aztec"))
-                    }
-                }
-            }
-            // **A PRIVATE SWAP (prd §1875).** Swap's "what" lists the tokens
-            // your private balance holds on Railgun under the same header:
-            // picking one swaps it without it leaving your private balance.
-            if verb == .swap, !privateSwapRows(q).isEmpty {
-                placeHeader(String(localized: "Your private balance"))
-                let privateNets: [String] = privateSwapRows(q).reduce(into: []) { if !$0.contains($1.network) { $0.append($1.network) } }
-                ForEach(privateNets, id: \.self) { net in
-                listHeader(net)
-                MoveDeckGrid {
-                    ForEach(privateSwapRows(q).filter { $0.network == net }, id: \.key) { p in
-                        MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
-                            pick {}
-                            p.act()
-                        } face: {
-                            // Its network's badge, as a public token wears one.
-                            MoveRowMark(token: p.symbol,
-                                        network: Op.networks.first { $0.name == p.network }.flatMap { Self.networkMark($0) },
-                                        size: DSHomeCircleMetrics.face)
-                        }
-                        .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
-                    }
-                }
-                }
-            }
-            if rows.isEmpty, verb != .send || privateWithRows(q).isEmpty, verb != .swap || privateSwapRows(q).isEmpty {
+            MoveTokenGrid(places: places)
+            if places.allSatisfy({ $0.choices.isEmpty }) {
                 Text(verbatim: !heldEverywhere && (!networkPicked || heldBy[network.chainId] == nil) ? String(localized: "Reading…")
                      : !q.isEmpty ? String(localized: "You have no \(search.trimmingCharacters(in: .whitespaces).uppercased())")
-                     : networkPicked && unread.contains(network.chainId) ? String(localized: "Couldn't read \(network.name)")
-                     : networkPicked ? String(localized: "Nothing on \(network.name) yet")
+                     : lookIn.count == 1 && unread.contains(network.chainId) ? String(localized: "Couldn't read \(network.name)")
+                     : lookIn.count == 1 ? String(localized: "Nothing on \(network.name) yet")
                      : String(localized: "Nothing to spend yet"))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
         }
+    }
+
+    /// A token picked off the one list: its network with it (prd §1909).
+    /// A swap's For stays where it can still arrive, as a pick on another
+    /// network would leave it (prd §1910).
+    private func takeToken(_ h: Tokens.Held, on net: Op.Network) {
+        let keep = buy
+        let home = buyHome
+        if !networkPicked || net != network { switchNetwork(net) }
+        if verb == .swap, let keep, buy == nil, keep.token != h.token {
+            if home == network {
+                buy = keep
+                destinationPicked = true
+            } else if destinations.contains(home), Self.arrives(keep.token, from: network, on: home) {
+                buy = keep
+                buyOn = home
+                destinationPicked = true
+            }
+        }
+        // Spend's amount is the card's value in dollars, whatever pays.
+        if verb == .buy { with = h } else { choose(h) }
     }
 
     /// Your private tokens as Send's "what" rows (prd §1719): what your
@@ -5848,10 +5812,9 @@ struct MoveSentence: View {
         // This network, then each other it can arrive on (prd §1566): what
         // can arrive there, its ETH and USDC until something is typed (§1617).
         if crossesInFor {
-            // The network picked to arrive on leads (prd §1600).
-            // The network decides the token (prd §1794): with a To network
-            // picked, only what can arrive there is listed.
-            for n in [buyHome] {
+            // **EVERY NETWORK IT CAN ARRIVE ON (prd §1910):** For has no
+            // Network row; this one first, each other under its title.
+            for n in destinations {
                 let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
                 var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: Tokens.offeredUnasked)
                 if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
@@ -5882,28 +5845,28 @@ struct MoveSentence: View {
     }
 
     private var buyList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(buyRows, id: \.key) { row in
-                let l = row.listed
-                let mine = (heldBy[row.net.chainId] ?? []).first { $0.id == l.id }
-                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on Uniswap's list")
-                listRow(l.token.symbol,
-                        sub: networkPicked && row.net == network ? about : [about, row.net.name].compactMap { $0 }.joined(separator: " · "),
-                        trailing: mine.map { Op.spoken($0.units, decimals: $0.token.decimals) },
-                        mark: l.token.symbol, dim: !l.onList) {
-                    pick {
-                        if crossesInFor {
-                            // Picked on another network: it arrives there, and
-                            // what is sold stays where it is (prd §1566).
-                            buyOn = row.net == network ? nil : row.net
-                        } else if row.net != buyHome || !networkPicked {
-                            switchNetwork(row.net)
-                        }
-                        buy = l
-                        destinationPicked = true
+        let choices = buyRows.map { row in
+            let l = row.listed
+            let mine = (heldBy[row.net.chainId] ?? []).first { $0.id == l.id }
+            return MoveTokenChoice(id: row.key, symbol: l.token.symbol, network: row.net.name, badge: Self.networkMark(row.net),
+                                   sub: l.onList ? mine.map { Op.spoken($0.units, decimals: $0.token.decimals) } : String(localized: "Unlisted"),
+                                   subInk: l.onList ? DS.textSecondary : DS.attentionInk,
+                                   picked: buy?.id == l.id && buyHome == row.net) {
+                pick {
+                    if crossesInFor {
+                        // Picked on another network: it arrives there, and
+                        // what is sold stays where it is (prd §1566).
+                        buyOn = row.net == network ? nil : row.net
+                    } else if row.net != buyHome || !networkPicked {
+                        switchNetwork(row.net)
                     }
+                    buy = l
+                    destinationPicked = true
                 }
             }
+        }
+        return VStack(alignment: .leading, spacing: 0) {
+            MoveTokenGrid(places: [MoveTokenPlace(id: "for", choices: choices)])
             if networkPicked, !YourAccountSwap.supported(network) {
                 Text("Swaps are not on \(network.name)").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
@@ -6117,8 +6080,9 @@ struct MoveSentence: View {
     /// network Relay takes deposits on goes through Relay, to your account on
     /// this network.
     private var elsewhereList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(networksByWorth) { n in
+        let q = search.trimmingCharacters(in: .whitespaces).lowercased()
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(networksByWorth.filter { q.isEmpty || $0.name.lowercased().contains(q) }) { n in
                 listRow(n.name, sub: n.isTest ? String(localized: "Test network · its tokens have no value") : String(localized: "your own address"),
                         image: Self.networkMark(n), picked: elsewhere == nil && networkPicked && n == network) {
                     pick {
@@ -6155,13 +6119,17 @@ struct MoveSentence: View {
                     DSHaptic.selection()
                 }
             }
-            ForEach(elsewhereNetworks) { n in
-                listRow(n.name, sub: String(localized: "through Relay"), mark: n.name,
-                        image: Self.networkMark(chainId: n.id), remote: n.icon) {
-                    pick {}
-                    takeRoute(from: n, token: n.coin(like: elsewhere?.token))
+            // **ANOTHER NETWORK'S TOKENS, ONE PICK (prd §1910):** each network
+            // Relay brings from, under its title, what it takes as tiles.
+            MoveTokenGrid(places: [MoveTokenPlace(id: "relay", title: String(localized: "Through Relay"), choices: elsewhereNetworks.flatMap { n in
+                n.coins.filter { c in q.isEmpty || c.symbol.lowercased().hasPrefix(q) || n.name.lowercased().contains(q) }.map { c in
+                    MoveTokenChoice(id: "\(n.id)|\(c.id)", symbol: c.symbol, network: n.name, badge: Self.networkMark(chainId: n.id),
+                                    picked: elsewhere?.from.id == n.id && elsewhere?.token == c) {
+                        pick {}
+                        takeRoute(from: n, token: c)
+                    }
                 }
-            }
+            })])
             if elsewhereNetworks.isEmpty, !YourAccountDemo.isOn {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
@@ -6199,22 +6167,6 @@ struct MoveSentence: View {
         }
     }
 
-    /// What they send (prd §1470): every coin Relay bridges from the route's
-    /// network, its own coin first.
-    private var elsewhereCoinList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let route = elsewhere {
-                ForEach(route.from.coins) { c in
-                    listRow(c.symbol, sub: c.isNative ? String(localized: "\(route.from.name)'s own token") : nil,
-                            mark: c.symbol, picked: c == route.token) {
-                        pick {}
-                        if c != route.token { takeRoute(from: route.from, token: c) }
-                    }
-                }
-            }
-        }
-    }
-
     /// What you receive (prd §1470): what you hold on your network, then its
     /// ETH and USDC, until you type (prd §1617); then any token on Uniswap's
     /// list. Relay
@@ -6225,13 +6177,15 @@ struct MoveSentence: View {
         let pool = (typed ? (found[to.chainId] ?? []) : []) + (listedBy[to.chainId] ?? [])
         let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [], shows: Tokens.offeredUnasked)
         return VStack(alignment: .leading, spacing: 0) {
-            ForEach(rows) { l in
-                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on Uniswap's list")
-                listRow(l.token.symbol, sub: about, mark: l.token.symbol, dim: !l.onList || l.token == elsewhere?.arrives) {
+            // One network: the shared grid draws no titles (prd §1910).
+            MoveTokenGrid(places: [MoveTokenPlace(id: "arrives", choices: rows.map { l in
+                MoveTokenChoice(id: l.id, symbol: l.token.symbol, network: to.name, badge: Self.networkMark(to),
+                                sub: l.onList ? nil : String(localized: "Unlisted"), subInk: DS.attentionInk,
+                                picked: l.token == elsewhere?.arrives) {
                     pick { elsewhereArrives = l.token }
                     if let route = elsewhere, l.token != route.arrives { takeRoute(from: route.from, token: route.token) }
                 }
-            }
+            })])
             if rows.isEmpty {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
@@ -7183,9 +7137,10 @@ struct MoveSentence: View {
             members[w, default: []].append(r)
         }
         // **THE RULINGS' ORDER (prd §1897 item 2):** Buy's tokens read Token ·
-        // Amount · Network, its gift cards Merchant · Amount · Pay with.
+        // Amount (its network folded into Token, prd §1910), its gift cards
+        // Merchant · Amount · Pay with.
         let preferred: [String] = switch verb {
-        case .deposit: [String(localized: "Token"), String(localized: "Amount"), String(localized: "Network")]
+        case .deposit: [String(localized: "Token"), String(localized: "Amount")]
         case .buy: [String(localized: "Merchant"), String(localized: "Amount"), String(localized: "Pay with")]
         default: []
         }
@@ -7528,7 +7483,7 @@ struct MoveSentence: View {
             }
         } else if verb == .deposit {
             MoveHoldWord(word: holdWords, enabled: depositSeller != nil,
-                         hint: depositSeller.map { Text("Opens \($0.name)'s page") } ?? Text("Pick a network first")) {
+                         hint: depositSeller.map { Text("Opens \($0.name)'s page") } ?? Text("Choose a token first")) {
                 deposit()
             }
         } else if nothingToMove {
@@ -8979,33 +8934,27 @@ struct MoveSentence: View {
         networksByWorth.filter { !$0.isTest && CardOnramp.seller(chainId: $0.chainId) != nil }
     }
 
+    /// What a card buys, on each network a card buys on (prd §1910): the
+    /// token and the network in one pick, the seller under each.
     private var depositCoinList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(CardOnramp.Coin.allCases, id: \.self) { coin in
-                listRow(coin.symbol, sub: coin == .usdc ? String(localized: "Dollars") : String(localized: "Ether"),
-                        mark: coin.symbol, picked: coin == depositCoin) {
-                    pick { depositCoin = coin }
-                }
-            }
-        }
-    }
-
-    private var depositNetworkList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(depositNetworks) { n in
-                if let seller = CardOnramp.seller(chainId: n.chainId) {
-                    listRow(n.name, sub: String(localized: "with \(seller.name)"), image: Self.networkMark(n),
-                            picked: depositSeller != nil && n == network) {
-                        // One transaction is one network, as the network blank says.
-                        if n != network, !items.isEmpty {
-                            say(String(localized: "One transaction is one network. Sign this one first"))
-                        } else {
-                            pick { switchNetwork(n) }
+        let choices = depositNetworks.flatMap { n in
+            CardOnramp.Coin.allCases.map { coin in
+                MoveTokenChoice(id: "\(n.chainId)|\(coin.rawValue)", symbol: coin.symbol, network: n.name, badge: Self.networkMark(n),
+                                sub: CardOnramp.seller(chainId: n.chainId)?.name,
+                                picked: depositSeller != nil && n == network && coin == depositCoin) {
+                    // One transaction is one network, as the network blank says.
+                    if n != network, !items.isEmpty {
+                        say(String(localized: "One transaction is one network. Sign this one first"))
+                    } else {
+                        pick {
+                            switchNetwork(n)
+                            depositCoin = coin
                         }
                     }
                 }
             }
         }
+        return MoveTokenGrid(places: [MoveTokenPlace(id: "card", choices: choices)])
     }
 
     /// Under the sentence: the whole address, to check against the seller's

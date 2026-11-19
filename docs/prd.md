@@ -74532,3 +74532,20 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** None of its own; `deckWord` is the one place a step's word is named.
+
+## §1910 — Every token list in Move is one template, and a token and its network are one pick on every verb (amends §1909, §1898 item 1, §1899 item 1, §1600, §1599, §1470, §1897 item 2) (user, 2026-11-19, of Swap after §1909 merged Send's: "do the same merge for swap?", "make it consistent", "it shouldn't be hand rolled on any screen in move") — BUILT
+
+**Why.** §1909 merged Send's network and token into one list. Swap still asked From's network, then its token, then For's network, then its token; Buy by card asked Token and Network as two steps; Receive from another network asked Relay's network, then its token. And each list was drawn by hand: Send's tiles under network titles, Swap's For as rows, Buy's card list as rows, Earn's tiles with no titles, the Aztec and Railgun screens as rows of their own.
+
+**Ruling.**
+
+1. **One template, `MoveTokenGrid` (`Screens/MoveDeck.swift`).** Each place under its title (Your public account, Your private balance, Your private account in Aztec's ink with its rule), each network under its own, the tokens as tiles at Home's app-icon size, each face wearing its network's badge. One place on one network draws no titles. Every token list in Move builds `MoveTokenChoice` rows into it: Send's With, Swap's From and For, Spend's Pay with, Buy's Token, Receive's from another network and what arrives, Earn's From, the Aztec send's token, Railgun's token and what it buys.
+2. **A token and its network are one pick everywhere.** Swap is Kind · From · For · Amount: From lists every network's tokens; For every network it can arrive on, this one first. Picking From on another network keeps For where it can still arrive. Buy by card is Kind · Token · Amount, each network a card buys on with its tokens and its seller. Receive from another network is one row, "USDT · Arbitrum", its list Relay's networks with their tokens, searchable. A row that names a token says its network after it ("USDC · Base") and its mark wears the badge.
+3. **A token off Uniswap's list says "Unlisted"** in the attention ink under its tile, where the row said "Not on Uniswap's list".
+4. **Not tokens, not this template:** people, merchants, networks alone (Receive on your own address, the private send's destination) and sums (the private screen's amounts).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `move-token-grid-audit.py` (new, in verify) fails a token tile or a token row drawn by hand on any Move screen, with per-file allowances that are a ceiling and a floor.
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Swap's From and For (a pick on Robinhood keeping "for ETH on Base"), Buy by card's Token. **Not seen:** Earn, Receive from another network (Relay is not asked in the demo), the Aztec and Railgun screens, a small phone, Dynamic Type.
