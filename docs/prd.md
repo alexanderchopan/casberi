@@ -74420,3 +74420,15 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Not done.** Nothing is built. Swap's screens after the hold (Face ID, Swapping, Swapped) are §1897's sequence, undrawn. Earn and Receive are not drawn in the Deck.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places as evenly spaced rows, each one copying or opening its address (amends §1896 item 9, §1803) (user, 2026-11-19, of Receive's places: "mae sure the spacig is equal", "other than that it is fin") — DESIGNED, NOT BUILT; the canvas https://claude.ai/artifact/HVBRdokcFujcjdy6eGdyMx, row "Deck · Earn and Receive"
+
+1. **Earn's steps are Kind · From · Amount** (amends §1896 item 9's two quiet kind words under the title): Kind is Lend or Take back. The sentence reads "Lend 0.001 ETH to Aave on Base." or "Take back 1 USDC from Aave on Base."
+2. **Lend's From is §1899's rows**, each grey line saying its network and what it earns ("Base · earns 1.4%"), so the rate is read before the pick. Take back lists what is lent.
+3. **Earn's amount is the keypad** with $20 · Half · All (§1898 item 6), a sum not covered dimmed; the "Half, 1.61497 USDC" rows are retired. The facts: "Earns 1.4% today" and Cost for Lend, "Lent" and "Arrives in your account at once" for Take back. The act is "Hold to lend" or "Hold to take back".
+4. **Receive has no steps and nothing to hold.** The deck lists its three places (§1803) as rows with one even gap between every row and door: Public account ("Base, Ethereum, Robinhood only") with "From another network" and "From another wallet" as doors under it (§1824); Private balance ("Base, Ethereum, or Robinhood only, new address each time"); Private account ("Aztec to Aztec only" in `DS.aztecInk`). Each place has its copy glyph at the right edge.
+5. **A place opens its address** (amends §1803): "Receive at your public account.", its networks a fact, the whole address large across the deck in groups of four, Share as a row, and "Copy address" as the foot's word. The private places open their own pages as today.
+
+**Not done.** Nothing is built. Earn's and Receive's screens after the hold are §1897's sequence, undrawn. Every verb of Move is now drawn in the Deck (§1897 to §1901).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
