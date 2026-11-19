@@ -14,7 +14,9 @@
 # What it removes, each only past the age floor (DISK_SWEEP_DAYS, default 1):
 #   1. build caches — any dir that PROVES it is DerivedData (`Build/` plus
 #      `info.plist` or `Logs/`) under ~/Library/Developer, Xcode/DerivedData,
-#      /private/tmp, /private/tmp/claude-501 and inside session scratchpads.
+#      /private/tmp, /private/tmp/claude-501, inside session scratchpads, and
+#      beside the worktrees in ~/Developer (`casberi-t1-dd`; ten of them,
+#      37 GB, one 18 days old on 2026-11-19, because nothing looked there).
 #      Only the cache, never the scratchpad around it: a session's notes and
 #      worktrees stay. The proof is what keeps a checkout safe — a worktree
 #      named `casberi-ship-wt` matches every name glob and has neither.
@@ -51,6 +53,7 @@ MODE=${1:-}
 
 LIBDEV=${DISK_SWEEP_LIBDEV:-$HOME/Library/Developer}
 TMPROOT=${DISK_SWEEP_TMP:-/private/tmp}
+DEVROOT=${DISK_SWEEP_DEV:-$HOME/Developer}
 USERTMP=${DISK_SWEEP_USERTMP:-$(getconf DARWIN_USER_TEMP_DIR)}
 USERTMP=${USERTMP%/}
 ONLY=${DISK_SWEEP_ONLY:-}          # "files": the filesystem arms alone (self-test)
@@ -100,7 +103,8 @@ remove() {                         # remove <arm> <path>
 sweep_build_caches() {
   local d
   typeset -aU cand
-  cand=("$LIBDEV"/*(N/) "$LIBDEV/Xcode/DerivedData"/*(N/) "$TMPROOT"/*(N/) "$TMPROOT/claude-501"/*(N/))
+  cand=("$LIBDEV"/*(N/) "$LIBDEV/Xcode/DerivedData"/*(N/) "$TMPROOT"/*(N/) "$TMPROOT/claude-501"/*(N/)
+        "$DEVROOT"/*(N/))
   # Inside a session scratchpad: <project>/<session>/… up to three levels down.
   cand+=("$TMPROOT/claude-501"/*/*/{,*/,*/*/,*/*/*/}Build(N/:h))
   for d in $cand; do
@@ -196,7 +200,10 @@ if [[ $MODE == --self-test ]]; then
   OLD=$(date -v-3d +%Y%m%d%H%M)
   mkdd() { mkdir -p "$1/Build/Products" "$1/Logs/Build"; : > "$1/info.plist"; }
   age() { find "$1" -exec touch -t "$OLD" {} + ; }
-  L=$T/lib; P=$T/tmp; U=$T/utmp
+  L=$T/lib; P=$T/tmp; U=$T/utmp; D=$T/dev
+  mkdd "$D/casberi-t1-dd";                       age "$D/casberi-t1-dd"       # beside its worktree
+  mkdd "$D/casberi-today-dd"                                                  # built today
+  mkdir -p "$D/casberi-t1/Casberi" "$D/casberi-t1/Build"; : > "$D/casberi-t1/.git"; age "$D/casberi-t1"
   mkdd "$L/Xcode/DerivedData/Casberi-old";       age "$L/Xcode/DerivedData/Casberi-old"
   mkdd "$L/Xcode/DerivedData/Casberi-warm";      age "$L/Xcode/DerivedData/Casberi-warm"
   : > "$L/Xcode/DerivedData/Casberi-warm/Logs/Build/today.xcactivitylog"      # rebuilt today
@@ -214,7 +221,7 @@ if [[ $MODE == --self-test ]]; then
   mkdir -p "$U/XcodeDistPipeline.~~~old" "$U/XcodeDistPipeline.~~~new"; age "$U/XcodeDistPipeline.~~~old"
   zsh -c 'sleep 60; :' "$P/casberi-building-dd" & HOLD=$!                         # a build in flight
   sleep 0.3
-  DISK_SWEEP_LIBDEV=$L DISK_SWEEP_TMP=$P DISK_SWEEP_USERTMP=$U DISK_SWEEP_ONLY=files DISK_SWEEP_KEEP=$P/casberi-callers-dd/ \
+  DISK_SWEEP_LIBDEV=$L DISK_SWEEP_TMP=$P DISK_SWEEP_USERTMP=$U DISK_SWEEP_DEV=$D DISK_SWEEP_ONLY=files DISK_SWEEP_KEEP=$P/casberi-callers-dd/ \
     DISK_SWEEP_LEDGER=/dev/null zsh "$0" >/dev/null 2>&1
   fails=0
   gone() { [[ ! -e $1 ]] || { print -r -- "✗ should be swept: ${1#$T/}"; (( fails++ )); } }
@@ -225,6 +232,7 @@ if [[ $MODE == --self-test ]]; then
   gone "$P/claude-501/proj/sess/scratchpad/dd"
   gone "$P/claude-501/loose-dd"
   gone "$U/XcodeDistPipeline.~~~old"
+  gone "$D/casberi-t1-dd"
   kept "$L/Xcode/DerivedData/Casberi-warm"
   kept "$L/Xcode/DerivedData/Casberi-newest"
   kept "$L/CasberiDD"
@@ -234,7 +242,9 @@ if [[ $MODE == --self-test ]]; then
   kept "$P/casberi-callers-dd"
   kept "$P/claude-501/proj/sess/scratchpad/notes.md"
   kept "$U/XcodeDistPipeline.~~~new"
-  (( fails == 0 )) && { print -r -- "✓ disk-sweep self-test: 6 swept, 9 kept"; exit 0; }
+  kept "$D/casberi-today-dd"
+  kept "$D/casberi-t1/Casberi"
+  (( fails == 0 )) && { print -r -- "✓ disk-sweep self-test: 7 swept, 11 kept"; exit 0; }
   exit 1
 fi
 
