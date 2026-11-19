@@ -95,7 +95,7 @@ enum PrivacyEngineProbe {
             log("discover", ms(t), "\(found.notes.count) notes · balance [\(balances)]")
             // Checked against the chain through Kohaku's provider (prd §1569a).
             let c = Date()
-            let checked = try await engine.check(network: engine.network ?? .sepolia, notes: found.notes.map(\.commitment))
+            let checked = try await engine.check(network: engine.network ?? .sepolia, notes: PrivateWatch.counted(found))
             let trees = checked.trees.sorted { $0.key < $1.key }
                 .map { "\($0.key) \($0.value.leaves) leaves \($0.value.known ? "known" : "UNKNOWN") read \($0.value.readMs) ms verify \($0.value.verifyMs) ms" }
             log("check", ms(c), "\(checked.checked ? "matches" : "MISMATCH") · \(trees.joined(separator: " · ")) · \(checked.notes - checked.notesMissing)/\(checked.notes) notes in the tree")

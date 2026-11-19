@@ -149,6 +149,14 @@ rm -f /tmp/pe-watch.$$
 grep -qF '.labelHash, .check, .verifyHoldings]' "$ENGINE" || { echo "✗ check is not account-free, so it must run inside the queue"; exit 1; }
 grep -q 'account\.' "$VERIFIED" && { echo "✗ verified.js reads the open account, so the check cannot leave the queue"; exit 1; }
 use "$BUNDLE" "isKnownRoot" "the shipped bundle has no Ethereum check — rebuild"
+# A note's leaf is Poseidon(COMMITMENT_LEAF_TAG, commitment, its block's
+# timestamp), never the bare commitment: comparing commitments called every
+# real note "Doesn't match Ethereum" from 3.0.30 to 3.0.33 (prd §1569c).
+use "$VERIFIED" "hash.hash([COMMITMENT_LEAF_TAG, hex(n.commitment), hex(n.createdAtBlock)])" "the check no longer compares a note's timestamped leaf"
+grep -q "notes.filter((c) => !inTree.has(leafKey(c)))" "$VERIFIED" && { echo "✗ the check compares bare commitments to the tree's leaves"; exit 1; }
+use "$ENGJS" "createdAtBlock: n.createdAtBlock == null ? null : hex(n.createdAtBlock)" "discover no longer hands back each note's leaf time"
+use "$WATCH" 'found.notes.filter { $0.status.uppercased() == "ACTIVE" }' "the check counts notes the balance does not"
+use "$BUNDLE" "notesUnplaced" "the shipped bundle still compares bare commitments — rebuild"
 use "$BUNDLE" "body64" "the shipped bundle's door reads a text body the app no longer sends — rebuild"
 echo "  ok   the door is asked before the funnel, pins are checked before a file is kept, the page reaches no host, two networks behind one switch"
 

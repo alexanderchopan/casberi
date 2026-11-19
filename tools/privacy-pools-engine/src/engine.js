@@ -386,7 +386,9 @@ const methods = {
     const s = await session('withdraw');
     await s.discoverNotes();
     const exported = await s.exportAccount();
-    const notes = (exported.notes ?? []).map((n) => ({ commitment: n.commitment, tokenId: n.tokenId, value: hex(n.value), status: n.status, label: hex(n.label) }));
+    const notes = (exported.notes ?? []).map((n) => ({ commitment: n.commitment, tokenId: n.tokenId, value: hex(n.value), status: n.status, label: hex(n.label),
+      // The time the vault stamped into the note's leaf (`check`, prd §1569c).
+      createdAtBlock: n.createdAtBlock == null ? null : hex(n.createdAtBlock) }));
     const balances = {};
     for (const n of notes) if (n.status === NoteStatus.ACTIVE) balances[n.tokenId] = hex(BigInt(balances[n.tokenId] ?? 0) + BigInt(n.value));
     return { notes, balances: Object.entries(balances).map(([tokenId, value]) => ({ tokenId, value })), ms: Math.round(now() - t) };

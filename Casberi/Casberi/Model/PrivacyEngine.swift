@@ -200,7 +200,7 @@ final class PrivacyEngine: NSObject {
     /// The notes `discover` found, checked against Ethereum itself through
     /// Kohaku's verified provider (prd §1569a). Called OUTSIDE `exclusive`:
     /// it takes a minute on a first read, and a Move must not wait on it.
-    func check(network: PrivacyNetwork, notes: [String]) async throws -> Wire.Checked {
+    func check(network: PrivacyNetwork, notes: [Wire.CheckNote]) async throws -> Wire.Checked {
         try await call(.check, Wire.Check(network: network, notes: notes), as: Wire.Checked.self)
     }
 

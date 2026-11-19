@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2069 of 2143 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2070 of 2144 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1965,8 +1965,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1567 — Private money's gaps closed on Ethereum: a fresh address signs its own deposit, USDC in Move's sentence, round-ups ri… (amended by §1568, §1571, §1572, §1694, §1778, §1779, §1823)
 - §1568 — Private money's review before mainnet, eight findings fixed: Take it back unwraps through the router, a move not yet… (amended by §1778)
 - §1569 — Kohaku is not adopted: its Privacy Pools package is v1, its Railgun package is empty, and Helios through its provider… (amended by §1569a)
-- §1569a — The private balance is checked against Ethereum itself through Kohaku's verified provider: each tree's root proven kn… (amended by §1569b, §1825)
-- §1569b — The check against Ethereum runs outside the engine's one-flow queue, at most every ten minutes a root, so a Move neve…
+- §1569a — The private balance is checked against Ethereum itself through Kohaku's verified provider: each tree's root proven kn… (amended by §1569b, §1569c, §1825)
+- §1569b — The check against Ethereum runs outside the engine's one-flow queue, at most every ten minutes a root, so a Move neve… (amended by §1569c)
+- §1569c — A note is checked by its real leaf, Poseidon(tag, commitment, the block's timestamp), never its bare commitment, and…
 - §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the… (amended by §1628, §1647)
 - §1571 — Round-ups are ETH in your private balance: no token or network to pick, counted on every network, deposited once they… (amended by §1572)
 - §1572 — Round-ups are one switch: your spare change, saved privately in dollars; counted on every network, saved on Ethereum… (amended by §1578, §1690)

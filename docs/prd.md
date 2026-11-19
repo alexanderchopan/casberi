@@ -69223,6 +69223,20 @@ Mock: the design canvas "Private money with 0xBow".
 
 **Mac half (§1402).** The same engine and watch; nothing of its own.
 
+## §1569c — A note is checked by its real leaf, Poseidon(tag, commitment, the block's timestamp), never its bare commitment, and only the notes the balance counts (amends §1569a, §1569b) (user, 2026-11-18: "my private ethereum on privacy pools says doesn't match ethereum") — BUILT
+
+**What was wrong.** §1569a matched each note's commitment against the state tree's leaves. The v2 vault never inserts a bare commitment: it inserts Poseidon(`COMMITMENT_LEAF_TAG`, commitment, the block's timestamp), the leaf the SDK proves a spend against (`computeTimestampedLeaf`). So every real note read as missing, and every held private row said "Doesn't match Ethereum" from 3.0.30 on. Only empty accounts (the simulator's) ever passed. The trees' roots were never wrong.
+
+**Measured (2026-11-18, Ethereum).** The three newest deposits: the timestamped leaf is in each one's own `LeavesInserted`, the bare commitment and a block-numbered leaf are not. Over the pool's whole tree from the SDK's reader (3,222 leaves), the old comparison missed 3 of 3 notes and the fixed one 0.
+
+1. **`discover` hands back each note's `createdAtBlock`**, the SDK's name for the time stamped into its leaf; the check computes the leaf from it. A note with no time is not counted (`notesUnplaced`), never called missing.
+2. **Only ACTIVE notes are checked**, the ones the held rows count (`PrivateWatch.counted`): a pending note may be a send not yet mined, so no leaf yet.
+3. **Guarded** (`privacy-engine-selftest.sh`): the check computes the timestamped leaf, a bare comparison fails, `discover` hands back the time, the watch counts ACTIVE only, and the shipped bundle carries the fix.
+
+**Not seen on a phone yet.** The simulator's probe account holds no notes; the phone's first check after the update clears the amber line (nothing is stored between launches).
+
+**Mac half (§1402).** The same engine and watch; nothing of its own.
+
 ## §1570 — The co-signer is a switch: required for every send and swap, or not; the spend limit's allowance is retired from the surface (amends §1455, §1456, §1462, §1496) (user, 2026-10-27: "we should just turn cosigner on or off. this allowance stuff has too many edge cases"; "ok" to one row) — RULED, built in 878
 
 **Why.** Testing on mainnet, "$100 a month" turned out to mean six separate allowances (ETH and the network's dollar on three networks), sends only, and every other token and every swap needing the co-signer anyway. Every wording tried ("of each coin", "per token and per network", "anything else needs …") left the person more confused, because the feature was co-signer protection with a carve-out, not a cap. A switch says what it does.

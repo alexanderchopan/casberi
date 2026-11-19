@@ -65,7 +65,14 @@ enum PrivacyEngineWire {
     /// network and the commitments `discover` returned.
     struct Check: Encodable {
         let network: PrivacyNetwork
-        let notes: [String]
+        let notes: [CheckNote]
+    }
+
+    /// A note as its leaf is made (prd §1569c): the vault inserts
+    /// Poseidon(tag, commitment, the block's timestamp), not the commitment.
+    struct CheckNote: Encodable, Equatable {
+        let commitment: String
+        let createdAtBlock: String?
     }
 
     /// One wallet's Ethereum holdings to read through the verified provider
@@ -204,6 +211,8 @@ enum PrivacyEngineWire {
         let value: String
         let status: String
         let label: String
+        /// The time the vault stamped into the note's leaf; nil when unknown.
+        var createdAtBlock: String? = nil
     }
 
     struct Balance: Decodable, Equatable {
@@ -231,6 +240,8 @@ enum PrivacyEngineWire {
         let trees: [String: Tree]
         let notes: Int
         let notesMissing: Int
+        /// Counted notes whose time is unknown, so not checked.
+        var notesUnplaced: Int? = nil
         let ms: Int
     }
 

@@ -217,17 +217,25 @@ enum PrivateWatch {
     /// nothing either way and is tried at the next read.
     private static var lastChecked: [String: Date] = [:]
 
+    /// The notes the held rows count (ACTIVE), each with the time its leaf
+    /// was stamped with. A pending note may be a send not yet mined, which is
+    /// no leaf yet; a spent one is not in the balance (prd §1569c).
+    static func counted(_ found: PrivacyEngineWire.Discovered) -> [PrivacyEngineWire.CheckNote] {
+        found.notes.filter { $0.status.uppercased() == "ACTIVE" }
+            .map { PrivacyEngineWire.CheckNote(commitment: $0.commitment, createdAtBlock: $0.createdAtBlock) }
+    }
+
     private static func check(_ found: PrivacyEngineWire.Discovered, root: String, on network: PrivacyNetwork) async {
         guard Date().timeIntervalSince(lastChecked[root] ?? .distantPast) > findEvery else { return }
         lastChecked[root] = Date()
         do {
-            let checked = try await PrivacyEngine.shared.check(network: network, notes: found.notes.map(\.commitment))
+            let checked = try await PrivacyEngine.shared.check(network: network, notes: counted(found))
             PrivateMoneyStore.shared.recordCheck(checked, root: root)
-            NSLog("privateWatch| checked | %@ | %@ | state %d leaves %@ | keystore %d leaves %@ | %d of %d notes in the tree | %d ms",
+            NSLog("privateWatch| checked | %@ | %@ | state %d leaves %@ | keystore %d leaves %@ | %d of %d notes in the tree | %d untimed | %d ms",
                   network.name, checked.checked ? "matches" : "MISMATCH",
                   checked.trees["state"]?.leaves ?? 0, (checked.trees["state"]?.known ?? false) ? "known" : "unknown",
                   checked.trees["keystore"]?.leaves ?? 0, (checked.trees["keystore"]?.known ?? false) ? "known" : "unknown",
-                  checked.notes - checked.notesMissing, checked.notes, checked.ms)
+                  checked.notes - checked.notesMissing, checked.notes, checked.notesUnplaced ?? 0, checked.ms)
         } catch {
             lastChecked[root] = nil
             NSLog("privateWatch| checked | %@ | unreachable | %@", network.name, String(describing: error))

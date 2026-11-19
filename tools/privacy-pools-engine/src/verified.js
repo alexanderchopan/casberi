@@ -17,7 +17,7 @@
 // and asking the chain about one note's nullifier would name it.
 import { colibri } from '@kohaku-eth/provider/colibri';
 import Colibri, { Strategy, set_wasm_url } from '@corpus-core/colibri-stateless';
-import { MerkleService, ViemRPCInteractor, createEvmKeystoreInteractor, createEvmPoolVaultInteractor } from '@0xbow/privacy-pools-v2-sdk';
+import { COMMITMENT_LEAF_TAG, MerkleService, ViemRPCInteractor, createEvmKeystoreInteractor, createEvmPoolVaultInteractor } from '@0xbow/privacy-pools-v2-sdk';
 import { decodeFunctionResult, encodeFunctionData, formatUnits } from 'viem';
 import { engineFetchVia } from './net.js';
 
@@ -84,6 +84,7 @@ async function knows(p, contract, root) {
 }
 
 const leafKey = (h) => BigInt(h).toString(16);
+const hex = (n) => `0x${BigInt(n).toString(16)}`;
 
 // One pass over both trees; a later pass fetches only the logs since the last.
 // It needs no open account, only the network and the commitments `discover`
@@ -112,9 +113,16 @@ export async function checkTrees(n, { notes, hash, say, now }) {
     trees[name] = { leaves: leaves.length, known, readMs: Math.round(r - t), verifyMs: Math.round(now() - r) };
     if (name === 'state') stateLeaves = leaves;
   }
+  // A note's leaf is not its commitment: the vault inserts
+  // Poseidon(COMMITMENT_LEAF_TAG, commitment, the block's timestamp), the leaf
+  // the SDK proves a spend against (`computeTimestampedLeaf`; measured on
+  // three mainnet deposits, 2026-11-18). Comparing bare commitments called
+  // every real note missing. A note whose time is unknown is not counted.
   const inTree = new Set(stateLeaves.map(leafKey));
-  const missing = notes.filter((c) => !inTree.has(leafKey(c))).length;
-  return { checked: trees.state.known && trees.keystore.known && missing === 0, trees, notes: notes.length, notesMissing: missing };
+  const placed = notes.filter((n) => n.createdAtBlock != null);
+  const missing = placed.filter((n) => !inTree.has(leafKey(hash.hash([COMMITMENT_LEAF_TAG, hex(n.commitment), hex(n.createdAtBlock)])))).length;
+  return { checked: trees.state.known && trees.keystore.known && missing === 0, trees, notes: placed.length, notesMissing: missing,
+    notesUnplaced: notes.length - placed.length };
 }
 
 // The Wallet's holdings, checked against Ethereum itself (prd §1825).
