@@ -5560,12 +5560,12 @@ struct MoveSentence: View {
                     // A person: the face the Wallet draws for that address
                     // (its ENS avatar, else its tinted mark), never initials
                     // or an empty column (prd §1534).
-                    WalletFace(address: face, size: Self.listMark, circular: true)
+                    WalletFace(address: face, size: DS.Face.list, circular: true)
                         .accessibilityHidden(true)
                 } else if let brand {
                     // An app's or a company's own mark (`BridgeIcon`), not a
                     // token's (`AssetMark` reads token art only, prd §1481).
-                    BridgeIcon(name: brand, size: Self.listMark, circular: true)
+                    BridgeIcon(name: brand, size: DS.Face.list, circular: true)
                         .accessibilityHidden(true)
                 } else if let image {
                     Image(image)
@@ -5635,7 +5635,7 @@ struct MoveSentence: View {
     private func personTile(_ name: String, address: String?, mark: String?, act: @escaping () -> Void) -> some View {
         MoveDeckTile(title: name, act: act) {
             if let address {
-                WalletFace(address: address, size: DSHomeCircleMetrics.face, circular: true)
+                WalletFace(address: address, size: DS.Face.seat, circular: true)
             } else {
                 MoveRowMark(token: mark ?? name, size: DSHomeCircleMetrics.face)
             }
@@ -9210,7 +9210,7 @@ struct MoveSentence: View {
             Task { await chooseProduct(p) }
         } face: {
             if let brand = Self.merchantMark(name) {
-                BridgeIcon(name: brand, size: DSHomeCircleMetrics.face, circular: true)
+                BridgeIcon(name: brand, size: DS.Face.seat, circular: true)
             } else {
                 MoveRowMark(token: name, size: DSHomeCircleMetrics.face)
             }
