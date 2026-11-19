@@ -3045,13 +3045,14 @@ enum DemoSeedAll {
             MainActor.assumeIsolated {
                 // Held: the two Base tokens the demo's own books hold (WETH
                 // and USDC, `WalletDemoState`); the price read ran and named
-                // nothing for this one.
+                // nothing for this one, and the token's own contract sent
+                // the transaction.
                 WalletSafety.flagFakeTransfer(
                     t, contract: "0x6d2e1b9a4c7f30e85a1d9c42b7e6f03a18c5d9e4",
                     category: "erc20",
                     held: ["0x4200000000000000000000000000000000000006",
                            "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"],
-                    pricedUSD: nil, priceWasRead: true)
+                    pricedUSD: nil, priceWasRead: true, sentByWallet: false)
                 // Both directions, as ingest does: this symbol is plain.
                 WalletSafety.flagSpoofedSymbol(t, symbols: ["BASEDROP"])
             }

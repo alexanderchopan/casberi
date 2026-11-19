@@ -432,7 +432,7 @@ enum WalletSafety {
     ///
     /// ## The conjunction, and why each half is load-bearing
     ///
-    /// Both must hold, and the flag FAILS CLOSED on either being unknown:
+    /// All three must hold, and the flag FAILS CLOSED on any being unknown:
     ///
     /// 1. **The wallet doesn't hold the token** — against a successfully READ
     ///    held set. A nil set is a failed holdings read, not an empty wallet
@@ -445,11 +445,33 @@ enum WalletSafety {
     ///    no leg carries a price at all, so without it every unheld outbound
     ///    token on that path would be flagged.
     ///
+    /// 3. **Somebody else sent the transaction** — its receipt was READ and the
+    ///    wallet did not act in it (`WalletUserOps.walletActed`). Added
+    ///    2026-11-19, after the first two called real sends fake (user: "i
+    ///    have things listed as fake transfers but i did send them"): sending
+    ///    the last of a token nobody prices passes both, and so does every
+    ///    send of a token read only off a pool. The first two are guesses
+    ///    about the token; this is the fact the flag claims. A contract can
+    ///    write any `Transfer` it likes and cannot make you send the
+    ///    transaction it wrote it in. nil is a receipt nobody could read, and
+    ///    it never flags.
+    ///
     /// Native coins are never flagged (no contract, always priced, and a fake
     /// ETH transfer isn't expressible — the chain itself is the ledger).
     static func isFakeOutboundTransfer(contract: String?, category: String,
                                        held: Set<String>?, pricedUSD: Double?,
-                                       priceWasRead: Bool) -> Bool {
+                                       priceWasRead: Bool, sentByWallet: Bool?) -> Bool {
+        guard sentByWallet == false else { return false }
+        return couldBeFakeOutbound(contract: contract, category: category, held: held,
+                                   pricedUSD: pricedUSD, priceWasRead: priceWasRead)
+    }
+
+    /// The two free halves of `isFakeOutboundTransfer`: an unheld, unpriced
+    /// token sent by "you". True marks a leg worth one receipt read, never a
+    /// fake by itself.
+    static func couldBeFakeOutbound(contract: String?, category: String,
+                                    held: Set<String>?, pricedUSD: Double?,
+                                    priceWasRead: Bool) -> Bool {
         // Fail closed: no contract (native), not a token transfer, no held set
         // to check against, or no price read to trust the absence of.
         guard let contract, category == "erc20", let held, priceWasRead else { return false }
@@ -461,9 +483,10 @@ enum WalletSafety {
     @MainActor
     static func flagFakeTransfer(_ thing: Thing, contract: String?, category: String,
                                  held: Set<String>?, pricedUSD: Double?,
-                                 priceWasRead: Bool) {
+                                 priceWasRead: Bool, sentByWallet: Bool?) {
         guard isFakeOutboundTransfer(contract: contract, category: category, held: held,
-                                     pricedUSD: pricedUSD, priceWasRead: priceWasRead)
+                                     pricedUSD: pricedUSD, priceWasRead: priceWasRead,
+                                     sentByWallet: sentByWallet)
         else { return }
         thing.addSecurityFlag("spam")
     }

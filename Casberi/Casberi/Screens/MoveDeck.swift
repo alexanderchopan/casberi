@@ -453,8 +453,9 @@ struct MoveDeckTile<Face: View>: View {
         } label: {
             VStack(spacing: DS.Space.s1) {
                 face()
+                    // Never clipped here: a token's network badge stands out
+                    // past its circle (user, 2026-11-19: "badges don't show").
                     .frame(width: DSHomeCircleMetrics.face, height: DSHomeCircleMetrics.face)
-                    .clipShape(Circle())
                     .padding(3)
                     .overlay(Circle().strokeBorder(DS.pickInk, lineWidth: 2).opacity(picked ? 1 : 0))
                     .accessibilityHidden(true)

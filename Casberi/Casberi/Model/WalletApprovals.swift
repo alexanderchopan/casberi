@@ -282,6 +282,13 @@ enum WalletApprovals {
     /// chain table — one table, so a chain added above serves the sync AND the
     /// prepare reads, and a network this table doesn't know honestly can't
     /// prepare. Reads only, like everything on these hosts.
+    /// Whether `rpcRead` has a host to ask on this network at all. False is
+    /// "no receipt can be read here", which a caller must tell apart from a
+    /// read that failed.
+    static func readsReceipts(network: String) -> Bool {
+        allChains.contains { $0.network == network && !$0.rpcs.isEmpty }
+    }
+
     static func rpcRead(network: String, method: String, params: [Any]) async -> Any? {
         guard let chain = allChains.first(where: { $0.network == network }) else { return nil }
         return await call(chain, method: method, params: params)

@@ -4153,13 +4153,13 @@ struct MoveSentence: View {
     /// where its rules are said; an Aztec address already typed goes along.
     private var fromList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            listRow(String(localized: "Your public account"), sub: String(localized: "Anyone can see it"), symbol: "wallet.bifold", picked: true) {
+            listRow(String(localized: "Your public account"), sub: String(localized: "Anyone can see it · \(network.name)"), symbol: "wallet.bifold", picked: true) {
                 withAnimation(DS.Motion.standard) { open = nil }
                 DSHaptic.selection()
             }
             if sendsPrivately {
                 listRow(String(localized: "Your private balance"),
-                        sub: String(localized: "Only you can see it"), symbol: "eye.slash") {
+                        sub: String(localized: "Only you can see it · \((PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name)"), symbol: "eye.slash") {
                     goPrivate(.send)
                 }
             }
@@ -5633,21 +5633,29 @@ struct MoveSentence: View {
             // face with its network's badge, the symbol, the dollars; under
             // the place they are in, said in full (§1904 item 8).
             let privateHere = (verb == .send && !privateWithRows(q).isEmpty) || (verb == .swap && !privateSwapRows(q).isEmpty)
-            if !rows.isEmpty, privateHere { listHeader(String(localized: "Your public account")) }
-            MoveDeckGrid {
-                ForEach(rows, id: \.key) { row in
-                    let h = row.held
-                    MoveDeckTile(title: h.token.symbol, sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
-                                 picked: with?.id == h.id && networkPicked && row.net == network) {
-                        pick {
-                            if !networkPicked || row.net != network { switchNetwork(row.net) }
-                            // Spend's amount is the card's value in dollars, whatever pays.
-                            if verb == .buy { with = h } else { choose(h) }
+            // **THE NETWORK IS A TITLE (user, 2026-11-19: "you could if you
+            // needed put the networks like a section title underneath"):**
+            // the place, then each network it holds on, biggest first, its
+            // tokens under it; the badge stays on each face.
+            let nets: [Op.Network] = rows.reduce(into: []) { if !$0.contains($1.net) { $0.append($1.net) } }
+            if !rows.isEmpty, privateHere || nets.count > 1 { placeHeader(String(localized: "Your public account")) }
+            ForEach(nets, id: \.chainId) { net in
+                if nets.count > 1 || privateHere { listHeader(net.name) }
+                MoveDeckGrid {
+                    ForEach(rows.filter { $0.net == net }, id: \.key) { row in
+                        let h = row.held
+                        MoveDeckTile(title: h.token.symbol, sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
+                                     picked: with?.id == h.id && networkPicked && row.net == network) {
+                            pick {
+                                if !networkPicked || row.net != network { switchNetwork(row.net) }
+                                // Spend's amount is the card's value in dollars, whatever pays.
+                                if verb == .buy { with = h } else { choose(h) }
+                            }
+                        } face: {
+                            MoveRowMark(token: h.token.symbol, network: Self.networkMark(row.net), size: DSHomeCircleMetrics.face)
                         }
-                    } face: {
-                        MoveRowMark(token: h.token.symbol, network: Self.networkMark(row.net), size: DSHomeCircleMetrics.face)
+                        .accessibilityLabel(Text("\(h.token.symbol) on \(row.net.name)"))
                     }
-                    .accessibilityLabel(Text("\(h.token.symbol) on \(row.net.name)"))
                 }
             }
             // **PRIVATE MONEY IS ROWS HERE (prd §1719).** Send's "what" lists
@@ -5656,34 +5664,48 @@ struct MoveSentence: View {
             // from your private balance to …"). No switch, no network to
             // pick first; network and token pin down the one place.
             if verb == .send, !privateWithRows(q).isEmpty {
-                listHeader(String(localized: "Your private balance"))
+                placeHeader(String(localized: "Your private balance"))
+                let privateNets: [String] = privateWithRows(q).reduce(into: []) { if !$0.contains($1.network) { $0.append($1.network) } }
+                ForEach(privateNets, id: \.self) { net in
+                listHeader(net)
                 MoveDeckGrid {
-                    ForEach(privateWithRows(q), id: \.key) { p in
+                    ForEach(privateWithRows(q).filter { $0.network == net }, id: \.key) { p in
                         MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
                             pick {}
                             p.act()
                         } face: {
-                            MoveRowMark(token: p.symbol, size: DSHomeCircleMetrics.face)
+                            // Its network's badge, as a public token wears one.
+                            MoveRowMark(token: p.symbol,
+                                        network: Op.networks.first { $0.name == p.network }.flatMap { Self.networkMark($0) },
+                                        size: DSHomeCircleMetrics.face)
                         }
                         .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
                     }
+                }
                 }
             }
             // **A PRIVATE SWAP (prd §1875).** Swap's "what" lists the tokens
             // your private balance holds on Railgun under the same header:
             // picking one swaps it without it leaving your private balance.
             if verb == .swap, !privateSwapRows(q).isEmpty {
-                listHeader(String(localized: "Your private balance"))
+                placeHeader(String(localized: "Your private balance"))
+                let privateNets: [String] = privateSwapRows(q).reduce(into: []) { if !$0.contains($1.network) { $0.append($1.network) } }
+                ForEach(privateNets, id: \.self) { net in
+                listHeader(net)
                 MoveDeckGrid {
-                    ForEach(privateSwapRows(q), id: \.key) { p in
+                    ForEach(privateSwapRows(q).filter { $0.network == net }, id: \.key) { p in
                         MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
                             pick {}
                             p.act()
                         } face: {
-                            MoveRowMark(token: p.symbol, size: DSHomeCircleMetrics.face)
+                            // Its network's badge, as a public token wears one.
+                            MoveRowMark(token: p.symbol,
+                                        network: Op.networks.first { $0.name == p.network }.flatMap { Self.networkMark($0) },
+                                        size: DSHomeCircleMetrics.face)
                         }
                         .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
                     }
+                }
                 }
             }
             if rows.isEmpty, verb != .send || privateWithRows(q).isEmpty, verb != .swap || privateSwapRows(q).isEmpty {
@@ -5933,7 +5955,9 @@ struct MoveSentence: View {
             if shows(String(localized: "Yours")), poolsHere || aztecHere {
             MoveDeckGrid {
             if poolsHere {
-                MoveDeckTile(title: balanceWord) {
+                // Its network under it (user, 2026-11-19: "it should how
+                // else does user know"): where the money sits.
+                MoveDeckTile(title: balanceWord, sub: privateNet) {
                     // The token decides (prd §1713 item 1): ETH and USDC to
                     // Privacy Pools, any other token on Ethereum to Railgun.
                     if RailgunPocket.available, let held = with, network == Op.ethereum,
@@ -5952,10 +5976,10 @@ struct MoveSentence: View {
                 // balance is Ethereum's, your private account is Aztec, each
                 // said in full (prd §1904 item 11: "we want users to think in
                 // terms of what they are trying to do not brand names").
-                MoveDeckTile(title: String(localized: "Your private account"), titleInk: DS.aztecInk) {
+                MoveDeckTile(title: String(localized: "Your private account"), sub: "Aztec", subInk: DS.aztecInk, titleInk: DS.aztecInk) {
                     goAztec(.deposit)
                 } face: {
-                    Image("brand-aztec").resizable().scaledToFill()
+                    Image("brand-aztec").resizable().scaledToFill().clipShape(Circle())
                 }
             }
             }
@@ -9102,6 +9126,16 @@ struct MoveSentence: View {
                 }
             }
         }
+    }
+
+    /// A place over its networks (prd §1904 item 8): your public account,
+    /// your private balance, white at the row's size.
+    private func placeHeader(_ text: String) -> some View {
+        Text(verbatim: text)
+            .dsText(.heading17)
+            .foregroundStyle(DS.textPrimary)
+            .frame(minHeight: 36, alignment: .bottomLeading)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private func listHeader(_ text: String) -> some View {

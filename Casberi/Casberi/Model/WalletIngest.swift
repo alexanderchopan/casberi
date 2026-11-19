@@ -674,6 +674,12 @@ enum WalletIngest {
                                             verifiedNFTs: verifiedNFTs,
                                             knownGood: knownGoodByOwner)
 
+        // WHO SENT each outbound leg the token test cannot clear (2026-11-19):
+        // the third half of the fake-transfer rule, and the one that tells a
+        // send of yours from a contract's claim. See `sendSignatures`.
+        let sendSigned = await sendSignatures(context: context, legs: fresh + healLegs,
+                                              heldPriced: heldPriced)
+
         var landed: [Thing] = []
         /// The watched wallets a transfer or swap landed at this pass: their
         /// holdings window is thrown out once the landing is saved (prd §1722).
@@ -783,7 +789,8 @@ enum WalletIngest {
                                                       category: leg.category,
                                                       held: heldPriced,
                                                       pricedUSD: leg.pricedUSD,
-                                                      priceWasRead: leg.priceWasRead)
+                                                      priceWasRead: leg.priceWasRead,
+                                                      sentByWallet: sendSigned[Self.sendKey(leg)])
                     }
                     // Both directions: a spoofed symbol lies on the way out
                     // too (see `flagSpoofedSymbol`).
@@ -840,7 +847,10 @@ enum WalletIngest {
         // Then the already-landed legs this pass re-read (2026-08-02): backfill
         // the price the row may predate, and flag the fictions among them.
         // Separate save — a heal must never be able to lose a landing.
-        healLandedTransfers(context: context, legs: healLegs, heldPriced: heldPriced)
+        healLandedTransfers(context: context, legs: healLegs, heldPriced: heldPriced,
+                            sendSigned: sendSigned)
+        // …and take the flag off the sends that were yours all along.
+        unflagOwnSends(context: context, sendSigned: sendSigned)
         // New token approvals ride the same pass (2026-07-16, prd §84) — an
         // incremental filtered-log read per wallet per chain, landing
         // "Approved X to spend unlimited Y" things whose link is the wallet's
@@ -2102,10 +2112,12 @@ enum WalletIngest {
     /// Never UNFLAGS — a token can enter the held set long after the fiction
     /// landed (buying the real thing an impostor copied doesn't retire the
     /// impostor), so absence of evidence this pass is not evidence of absence.
+    /// A flag comes off in one place, on a receipt: `unflagOwnSends`.
     @MainActor
     @discardableResult
     private static func healLandedTransfers(context: ModelContext, legs: [Leg],
-                                            heldPriced: Set<String>?) -> Int {
+                                            heldPriced: Set<String>?,
+                                            sendSigned: [String: Bool]) -> Int {
         guard !legs.isEmpty else { return 0 }
         // One fetch, indexed by ref — the alternative is a fetch per leg, and
         // a busy wallet re-reads hundreds per pass.
@@ -2163,12 +2175,14 @@ enum WalletIngest {
             // Sent legs only — `isFakeOutboundTransfer` is a claim about
             // OUTBOUND fictions, and asking it about an inbound leg would be
             // asking a different question than the one it answers.
+            let sentByWallet = sendSigned[sendKey(leg)]
             if !leg.received, !thing.hasSecurityFlag("spam"),
                WalletSafety.isFakeOutboundTransfer(contract: leg.contract,
                                                    category: leg.category,
                                                    held: heldPriced,
                                                    pricedUSD: leg.pricedUSD,
-                                                   priceWasRead: leg.priceWasRead) {
+                                                   priceWasRead: leg.priceWasRead,
+                                                   sentByWallet: sentByWallet) {
                 thing.addSecurityFlag("spam")
                 touched = true
             }
@@ -4027,6 +4041,116 @@ enum WalletIngest {
         // duplicate: `seen` already makes the keys unique, and a wallet refresh
         // is the wrong place to find out that an invariant slipped.
         return Dictionary(answers.compactMap { $0 }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// How many receipts one pass buys to ask who sent an outbound token leg.
+    /// Overflow is left UNKNOWN, which never flags; a verdict is kept, so the
+    /// next pass spends its budget on the legs this one did not reach.
+    private static let sendReceiptBudget = 24
+
+    private static func sendKey(_ leg: Leg) -> String {
+        "\(leg.chain.network)|\(leg.hash.lowercased())|\(leg.address.lowercased())"
+    }
+
+    private static func sendKey(_ job: NFTReceiptJob) -> String {
+        "\(job.network)|\(job.hash)|\(job.address)"
+    }
+
+    /// Which outbound token legs the wallet itself sent, keyed by `sendKey`
+    /// (2026-11-19): the fake-transfer rule's third half.
+    ///
+    /// Asked only of a leg the token test cannot clear
+    /// (`WalletSafety.couldBeFakeOutbound`) and of a row already wearing the
+    /// flag, so a wallet nobody is spamming buys no read. One keyless
+    /// `eth_getTransactionReceipt` each, the pool `nftSignatures` reads. A
+    /// receipt never changes, so a verdict is kept (`SendVerdicts`) and asked
+    /// once per phone. A key absent from the map is a receipt nobody read.
+    @MainActor
+    private static func sendSignatures(context: ModelContext, legs: [Leg],
+                                       heldPriced: Set<String>?) async -> [String: Bool] {
+        var wanted: [NFTReceiptJob] = []
+        for leg in legs where !leg.received && !leg.hash.isEmpty {
+            guard WalletSafety.couldBeFakeOutbound(contract: leg.contract, category: leg.category,
+                                                   held: heldPriced, pricedUSD: leg.pricedUSD,
+                                                   priceWasRead: leg.priceWasRead)
+            else { continue }
+            wanted.append(NFTReceiptJob(network: leg.chain.network, hash: leg.hash.lowercased(),
+                                        address: leg.address.lowercased()))
+        }
+        // The rows already flagged, whether or not this pass re-read them: a
+        // send called fake last month is outside every read window.
+        wanted += flaggedSends(context: context).map(\.job)
+        var out: [String: Bool] = [:]
+        var jobs: [NFTReceiptJob] = []
+        var seen = Set<String>()
+        for job in wanted {
+            let key = sendKey(job)
+            guard seen.insert(key).inserted else { continue }
+            if let kept = SendVerdicts.shared[key] { out[key] = kept; continue }
+            guard WalletApprovals.readsReceipts(network: job.network) else { continue }
+            jobs.append(job)
+        }
+        guard !jobs.isEmpty else { return out }
+        let budgeted = Array(jobs.prefix(sendReceiptBudget))
+        let answers = await IngestSupport.boundedGather(budgeted, maxConcurrent: 4) { job -> (String, Bool)? in
+            guard let sent = await sendWasYours(network: job.network, hash: job.hash,
+                                                address: job.address) else { return nil }
+            return (sendKey(job), sent)
+        }
+        for case let (key, sent)? in answers {
+            out[key] = sent
+            SendVerdicts.shared[key] = sent
+        }
+        SendVerdicts.shared.save()
+        return out
+    }
+
+    /// Every landed transfer wearing the fake-transfer flag, with the
+    /// transaction it names read back off the row: the hash and the network
+    /// from its explorer link, the wallet from `walletAddress`.
+    @MainActor
+    private static func flaggedSends(context: ModelContext) -> [(thing: Thing, job: NFTReceiptJob)] {
+        let flagged = (try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == "Wallet" && $0.securityFlag != nil
+        }))) ?? []
+        return flagged.compactMap { thing in
+            guard thing.isLive, thing.hasSecurityFlag("spam"),
+                  let address = thing.walletAddress?.lowercased(),
+                  let hash = MoneyReceipt.txHash(inLink: thing.content),
+                  let chain = allChains.first(where: { thing.content.hasPrefix($0.explorer) })
+            else { return nil }
+            return (thing, NFTReceiptJob(network: chain.network, hash: hash, address: address))
+        }
+    }
+
+    /// Takes the fake-transfer flag off a send that was yours (user,
+    /// 2026-11-19: "i have things listed as fake transfers but i did send
+    /// them"). On a receipt saying the wallet sent it, or on a network with
+    /// no receipt to read, where the rule can flag nothing and a flag from
+    /// the two-half rule has no evidence left under it.
+    @MainActor
+    @discardableResult
+    private static func unflagOwnSends(context: ModelContext, sendSigned: [String: Bool]) -> Int {
+        var cleared = 0
+        for (thing, job) in flaggedSends(context: context)
+        where sendSigned[sendKey(job)] == true || !WalletApprovals.readsReceipts(network: job.network) {
+            thing.removeSecurityFlag("spam")
+            cleared += 1
+        }
+        if cleared > 0 { _ = context.saveHonestly() }
+        return cleared
+    }
+
+    /// Whether `address` acted in transaction `hash` on `network`: nil when
+    /// the receipt could not be read, and nil is never false. A Safe's own
+    /// execution counts, which `nftTransactionWasSent` does not ask.
+    static func sendWasYours(network: String, hash: String, address: String) async -> Bool? {
+        guard let receipt = await WalletApprovals.rpcRead(
+                network: network, method: "eth_getTransactionReceipt",
+                params: [hash]) as? [String: Any] else { return nil }
+        return WalletUserOps.walletActed(
+            logs: (receipt["logs"] as? [[String: Any]]) ?? [],
+            from: receipt["from"] as? String, wallet: address)
     }
 
     /// Whether `address` sent transaction `hash` on `network` — nil when the

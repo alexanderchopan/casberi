@@ -74483,3 +74483,17 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 3. **Move's search field is a bar**: the entry well Apps' field stands on (`DS.fillFaint`, 12pt corners), never a glyph and grey words alone.
 
 **Mac half (§1402).** Base's mark is the Mac's too; Private gas has none (the Mac carries no wallet, §1893).
+
+## §1906 — A fake transfer is one somebody else sent (amends the 2026-08-02 fake-transfer rule; §481's "who signed" carried to tokens) (user, 2026-11-19: "in wallet i have things listed as fake transfers but i did send them", "and the thing sheet says from accountless.eth") — BUILT
+
+**Why.** The flag stood on two guesses about the token: the wallet does not hold it, and Zerion gave the leg no price. Sending the last of an unpriced token passes both, so a real send read "You didn't send this" and counted under Risks › Fake transfers.
+
+1. **The third half is the fact the flag claims** (`WalletSafety.isFakeOutboundTransfer(sentByWallet:)`): a sent token leg is fake only when its transaction's receipt was read and the wallet did not act in it. A receipt nobody could read never flags.
+2. **Acting** (`WalletUserOps.walletActed`): the wallet sent the transaction, its UserOperation rode in it, or it is a Safe that logged `ExecutionSuccess` or `ExecutionFromModuleSuccess` itself. A log's emitter is set by the chain. `SafeReceived` proves nothing: anybody can make a Safe write it.
+3. **Cost.** One keyless `eth_getTransactionReceipt` (`WalletApprovals.rpcRead`, no Alchemy credits) for a leg the two token halves cannot clear, 24 a pass, the answer kept on the phone (`SendVerdicts`, a receipt never changes). A wallet nobody spams buys none.
+4. **Rows already flagged heal** (`WalletIngest.unflagOwnSends`): every flagged send is asked once, wherever it sits in history, by the hash in its own link; the flag comes off on a receipt saying you sent it, and on a network with no receipt host, where the rule can no longer flag anything.
+5. **Not chosen.** Dropping the two token halves: a Safe owner's or relayer's transaction moving a held, priced token is not spam. Trusting the leg's `from`: that is the field the attack writes.
+
+**Checks.** `CasberiTests/FakeTransferTests`; `wallet-viz-selftest.sh` (seven `walletActed` cases).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

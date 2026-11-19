@@ -196,6 +196,36 @@ enum WalletUserOps {
         }
     }
 
+    /// `ExecutionSuccess(bytes32,uint256)` and
+    /// `ExecutionFromModuleSuccess(address)`: what a Safe logs when its owners'
+    /// signatures, or a module they enabled, made it act.
+    static let safeExecutionTopics: Set<String> = [
+        "0x442e715f626346e8c54381002da614f62bee8d27386535b2521ec8540898556e",
+        "0x6895c13664aa4f67288b25d7a21d7aaa34916e355fb9b6fae0a139a9085becb8",
+    ]
+
+    /// Whether `wallet` ACTED in this transaction: it sent it, its
+    /// UserOperation rode in it, or it is a Safe that executed in it.
+    ///
+    /// Wider than `wasSentByWallet` by the Safe arm, and for a different
+    /// question. That one asks who paid (a Safe owner's transaction is the
+    /// owner's); this one asks whether a transfer out of the wallet is the
+    /// wallet's own doing, and a Safe's send is. The proof is a log whose
+    /// EMITTER is the wallet: a log's address is set by the chain, never by the
+    /// contract that wrote it, and a Safe writes these two only after checking
+    /// its owners' signatures or an enabled module. `SafeReceived` is left out
+    /// on purpose: anybody can make a Safe write it by sending it one wei.
+    static func walletActed(logs: [[String: Any]], from: String?, wallet: String) -> Bool {
+        if wasSentByWallet(logs: logs, from: from, wallet: wallet) { return true }
+        let me = wallet.lowercased()
+        return logs.contains { log in
+            guard (log["address"] as? String)?.lowercased() == me,
+                  let first = (log["topics"] as? [String])?.first?.lowercased()
+            else { return false }
+            return safeExecutionTopics.contains(first)
+        }
+    }
+
     /// Every UserOperation in a receipt whose emitter we don't recognise —
     /// the probe's drift line. An entry here means a new EntryPoint version is
     /// live and `knownEntryPoints` is behind, which shows up as gas we decline

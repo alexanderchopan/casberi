@@ -936,6 +936,15 @@ final class Thing {
         securityFlag = (current + [name]).joined(separator: ",")
     }
 
+    /// Takes one signal back, leaving the others. nil once none is left, so
+    /// `isFlagged` and every "nothing is flagged" fast path read it as clean.
+    func removeSecurityFlag(_ name: String) {
+        let current = securityFlags
+        guard current.contains(name) else { return }
+        let rest = current.filter { $0 != name }
+        securityFlag = rest.isEmpty ? nil : rest.joined(separator: ",")
+    }
+
     /// The account a social post came from — the Bluesky/Farcaster handle
     /// that authored it. When more than one account of a source is watched,
     /// the row leads with that author's avatar and names them, the way a

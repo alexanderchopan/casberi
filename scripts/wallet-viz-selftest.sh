@@ -919,6 +919,32 @@ check(!sentByMe([uoLog(sender: OTHER, paymaster: ZERO, costWei: TENTH)], from: O
 // caller does not care what the transaction cost, so it must survive the case.
 check(sentByMe([], from: ME), "a free transaction we sent is still ours")
 
+// DID THE WALLET ACT (2026-11-19) — the fake-transfer rule's question, wider
+// than who paid by one arm: a Safe's own execution. The proof is the log's
+// EMITTER, which the chain sets, so a stranger's contract writing the same
+// topic proves nothing, and neither does the one log anybody can make a Safe
+// write (`SafeReceived`, by sending it a wei).
+func acted(_ logs: [[String: Any]], from: String?) -> Bool {
+    WalletUserOps.walletActed(logs: logs, from: from, wallet: ME)
+}
+let SAFE_EXEC = "0x442e715f626346e8c54381002da614f62bee8d27386535b2521ec8540898556e"
+let SAFE_MODULE = "0x6895c13664aa4f67288b25d7a21d7aaa34916e355fb9b6fae0a139a9085becb8"
+let SAFE_RECEIVED = "0x3d0ce9bfc3ed7d6862dbb28b2dea94561fe714a1b4d019aa8af39730d1ad7c3d"
+func log(_ emitter: String, _ topic: String) -> [String: Any] {
+    ["address": emitter, "topics": [topic], "data": "0x"]
+}
+check(acted([], from: ME), "a transaction we sent is our act")
+check(!acted([], from: OTHER), "a stranger's transaction with no word of ours is not our act")
+check(acted([log(ME.uppercased().replacingOccurrences(of: "0X", with: "0x"), SAFE_EXEC)], from: OTHER),
+      "a Safe that executed is the actor, whoever sent the transaction")
+check(acted([log(ME, SAFE_MODULE)], from: OTHER), "a Safe moved by its own module is the actor")
+check(!acted([log(OTHER, SAFE_EXEC)], from: OTHER),
+      "the same topic from somebody else's contract proves nothing")
+check(!acted([log(ME, SAFE_RECEIVED)], from: OTHER),
+      "a wei sent to a Safe does not make it the actor")
+check(acted([uoLog(sender: ME, paymaster: PAYMR, costWei: TENTH)], from: OTHER),
+      "our UserOperation is our act here too")
+
 // Every canonical EntryPoint is trusted, not just the one above.
 for ep in WalletUserOps.knownEntryPoints {
     check(attr([uoLog(sender: ME, paymaster: ZERO, costWei: TENTH, emitter: ep)], from: OTHER)
