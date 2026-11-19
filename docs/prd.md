@@ -74395,3 +74395,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Not done.** Nothing is built. Swap, Earn and Receive are not drawn in the Deck. The address book past what the deck shows scrolls inside it, undrawn.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amends §1897 item 6, §1898 item 4, §1898 item 5, §1797) (user, 2026-11-19, of From drawn as tiles over rows: "we have a mix of tokens in row and private in a list and i worry we are mixing things. the tokens i am guessing are your public and private is below"; of Send: "oh one thing we missed on send is 'add another'"; "Update them") — DESIGNED, NOT BUILT; the canvas https://claude.ai/artifact/HVBRdokcFujcjdy6eGdyMx, boards "Send · From", "Card · Pay with" and the row "Send · Add another"
+
+1. **From and Pay with are one list of rows** (amends §1897 item 6's tile and §1898 item 5's tiles over rows): under the label Public, a row per token and network, the token's 30pt mark, the token over its network grey, the balance trailing (`heading17`, even digits); under the label Private, your private balance and your private account in the same row. One anatomy, one column of balances, never tiles over rows. A row that cannot cover the cost, or that the To cannot take, is dimmed and takes no tap. Pay with lists Public only.
+2. **A private place keeps its whole rule** in that row (§1898 item 4): "Your private account" over "Aztec to Aztec only" in `DS.aztecInk`.
+3. **Add another lives in the facts** (amends §1797's rows under the sentence): at Ready the facts list each line of the send as a row (its person, its amount), then a grey row with `plus`, "Add another", then Cost. A tap keeps the line and opens the deck on To for the next one; the sentence ends on a pink "and" and a caret.
+4. **The lines read as one sentence**: "Send $20 to Leo and $10 to Ana, in USDC on Base." What the lines share (token and network) is said once at the end. A line after the first has its ×; a tap on a line opens it in the deck to change.
+
+**Not done.** Nothing is built.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
