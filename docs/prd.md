@@ -74517,3 +74517,18 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `zkmoney-selftest.sh` holds the split, the heading and the gate.
+
+## §1909 — Send's network and token are one step, With: To · With · Amount (amends §1898 item 1, §1900 item 2, §1790, §1805) (user, 2026-11-19, on 1046, of From opening on networks and then again on tokens: "from shows up at two different times. the problem is a user may want to pick by token first and often times they do. here however from first is network", "so all parts of the flow need to have titles", "the token can be With", "most times a user will go to that first", "should we merge from and with so its always in same list together? would that be better? longer lists like that but less taps", then "you decide, then fix") — BUILT
+
+**Why.** §1898 folded Send's network and its token under one step word, From. The step opened on networks, and after a pick stayed on with the tokens: one title asking two things in turn, and no word to tap for the token, which is what most people go to first. §1904 had already noted the doubt ("i'm not sure 'from' for tokens makes sense since we use it 'who' elsewhere"). The user asked whether one list would be better, fewer taps for a longer list, and left the call to the build.
+
+**Ruling.** Decided for one list.
+
+1. **Send's steps are To · With · Amount.** With opens one list: every token you hold, under its network's title, biggest network first, then your private places under theirs (§1899, §1904 item 11, §1908). One pick answers the network and the token.
+2. **Send asks no network on its own** (amends §1790's "network before its token" and §1805's Network row): no Network row, no "on a network." gap in the sentence; the gap is "a token", and the foot says "Choose a token". The sentence still ends "on Base."
+3. **The list is every network's whichever was picked last** (`lookIn`), so changing to a token on another network is one tap. With lines already kept by Add another it lists that transaction's network only: one transaction is one network.
+4. **Swap and Buy keep their steps** (From · For; Pay with).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** None of its own; `deckWord` is the one place a step's word is named.

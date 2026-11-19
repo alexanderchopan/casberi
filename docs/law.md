@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2088 of 2162 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2089 of 2163 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2232,7 +2232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1787 — On its way leaves Home; Holdings' waiting rows open its steps (amends §1779)
 - §1788 — Fixes from the screen-by-screen walk: the private account's door stands from the first frame, its rows carry no line,…
 - §1789 — Move's rows read To, From, Token, Amount (amends §1781)
-- §1790 — Send's rows read To, From, Network, Token, Amount (amends §1789)
+- §1790 — Send's rows read To, From, Network, Token, Amount (amends §1789) (amended by §1909)
 - §1791 — Move's template: the sentence says only what is picked, and the amount is typed in its row (amends §1754, §1781, §1518) (amended by §1892, §1896)
 - §1792 — A network always shows its mark, and a token wears its network's as a badge
 - §1793 — Swap is two pairs: a token on its network, for a token on its network (amends §1754, §1600, §1555)
@@ -2247,7 +2247,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro… (amended by §1889, §1896)
 - §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824, §1892, §1901)
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616… (amended by §1889)
-- §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w… (amended by §1892)
+- §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w… (amended by §1892, §1909)
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
 - §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one… (amended by §1871, §1893)
 - §1808 — One wallet, the first fixes: a category's name opens its page, the map names its tiles, the cards take the screen, Mo… (amended by §1828, §1893)
@@ -2340,9 +2340,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
 - §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898, §1900, §1901)
 - §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904)
-- §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904)
+- §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904, §1909)
 - §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900)
-- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904)
+- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904, §1909)
 - §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902, §1903, §1904)
 - §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;… (amended by §1903)
 - §1903 — The Deck after its first walk: the deck takes 37% of the phone, its lists fade into the foot, Amount always raises th… (amended by §1904)
@@ -2351,6 +2351,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1906 — A fake transfer is one somebody else sent
 - §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
 - §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte…
+- §1909 — Send's network and token are one step, With: To · With · Amount
 
 ## Dead rulings → what replaced them (generated)
 

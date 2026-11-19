@@ -942,7 +942,13 @@ struct MoveSentence: View {
     /// Where a token list looks: the picked network, or all of them, the
     /// one holding the most first (§1442a: a token is tapped before a
     /// network as often as after).
-    private var lookIn: [Op.Network] { networkPicked ? [network] : networksByWorth }
+    private var lookIn: [Op.Network] {
+        // **SEND'S WITH IS ONE LIST (prd §1909):** every network's tokens,
+        // whichever was picked last, so one pick answers both. Lines already
+        // kept hold it to their network: one transaction is one network.
+        if verb == .send, items.isEmpty { return networksByWorth }
+        return networkPicked ? [network] : networksByWorth
+    }
     /// What For's search looks in: the network a swap arrives on, once
     /// another is picked (prd §1566).
     private var searchedIn: [Op.Network] {
@@ -1860,6 +1866,9 @@ struct MoveSentence: View {
                 }
             }
             draftSymbol = nil
+            // A token a draft picked is on this network: Send asks no
+            // network apart from its token (prd §1909).
+            if verb == .send, with != nil { networkPicked = true }
             #if DEBUG
             if Self.drafting {
                 await readLists()
@@ -3094,7 +3103,6 @@ struct MoveSentence: View {
         switch verb {
         case .send:
             if !toShown { out.append(hole(.to)) }
-            if !networkPicked { out.append(hole(.network)) }
             if with == nil { out.append(hole(.with)) }
             if !sellShown { out.append(hole(.amount)) }
         case .swap:
@@ -3886,7 +3894,8 @@ struct MoveSentence: View {
             // asks the network on a row of its own, before the token
             // (prd §1790).
             guard b.names != .verb else { continue }
-            let folds = false
+            // Send's token row says its network: no row of its own does (§1909).
+            let folds = verb == .send
             // **A SWAP IS TWO PAIRS (prd §1793, §1794):** each side a
             // network and its token, on one line. Its four rows are read
             // off the swap itself (`swapPairRows`), so each is there from
@@ -3902,7 +3911,9 @@ struct MoveSentence: View {
             // **A ROW ONLY WHERE THERE IS A CHOICE (prd §1805):** the one
             // network you hold anything on, and the one token there, are
             // said by the sentence and ask nothing.
-            if verb == .send, items.isEmpty, b.names == .network, onlyNetwork { continue }
+            // **SEND ASKS NO NETWORK (prd §1909):** the token's list is every
+            // network's, each under its title, and a pick there is both.
+            if verb == .send, b.names == .network { continue }
             if verb == .send, items.isEmpty, b.names == .with, onlyToken { continue }
             let id = "choice\(b.names)"
             guard seen.insert(id).inserted else { continue }
@@ -3999,8 +4010,8 @@ struct MoveSentence: View {
         guard verb == .send, receipt == nil, stage == nil, items.isEmpty, thenWord == nil,
               !verbStops, !emptyEverywhere else { return nil }
         if !toShown { return .to }
-        if !networkPicked { return .network }
-        if with == nil { return amount.isEmpty ? .with : nil }
+        // The token is asked, never the network alone (prd §1909).
+        if with == nil || !networkPicked { return amount.isEmpty ? .with : nil }
         return amount.isEmpty ? .amount : nil
     }
 
@@ -4069,7 +4080,8 @@ struct MoveSentence: View {
         // don't need to show the network icon bc you already show it in
         // network").** The Network row above it says where.
         switch which {
-        case .with: return with.map { MoveRowMark(token: $0.token.symbol) }
+        // Send has no Network row (prd §1909): its token wears the badge.
+        case .with: return with.map { MoveRowMark(token: $0.token.symbol, network: verb == .send && networkPicked ? Self.networkMark(network) : nil) }
         case .buy:
             guard verb == .swap, let buy else { return nil }
             return MoveRowMark(token: crossBuy?.symbol ?? buy.token.symbol)
@@ -7138,7 +7150,12 @@ struct MoveSentence: View {
     /// network and its token are one step: From, To, Pay with.
     private func deckWord(_ which: Blank) -> String {
         switch (verb, which) {
-        case (.send, .from), (.send, .network), (.send, .with): String(localized: "From")
+        // **SEND'S NETWORK AND TOKEN ARE ONE STEP, WITH (prd §1909, user,
+        // 2026-11-19: "from shows up at two different times", "the token
+        // can be With", "should we merge from and with so its always in
+        // same list together … less taps"):** one list, every network's
+        // tokens under its title (`lookIn`), one pick for both.
+        case (.send, .from), (.send, .network), (.send, .with): String(localized: "With")
         case (.swap, .network), (.swap, .with): String(localized: "From")
         // **FOR, NEVER TO (prd §1904 item 2):** To is always a person or a
         // place; what a swap buys is "for", as the sentence says it.
