@@ -202,9 +202,22 @@ enum PrivateOnEthereum {
             try await open(account, reason: reason)
             let engine = PrivacyEngine.shared
             PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)
-            let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)
-                : try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to)
-            let relayed = try await engine.relay(handle: spend.handle)
+            // The relayer's fee holds a short while, and proving on the phone
+            // can outlast it (measured 2026-11-18: "FeeCommitmentExpired", 11 s
+            // late): prove and quote once more, then relay; nothing went out.
+            var relayed: PrivacyEngineWire.Relayed
+            var tries = 0
+            while true {
+                tries += 1
+                let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)
+                    : try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to)
+                do {
+                    relayed = try await engine.relay(handle: spend.handle)
+                    break
+                } catch let f as PrivacyEngineWire.Failure where f.name == "FeeCommitmentExpired" && tries < 2 {
+                    NSLog("privateEthereum| fee quote expired before the relay | proving again")
+                }
+            }
             NSLog("privateEthereum| relayed | %@ | %@ | %@ to %@", balanceToBalance ? "balance to balance" : "paid out", relayed.tx, amount, YourAccount.short(to))
             if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after, root: account, network: network) }
             return relayed.tx

@@ -265,6 +265,9 @@ extension FeedScreen {
         // your Aztec account (prd §1712).
         if source == "All" || source == "Wallet" {
             roster = BridgeRefresh.privateRoster(after: roster)
+            // A pull is a person asking: Railgun reads now, whatever the
+            // reading's age (its window is for the automatic reads).
+            Task { await RailgunHoldings.shared.refresh(force: true) }
         }
         chrome.rain(sources: roster)   // spins the avatar door, deals the shower
         await refreshFeed()

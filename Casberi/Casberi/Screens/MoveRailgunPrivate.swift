@@ -625,7 +625,7 @@ final class RailgunMove {
             }
             PrivateSendSteps.shared.finish()
             stage = .done(String(localized: "On its way: private in about an hour. Then send again."))
-            await RailgunHoldings.shared.refresh(force: true)
+            RailgunHoldings.shared.afterMove()
         } catch {
             PrivateSendSteps.shared.fail(Self.words(error))
             stage = .failed(Self.words(error))
@@ -653,10 +653,18 @@ final class RailgunMove {
     /// your account's stages say the signing.
     static let takeBackPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, .signing, .sent(.ethereum)])
     /// A swap's (prd §1875): said as swapped, never as sent.
-    static let swapStepsPlan = PrivateSendSteps.Plan(steps: [
-        .checking, .proving,
-        PrivateSendSteps.Step(key: .sent, running: String(localized: "Swapping on Ethereum"), done: String(localized: "Swapped on Ethereum")),
-    ])
+    static let swapStepsPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, swapped])
+    static let swapped = PrivateSendSteps.Step(key: .sent, running: String(localized: "Swapping on Ethereum"),
+                                               done: String(localized: "Swapped on Ethereum"))
+    /// A new address of yours carries it (prd §1726): its first step is the
+    /// gas coming from your private ETH, said as that, never "Checking"
+    /// (user, 2026-11-18: "shouldn't it say better things than checking").
+    static let payingGas = PrivateSendSteps.Step(key: .checking, running: String(localized: "Paying gas from your private ETH"),
+                                                 done: String(localized: "Paid gas from your private ETH"))
+    static let swapFreshPlan = PrivateSendSteps.Plan(steps: [payingGas, .proving, swapped])
+    @MainActor static var sendFreshPlan: PrivateSendSteps.Plan {
+        PrivateSendSteps.Plan(steps: [payingGas, .proving, .sent(.ethereum)])
+    }
 
     /// Moves it: in through your account's shield, or back to your account.
     func run() async {
@@ -679,7 +687,7 @@ final class RailgunMove {
             case .takeBack where toPrivate && viaFresh:
                 guard let plan = transferPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.transferFromFresh(plan, unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) }) { _ in }
+                _ = try await RailgunPocket.transferFromFresh(plan, unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toPrivate:
@@ -692,7 +700,7 @@ final class RailgunMove {
             case .takeBack where toSomeoneElse && viaFresh:
                 stage = .working(String(localized: "Confirm with Face ID"))
                 _ = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
-                                                          unlocked: { [weak self] in self?.started(.send(.ethereum), away: true) }) { _ in }
+                                                          unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toSomeoneElse:
@@ -705,7 +713,7 @@ final class RailgunMove {
             case .swap where viaFresh:
                 guard let plan = swapPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
-                _ = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(Self.swapStepsPlan, away: true) }) { _ in }
+                _ = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(Self.swapFreshPlan, away: true) }) { _ in }
                 finishSteps()
                 stage = .done(String(localized: "Swapped privately."))
             case .swap:
@@ -727,7 +735,7 @@ final class RailgunMove {
             }
             if Self.kept === self { Self.kept = nil }
             DSHaptic.success()
-            await RailgunHoldings.shared.refresh(force: true)
+            RailgunHoldings.shared.afterMove()
         } catch {
             // The rows keep the failure on the step it reached (§1700x),
             // in the sheet or behind it (prd §1806).
@@ -1088,7 +1096,7 @@ struct MoveRailgunSentence<Head: View>: View {
     @ViewBuilder private var costLine: some View {
         if move.stage == .quoting {
             if let since = RailgunSync.shared.since {
-                PrivateWarmingRow(since: since, firstTime: RailgunSync.shared.firstTime, percent: RailgunSync.shared.percent)
+                PrivateWarmingRow(since: since, firstTime: RailgunSync.shared.firstTime, percent: RailgunSync.shared.percent, railgun: true)
             } else {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .small)
@@ -1110,7 +1118,9 @@ struct MoveRailgunSentence<Head: View>: View {
         case .takeBack where move.toPrivate: String(localized: "only they see how much")
         case .takeBack where move.toSomeoneElse: String(localized: "your account isn't on it")
         case .takeBack: nil
-        case .swap: String(localized: "your account isn't on it")
+        // A private swap is private by name: no tail repeats it (user,
+        // 2026-11-18: "it's a private swap isn't that assumed").
+        case .swap: nil
         }
     }
 

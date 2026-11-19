@@ -74205,3 +74205,18 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** Shared model; reaches the Mac's Holdings unchanged.
 
 **Checks.** `shield-bridge-selftest.sh` holds the state rule, the carried count and the ready check. Not seen on the user's phone yet: it changes once the Wallet next settles.
+
+## §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap's foot names no cost tail, the sync ends when its trees do, a fresh sender may call Railgun's relay adapter, a relayed withdrawal proves again once when the fee quote expires, and the private balance is read again as the move lands and on every pull (amends §1875, §1885) (user, 2026-11-18, the first private swap on the phone, DAI to WETH: "it should say something like that re re-sync", "why do we even need to say no one sees your account it's a private swap isn't that assumed", "shouldn't it say better things than checking then?", "ok my balance hasn't changed yet", "i refreshed twice") — BUILT; the swap went through on Ethereum (0x35fb411f…bc04)
+
+1. **A re-sync says it updates:** after the first, Railgun's waiting row reads "Updating your private balance · N s"; "Getting your private balance ready" stays Privacy Pools'.
+2. **Gas from private ETH is a step:** a swap or send from a one-time sender reads Paying gas from your private ETH · Proving on this iPhone · Swapping (or Sending) on Ethereum, never "Checking".
+3. **A private swap draws no cost tail:** that no one sees your account is what private means; the price is the price, with no warning on its share of the amount.
+4. **The sync ends when both trees are complete and five seconds pass quiet:** the wallet's decrypt announces itself only when it runs, and the sync waited out its ten-minute cap (measured on the phone).
+5. **A one-time sender may call Railgun's classic relay adapter's `relay`,** with no ETH (`FreshTx.allowed`); `swapFromFresh` checks the adapter and selector before it signs. It refused the first swap ("not a fresh address's move").
+6. **A relayed Privacy Pools withdrawal proves again once on `FeeCommitmentExpired`:** proving on the phone outlasted the relayer's quote by 11 s; nothing went out.
+7. **The private balance is read again as the move lands:** forced reads at 20, 65 and 155 s until the reading changes (`RailgunHoldings.afterMove`); the read right after the hash ran before the block. A pull on All or the Wallet forces Railgun's read too: the ten-minute window is for the automatic reads.
+8. **The engine says what its own proofs hold** after every sync (`pois spent`/`pois received`, DEBUG console): the swap's WETH and its DAI change both read "private in about an hour", and no proof reached the screening node in the next launch.
+
+**Seen** on the phone: the swap on Ethereum, 4.98 DAI for 0.00279 WETH, gas 0.000175 ETH from a one-time sender; the WETH and DAI in Holdings › Private after a relaunch, both "private in about an hour". **Not seen:** whether the relay adapter's shield clears faster than the hour (§1875's measurement), the re-reads landing without a relaunch.
+
+**Checks.** `railgun-selftest.sh`: the fresh plans' steps, the relay adapter allowed only by selector and without ETH.

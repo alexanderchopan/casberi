@@ -118,6 +118,23 @@ final class RailgunHoldings {
         }
     }
 
+    /// A private move just left, and the chain has not mined it: a read now
+    /// sees nothing new (2026-11-18, a swap's WETH missing after two pulls
+    /// and a forced read that ran before the block). Read again as blocks
+    /// land, until the reading changes, three times at most.
+    func afterMove() {
+        guard !DemoMode.isActive else { return }
+        let before = reading
+        Task { @MainActor in
+            for wait in [20, 45, 90] {
+                try? await Task.sleep(for: .seconds(wait))
+                while syncing { try? await Task.sleep(for: .seconds(2)) }
+                await refresh(force: true)
+                if reading != before { return }
+            }
+        }
+    }
+
     /// Reads the wallet when its reading is old (never in the demo), then
     /// the prices.
     func refresh(force: Bool = false) async {

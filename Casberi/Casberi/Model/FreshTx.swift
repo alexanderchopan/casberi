@@ -47,6 +47,9 @@ enum FreshTx {
         // approval of the proxy. Nothing carries ETH.
         if network.chainId == railgunChain {
             if t == railgunProxy { return (d.hasPrefix(railgunShield) || d.hasPrefix(railgunTransact)) && carried.isEmpty }
+            // A private swap (prd §1875): the classic relay adapter's proved
+            // `relay`, carrying no ETH; never its 7702 twin.
+            if t == railgunRelayAdapt { return d.hasPrefix(railgunRelay) && carried.isEmpty }
             if railgunTokens.contains(where: { $0.contract.lowercased() == t }) {
                 guard d.hasPrefix(approve), d.count == 2 + 8 + 128, carried.isEmpty else { return false }
                 return String(d.dropFirst(10).prefix(64)) == String(repeating: "0", count: 24) + railgunProxy.dropFirst(2)
@@ -132,6 +135,12 @@ enum FreshTx {
     static let railgunShield = "0x044a40c3"
     /// `transact((…)[])`, Railgun's proved send (an unshield here), from the same ABI.
     static let railgunTransact = "0xd8ae136a"
+    /// Railgun's classic relay adapter on Ethereum (`NETWORK_CONFIG.relayAdaptContract`),
+    /// the one a private swap goes through (prd §1875).
+    static let railgunRelayAdapt = "0xac9f360ae85469b27aeddeafc579ef2d052ad405"
+    /// Its `relay((…)[],(bytes31,bool,uint256,(address,bytes,uint256)[]))`, from
+    /// Railgun's own ABI (engine 9.9.1, V2/RelayAdapt).
+    static let railgunRelay = "0x28223a77"
     /// The most a fresh sender's unshield may use (measured 516,069 from a
     /// plain key, §1713 item 8), with room; estimated each time and held to it.
     static let railgunSendGas = 900_000

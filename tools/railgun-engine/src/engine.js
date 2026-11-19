@@ -190,6 +190,26 @@ const poi = async (method, params) => {
   return res.result;
 };
 
+// The proofs a move of ours owes the screening node (2026-11-18: a private
+// swap's WETH and its DAI change both read "about an hour", and no proof
+// reached the node). The SDK makes them after a scan, unawaited and silent;
+// this asks it to, awaited, and says what the newest transactions hold.
+async function reportPOIs() {
+  try {
+    const wallet = walletForID(walletID);
+    await wallet.refreshPOIsForTXIDVersion(CHAIN, V2, true);
+    const short = (v) => String(v ?? '').replace(/0x([0-9a-f]{6})[0-9a-f]{58}/gi, '0x$1…');
+    const spent = await wallet.getTXOsSpentPOIStatusInfo(V2, CHAIN);
+    for (const { strings: x } of spent.slice(0, 3)) {
+      say(`pois spent ${x.blockNumber} ${short(x.txid)} | ${short(x.railgunTransactionInfo)} | sent ${JSON.stringify(x.poiStatusesSentCommitments)} | unshield ${JSON.stringify(x.poiStatusesUnshieldEvents)} | canGenerate ${x.listKeysCanGenerateSpentPOIs.length}`.slice(0, 900));
+    }
+    const received = await wallet.getTXOsReceivedPOIStatusInfo(V2, CHAIN);
+    for (const { strings: x } of received.slice(0, 4)) say(`pois received ${short(JSON.stringify(x))}`.slice(0, 600));
+  } catch (e) {
+    say(`pois failed ${String(e?.message ?? e).slice(0, 200)} ${String(e?.cause?.message ?? '').slice(0, 300)}`);
+  }
+}
+
 function requireOpen() {
   if (!walletID) throw Object.assign(new Error('no wallet is open'), { name: 'NotOpen' });
 }
@@ -351,11 +371,23 @@ const methods = {
     const cap = Number(p.capMs ?? 600000);
     const scan = awaitWalletScan(walletID, CHAIN);
     await refreshBalances(CHAIN, [walletID]);
-    await Promise.race([scan, new Promise((r) => setTimeout(r, cap))]);
-    const until = now() + cap;
     const complete = () => utxo?.scanStatus === 'Complete' && txid?.scanStatus === 'Complete';
+    // The wallet's decrypt announces itself only when it runs: with nothing
+    // new, or a scan already under way, it may never, and this waited out
+    // the whole cap (measured on the phone, 2026-11-18: the trees complete at
+    // 16:02:05, the swap still "getting ready" minutes later). Both trees
+    // complete and five seconds quiet is done too.
+    let settledTimer;
+    const settled = new Promise((r) => {
+      const from = now();
+      settledTimer = setInterval(() => { if (complete() && now() - from > 5000) r(); }, 500);
+    });
+    await Promise.race([scan, settled, new Promise((r) => setTimeout(r, cap))]);
+    clearInterval(settledTimer);
+    const until = now() + cap;
     while (!complete() && now() < until) await new Promise((r) => setTimeout(r, 1000));
     const synced = Math.round(now() - t);
+    reportPOIs();
 
     const engine = getEngine();
     const ut = engine.getUTXOMerkletree(V2, CHAIN);
@@ -734,7 +766,12 @@ globalThis.casberiRailgun = {
       const value = await fn(paramsJSON ? JSON.parse(paramsJSON) : {});
       return plainJSON({ ok: true, value: value ?? {} });
     } catch (e) {
-      return JSON.stringify({ ok: false, error: { name: String(e?.name ?? 'Error'), message: String(e?.message ?? e).slice(0, 500) } });
+      // The SDK keeps a refused estimate's revert reason in `cause` (its
+      // "RelayAdapt multicall failed at index 1." says only where): carried
+      // whole, so the reason reaches the log and the step.
+      let message = String(e?.message ?? e);
+      for (let c = e?.cause, n = 0; c && n < 4; c = c.cause, n += 1) message += ' — ' + String(c?.message ?? c);
+      return JSON.stringify({ ok: false, error: { name: String(e?.name ?? 'Error'), message: message.slice(0, 900) } });
     }
   },
 };

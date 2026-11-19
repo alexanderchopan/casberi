@@ -146930,6 +146930,34 @@
         }
       }
     },
+    "Paid gas from your private ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas pagado con tu ETH privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開の ETH でガスを支払い済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 ETH로 가스를 지불함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已用你的私密 ETH 支付 Gas"
+          }
+        }
+      }
+    },
     "Paid in %@." : {
       "localizations" : {
         "es" : {
@@ -149701,6 +149729,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "支付方式"
+          }
+        }
+      }
+    },
+    "Paying gas from your private ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pagando el gas con tu ETH privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開の ETH でガスを支払い中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 ETH로 가스 지불 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在用你的私密 ETH 支付 Gas"
           }
         }
       }
@@ -209228,6 +209284,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Work 中的更新"
+          }
+        }
+      }
+    },
+    "Updating your private balance · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Actualizando tu saldo privado · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高を更新中 · %lld秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액 업데이트 중 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在更新你的私密余额 · %lld 秒"
           }
         }
       }

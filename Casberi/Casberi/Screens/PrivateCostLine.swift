@@ -182,6 +182,9 @@ struct PrivateWarmingRow: View {
     /// stops it (iOS pauses the engine in the background, never a sheet).
     var firstTime = false
     var percent: Int? = nil
+    /// Railgun's catch-up after the first: it updates what is kept (user,
+    /// 2026-11-18: "it should say something like that re re-sync").
+    var railgun = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -192,6 +195,7 @@ struct PrivateWarmingRow: View {
                     Text(verbatim: firstTime
                          ? (percent.map { String(localized: "Setting up your private balance · \($0)%") }
                             ?? String(localized: "Setting up your private balance · \(seconds) s"))
+                         : railgun ? String(localized: "Updating your private balance · \(seconds) s")
                          : String(localized: "Getting your private balance ready · \(seconds) s"))
                         .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
                     Spacer(minLength: 0)

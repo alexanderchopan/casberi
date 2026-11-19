@@ -327,5 +327,13 @@ use "$POCKET" "RailgunSync.shared.firstTime = opened.keptLeaves == 0" "the first
 use "Casberi/Casberi/Model/RailgunEngine.swift" 'if line.hasPrefix("progress ") { RailgunSync.shared.heard(line) }' "Railgun's own scan progress reaches the row"
 use "Casberi/Casberi/Screens/PrivateStepRows.swift" ".onChange(of: railgunSync.firstReady)" "a first sync that finishes says so in a toast"
 use "$MOVEF" "self?.started(Self.swapStepsPlan, away: true)" "a swap's steps say swapping and swapped, never sent"
+use "$MOVEF" "self?.started(Self.swapFreshPlan, away: true)" "a new address's swap says it pays gas from your private ETH, never Checking"
+use "Casberi/Casberi/Model/FreshTx.swift" "if t == railgunRelayAdapt { return d.hasPrefix(railgunRelay) && carried.isEmpty }" "a new address of yours may send a private swap: the classic adapter's relay, no ETH"
+grep -q 'railgunRelayAdapt = "0xac9f360ae85469b27aeddeafc579ef2d052ad405"' Casberi/Casberi/Model/FreshTx.swift \
+  && echo "  ✓ that adapter is the classic one, never its 7702 twin" \
+  || { echo "  ✗ the new address's swap is not held to the classic relay adapter"; fail=1; }
+use "$MOVEF" "RailgunHoldings.shared.afterMove()" "a move done reads the private balance again as it lands (§1887)"
+use "Casberi/Casberi/Model/RailgunHoldings.swift" "for wait in [20, 45, 90] {" "the re-reads wait for the block, three at most"
+use "Casberi/Casberi/Screens/FeedScreen+Actions.swift" "Task { await RailgunHoldings.shared.refresh(force: true) }" "a pull on the Wallet forces Railgun's read"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

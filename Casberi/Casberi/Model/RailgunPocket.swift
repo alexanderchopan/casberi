@@ -435,6 +435,13 @@ enum RailgunPocket {
         guard RailgunSwap.checked(quote.calls, sell: sellToken, amount: net, adapter: adapter),
               let back = RailgunSwap.afterFee(quote.buyAmount, bps: inBps) else { throw Failure.notRailgun }
         var wire = RailgunEngineWire.Swap(token: sellToken, amount: hexAmount, buyToken: buyToken, calls: RailgunSwap.wire(quote.calls))
+        #if DEBUG
+        // The calls as written (public: tokens, router, amounts), to replay a
+        // refused estimate (2026-11-18: "RelayAdapt multicall failed at index 1").
+        for (i, c) in wire.calls.enumerated() { NSLog("railgunPocket| swap call %d | %@ | %@", i, c.to, c.data) }
+        NSLog("railgunPocket| swap amounts | gross %@ | net %@ | out %@ | least %@ | venue %@", amount, net, quote.buyAmount, quote.minimumBuy,
+              quote.route.map { "\($0.venue.kind)" } ?? "none")
+        #endif
         // A broadcaster that carries relay-adapt sends, paid in a token it
         // takes that you hold; else a fresh sender, its gas your private ETH.
         var broadcast: RailgunEngineWire.SwapQuote?
@@ -498,7 +505,9 @@ enum RailgunPocket {
         wire.feeToken = nil
         wire.fee = nil
         let p = try await RailgunEngine.shared.prepareSwap(wire)
-        guard p.tx.to.lowercased() == adapter, PrivateMoney.decimal(hex: p.tx.value) == "0" else { throw Failure.notRailgun }
+        guard p.tx.to.lowercased() == adapter, adapter == FreshTx.railgunRelayAdapt,
+              p.tx.data.lowercased().hasPrefix(FreshTx.railgunRelay),
+              PrivateMoney.decimal(hex: p.tx.value) == "0" else { throw Failure.notRailgun }
         let fees = try await PrivateRPC.fees(network)
         let estimate = Int(try await PrivateRPC.decimal(network, "eth_estimateGas",
                                                         [["from": sender.address, "to": p.tx.to, "data": p.tx.data, "value": "0x0"]])) ?? 0
@@ -650,7 +659,9 @@ final class RailgunSync {
     func heard(_ line: String) {
         let parts = line.split(separator: " ")
         guard parts.count >= 4, parts[0] == "progress", let n = Int(parts.last!.dropLast()) else { return }
-        trees[String(parts[1])] = max(0, min(100, n))
+        // A finished tree reports "Complete 0%" (measured on the phone,
+        // 2026-11-18): complete is all of it.
+        trees[String(parts[1])] = parts[2] == "Complete" ? 100 : max(0, min(100, n))
         percent = trees.values.min()
     }
 
