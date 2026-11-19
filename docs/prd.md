@@ -74406,3 +74406,17 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Not done.** Nothing is built.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amends §1896 item 6, §1896 item 7, §1899 item 3, §1797) (user, 2026-11-19, of Home's panel: "you know how on home the bottom half of the screen is made to look like a tray w a curved top and is a slightly different color? should we do that to the bottom half of these move screens", then "Yes, the panel"; of Swap: "ok swap has add another too fyi"; "Write it up") — DESIGNED, NOT BUILT; the canvas https://claude.ai/artifact/HVBRdokcFujcjdy6eGdyMx, row "Deck · Swap", every Deck board on the panel
+
+1. **The deck stands on Home's panel** (§1858's `HomePanelFade`, `HomePanelMetrics`): a 30pt curved top in `DS.fillFaint` at the panel's ink, fading to the page over 520pt, its edge 22pt above the step words. The sentence and the facts stand on the page above it: what the move is over the black, where you change it on the panel. It is Home's part and fades to nothing, so it is not a plate (§782); nothing else in Move draws a surface.
+2. **Swap's steps are Kind · From · To · Amount · When** (amends §1896 item 6's two sides of rows), one row of words. Sweep's are Kind · Under · Network.
+3. **From is §1899's list of rows**; **To is one "Token" field over rows** of token by network, each with its price trailing. A token on another network moves through Across, said "Moving" (never "Crossing").
+4. **What comes back is a fact**, "You get ≈ 0.0160 ETH" (amends §1896 item 7's line on the To row): on Amount while typing, at Ready over Cost. "Moves the price N%" stands as a fact where a swap moves it 1% or more (§1680).
+5. **When is rows** (§1793): Now with what comes back, then the price at −5%, −10% and −25% with its percent trailing, then Custom; "ETH now $3,120" is the fact over them. An order reads "Swap $50 of USDC for ETH on Base when ETH is $2,808."; its facts are You get, Until (a fact that opens the choice) and Through CoW Swap; its act is "Hold to place".
+6. **Sweep** reads "Sweep 2 tokens under $1 into ETH on Base." (§1799), its act "Hold to sweep".
+7. **Add another is the deck's first row at Ready** (amends §1899 item 3, which put it in the facts): grey, `plus`, under the step words, on Send and Swap. The facts hold the lines: a swap's lines are what you give ("USDC $50", "DEGEN $20" with its ×), then "You get" for them all and Cost; the sentence reads "Swap $50 of USDC and $20 of DEGEN for ETH on Base.", what the lines share said once. The deck is where the move changes, and at Ready it was empty; in the facts a swap's fifth row ran under the panel's edge.
+
+**Not done.** Nothing is built. Swap's screens after the hold (Face ID, Swapping, Swapped) are §1897's sequence, undrawn. Earn and Receive are not drawn in the Deck.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

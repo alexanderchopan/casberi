@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2079 of 2153 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2080 of 2154 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2239,7 +2239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1794 — Move: the sentence over the button, one-line rows, a network and its token on each side of a swap (amends §1781, §178…
 - §1795 — Swap is four plain rows: From, Token, To, Token (amends §1794 item 5)
 - §1796 — Swap's rows are Network, Token, To network, To token; a whole swap fits without a scroll (amends §1795, §1794 items 3…
-- §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (… (amended by §1892, §1896, §1899)
+- §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (… (amended by §1892, §1896, §1899, §1900)
 - §1798 — Shield stays Move's one way into Aztec; an app's own bridge is not added (keeps §1700d and §1700e)
 - §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (amended by §1872)
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
@@ -2338,10 +2338,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
-- §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898)
+- §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898, §1900)
 - §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899)
 - §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899)
-- §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts
+- §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900)
+- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready
 
 ## Dead rulings → what replaced them (generated)
 
