@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2086 of 2160 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2087 of 2161 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2349,6 +2349,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show…
 - §1905 — Private gas is said so, and Base's mark is its own tile
 - §1906 — A fake transfer is one somebody else sent
+- §1907 — With a zk.money tag in To, From offers no Aztec account
 
 ## Dead rulings → what replaced them (generated)
 

@@ -740,4 +740,11 @@ grep -q 'if tag != nil { balanceToBalance = false; return }' "$PM" \
 grep -q 'if tag != nil, !onEthereum {' "$PM" \
   || { echo "✗ a tag can be paid from Sepolia's private balance"; exit 1; }
 
+# Your Aztec account cannot pay a tag (prd §1907): with a tag in To, Send's
+# From offers no Aztec row, so nobody picks a way that leads nowhere.
+grep -q 'if sendsFromAztec, aztecCanPay {' "$SEND" \
+  && grep -q 'return !toIsTag && !RailgunSwap.isPrivateAddress(typed) && items.isEmpty' "$SEND" \
+  && grep -q 'return paysZkMoney || ZkMoneyWire.tag(typed) != nil || ZkMoneyWire.atTag(typed) != nil' "$SEND" \
+  || { echo "✗ Send offers your Aztec account to pay a zk.money tag, which it cannot (prd §1907)"; exit 1; }
+
 echo "✓ zk.money self-test passed"

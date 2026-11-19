@@ -74497,3 +74497,13 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Checks.** `CasberiTests/FakeTransferTests`; `wallet-viz-selftest.sh` (seven `walletActed` cases).
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1907 — With a zk.money tag in To, From offers no Aztec account (user, 2026-11-19: "you can't pay with your aztec account to zkmoney is that right? and in the wallet tho it still gives you the option to choose aztec if you already entered a zkmoney tag in the to address. this can lead to confusion") — BUILT
+
+**Why.** A tag is paid by a deposit on Ethereum (its one-time address) or by 0xDAI from another zk.money account (§1719 item 1, measured 2026-11-17). Your Aztec account holds Shield's USDC and ETH and can do neither, yet Send's From listed "Your private account · Aztec to Aztec only" beside a tag, and picking it opened an Aztec sentence with nobody in To.
+
+**Ruling.** While To holds a tag, proven or typed and still looked up (`toIsTag`: `paysZkMoney`, `ZkMoneyWire.tag`, `atTag`), From lists Your public account and Your private balance only (the latter pays the tag, §1874). The same holds for a Railgun 0zk address in To and for a send that already keeps other lines (an Aztec send goes alone; user: "are there other times we need to hide it?"), all through `aztecCanPay`. An Aztec address, or an Ethereum address or name (paid out through Shield, §1700f item 14), keeps the row.
+
+**Mac half (§1402).** The same list in the tray.
+
+**Checks.** `zkmoney-selftest.sh` holds the guard and its tag test.

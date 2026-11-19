@@ -4146,6 +4146,20 @@ struct MoveSentence: View {
 
     /// Send can leave from your private balance, or your private account.
     private var sendsPrivately: Bool { PrivateMove.available }
+    /// Whether your Aztec account can pay what To holds (prd §1907): never a
+    /// zk.money tag or a Railgun 0zk address, and never beside lines already
+    /// kept, since an Aztec send goes alone. An Aztec or Ethereum address
+    /// (paid out through Shield) it can.
+    private var aztecCanPay: Bool {
+        let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !toIsTag && !RailgunSwap.isPrivateAddress(typed) && items.isEmpty
+    }
+
+    /// To holds a zk.money tag: proven, or typed and still being looked up.
+    private var toIsTag: Bool {
+        let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        return paysZkMoney || ZkMoneyWire.tag(typed) != nil || ZkMoneyWire.atTag(typed) != nil
+    }
     private var sendsFromAztec: Bool { AztecProver.isAvailable && AztecAccountStore.shared.shown.address != nil }
 
     /// **FROM (prd §1779).** Three places at most, each named as the Wallet
@@ -4163,7 +4177,11 @@ struct MoveSentence: View {
                     goPrivate(.send)
                 }
             }
-            if sendsFromAztec {
+            // **NOT TO A TAG (prd §1907, user: "it still gives you the option to
+            // choose aztec if you already entered a zkmoney tag").** Your
+            // Aztec account cannot pay zk.money: a tag takes a deposit on
+            // Ethereum, or 0xDAI from a zk.money account.
+            if sendsFromAztec, aztecCanPay {
                 listRow(String(localized: "Your private account"), sub: Self.aztecRule, symbol: "diamond") {
                     let typed = to.trimmingCharacters(in: .whitespaces)
                     goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)
