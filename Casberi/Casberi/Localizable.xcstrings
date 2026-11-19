@@ -88696,6 +88696,34 @@
         }
       }
     },
+    "Ethereum would have turned it down. Nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum lo habría rechazado. No se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum で拒否されるため、何も送信していません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 거절되었을 것입니다. 아무것도 전송되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 会拒绝它。未发送任何内容。"
+          }
+        }
+      }
+    },
     "Ethereum · %@" : {
       "localizations" : {
         "es" : {
@@ -101330,6 +101358,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Gas 用于支付你的 Aztec 账户的操作费用，不能发送给任何人。"
+          }
+        }
+      }
+    },
+    "Gas rose while it was paid. Nothing was sent. Try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El gas subió mientras se pagaba. No se envió nada. Inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払い中にガス代が上がりました。何も送信されていません。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "결제하는 동안 가스비가 올랐습니다. 아무것도 전송되지 않았습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支付期间 Gas 上涨了。未发送任何内容。请重试。"
           }
         }
       }

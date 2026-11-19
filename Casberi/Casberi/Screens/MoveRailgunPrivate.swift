@@ -845,6 +845,14 @@ final class RailgunMove {
         if (error as? RailgunEngineWire.Failure)?.name == "BroadcastUnconfirmed" {
             return String(localized: "The broadcaster did not confirm. Check Activity before sending again.")
         }
+        // Gas rose past what the new address was given: never signed.
+        if case .refused(let why)? = error as? FreshSigner.Failure, why.hasPrefix("its gas rose") {
+            return String(localized: "Gas rose while it was paid. Nothing was sent. Try again.")
+        }
+        // The dry run reverted: never signed (prd §1894).
+        if case .reverted(_)? = error as? FreshSigner.Failure {
+            return String(localized: "Ethereum would have turned it down. Nothing was sent.")
+        }
         // It answered, and refused: nothing went out (prd §1887).
         if (error as? RailgunEngineWire.Failure)?.name == "BroadcastRefused" {
             return String(localized: "The broadcaster turned it down. Nothing was sent.")

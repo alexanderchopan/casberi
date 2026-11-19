@@ -54,6 +54,41 @@ enum FreshSigner {
                      network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64,
                      kept: (_ hash: String, _ nonce: String) -> Void) async throws -> String {
         let nonce = try await PrivateRPC.call(network, "eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
+        // **A RAILGUN RELAY IS RUN BEFORE IT IS SENT (prd §1894).** MEV
+        // Blocker drops a transaction that would revert and says nothing:
+        // a private swap read "Swapped" and was never mined (2026-11-18,
+        // 0x9d7c8c66…). Its approvals ride inside the relay, so a dry run at
+        // the latest block is the transaction's own; one that reverts is not
+        // signed, and its reason is said.
+        if to.lowercased() == FreshTx.railgunRelayAdapt {
+            do {
+                _ = try await PrivateRPC.call(network, "eth_call", [["from": from, "to": to, "data": data, "value": value,
+                                                                      "gas": "0x" + String(gas, radix: 16)], "latest"])
+            } catch Failure.refused(let why) {
+                NSLog("freshAddress| would revert | %@ | %@", network.name, why)
+                throw Failure.reverted(why)
+            }
+        }
+        // **ITS FEE FITS WHAT IT HOLDS (prd §1894).** A fresh address is
+        // funded with the gas at one moment's price and sends at the next's:
+        // a ceiling over its balance is a transaction no block can take, and
+        // MEV Blocker keeps it without a word (2026-11-18, 0x9d7c8c66…, 20
+        // minutes unmined). The ceiling comes down to the balance; under the
+        // price now, it is not sent.
+        var maxFee = maxFee
+        let held = UInt64(try await PrivateRPC.decimal(network, "eth_getBalance", [from, "latest"])) ?? 0
+        let carried = UInt64(PrivateMoney.decimal(hex: value)) ?? 0
+        if held >= carried, gas > 0 {
+            let fits = (held - carried) / UInt64(gas)
+            if fits < maxFee {
+                let price = UInt64(try await PrivateRPC.decimal(network, "eth_gasPrice", [])) ?? 0
+                guard fits >= max(price, tip) else {
+                    NSLog("freshAddress| gas rose | %@ | holds %llu, needs %llu a unit", network.name, fits, price)
+                    throw Failure.refused("its gas rose past what it holds")
+                }
+                maxFee = fits
+            }
+        }
         guard let tx = FreshTx.Tx(network: network, nonce: nonce, maxPriorityFeePerGas: "0x" + String(tip, radix: 16),
                                   maxFeePerGas: "0x" + String(maxFee, radix: 16), gas: "0x" + String(gas, radix: 16),
                                   to: to, value: value, data: data) else { throw Failure.refused("not a fresh address's move") }

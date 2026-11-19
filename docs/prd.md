@@ -74298,3 +74298,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **After.** No further Mac builds: `verify-mac.sh` and the "Mac half" of new rulings can be retired once this build is live (a separate change).
 
 **Mac half (§1402).** This is it. The iPhone and iPad are unchanged.
+
+## §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is not sent, and a Railgun relay is run before it is signed (amends §1726, §1891) (user, 2026-11-18, of a private swap the app said went: "worked") — BUILT
+
+**Found.** The swap from a new address (0x9d7c8c66…47dd) was handed to MEV Blocker and never mined. The address was funded with 3.6M gas at the fee ceiling of one moment (`senderGasCost`, `gas × maxFee`) and signed at the next moment's ceiling; a ceiling over the balance is a transaction no block can take (EIP-1559 charges the whole ceiling up front), and MEV Blocker keeps it without a word. The app read the handover as "Swapped". Nothing moved: the DAI is still yours, and about $2 of gas waits on `...5eea`.
+
+1. **The ceiling fits the balance** (`FreshSigner.send`): when `gas × maxFee` is more than the address holds (less what it carries), the ceiling comes down to `balance / gas`. Under the gas price now, or under the tip, it is not signed: "Gas rose while it was paid. Nothing was sent. Try again." The next try tops up the difference.
+2. **A Railgun relay is run before it is signed** (`eth_call` at the latest block, from the address, with its gas): MEV Blocker drops a reverting transaction silently, so one that would revert is refused here with its reason, "Ethereum would have turned it down. Nothing was sent." Only for the relay adapter, whose approvals ride inside it: a separate approval's next transaction would fail a dry run until the approval is mined.
+
+**Not done:** "Swapped" still means handed over, not mined; the gas left on a new address that sent nothing is not swept back.
+
+**Checks.** `railgun-selftest.sh`: the dry run, the ceiling to the balance, the refusal under the price.

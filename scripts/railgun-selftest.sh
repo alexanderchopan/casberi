@@ -344,5 +344,8 @@ use "tools/railgun-engine/src/engine.js" "if (broadcaster) refusedBroadcasters.a
 use "tools/railgun-engine/src/engine.js" "const REFUSED_FOR = 7 * 86400 * 1000;" "and for a week, not a launch"
 [[ $(grep -c "const selected = pickBroadcaster(feeToken" tools/railgun-engine/src/engine.js) -eq 3 ]] && echo "  ✓ every broadcast picks past a refusal" || { echo "  ✗ a broadcast picks a broadcaster that refused"; fail=1; }
 use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" '"BroadcastRefused"' "a refusal says nothing was sent"
+use "Casberi/Casberi/Model/FreshSigner.swift" "if to.lowercased() == FreshTx.railgunRelayAdapt {" "a Railgun relay is run before it is signed (§1894)"
+use "Casberi/Casberi/Model/FreshSigner.swift" "let fits = (held - carried) / UInt64(gas)" "a new address's fee fits what it holds"
+use "Casberi/Casberi/Model/FreshSigner.swift" "guard fits >= max(price, tip) else {" "and under the price now it is not sent"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

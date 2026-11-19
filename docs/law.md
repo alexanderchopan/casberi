@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2072 of 2146 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2073 of 2147 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2164,7 +2164,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1723 — A Railgun send to someone else goes through Railgun's broadcaster: found over Waku's three relays through the app's o… (amended by §1877)
 - §1724 — Receive into Railgun: a fresh address paid any listed token but ETH and USDC moves it into your Railgun private balan…
 - §1725 — Railgun's broadcaster relays are reached through Tor on the phone, one circuit, Tor up before Waku dials, never direc…
-- §1726 — When no broadcaster can carry a Railgun send, a fresh sender does: a new address of yours, its gas a relayed withdraw… (amended by §1877)
+- §1726 — When no broadcaster can carry a Railgun send, a fresh sender does: a new address of yours, its gas a relayed withdraw… (amended by §1877, §1894)
 - §1727 — Your private balance on Ethereum takes any amount of a Railgun token, typed, from $10 worth; the line says the minimu…
 - §1728 — Railgun's Move says dollars: the amount in dollars with the floor beside it and $10 · Half · All, under the floor you… (amended by §1885)
 - §1729 — Needs you, Permissions and Threats stand on Wallet Home while empty: Needs you at 0, Permissions "None", Threats "Uns…
@@ -2333,8 +2333,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a…
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
-- §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says…
+- §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
+- §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 
 ## Dead rulings → what replaced them (generated)
 
