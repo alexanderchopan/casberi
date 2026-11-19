@@ -148,6 +148,8 @@ struct LibrarySearch: View {
         let present = chrome.chipOrder.filter {
             $0 != HomeScope.markets && !gathered.contains($0)
                 && CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
+                // The Mac carries no wallet (prd §1893).
+                && (WalletHere.isOn || !WalletHere.isWalletSource($0))
         }
         return (present + gathered.filter(CategoryFold.isCategory))
             .sorted { CategoryOrder.rank(of: $0, in: order) < CategoryOrder.rank(of: $1, in: order) }
@@ -243,7 +245,7 @@ struct LibrarySearch: View {
                  lit: wallet, key: CategoryFold.walletRoom) {
                 pickCategory(CategoryFold.walletCategory)
             },
-        ]
+        ].filter { WalletHere.isOn || $0.key != CategoryFold.walletRoom }
     }
 
     /// The apps a row shows: a merged room's connected apps, the ones you
@@ -568,7 +570,7 @@ struct LibrarySearch: View {
             hits.append(Hit(id: "person:" + contact.id, group: TraySearch.contacts, name: contact.name,
                             mark: .face(.person(contact))) { landInSettings(.contacts(contact.name)) })
         }
-        for item in SubscriptionsReading.shared.items {
+        for item in SubscriptionsReading.shared.items where WalletHere.isOn {
             let figure = item.amount.map {
                 BalancePrivacy.shared.value(CardSpendRoom.money($0, code: item.currency))
             }
@@ -672,6 +674,8 @@ struct LibrarySearch: View {
     /// words are.
     private func thingHit(_ thing: Thing, line: String? = nil, given: TraySearch.Match? = nil) -> Hit? {
         guard thing.isLive, let group = BridgeCatalog.category(forSource: thing.source) else { return nil }
+        // The Mac carries no wallet (prd §1893): no transfer is found there.
+        guard WalletHere.isOn || !WalletHere.isWalletSource(thing.source) else { return nil }
         let id = thing.id
         return Hit(id: "thing:" + id.uuidString, group: group, name: thing.title,
                    tier: .thing, anyWord: true, given: given, line: line ?? Self.whence(thing),
@@ -754,7 +758,7 @@ struct LibrarySearch: View {
     /// A pasted address: the wallet you watch, by its name, or Watch this
     /// wallet with the address already typed.
     private func addressHits(_ words: String) -> [Hit] {
-        guard TraySearch.isEVMAddress(words) else { return [] }
+        guard WalletHere.isOn, TraySearch.isEVMAddress(words) else { return [] }
         let short = WalletStore.shortAddress(words)
         if let entry = WalletStore.shared.addresses.first(where: { WalletWatch.sameAddress($0.address, words) }) {
             return [Hit(id: "addr:" + entry.address, group: CategoryFold.walletRoom,
@@ -966,7 +970,7 @@ struct LibrarySearch: View {
         let portfolio = DemoMode.isActive
             ? WalletPortfolio.demoFixture(account: WalletPortfolio.demoAccountHeld(scopeTo: nil, only: nil))
             : WalletPortfolio.from(groups: WalletIngest.lastKnownHoldingsByWallet())
-        holdings = portfolio.positions.filter { $0.usd >= 1 }
+        holdings = WalletHere.isOn ? portfolio.positions.filter { $0.usd >= 1 } : []
         // People are found from the index's snapshot, which only Settings
         // and the book built; build it here so a person is found first time.
         _ = ContactIndexSources.rebuild(context: context)

@@ -215,7 +215,7 @@ struct AccountDetailSheet: View {
                 // re-pasted, while this key deleted by mistake needs somebody
                 // ELSE to send an on-chain `swapOwner` before the Safe works
                 // again. Different cost, different verb, different sentence.
-                if SafeSigner.hasAnyKey {
+                if WalletHere.isOn, SafeSigner.hasAnyKey {
                     DSPushRow(title: Text("Delete signing key"),
                               fact: Text("Safe co-signer"),
                               tint: DS.destructiveInk, opens: false,
@@ -672,7 +672,10 @@ struct AccountDetailSheet: View {
             // **WALLET AND FEED, AS THINGS ARRIVE (prd §1237).** Two switches,
             // one dimension: what you hear about. When is always "as Casberi
             // finds it", which the footnote says, because no switch can.
-            notifySwitch(Notifications.Settings.wallet, detail: Text("Money in and out, loans, Safe signatures"))
+            // The Mac carries no wallet (prd §1893).
+            if WalletHere.isOn {
+                notifySwitch(Notifications.Settings.wallet, detail: Text("Money in and out, loans, Safe signatures"))
+            }
             notifySwitch(Notifications.Settings.feed, detail: Text("Everything else"))
             DSFootnote("They arrive as Casberi finds them, one per app.")
         }

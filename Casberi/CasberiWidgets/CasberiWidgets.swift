@@ -21,9 +21,14 @@ import ActivityKit
 struct CasberiWidgets: WidgetBundle {
     var body: some Widget {
         NotesWidget()
+        // The Mac carries no wallet (prd §1893): Notes and Feed only there.
+        #if !targetEnvironment(macCatalyst)
         WalletWidget()
+        #endif
         FeedWidget()
+        #if !targetEnvironment(macCatalyst)
         WatchlistWidget()
+        #endif
         ComposeControl()
         // A QUICK NOTE from anywhere (prd §982): Control Center, the Lock
         // Screen and the Action button, onto the note sheet.

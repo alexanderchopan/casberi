@@ -72,6 +72,9 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     /// top (§1280's face); Library is Sources' place (§1321). ONE door for
     /// the phone's bar, the rail (prd §1402) and the ⌘-digits.
     @MainActor static func open(_ tab: PlaceTab, chrome: ShellChrome, route: HomeRoute) {
+        // The Mac has no Home and no Move (`WalletHere`, prd §1893): a key
+        // or link that still names one lands on Activity.
+        let tab = WalletHere.isOn || shown.contains(tab) ? tab : .feed
         withAnimation(DS.Motion.standard) {
             switch tab {
             case .feed:
@@ -94,6 +97,10 @@ enum PlaceTab: String, Identifiable, CaseIterable {
             }
         }
     }
+
+    /// The places this device draws, in the rail's order: every one, or on
+    /// the Mac, which carries no wallet (prd §1893), Activity and Apps.
+    static var shown: [PlaceTab] { WalletHere.isOn ? allCases : [.feed, .library] }
 
     @MainActor static func current(_ source: String) -> PlaceTab? {
         if HomeScope.isMarkets(source) { return .wallet }

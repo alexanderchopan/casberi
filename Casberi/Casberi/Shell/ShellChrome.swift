@@ -1359,6 +1359,7 @@ final class ShellChrome {
     /// The band's Wallet button (prd §1278): the Wallet on Home, on All, from
     /// any page; on the Wallet itself it returns to Home.
     func openWallet() {
+        guard WalletHere.isOn else { return }
         WalletPerf.openBegan()
         Task { @MainActor in MoveWarm.start() }
         walletScope = nil
@@ -1368,6 +1369,7 @@ final class ShellChrome {
 
     /// The Wallet's Activity, from a finished move's receipt (prd §1805).
     func openWalletActivity() {
+        guard WalletHere.isOn else { return }
         walletScope = nil
         landWallet(on: .activity)
         sourceRequest = CategoryFold.walletRoom
@@ -1376,6 +1378,7 @@ final class ShellChrome {
     /// The Wallet's Activity from Activity: it goes back there, on the
     /// section `anchor` names (prd §1827).
     func openWalletActivity(fromActivity anchor: String?) {
+        guard WalletHere.isOn else { return }
         walletScope = nil
         landWallet(on: .activity, fromActivity: anchor)
         sourceRequest = CategoryFold.walletRoom
@@ -1444,6 +1447,7 @@ final class ShellChrome {
     /// One of the Wallet's pages, from Activity's rows (prd §1807): it goes
     /// back to Activity, on the section `anchor` names (prd §1827).
     func openWalletPage(_ section: WalletSection, fromActivity anchor: String?, keepingScope: Bool = false) {
+        guard WalletHere.isOn else { return }
         // From Home's head the page reads whose money Home showed (§1843).
         if !keepingScope { walletScope = nil }
         landWallet(on: section, fromActivity: anchor)
@@ -1465,10 +1469,17 @@ final class ShellChrome {
     /// them (`casberi://settings`, ⌘,, the search's hit, `-openSettings`)
     /// open the page scrolled to that card, never at the top of Account.
     func openSettings() {
+        // The Mac carries no wallet (prd §1893): Settings are a page.
+        guard WalletHere.isOn else { settingsRequest &+= 1; return }
         openYourAccount(at: Self.settingsAnchor)
     }
 
+    /// Settings' own page asked for, where there is no wallet to hold them
+    /// (the Mac, prd §1893); `MainSurface` pushes it.
+    var settingsRequest = 0
+
     func openYourAccount(at anchor: String) {
+        guard WalletHere.isOn else { return }
         walletScope = nil
         landWallet(on: .yourAccount)
         walletScrollRequest = anchor

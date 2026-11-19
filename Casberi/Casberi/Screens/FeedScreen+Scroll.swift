@@ -363,15 +363,17 @@ extension FeedScreen {
     /// Wallet, each a row onto its page. Nothing waiting, no section.
     @ViewBuilder
     func activityNeedsSection(_ visible: [Thing]) -> some View {
-        let money = activityMoneyRows(visible)
-        let asks = walletUpcoming(money)
-        let needs = walletNeedsCount(upcoming: asks)
+        // The Mac carries no wallet (prd §1893): only what your apps ask.
+        let wallet = WalletHere.isOn
+        let money = wallet ? activityMoneyRows(visible) : []
+        let asks = wallet ? walletUpcoming(money) : []
+        let needs = wallet ? walletNeedsCount(upcoming: asks) : 0
         // **THE ROW NAMES WHAT WAITS (prd §1809).** It read "Money · 13"
         // directly over the Money section, two Moneys in a row; it is the
         // first thing waiting now, and how many more.
         // Under Needs you a row does not say it needs you (§1378, §1862).
         let first = asks.first(where: \.isLive).map { NeedsYouWords.name($0.title) }
-        let yours = YourAccountDemo.shownAddress
+        let yours = wallet ? YourAccountDemo.shownAddress : nil
         let pending = yours.map { chrome.walkClosed >= 0 && YourAccountFirstOpen.setupPending($0) } ?? false
         // Before anything has moved the Wallet's own row says it (prd
         // §1839): one row for your account on the whole of Activity.
@@ -385,7 +387,7 @@ extension FeedScreen {
         // with the cards; what it counted and you have not seen stands here,
         // one row onto Risks.
         // On Home risks are never an ask (prd §1857): Risks' door counts them.
-        let risks = homeHeadShown ? 0 : homeRisksUnseen
+        let risks = homeHeadShown || !wallet ? 0 : homeRisksUnseen
         // **HOME'S NEEDS YOU IS ONE ROW (prd §1857, user: "only one item in
         // needs you (not risks)").** Your account's ask, else the Wallet's
         // first, else the newest an app asks; the rest wait on their pages.
@@ -512,7 +514,7 @@ extension FeedScreen {
         // never the word alone.
         if quietActivity, moves.isEmpty {
             // The first run's card is the Wallet's whole start (prd §1847).
-            if !homeBare { activityWalletStart }
+            if !homeBare, WalletHere.isOn { activityWalletStart }
         } else {
         // **THE WORD IS THE CATEGORY'S OWN (prd §1812, user: "'money'
         // shouldn't be the category title it should be wallet like it is in

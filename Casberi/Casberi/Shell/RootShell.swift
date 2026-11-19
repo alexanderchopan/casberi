@@ -328,7 +328,8 @@ struct RootShell: View {
         // THE LIVE ASK (prd §913). `initial: true` for the sponsor sheet's
         // reason: an ask can be waiting before this view mounts.
         .onChange(of: SafePeer.state.asks.first?.id, initial: true) { _, _ in
-            safeAsk = SafePeer.state.asks.first
+            // The Mac carries no wallet (prd §1893): no ask rises there.
+            safeAsk = WalletHere.isOn ? SafePeer.state.asks.first : nil
         }
         // The note sheet's two triggers (prd §969) — ONE modifier, because this
         // chain is at the type-checker's edge and two more tipped it over.
@@ -500,7 +501,8 @@ struct RootShell: View {
             // subscribe at launch when this phone holds a key. No key, no
             // relay socket — the peer never starts for a phone that signs
             // nothing.
-            SafePeer.startIfNeeded { modelContext }
+            // The Mac carries no wallet (prd §1893): no peer there.
+            if WalletHere.isOn { SafePeer.startIfNeeded { modelContext } }
             // Landing (2026-07-13, simplified 2026-07-20 — the Pinned board
             // retired, docs/archive/agent-brief.md rulings 11-12; reverted to
             // "always All" 2026-07-28 per user feedback — the §131 amendment
@@ -2161,8 +2163,11 @@ struct RootShell: View {
         // (docs/specs/wallet-perf-spec.md A3): every wallet read waits on its
         // bootstrap. It starts a thread and returns; free once started; no
         // wallet, no Tor (§1495).
-        if !WalletStore.shared.addresses.isEmpty, !DemoMode.isActive { TorClient.shared.start() }
-        MoveWarm.start()
+        // None of it on the Mac, which carries no wallet (prd §1893).
+        if WalletHere.isOn {
+            if !WalletStore.shared.addresses.isEmpty, !DemoMode.isActive { TorClient.shared.start() }
+            MoveWarm.start()
+        }
         // A STRANDED POUR resumes here (2026-08-07, found while writing the
         // spec for this feature's next pass). `pourIfNeeded` originally had
         // ONE call site — the onboarding cover's `onDismiss` — on the
@@ -2404,10 +2409,13 @@ struct RootShell: View {
             // Ask iOS to sample wallet holdings while we're away, so
             // the value line densifies between opens (no-op without a
             // watched wallet; the OS decides if it ever runs).
-            WalletBackgroundRefresh.schedule()
-            // …and the private watch, while a fresh address or a waiting
-            // deposit could change (prd §1562).
-            PrivateWatchTask.schedule()
+            // Neither on the Mac, which carries no wallet (prd §1893).
+            if WalletHere.isOn {
+                WalletBackgroundRefresh.schedule()
+                // …and the private watch, while a fresh address or a waiting
+                // deposit could change (prd §1562).
+                PrivateWatchTask.schedule()
+            }
             // The "new since last seen" boundary a row's time tints against
             // (`ShapedRows.newSinceLastSeen`). Born as the hero widget's
             // new-ring stamp (2026-07-13); the key keeps its name.

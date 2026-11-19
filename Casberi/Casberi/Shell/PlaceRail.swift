@@ -35,13 +35,16 @@ struct PlaceRail: View {
         VStack(spacing: DS.Space.s2) {
             // The bar's order (prd §1741): Apps led the rail only while it
             // wore your face.
-            tile(.wallet)
+            // The Mac carries no wallet (prd §1893): no Home, no Move.
+            if WalletHere.isOn { tile(.wallet) }
             tile(.feed)
             tile(.library)
             // Move stands apart at the end, as the phone's circle does
             // beside its three places (prd §1715).
-            tile(.move)
-                .padding(.top, DS.Space.s3)
+            if WalletHere.isOn {
+                tile(.move)
+                    .padding(.top, DS.Space.s3)
+            }
             Spacer(minLength: 0)
             demoFoot
         }
@@ -78,7 +81,7 @@ struct PlaceRail: View {
         .buttonStyle(PressSpring())
         .dsHover()
         // The key with the word (prd §1407): the ⌘-digit in the bar's order (§1402, §1422).
-        .dsTooltip("\(tab.label)  ⌘\((PlaceTab.allCases.firstIndex(of: tab) ?? 0) + 1)")
+        .dsTooltip("\(tab.label)  ⌘\((PlaceTab.shown.firstIndex(of: tab) ?? 0) + 1)")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: tab.label))
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)

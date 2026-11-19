@@ -672,7 +672,12 @@ enum BridgeCatalog {
     static var offers: [Offer] {
         let cloud = privateCloudAvailable()
         #if targetEnvironment(macCatalyst)
-        return allOffers.filter { !$0.unavailableOnMac && (cloud || !$0.needsPrivateCloud) }
+        // The Mac carries no wallet (`WalletHere`): no wallet app or chain
+        // testnet is offered there, connected or not.
+        return allOffers.filter {
+            !$0.unavailableOnMac && (cloud || !$0.needsPrivateCloud)
+                && $0.group != CategoryFold.walletCategory && $0.group != WalletHere.testnets
+        }
         #else
         return allOffers.filter { cloud || !$0.needsPrivateCloud }
         #endif

@@ -435,7 +435,7 @@ struct ThingSheetView: View {
         }
         // Send raises Move once this sheet has gone (prd §1587): raised
         // while it is still closing, the tray would find the screen busy.
-        .onDisappear { if raisesMove { chrome.moveTray = true } }
+        .onDisappear { if raisesMove, WalletHere.isOn { chrome.moveTray = true } }
     }
 
     /// Send was tapped: Move rises as this sheet leaves.
@@ -1156,7 +1156,8 @@ struct ThingSheetView: View {
                 }
                 if let check = safeCheck {
                     let signable: Bool = {
-                        guard case .pending = check.status, thing.sourceRef != nil
+                        // Nothing signs on the Mac (prd §1893).
+                        guard WalletHere.isOn, case .pending = check.status, thing.sourceRef != nil
                         else { return false }
                         // Either of this phone's keys (prd §1251): a Safe that
                         // names only the Enclave owner lands rows now too.
@@ -1180,7 +1181,7 @@ struct ThingSheetView: View {
                 // behind the hash and the one Sign, on the row that said
                 // "your signature is needed". Only where a key exists.
                 if let ref = thing.sourceRef, ref.hasPrefix("wallet:safemsg:"),
-                   let safe = thing.walletAddress, !safe.isEmpty, SafeSigner.hasAnyKey {
+                   let safe = thing.walletAddress, !safe.isEmpty, WalletHere.isOn, SafeSigner.hasAnyKey {
                     SafeStatementBlock(source: .landed(ref: ref, safe: safe))
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
@@ -3871,7 +3872,7 @@ struct ThingSheetView: View {
         // account here to send from; never your own address or a flagged row.
         // **AGAIN (prd §1752):** a send of your own names the same amount and
         // token too, so its tile says what it does; the action is the same.
-        if let sendTo = MoveSentence.sendableCounterparty(thing) {
+        if WalletHere.isOn, let sendTo = MoveSentence.sendableCounterparty(thing) {
             let again = MoveSentence.againDraft(thing) != nil
             out.append(Verb(label: again ? String(localized: "Again") : String(localized: "Send"),
                             icon: again ? "arrow.clockwise" : "paperplane", action: .sendTo(sendTo)))

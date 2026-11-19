@@ -675,7 +675,7 @@
   {
    "id": "move-tray",
    "covers": [
-    "Screens/MoveScreen.swift:chrome.moveTray"
+    "Screens/MoveScreen.swift:WalletHere.isOn&&chrome.moveTray"
    ],
    "launch": [
     "demo"
@@ -1438,6 +1438,12 @@
   }
  ],
  "exempt": [
+  {
+   "covers": [
+    "Shell/MainSurface.swift:route.sheet#node.settings"
+   ],
+   "why": "Settings' own page is asked for only on the Mac (ShellChrome.openSettings, prd §1893), where HomeRoute.pushes is true, so it is pushed on the stack and never rises as this sheet"
+  },
   {
    "covers": [
     "Screens/ThingSheetView.swift:faceTarget#followChannel"

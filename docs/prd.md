@@ -74275,3 +74275,26 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Not seen:** a broadcaster that takes prepaid fees, or another one carrying swaps; the files' second launch reading from the phone.
 
 **Checks.** `railgun-selftest.sh`: the files kept, the proof run once more after a slow download, a refusal kept as such and passed over.
+
+## §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page of their own; the website stops calling Casberi a Mac app (amends §1402, §1807, §1808's Settings card on the Mac, §1843's Mac half) (user, 2026-11-18, of the Mac's Home cards: "why does mac have this UI we got rid of it long ago on mobile", "i personally have never used the mac app", "i do care if we have to leave it on the store and it breaks for people, specifically the wallet i don't want a user to think they can do a wallet action that fails", "remove wallet from mac", "nobody uses the mac", "ok do it, and also update the website", "it has a mac picture that needs removal and we need to remove available on mac") — BUILT; the Mac build ships once, with the next App Store release
+
+**Why.** The Mac is the iPhone app's own record (one bundle id, Catalyst builds uploaded), so Apple lets neither the Mac version be removed alone nor the iPad app run on Macs in its place (App Store Connect help, read 2026-11-18). A Mac that is never updated again keeps whatever it last shipped on the store, and a frozen Move, Safe signer and wallet read start failing as keys and services drift. The Mac's last build therefore holds no money at all.
+
+**Ruling.**
+1. **`WalletHere.isOn` is false on the Mac** (`Model/WalletHere.swift`), fixed per build, never a switch (App Review 2.3.1). Every wallet door and job reads it, or the same `#if targetEnvironment(macCatalyst)` where a harness compiles the file alone.
+2. **The rail is Activity · Apps**; ⌘1–⌘2 name them; the ⌥ scope keys are gone; the Mac opens on Activity and Settings has no "Open on".
+3. **Settings are their own page** (`HomeRoute.Node.settings` → `SettingsScreen`): ⌘,, `casberi://settings`, Apps' Settings door and `-openSettings` push it, since the Account page that holds them elsewhere (§1808) is the Wallet's.
+4. **Any wallet place lands on Activity**: the Wallet room, Markets, any app filed under Wallet and the Testnets room (`WalletHere.isWalletSource`), however asked (a link, a key, a search, a notification).
+5. **No wallet app is offered** (`BridgeCatalog.offers` drops the Wallet and Testnets groups); search finds no wallet category, account, holding, subscription, pasted address or transfer.
+6. **Activity has no Money and no wallet ask**: Needs you keeps only what your apps ask.
+7. **No act moves money**: Move never rises; item pages lose Send/Again, Pay, Claim to your account and Safe signing; Contacts lose Send, Pay, Follow and Stop following; Data loses Delete signing key; no Safe ask rises.
+8. **Nothing reads a wallet in the background**: the sweep's wallet slots (wallets, Safe, Privy, Acorns, Rocket Money, ENS, CardPointers, Logos, the five wallet token apps, sanctions, your account's protection), Tor, Move's warm-up, the Safe peer, the wallet background task and the private watch.
+9. **Notifications are Feed alone**; the Wallet switch is absent and never on.
+10. **The Wallet and Watchlist widgets are not offered**; nothing publishes their figures.
+11. **The website names iPhone and iPad only**: the MacBook picture and every "Mac" in the copy are gone (`website/`, `llms*.txt`).
+
+**Not built.** Rows already synced from the phone are not deleted from the Mac's store; they are only never shown. Someone with automatic updates off keeps the Mac build they have. The Mac's App Store description should drop wallet claims when this build is submitted.
+
+**After.** No further Mac builds: `verify-mac.sh` and the "Mac half" of new rulings can be retired once this build is live (a separate change).
+
+**Mac half (§1402).** This is it. The iPhone and iPad are unchanged.

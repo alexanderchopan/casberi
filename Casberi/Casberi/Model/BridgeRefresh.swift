@@ -154,9 +154,17 @@ enum BridgeRefresh {
         }
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
         lastSweep = .now
+        // **THE MAC CARRIES NO WALLET (prd §1893):** no wallet app, account,
+        // chain or private balance is read there. One constant, not
+        // `WalletHere`, because the harnesses compile this file alone.
+        #if targetEnvironment(macCatalyst)
+        let wallet = false
+        #else
+        let wallet = true
+        #endif
         // OFAC's sanctioned addresses for Move's checks (prd §1513): once a
         // day, whole, with an account on this phone.
-        MoveChecks.refreshSanctionsIfDue()
+        if wallet { MoveChecks.refreshSanctionsIfDue() }
         // This pass's pace, fixed here rather than read per slot — see
         // `stagger`.
         let leadInMs = force ? 0 : 1800
@@ -355,7 +363,7 @@ enum BridgeRefresh {
         // new app, and each pass also re-reads a bounded set of balances, so
         // it rides the same ten-minute throttle and by-name pause.
         let privyPaused = store.bridges.contains { $0.id == PrivyHomeFeed.seatID && $0.status == .paused }
-        if PrivyHomeAuth.connected, !privyPaused,
+        if wallet, PrivyHomeAuth.connected, !privyPaused,
            force || BridgeRefresh.dueForHeal("privy.home") {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
@@ -468,13 +476,13 @@ enum BridgeRefresh {
         // The two finance seats (§780b) — each sweeps only while its own
         // session is in the Keychain, so a person who never connected pays
         // nothing for either.
-        if AcornsAuth.connected {
+        if wallet, AcornsAuth.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await AcornsIngest.refresh(context: context)
             }
         }
-        if RocketMoneyAuth.connected {
+        if wallet, RocketMoneyAuth.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await RocketMoneyIngest.refresh(context: context)
@@ -489,7 +497,7 @@ enum BridgeRefresh {
         // Your money on a network without the recovery key (prd §1442m): a
         // few reads per network, at most every ten minutes, and a row under
         // Needs you when this phone can fix it. Never signs: that is Face ID.
-        if YourAccountKey.address != nil {
+        if wallet, YourAccountKey.address != nil {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 await YourAccountProtection.check()
@@ -598,7 +606,8 @@ enum BridgeRefresh {
                 _ = await AppleWalletBridge.refresh(context: context, store: store)
             }
         }
-        for bridge in TokenBridge.allCases where bridge.connected {
+        let walletTokens: Set<TokenBridge> = [.bitrefill, .privacy, .wise, .splits, .simplefin]
+        for bridge in TokenBridge.allCases where bridge.connected && (wallet || !walletTokens.contains(bridge)) {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await TokenIngest.refresh(bridge, context: context)
@@ -627,13 +636,13 @@ enum BridgeRefresh {
         // A phone that signs for a Safe reads that Safe's queue with no wallet
         // watched at all (prd §1249); with one watched, `WalletIngest.refresh`
         // below carries the phone's Safes in the same pass.
-        if WalletStore.shared.addresses.isEmpty, SafeSigner.hasAnyKey {
+        if wallet, WalletStore.shared.addresses.isEmpty, SafeSigner.hasAnyKey {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await SafeBridge.syncNow(context: context)
             }
         }
-        if !WalletStore.shared.addresses.isEmpty {
+        if wallet, !WalletStore.shared.addresses.isEmpty {
             // **THE WALLET ON SCREEN GOES FIRST (docs/specs/wallet-perf-spec.md C4).**
             // Its slot sat behind some thirty others, up to ~6s after the
             // lead-in; standing on the Wallet, it takes the first slot's time
@@ -806,7 +815,7 @@ enum BridgeRefresh {
         // Logos (prd §988). A pass is one head read, one balance read per
         // watched account, and the blocks since the cursor in pages of 200 —
         // a few hundred a day away, capped at `LogosIngest.walkCap`.
-        if LogosStore.shared.connected {
+        if wallet, LogosStore.shared.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await LogosIngest.refresh(context: context)
@@ -922,7 +931,7 @@ enum BridgeRefresh {
         // follow), the seat gates the foreground poll: a
         // person who never connected it pays nothing, and a disconnected seat
         // stays disconnected.
-        if connected("ens") {
+        if wallet, connected("ens") {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await ENSIngest.refresh(context: context)
@@ -939,7 +948,7 @@ enum BridgeRefresh {
         // a sweep for one is a guaranteed round trip to be told no, on every
         // foreground, forever. `CardPointersIngest.refresh` re-checks the same
         // thing — this is the cheap gate, not the only one.
-        if connected("cardpointers"), CardPointersAuth.isPro {
+        if wallet, connected("cardpointers"), CardPointersAuth.isPro {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
                 _ = await CardPointersIngest.refresh(context: context)

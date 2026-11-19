@@ -354,8 +354,10 @@ struct SettingsRows: View {
         ]
         // Diagnostics left Settings (user, 2026-10-10: "doesn't seem we need
         // it anymore") and was deleted on 2026-10-21 (user: "remove diagnostics").
-        // The phone's Home is one page (prd §1843): nothing to open on.
-        return rows.filter { !(PhoneHome.isOn && $0.title == "Open on") }.sorted { $0.title < $1.title }
+        // The phone's Home is one page (prd §1843), and the Mac has no Home
+        // (prd §1893): nothing to open on.
+        return rows.filter { !((PhoneHome.isOn || !WalletHere.isOn) && $0.title == "Open on") }
+            .sorted { $0.title < $1.title }
     }
 
     /// **SEE THE DEMO IS DELETED FROM SETTINGS (prd §1236, user: "i think we

@@ -394,13 +394,13 @@ struct AddressesSection: View {
             .frame(minHeight: Self.rowPitch)
             .dsListRow()
             VStack(spacing: 0) {
-                if let address = hit.address {
+                if WalletHere.isOn, let address = hit.address {
                     DSDoorRow(icon: "eye", title: Text("Follow \(hit.name)")) { follow(hit, address: address) }
                 }
                 // A tag found is someone to pay, saved or not (prd §1767):
                 // Send opens on Ethereum with the tag in To. This is the
                 // page, not a card, so nothing is closing under Move.
-                if YourAccountDemo.shownAddress != nil,
+                if WalletHere.isOn, YourAccountDemo.shownAddress != nil,
                    let tag = hit.identities.first(where: { $0.kind == .zkMoney })?.body {
                     DSDoorRow(icon: "paperplane", title: Text("Pay \(hit.name)")) {
                         chrome.moveDraft = MoveSentence.sendDraft(to: tag, on: YourAccountOp.ethereum)
@@ -1512,7 +1512,8 @@ struct ContactSheet: View {
     /// An address Send may open on: an account here to send from, a 0x
     /// address, and not one the book knows as a contract or a key.
     static func sendable(_ address: String) -> Bool {
-        guard YourAccountDemo.shownAddress != nil, ENS.isHexAddress(address) else { return false }
+        // Never on the Mac, which carries no wallet (prd §1893).
+        guard WalletHere.isOn, YourAccountDemo.shownAddress != nil, ENS.isHexAddress(address) else { return false }
         let kind = AddressBook.shared.entry(for: address)?.kind
         return kind != .contract && kind != .key
     }
@@ -1744,7 +1745,7 @@ struct ContactSheet: View {
         // the row opens Send on Ethereum with the tag in To, which sets up
         // the dollar you hold; with none it stays a fact that copies (§83).
         case .zkMoney:
-            guard raisesMove, YourAccountDemo.shownAddress != nil, let bare = ZkMoneyWire.tag(identity.body) else { return nil }
+            guard raisesMove, WalletHere.isOn, YourAccountDemo.shownAddress != nil, let bare = ZkMoneyWire.tag(identity.body) else { return nil }
             let tag = ZkMoneyWire.display(bare)
             // **MOVE RISES ONCE THE CARD HAS GONE (`onDisappear`), never on a
             // timer.** Raised 450ms after `dismiss()`, Move met this card

@@ -11,7 +11,9 @@ enum OpenOn: String {
     static let key = "launch.opensOn"
 
     static var current: OpenOn {
-        OpenOn(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .wallet
+        // The Mac carries no wallet (prd §1893): it opens on Activity.
+        guard WalletHere.isOn else { return .feed }
+        return OpenOn(rawValue: UserDefaults.standard.string(forKey: key) ?? "") ?? .wallet
     }
 
     /// The `filter.source` a new window starts on.

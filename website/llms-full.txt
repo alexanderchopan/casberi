@@ -1,10 +1,10 @@
 # Casberi — Full documentation
 
-> Keep it moving, privately. Your life and money are spread across accounts; you spend the day switching between apps to get anything done. Casberi is a wallet that keeps it all moving, privately: connect your apps and everything lands in one private feed on your device, beside one balance for every account you have and follow. Free on iPhone, iPad and Mac, with no Casberi account, ever.
+> Keep it moving, privately. Your life and money are spread across accounts; you spend the day switching between apps to get anything done. Casberi is a wallet that keeps it all moving, privately: connect your apps and everything lands in one private feed on your device, beside one balance for every account you have and follow. Free on iPhone and iPad, with no Casberi account, ever.
 
 Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
-Last updated: November 16, 2026 · Describes Casberi 3.0.32. The App Store may be a version behind.
+Last updated: November 16, 2026 · Describes Casberi 3.0.34. The App Store may be a version behind.
 
 ## What Casberi does
 
@@ -39,7 +39,7 @@ Four steps to start. Then one short page for each part of the app.
 3. Pick one and connect it. Calendar and Photos are one tap; an account needs only an address.
 4. Open Activity. What you connected is there.
 
-Casberi is one wallet, in three parts. Home is what you have: your balance, a map of what it's in, and six cards — Account, Activity, Apps, Holdings, Risks and Watchlist. Activity is what happened, in your money and your apps; it's a card on Home, and one swipe to its side. Move, the circle at the bottom, is what you do with your money, and the only thing on the bar. A page's title says where you are: its grey words go back, and so does a swipe to the right. On the Mac, Home, Activity, Apps and Move run down the side, ⌘1 to ⌘4 open them, and ⌘F goes to Apps' field.
+Casberi is one wallet, in three parts. Home is what you have: your balance, a map of what it's in, and six cards — Account, Activity, Apps, Holdings, Risks and Watchlist. Activity is what happened, in your money and your apps; it's a card on Home, and one swipe to its side. Move, the circle at the bottom, is what you do with your money, and the only thing on the bar. A page's title says where you are: its grey words go back, and so does a swipe to the right.
 
 ### Home
 
@@ -211,7 +211,7 @@ Casberi has no server and no analytics. Your things are kept in a database on yo
 - Copying. What you copy expires after ten minutes. An address, a code or a key you copy stays on this device and expires after two.
 - Notifications. Made on your device. There's no server to send them.
 
-Good to know: a few services refuse Tor and are read directly — among them Relay, so Receive from another network, and a round-up bought on another network, say "not through Tor". The Mac has no Tor yet, and says so.
+Good to know: a few services refuse Tor and are read directly — among them Relay, so Receive from another network, and a round-up bought on another network, say "not through Tor".
 
 What this app reaches, in Casberi's settings under Data, lists every service Casberi can reach and what it actually reached, including how much went through Tor and which services refuse it.
 
@@ -263,7 +263,7 @@ Over a hundred apps, in nine catalog categories: Wallet, Testnets, Work, Agents,
 - Do I need an account? — No. There's nothing to sign up for — Casberi works the moment it's installed.
 - Where do my things live? — In a database on your device. No Casberi server holds them, and iCloud sync stays off until you turn it on. Deleting is two clear choices: Delete things wipes your data (this device and iCloud), Delete access removes every token and key Casberi holds.
 - What does it cost? — It's free on the App Store.
-- What do I need to run it? — An iPhone, iPad, or Mac. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server.
+- What do I need to run it? — An iPhone or iPad. Nothing is billed, and no question goes to a model unless you connect an agent and send to it — then it goes straight to that provider, or to your own server. Connected apps do reach their own services to fetch your things; that traffic goes from your device to them, never through a Casberi server.
 - Does Casberi hold my money? — No. Your account is a Safe that only your keys can move: this device's key, a recovery key in your iCloud Keychain, and a co-signer in another wallet if you add one. Export a private key and the account opens in another wallet without Casberi.
 - Is there a seed phrase? — No. This device's key lives in its Secure Enclave, never leaves it and signs only with Face ID, and each send moves your account to a fresh one. Your recovery key is in your iCloud Keychain. Casberi can also co-sign a Safe you share with others: it adds a signature and can never move money on its own.
 - Can it act without asking? — No. Typed text never saves silently, and any write that leaves the app waits for a tap. Following an account is read-only — it can never trade or move funds. Your account moves money only when you finish a sentence in Move and approve it with Face ID; if you require your co-signer, it approves every send and swap too, and a round-up buys only inside a move you approved. A Safe signature leaves only when you tap Sign and pass Face ID, and can never execute a transaction on its own. Bankr is only ever asked questions, never given instructions.

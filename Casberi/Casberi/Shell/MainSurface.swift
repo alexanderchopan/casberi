@@ -688,6 +688,8 @@ struct MainSurface: View {
             SettingsHome()
         case .casberi:
             SettingsHome()
+        case .settings:
+            SettingsScreen()
         case .move:
             MoveScreen()
         case .reach:
@@ -2108,6 +2110,12 @@ struct MainSurface: View {
                 filter.source = "All"
                 return
             }
+            // The Mac carries no wallet (prd §1893): every door, link, key
+            // or launch that names a wallet place lands on Activity.
+            if !WalletHere.isOn, WalletHere.isWalletSource(source) {
+                filter.source = "All"
+                return
+            }
             // A section change is a step inside the Wallet only while it is
             // the room on screen (prd §1827, `ShellChrome.walletTrail`).
             chrome.walletStanding = source == CategoryFold.walletRoom
@@ -2228,9 +2236,12 @@ struct MainSurface: View {
         .onChange(of: filter.source, initial: true) { _, source in
             route.shownPlace = HomeScope.Place(source: source)
         }
+        // Settings' own page, where there is no wallet to hold them.
+        .onChange(of: chrome.settingsRequest) { _, _ in route.present(.settings) }
         .onChange(of: chrome.sourceRequest) { _, asked in
             guard let asked else { return }
             chrome.sourceRequest = nil
+            if !WalletHere.isOn, WalletHere.isWalletSource(asked) { return }
             // Beside the rail there is no Feed section to scroll to: the
             // Notes category opens your notes (prd §1347).
             let request = isRegular && asked == HomeScope.notesSection ? Pinboard.room : walletLanding(asked)

@@ -432,7 +432,8 @@ extension FeedScreen {
                 if starts, quietActivity, homeHeadShown { activityStartSection }
                 Group {
                     if !starts || homeHeadShown { activityNeedsSection(visible) }
-                    if !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
+                    // No Money on the Mac, which carries no wallet (prd §1893).
+                    if WalletHere.isOn, !starts || quietActivity { activityMoneySection(visible, nextEventID: nextEventID) }
                 }
                 .environment(\.feedSectionLeads, Self.homeLeadAnchor(jumps))
                 .environment(\.feedSectionClose, homeHeadShown)

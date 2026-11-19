@@ -49,7 +49,7 @@ struct MoveTrayPresenter: ViewModifier {
     let context: ModelContext
 
     func body(content: Content) -> some View {
-        content.sheet(isPresented: Binding(get: { chrome.moveTray }, set: { chrome.moveTray = $0 }),
+        content.sheet(isPresented: Binding(get: { WalletHere.isOn && chrome.moveTray }, set: { chrome.moveTray = $0 }),
                       onDismiss: {
                           // A walk put away is a walk seen: the door is Your
                           // account again, or its page (keys, Tor, export)

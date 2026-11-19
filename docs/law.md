@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2071 of 2145 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2072 of 2146 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1799,7 +1799,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1399 — Newest is never day-bound (amends §1331 item 4, §1256) (amended by §1581)
 - §1400 — A fiat currency is never in the token icon book (amends §931)
 - §1401 — The connect and setup screens stand bare too (completes §1393)
-- §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face,… (amended by §1664)
+- §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face,… (amended by §1664, §1893)
 - §1403 — Where there is a pane, the box lives in it; the list is only a list (amends §760's box on regular-width columns, §248…
 - §1404 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note k…
 - §1405 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the…
@@ -2249,8 +2249,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616… (amended by §1889)
 - §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w…
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
-- §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one… (amended by §1871)
-- §1808 — One wallet, the first fixes: a category's name opens its page, the map names its tiles, the cards take the screen, Mo… (amended by §1828)
+- §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one… (amended by §1871, §1893)
+- §1808 — One wallet, the first fixes: a category's name opens its page, the map names its tiles, the cards take the screen, Mo… (amended by §1828, §1893)
 - §1809 — One wallet, the second pass: Activity is a card on Home and the bar is Move alone, Activity is small words over one r…
 - §1810 — Activity's rows: a card says its amount once, every row is one height, a face wears its app (amends §1414, §1386, §73…
 - §1811 — The title is the whole path, and a word that opens wears a chevron (amends §1809, §1262)
@@ -2285,7 +2285,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1840 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
 - §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
 - §1842 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (numbered §182…
-- §1843 — The phone's Home is one scroll: your money on one card, the watchlist as a line, Account and its address as chips, ch… (amended by §1870, §1871)
+- §1843 — The phone's Home is one scroll: your money on one card, the watchlist as a line, Account and its address as chips, ch… (amended by §1870, §1871, §1893)
 - §1844 — Needs you holds what is near and can be marked as seen; a page goes back to the top of Home; each band tile opens its…
 - §1845 — Home's head is centred; the band and the feed keep the left edge (amends §1843 items 2, 4 and 5)
 - §1846 — Home's head breathes: its three groups stand apart; the Wallet section stays when empty (amends §1843 item 6)
@@ -2334,6 +2334,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a…
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says…
+- §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -51,7 +51,13 @@ enum Notifications {
         /// every other category to Feed.
         static let wallet = "Wallet"
         static let feed = "Feed"
+        /// The Mac carries no wallet (prd §1893): Feed is its one switch,
+        /// and Wallet is never on there.
+        #if targetEnvironment(macCatalyst)
+        static let switches = [feed]
+        #else
         static let switches = [wallet, feed]
+        #endif
 
         /// The switch a catalogue category answers to.
         static func switchName(ofCategory category: String) -> String {
@@ -64,7 +70,12 @@ enum Notifications {
         /// throttle it then can't spend when it matters.
         var anyOn: Bool { !Set(Self.switches).isSubset(of: off) }
 
-        func isOn(_ name: String) -> Bool { !off.contains(name) }
+        func isOn(_ name: String) -> Bool {
+            #if targetEnvironment(macCatalyst)
+            if name == Self.wallet { return false }
+            #endif
+            return !off.contains(name)
+        }
 
         func allows(category: String) -> Bool { isOn(Self.switchName(ofCategory: category)) }
     }

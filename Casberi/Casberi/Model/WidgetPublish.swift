@@ -163,19 +163,30 @@ enum WidgetPublish {
     /// from the figures it draws (`FeedScreen.homeWidgetFigures`), so the tile
     /// and Home can never state two totals. Reloads only on a change.
     static func home(_ figures: WidgetWalletHome?) {
+        // No wallet tile on the Mac (prd §1893).
+        #if targetEnvironment(macCatalyst)
+        return
+        #else
         guard !DemoMode.isActive, let figures,
               let group = UserDefaults(suiteName: SharedStore.appGroup) else { return }
         if WidgetPayload.write(figures, key: WidgetWallet.key,
                                stampKey: WidgetWallet.stampKey, defaults: group) {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind)
         }
+        #endif
     }
 
     /// Your first four watched tokens and the day's move of each (prd §1881),
     /// read off what Home's Watchlist row reads. Called on every foreground
     /// and again when the prices land (`WatchlistPrices.refreshIfStale`).
     static func watchlist(_ group: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup)) {
-        guard !DemoMode.isActive, let group else { return }
+        // No Watchlist tile on the Mac (prd §1893).
+        #if targetEnvironment(macCatalyst)
+        let mac = true
+        #else
+        let mac = false
+        #endif
+        guard !mac, !DemoMode.isActive, let group else { return }
         // Prices live in memory: before this launch has read them, publishing
         // would blank every move the tile already holds.
         guard WatchlistPrices.shared.readAt != nil || Watchlist.shared.tokens.isEmpty else { return }

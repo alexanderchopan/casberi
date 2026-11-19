@@ -120,10 +120,13 @@ struct CasberiApp: App {
         // Register the wallet background-refresh handler before launch
         // finishes (BGTaskScheduler's requirement). One call, no work — the
         // OS decides if it ever runs; scheduling happens when we background.
-        WalletBackgroundRefresh.register()
-        // The private watch (prd §1562): fresh addresses and approvals while
-        // away, through Tor or not at all.
-        PrivateWatchTask.register()
+        // Neither on the Mac, which carries no wallet (prd §1893).
+        if WalletHere.isOn {
+            WalletBackgroundRefresh.register()
+            // The private watch (prd §1562): fresh addresses and approvals
+            // while away, through Tor or not at all.
+            PrivateWatchTask.register()
+        }
         // Publish the container so the background task can sweep the corpus
         // for notifications (prd §306) with no view above it. Must be the SAME
         // container the UI runs on — see `SharedStore.live`.
@@ -345,7 +348,7 @@ struct CasberiApp: App {
             // not outlive its control (§360): no chip strip, no key past the
             // last tab.
             CommandGroup(after: .toolbar) {
-                ForEach(Array(PlaceTab.allCases.enumerated()), id: \.element) { i, tab in
+                ForEach(Array(PlaceTab.shown.enumerated()), id: \.element) { i, tab in
                     Button("Switch to \(tab.label)") {
                         guard let chrome = focusedChrome, let scene = focusedScene else { return }
                         PlaceTab.open(tab, chrome: chrome, route: scene.route)
@@ -405,7 +408,9 @@ struct CasberiApp: App {
             // every item here disables unless the rail is drawn AND
             // `shellChromeClear` — a disabled item's key equivalent falls
             // through to the responder chain, so the composer keeps its keys.
+            // None on the Mac, which carries no wallet (prd §1893).
             CommandGroup(after: .toolbar) {
+                if WalletHere.isOn {
                 ForEach(1...(WalletStore.watchLimit + 2), id: \.self) { n in
                     let scopes = focusedWalletScopes
                     let slot = n <= scopes.count ? scopes[n - 1] : nil
@@ -422,6 +427,7 @@ struct CasberiApp: App {
                     }
                     .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .option)
                     .disabled(n > scopes.count)
+                }
                 }
             }
             // The keyboard walk (2026-07-31) — the list half of list+detail,

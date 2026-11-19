@@ -44,6 +44,11 @@ final class HomeRoute {
         /// this app reaches, Diagnostics), the tray's Settings door and
         /// `casberi://settings` (prd §933, again since §1111).
         case casberi
+        /// SETTINGS' OWN PAGE on the Mac (prd §1893): Settings are the last
+        /// card of the Wallet's Account page everywhere else (§1808), and the
+        /// Mac carries no wallet, so ⌘, and every Settings door push
+        /// `SettingsScreen` there.
+        case settings
         /// MOVE: your account (prd §1422) — a place, cut to like Settings,
         /// never pushed.
         case move

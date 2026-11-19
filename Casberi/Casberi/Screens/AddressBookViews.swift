@@ -1066,12 +1066,13 @@ struct AddressCard: View {
             //
             // Absent, never disabled, in the two states Watch cannot act: the
             // roster is full, or the row is a contact or social profile with no
-            // chain to read.
-            if isWatched {
+            // chain to read. Neither on the Mac, which carries no wallet
+            // (prd §1893): the list it would change is the phone's too.
+            if WalletHere.isOn, isWatched {
                 Button(role: .destructive) {
                     WalletUnwatch.perform(current, context: modelContext, chrome: chrome, bridges: bridges)
                 } label: { Label("Stop following", systemImage: "eye.slash") }
-            } else if WalletStore.shared.canWatchMore, !current.kind.isMonogram {
+            } else if WalletHere.isOn, WalletStore.shared.canWatchMore, !current.kind.isMonogram {
                 Button {
                     // The BOOK's address, which is the resolved form — the same
                     // identity this card has been showing (§212). A PLACEHOLDER

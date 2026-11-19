@@ -158,14 +158,15 @@ enum VerbDerivation {
                 // own claim page, in Casberi's browser, with your account
                 // offered as the wallet it pays (prd §1822). Claiming into
                 // a zk.money account stays zk.money's, in Safari.
-                if YourAccountDemo.shownAddress != nil {
+                // Never on the Mac, which carries no wallet (prd §1893).
+                if WalletHere.isOn, YourAccountDemo.shownAddress != nil {
                     out.append(Verb(label: String(localized: "Claim to your account"), icon: "arrow.down.circle", action: .claimZkMoneyHere))
                 }
                 out.append(Verb(label: "Claim in zk.money", icon: "arrow.up.forward.app", action: .claimZkMoney))
             }
             // A zk.money request still open, with an account here to pay it
             // from (prd §1745): Pay leads and opens Send already written.
-            if YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {
+            if WalletHere.isOn, YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {
                 out.append(Verb(label: String(localized: "Pay"), icon: "paperplane", action: .payZkMoney))
             }
             // A request paid from here (prd §1752): the send's own page on

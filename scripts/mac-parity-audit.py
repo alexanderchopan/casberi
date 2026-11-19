@@ -28,8 +28,8 @@ off within a week, so each one is a mechanical fact with no judgement in it.
        failure this catches is the silent one — a new capability added to iOS
        alone, which nothing notices until a signed Catalyst archive fails.
 
-    3. THE DIGIT SHORTCUTS. ⌘1–⌘3 open the three places the rail shows
-       (`PlaceTab.allCases`, prd §1402) through the one door every tab press
+    3. THE DIGIT SHORTCUTS. ⌘1–⌘3 open the places the rail shows
+       (`PlaceTab.shown`, prd §1402; Activity and Apps alone on the Mac, §1893) through the one door every tab press
        takes (`PlaceTab.open`), never by writing `FeedFilter.source` by hand:
        Library is a place in You, not a source, so a raw write lands a word
        where no predicate matches it. Until §1402 the run was ⌘1–⌘9 against
@@ -226,7 +226,7 @@ def check_digit_shortcuts(findings):
     # The ⌘-digit run: a ForEach over the places carrying a .command digit
     # shortcut.
     block = re.search(
-        r"ForEach\(Array\(PlaceTab\.allCases\.enumerated\(\)\).*?"
+        r"ForEach\(Array\(PlaceTab\.(?:allCases|shown)\.enumerated\(\)\).*?"
         r"keyboardShortcut\(KeyEquivalent.*?modifiers:\s*\.command\)",
         body, re.S)
     if not block:
@@ -352,7 +352,7 @@ FIXTURE_ROUTER = '''
 
 FIXTURE_COMMANDS_GOOD = '''
             CommandGroup(after: .toolbar) {
-                ForEach(Array(PlaceTab.allCases.enumerated()), id: \\.element) { i, tab in
+                ForEach(Array(PlaceTab.shown.enumerated()), id: \\.element) { i, tab in
                     Button("Switch to \\(tab.label)") {
                         guard let chrome = focusedChrome, let scene = focusedScene else { return }
                         PlaceTab.open(tab, chrome: chrome, route: scene.route)
