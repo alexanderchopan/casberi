@@ -176,10 +176,21 @@ enum AztecGas {
     /// and its tray: a top-up on its way, nothing, under one transaction's
     /// worth, or enough. The thresholds are the ones a send already uses.
     enum Standing: Equatable { case arriving, none, low, enough }
+    /// **CARRIED IS NOT ON ITS WAY (prd §1886, user: "it says 'on its way'
+    /// but that wasn't any time recently").** A private deposit stays
+    /// unminted until the next send, which may be days; once Aztec has it,
+    /// it counts as gas in the contract and the row stops saying On its way.
     @MainActor
     static var state: Standing {
         let (gas, inside, own) = standing
-        return state(waiting: gas.contains { !$0.claimed }, inside: inside, own: own)
+        return state(waiting: gas.contains { !$0.claimed && $0.ready != true },
+                     inside: inside + carried(gas), own: own)
+    }
+
+    /// What carried private deposits hold, base units: the next send mints it.
+    static func carried(_ gas: [AztecAccountStore.GasDeposit]) -> Decimal {
+        gas.filter { $0.isPrivate && !$0.claimed && $0.ready == true }
+            .reduce(0) { $0 + (Decimal(string: $1.amountUnits) ?? 0) }
     }
     static func state(waiting: Bool, inside: Decimal, own: Decimal) -> Standing {
         if waiting { return .arriving }
@@ -264,6 +275,14 @@ enum AztecGas {
            let answer = try? await AztecEngine.shared.call("gasSpent", [waiting]) as? [String: Any] {
             for nonce in (answer["spent"] as? [String] ?? []).compactMap({ UInt64($0) }) {
                 AztecAccountStore.shared.markGasClaimed(nonce)
+            }
+        }
+        // A private one is minted by the next send; Aztec carrying it is
+        // what ends "On its way" (prd §1886).
+        for deposit in AztecAccountStore.shared.snapshot.gas ?? [] where !deposit.claimed && deposit.isPrivate && deposit.ready != true {
+            if let ready = try? await AztecEngine.shared.call("feeJuiceReady", [deposit.messageHash]) as? [String: Any],
+               ready["ready"] as? Bool == true {
+                AztecAccountStore.shared.markGasReady(deposit.nonce)
             }
         }
         for deposit in AztecAccountStore.shared.snapshot.gas ?? [] where !deposit.claimed && !deposit.isPrivate {

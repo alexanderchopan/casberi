@@ -74195,3 +74195,13 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Seen** on the iPhone 17 Pro simulator (`-railgunFirstSyncPreview 40`, demo): the row and its line; Receive's two rows. **Not seen:** a real first sync's percentage moving, the toast after one.
 
 **Checks.** `railgun-selftest.sh`: the first sync known from the kept leaves, the scan's progress reaching the row, the toast, a swap's steps never "sent".
+
+## §1886 — Gas Aztec has carried is gas: a private top-up waiting for the next send no longer reads "On its way" (fixes §1700aa, §1761) (user, 2026-11-18: "i have some fee juice and it says 'on its way' but that wasn't any time recently i did it") — BUILT
+
+**Found.** Since §1700aa a top-up goes to the shared private fee contract and is minted by the next send, not claimed on its own. `AztecGas.state` read every unclaimed deposit as waiting, so a carried one said "On its way" until you next sent on Aztec, days later. Measured on the user's Safe: 30 AZTEC to the FeeJuicePortal on Nov 5, 11, 13 and 14.
+
+**Ruling.** `AztecGas.settle()` asks Aztec whether each private deposit's message has arrived (`feeJuiceReady`) and marks it `ready`. A ready, unminted deposit is not waiting, and its amount counts as gas in the contract (`carried`), so the row reads Enough or Low. One still in transit stays "On its way". `ridesAlong` is unchanged: no second private top-up while one is unminted.
+
+**Mac half (§1402).** Shared model; reaches the Mac's Holdings unchanged.
+
+**Checks.** `shield-bridge-selftest.sh` holds the state rule, the carried count and the ready check. Not seen on the user's phone yet: it changes once the Wallet next settles.

@@ -67,6 +67,13 @@ grep -q "proxyClass: '0x18fa95a66c31125278bf4d07166e30fff3ad7e12b232710bf7e376f3
 # offers a spent deposit for ever; a private deposit claimed on its own would
 # name the account as that claim's payer.
 GAS="Casberi/Casberi/Model/Aztec/AztecGas.swift"
+# Carried private gas is not on its way (prd §1886): it waits in the fee
+# contract for the next send, which may be days, and counts as gas.
+grep -q 'return state(waiting: gas.contains { !$0.claimed && $0.ready != true },' "$GAS" \
+  && grep -q 'inside: inside + carried(gas), own: own)' "$GAS" \
+  && grep -q 'where !deposit.claimed && deposit.isPrivate && deposit.ready != true {' "$GAS" \
+  && grep -q 'AztecAccountStore.shared.markGasReady(deposit.nonce)' "$GAS" \
+  || { echo "✗ private gas Aztec has carried reads On its way again until the next send (prd §1886)"; exit 1; }
 MOVE="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
 (( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.unminted\]) as? \[String: Any\]') == 3 )) \
   || { echo "✗ one of the three sends (a claim, a private send, an exit) no longer offers the waiting gas deposits"; exit 1; }

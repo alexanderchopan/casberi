@@ -76,6 +76,9 @@ final class AztecAccountStore {
         /// contract, minted by the next send; nil or `"own"` (every deposit
         /// before §1700aa), to the account itself, claimed on its own.
         var kind: String?
+        /// A private deposit Aztec has carried (prd §1886): its gas is there,
+        /// waiting for the next send to mint it, no longer on its way.
+        var ready: Bool?
         var id: UInt64 { nonce }
         var isPrivate: Bool { kind == "private" }
     }
@@ -324,6 +327,12 @@ final class AztecAccountStore {
     func markExitWithdrawn(_ transaction: String, withdrawal: String) {
         guard let i = snapshot.exits?.firstIndex(where: { $0.transaction == transaction }) else { return }
         snapshot.exits?[i].withdrawal = withdrawal
+        save()
+    }
+
+    func markGasReady(_ nonce: UInt64) {
+        guard let i = snapshot.gas?.firstIndex(where: { $0.nonce == nonce }), snapshot.gas?[i].ready != true else { return }
+        snapshot.gas?[i].ready = true
         save()
     }
 
