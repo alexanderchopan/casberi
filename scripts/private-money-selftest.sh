@@ -386,8 +386,11 @@ use "$ETH" 'guard tx.to.lowercased() == network.keystore.lowercased() else { thr
 use "$ETH" 'guard d.tx.to.lowercased() == pool.router.lowercased(), d.share.lowercased() == pool.share.lowercased(),' "a deposit may go somewhere other than its token's yield router"
 use "$ETH" 'carried <= most else { throw Failure.noPool }' "a deposit may carry more than its budget"
 use "$ETH" 'guard quit.recipient.lowercased() == owner.lowercased() else { throw Failure.notOwner }' "a ragequit paying someone other than your account is signed"
-use "$ETH" 'reason: String = String(localized: "Send from your private balance")) async throws -> String {' "a relayed send no longer asks for the device owner"
-awk '/static func send\(token: String/,/^    }$/' "$ETH" | grep -q 'try await open(account, reason: reason)' || { echo "✗ a relayed send opens without asking for the device owner"; exit 1; }
+use "$ETH" 'reason: String = String(localized: "Send from your private balance"),' "a relayed send no longer asks for the device owner"
+use "$ETH" 'try await open(account, reason: reason)' "a relayed send no longer asks for the device owner"
+# Since §1881 `send` hands every relayed send to `relayedSend`, which opens.
+awk '/static func send\(token: String/,/^    }$/' "$ETH" | grep -q 'relayedSend(account: account' || { echo "✗ a relayed send skips the one door that asks for the device owner"; exit 1; }
+awk '/private static func relayedSend\(/,/^    }$/' "$ETH" | grep -q 'try await open(account, reason: reason)' || { echo "✗ a relayed send opens without asking for the device owner"; exit 1; }
 [[ $(grep -c 'try await YourAccountChain.privateCalls(' "$ETH") -ge 2 ]] || { echo "✗ a deposit or Take it back no longer goes through your account"; exit 1; }
 awk '/static func privateCalls\(/,/^    }$/' "$CHAIN" > "$TMP0"
 grep -q 'throw Failure(message: String(localized: "\\(net.name) could not check this, so nothing was signed"))' "$TMP0" || { echo "✗ a private call no node would simulate is signed"; exit 1; }
@@ -1274,7 +1277,8 @@ for f in MoveFreshReceive MoveAztecReceive; do
     use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard(act: leave' "$f has no way back to Receive's addresses (prd §1803)"
 done
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
-    use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard()' "$f has no way back to Move's menu (prd §1781)"
+    # A page with an open list (§1888) passes the back card what closes it first.
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard(' "$f has no way back to Move's menu (prd §1781)"
 done
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
     use "Casberi/Casberi/Screens/$f.swift" 'MoveChoiceRows(rows: choiceRows' "$f's choices are not rows (prd §1781)"

@@ -734,7 +734,7 @@ grep -q 'return usdcChoices.filter { Self.tagTakes($0) }.map { ("USDC", $0) }' "
   && grep -q 'guard symbol == "USDC", Self.tagTakes(amount) else {' "$PM" \
   || { echo "✗ a private tag payment can be made in ETH, or outside zk.money's limits (prd §1874)"; exit 1; }
 grep -q 'if tag != nil { balanceToBalance = false; return }' "$PM" \
-  && grep -q 'balanceToBalance: tag == nil && balanceToBalance == true)' "$PM" \
+  && grep -q 'balanceToBalance: tag == nil && balanceToBalance == true' "$PM" \
   || { echo "✗ a deposit address could be paid balance to balance, where zk.money never sees it"; exit 1; }
 grep -q 'if tag != nil, !onEthereum {' "$PM" \
   || { echo "✗ a tag can be paid from Sepolia's private balance"; exit 1; }

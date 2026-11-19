@@ -28,6 +28,10 @@ grep -q 'workAsks(visible)' Casberi/Casberi/Screens/FeedScreen+MergedRoom.swift 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 cp "$ASK" "$STAGE" "$TMP/"
+# The notification sweep's door (prd §1881) reads a stored `Thing` and the
+# catalogue: it is the app's, not this rule's, so it is cut here.
+sed -i '' '/^extension WorkAsk {$/,$d' "$TMP/WorkAsk.swift"
+grep -q "static func needsYou" "$TMP/WorkAsk.swift" || { echo "✗ cutting the notification door took the rule with it"; exit 1; }
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 

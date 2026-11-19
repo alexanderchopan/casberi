@@ -98,6 +98,9 @@ enum DeviceWord {
     @MainActor static var proving: String { "Proving" }
     @MainActor static var proved: String { "Proved" }
 }
+// What a send ending tells you while you are away (prd §1881): heard, never sent.
+enum NotifyKind { case moveFailed, moveSwapped, moveSent }
+enum Notifications { static func outcome(_ kind: NotifyKind, id: String, place: String, body: String, mark: String) async {} }
 @MainActor func runChecks() -> Int {
     var fails = 0
     func check(_ name: String, _ ok: Bool) { if !ok { print("  ✗ \(name)"); fails += 1 } }
@@ -212,11 +215,11 @@ RAILGUN_MOVE=Casberi/Casberi/Screens/MoveRailgunPrivate.swift
   || { echo "✗ a Railgun send to someone stays in its sheet (prd §1806)"; exit 1; }
 grep -q 'started(Self.takeBackPlan) }' $RAILGUN_MOVE \
   || { echo "✗ taking back from Railgun leaves its sheet before your account has signed (prd §1806)"; exit 1; }
-grep -q 'if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: Self.landedWords) {' $RAILGUN_MOVE \
+grep -q 'if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: landed) {' $RAILGUN_MOVE \
   || { echo "✗ Railgun's sheet closes before Face ID, or over another send (prd §1806)"; exit 1; }
 grep -q '.task(id: move.mode) { if RailgunMove.kept !== move { await move.read() } }' $RAILGUN_MOVE \
   || { echo "✗ a Railgun send behind its sheet is read over when its sentence opens again (prd §1806)"; exit 1; }
-grep -q 'guard mode != .takeBack || !anotherIsGoing else {' $RAILGUN_MOVE \
+grep -q 'guard mode == .deposit || !anotherIsGoing else {' $RAILGUN_MOVE \
   || { echo "✗ a second Railgun proof can start while one is behind its sheet (prd §1806)"; exit 1; }
 grep -q 'PrivateSendSteps.shared.mark(key, from: .railgun)' Casberi/Casberi/Model/RailgunEngine.swift \
   || { echo "✗ Railgun's engine no longer names itself, so its send behind the sheet never moves (prd §1806)"; exit 1; }
