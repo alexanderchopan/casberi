@@ -74264,3 +74264,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** Shared model and Move; the Signer sheet shows its code where no wallet opens.
 
 **Checks.** `shield-bridge-selftest.sh`: Move reaches only the co-signer's deposit, no Safe sign-in or Safe deposit remains, an exit signs in only by the co-signer.
+
+## §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says the broadcaster's own words and nothing sent, a broadcaster that refused is passed over for a week, and the swap goes from a new address of yours when none is left (amends §1875, §1887) (user, 2026-11-18, testing 1043 on the phone: "i got an error 'not swapped'", "error says … railgun did not answer nothing was sent"; of the landing: "says 'swap dai for what in your private balance'. that is weird. should say 'a token'", "on cost, this spacing seems weird is it same spacing we use on the swap screen?") — BUILT; seen on the phone
+
+1. **Railgun's proving files are kept on this phone** (the engine page's IndexedDB, under a memory copy). They came from IPFS on every launch, and the screening proof's 8 MB took 48 s on the phone against Railgun's 45 s limit, so the swap failed as "Railgun did not answer". A download that times out still lands; the proof waits a minute and runs once more.
+2. **A broadcaster that answers with an error refused before sending.** The engine keeps its words (Waku's client hid them as the cause) and says `BroadcastRefused`; the sheet says "The broadcaster turned it down. Nothing was sent.", never "did not confirm", which stays for an answer that never came.
+3. **A broadcaster that refused is passed over for a week** (`refusedBroadcasters`, kept on the phone). Measured: Ophis, the one broadcaster carrying private swaps on Ethereum, answers every swap with "now requires confirmed prepaid fees", a fee Railgun's SDK does not pay (none in wallet 11.3.5 either). With it passed over, the swap goes from a new address of yours, its gas from your private ETH (§1875), and it did (0x9d7c8c66…47dd).
+4. **The landing asks for "a token"**, never "what", and a private cost's list stands at the public swap's Details pitch (`walletRowPitch`).
+
+**Not seen:** a broadcaster that takes prepaid fees, or another one carrying swaps; the files' second launch reading from the phone.
+
+**Checks.** `railgun-selftest.sh`: the files kept, the proof run once more after a slow download, a refusal kept as such and passed over.

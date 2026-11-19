@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2070 of 2144 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2071 of 2145 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2317,7 +2317,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another s…
 - §1873 — Helper text fits one line
 - §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fres…
-- §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c… (amended by §1885)
+- §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c… (amended by §1885, §1891)
 - §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired
 - §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva…
 - §1878 — Receive on Base or Robinhood, earn on Ethereum
@@ -2329,10 +2329,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1884 — An address is one quiet line
 - §1885 — The first Railgun sync says it is the first, how far it is, and that only leaving Casberi stops it; a toast says when…
 - §1886 — Gas Aztec has carried is gas: a private top-up waiting for the next send no longer reads "On its way" (fixes §1700aa,…
-- §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap…
+- §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap… (amended by §1891)
 - §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a…
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
+- §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says…
 
 ## Dead rulings → what replaced them (generated)
 

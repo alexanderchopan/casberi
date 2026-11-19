@@ -845,6 +845,10 @@ final class RailgunMove {
         if (error as? RailgunEngineWire.Failure)?.name == "BroadcastUnconfirmed" {
             return String(localized: "The broadcaster did not confirm. Check Activity before sending again.")
         }
+        // It answered, and refused: nothing went out (prd §1887).
+        if (error as? RailgunEngineWire.Failure)?.name == "BroadcastRefused" {
+            return String(localized: "The broadcaster turned it down. Nothing was sent.")
+        }
         if let failure = error as? YourAccountChain.Failure { return failure.message }
         if error is PrivateRootKey.Failure {
             return String(localized: "Face ID did not open the private account")

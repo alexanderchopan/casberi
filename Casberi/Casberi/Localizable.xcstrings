@@ -195450,6 +195450,34 @@
         }
       }
     },
+    "The broadcaster turned it down. Nothing was sent." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El broadcaster lo rechazó. No se envió nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターが拒否しました。何も送信されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터가 거절했습니다. 아무것도 전송되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "广播者拒绝了它。未发送任何内容。"
+          }
+        }
+      }
+    },
     "The bundler took nothing" : {
       "localizations" : {
         "es" : {

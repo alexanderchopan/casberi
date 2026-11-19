@@ -76,12 +76,67 @@ let encryptionKey = null;
 let utxo = null;
 let txid = null;
 let seen = null;
+// Railgun's proving files, kept on this phone (IndexedDB, beside the trees)
+// under a memory copy: they came from IPFS on every launch, and the
+// screening proof's 8 MB took 48 s on a phone against Railgun's 45 s limit
+// (measured 2026-11-18, a private swap refused). Once per phone now.
 const artifacts = new Map();
+const artifactDB = new Promise((resolve) => {
+  try {
+    const r = indexedDB.open('casberi-railgun-artifacts', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('files');
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => resolve(null);
+  } catch { resolve(null); }
+});
+const artifactKept = async (path) => {
+  const db = await artifactDB;
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const q = db.transaction('files').objectStore('files').get(path);
+      q.onsuccess = () => resolve(q.result ?? null);
+      q.onerror = () => resolve(null);
+    } catch { resolve(null); }
+  });
+};
+const keepArtifact = async (path, item) => {
+  const db = await artifactDB;
+  if (!db || !(typeof item === 'string' || ArrayBuffer.isView(item) || item instanceof ArrayBuffer)) return;
+  await new Promise((resolve) => {
+    try {
+      const t = db.transaction('files', 'readwrite');
+      t.objectStore('files').put(typeof item === 'string' ? item : new Uint8Array(item), path);
+      t.oncomplete = t.onerror = t.onabort = () => resolve();
+    } catch { resolve(); }
+  });
+};
+const artifactFromDisk = async (path) => {
+  if (artifacts.has(path)) return artifacts.get(path);
+  const kept = await artifactKept(path);
+  if (kept == null) return null;
+  const item = typeof kept === 'string' ? kept : Buffer.from(kept);
+  artifacts.set(path, item);
+  return item;
+};
 const store = new ArtifactStore(
-  async (p) => artifacts.get(p) ?? null,
-  async (d, p, item) => { artifacts.set(p, item); },
-  async (p) => artifacts.has(p),
+  async (p) => artifactFromDisk(p),
+  async (d, p, item) => { artifacts.set(p, item); await keepArtifact(p, item); },
+  async (p) => (await artifactFromDisk(p)) != null,
 );
+
+// A proof whose files timed out once: the download goes on and keeps them
+// when it ends, so wait for it and prove again, once.
+async function proving(prove) {
+  try {
+    return await prove();
+  } catch (e) {
+    if (!/Timed out downloading artifact/i.test(String(e?.message))) throw e;
+    say('artifacts slow, waiting for the download to finish');
+    await new Promise((r) => setTimeout(r, 60000));
+    return prove();
+  }
+}
 
 // The SDK asks the screening node through axios, whose browser default is
 // XMLHttpRequest — which the page's CSP blocks and `net.js` never sees
@@ -254,6 +309,53 @@ async function reportPOIs() {
   } catch (e) {
     say(`pois failed ${String(e?.message ?? e).slice(0, 200)} ${String(e?.cause?.message ?? '').slice(0, 300)}`);
   }
+}
+
+// Broadcasters that turned a transaction of ours down, passed over from then
+// on (measured 2026-11-18: "Ophis now requires confirmed prepaid fees",
+// a fee this SDK does not pay, and Railgun's pick chose it again).
+// Kept a week on this phone, so a new launch does not ask it first again.
+const REFUSED_KEY = 'casberi.refusedBroadcasters';
+const REFUSED_FOR = 7 * 86400 * 1000;
+const refusedBroadcasters = (() => {
+  const set = new Set();
+  try {
+    const kept = JSON.parse(localStorage.getItem(REFUSED_KEY) ?? '{}');
+    for (const [address, at] of Object.entries(kept)) if (Date.now() - Number(at) < REFUSED_FOR) set.add(address);
+  } catch {}
+  const add = set.add.bind(set);
+  set.add = (address) => {
+    add(address);
+    try {
+      const kept = JSON.parse(localStorage.getItem(REFUSED_KEY) ?? '{}');
+      kept[address] = Date.now();
+      localStorage.setItem(REFUSED_KEY, JSON.stringify(kept));
+    } catch {}
+    return set;
+  };
+  return set;
+})();
+function pickBroadcaster(feeToken, relayAdapt) {
+  const best = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, relayAdapt);
+  if (best && !refusedBroadcasters.has(best.railgunAddress)) return best;
+  const open = (WakuBroadcasterClient.findBroadcastersForToken(CHAIN, feeToken, relayAdapt) ?? [])
+    .filter((b) => !refusedBroadcasters.has(b.railgunAddress) && (!b.tokenFee.expiration || Number(b.tokenFee.expiration) > Date.now()));
+  open.sort((a, b) => (BigInt(a.tokenFee.feePerUnitGas) < BigInt(b.tokenFee.feePerUnitGas) ? -1 : 1));
+  return open[0];
+}
+
+// A broadcaster that answers with an error refused the transaction before
+// sending it (Waku's client wraps its words as the cause), so nothing went
+// out and its own words say why (measured 2026-11-18: a private swap read
+// "did not confirm" over a refusal). Anything else may have reached it.
+function broadcastFailure(e, broadcaster) {
+  const said = e?.cause?.message;
+  if (said && /response error from broadcaster/i.test(String(e?.message))) {
+    if (broadcaster) refusedBroadcasters.add(broadcaster);
+    say(`broadcaster refused ${String(said).slice(0, 300)}`);
+    return Object.assign(new Error(String(said).slice(0, 300)), { name: 'BroadcastRefused' });
+  }
+  return Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
 }
 
 function requireOpen() {
@@ -526,14 +628,14 @@ const methods = {
       est = await gasEstimateForUnprovenUnshieldBaseToken(V2, NETWORK, to, walletID, encryptionKey, { tokenAddress: token, amount }, gasDetails(p), undefined, true);
       const pt = now();
       say('step proving');
-      await generateUnshieldBaseTokenProof(V2, NETWORK, to, walletID, encryptionKey, { tokenAddress: token, amount }, undefined, true, undefined, () => {});
+      await proving(() => generateUnshieldBaseTokenProof(V2, NETWORK, to, walletID, encryptionKey, { tokenAddress: token, amount }, undefined, true, undefined, () => {}));
       proofMs = Math.round(now() - pt);
       ({ transaction } = await populateProvedUnshieldBaseToken(V2, NETWORK, to, walletID, { tokenAddress: token, amount }, undefined, true, undefined, gasDetails(p, est.gasEstimate)));
     } else {
       est = await gasEstimateForUnprovenUnshield(V2, NETWORK, walletID, encryptionKey, recipients, [], gasDetails(p), undefined, true);
       const pt = now();
       say('step proving');
-      await generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], undefined, true, undefined, () => {});
+      await proving(() => generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], undefined, true, undefined, () => {}));
       proofMs = Math.round(now() - pt);
       ({ transaction } = await populateProvedUnshield(V2, NETWORK, walletID, recipients, [], undefined, true, undefined, gasDetails(p, est.gasEstimate)));
     }
@@ -575,7 +677,7 @@ const methods = {
     const to = getAddress(p.to);
     const token = getAddress(p.token);
     const feeToken = getAddress(p.feeToken);
-    const selected = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, false);
+    const selected = pickBroadcaster(feeToken, false);
     if (!selected) throw Object.assign(new Error(`no broadcaster takes ${feeToken}`), { name: 'NoBroadcaster' });
     // Type 1 (a broadcast batch carries a minimum gas price), at the node's
     // price and a third over it, so a block's rise does not strand it.
@@ -614,7 +716,7 @@ const methods = {
     const pt = now();
     // The steps Move's rows show (prd §1728, §1700x): the proof, then the hand-over.
     say('step proving');
-    await generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], feeRecipient, false, q.gasPrice, () => {});
+    await proving(() => generateUnshieldProof(V2, NETWORK, walletID, encryptionKey, recipients, [], feeRecipient, false, q.gasPrice, () => {}));
     const proofMs = Math.round(now() - pt);
     const populated = await populateProvedUnshield(V2, NETWORK, walletID, recipients, [], feeRecipient, false, q.gasPrice, q.details);
     const tx = populated.transaction;
@@ -629,7 +731,7 @@ const methods = {
       txHash = await sending.send();
     } catch (e) {
       quoted = null;
-      throw Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
+      throw broadcastFailure(e, q.selected.railgunAddress);
     }
     quoted = null;
     return { txHash, proofMs, ms: Math.round(now() - t) };
@@ -650,7 +752,7 @@ const methods = {
     await startBroadcasters();
     const s = swapParts(p);
     const feeToken = getAddress(p.feeToken);
-    const selected = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, true);
+    const selected = pickBroadcaster(feeToken, true);
     if (!selected) throw Object.assign(new Error(`no broadcaster carries a swap for ${feeToken}`), { name: 'NoBroadcaster' });
     const gasPrice = (BigInt(await rpc('eth_gasPrice', [])) * 4n) / 3n;
     const feeTokenDetails = { tokenAddress: feeToken, feePerUnitGas: BigInt(selected.tokenFee.feePerUnitGas) };
@@ -682,8 +784,8 @@ const methods = {
     const feeRecipient = { tokenAddress: q.feeToken, amount: q.fee, recipientAddress: q.selected.railgunAddress };
     const pt = now();
     say('step proving');
-    await generateCrossContractCallsProof(V2, NETWORK, walletID, encryptionKey, q.unshields, [], q.shields, [], q.calls,
-      feeRecipient, false, q.gasPrice, undefined, () => {});
+    await proving(() => generateCrossContractCallsProof(V2, NETWORK, walletID, encryptionKey, q.unshields, [], q.shields, [], q.calls,
+      feeRecipient, false, q.gasPrice, undefined, () => {}));
     const proofMs = Math.round(now() - pt);
     const populated = await populateProvedCrossContractCalls(V2, NETWORK, walletID, q.unshields, [], q.shields, [], q.calls,
       feeRecipient, false, q.gasPrice, q.details);
@@ -697,7 +799,7 @@ const methods = {
       txHash = await sending.send();
     } catch (e) {
       quotedSwap = null;
-      throw Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
+      throw broadcastFailure(e, q.selected.railgunAddress);
     }
     quotedSwap = null;
     return { txHash, proofMs, ms: Math.round(now() - t) };
@@ -714,8 +816,8 @@ const methods = {
       s.calls, gasDetails(p), undefined, true, undefined);
     const pt = now();
     say('step proving');
-    await generateCrossContractCallsProof(V2, NETWORK, walletID, encryptionKey, s.unshields, [], s.shields, [], s.calls,
-      undefined, true, undefined, undefined, () => {});
+    await proving(() => generateCrossContractCallsProof(V2, NETWORK, walletID, encryptionKey, s.unshields, [], s.shields, [], s.calls,
+      undefined, true, undefined, undefined, () => {}));
     const proofMs = Math.round(now() - pt);
     const { transaction } = await populateProvedCrossContractCalls(V2, NETWORK, walletID, s.unshields, [], s.shields, [], s.calls,
       undefined, true, undefined, gasDetails(p, est.gasEstimate));
@@ -737,7 +839,7 @@ const methods = {
     await startBroadcasters();
     const s = transferParts(p);
     const feeToken = getAddress(p.feeToken);
-    const selected = WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, false);
+    const selected = pickBroadcaster(feeToken, false);
     if (!selected) throw Object.assign(new Error(`no broadcaster takes ${feeToken}`), { name: 'NoBroadcaster' });
     const gasPrice = (BigInt(await rpc('eth_gasPrice', [])) * 4n) / 3n;
     const feeTokenDetails = { tokenAddress: feeToken, feePerUnitGas: BigInt(selected.tokenFee.feePerUnitGas) };
@@ -765,7 +867,7 @@ const methods = {
     const feeRecipient = { tokenAddress: q.feeToken, amount: q.fee, recipientAddress: q.selected.railgunAddress };
     const pt = now();
     say('step proving');
-    await generateTransferProof(V2, NETWORK, walletID, encryptionKey, false, q.memo, q.recipients, [], feeRecipient, false, q.gasPrice, () => {});
+    await proving(() => generateTransferProof(V2, NETWORK, walletID, encryptionKey, false, q.memo, q.recipients, [], feeRecipient, false, q.gasPrice, () => {}));
     const proofMs = Math.round(now() - pt);
     const populated = await populateProvedTransfer(V2, NETWORK, walletID, false, q.memo, q.recipients, [], feeRecipient, false, q.gasPrice, q.details);
     const tx = populated.transaction;
@@ -778,7 +880,7 @@ const methods = {
       txHash = await sending.send();
     } catch (e) {
       quotedTransfer = null;
-      throw Object.assign(new Error(String(e?.message ?? e)), { name: 'BroadcastUnconfirmed' });
+      throw broadcastFailure(e, q.selected.railgunAddress);
     }
     quotedTransfer = null;
     return { txHash, proofMs, ms: Math.round(now() - t) };
@@ -791,7 +893,7 @@ const methods = {
     const est = await gasEstimateForUnprovenTransfer(V2, NETWORK, walletID, encryptionKey, s.memo, s.recipients, [], gasDetails(p), undefined, true);
     const pt = now();
     say('step proving');
-    await generateTransferProof(V2, NETWORK, walletID, encryptionKey, false, s.memo, s.recipients, [], undefined, true, undefined, () => {});
+    await proving(() => generateTransferProof(V2, NETWORK, walletID, encryptionKey, false, s.memo, s.recipients, [], undefined, true, undefined, () => {}));
     const proofMs = Math.round(now() - pt);
     const { transaction } = await populateProvedTransfer(V2, NETWORK, walletID, false, s.memo, s.recipients, [], undefined, true, undefined,
       gasDetails(p, est.gasEstimate));

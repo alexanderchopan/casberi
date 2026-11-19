@@ -271,7 +271,7 @@ grep -q "7702" <(grep -E "^import|from '@railgun-community/wallet'|CrossContract
   || echo "  ✓ the engine never imports the 7702 relay adapter's calls"
 use "$ENGINE" "q.selected.tokenFee.feesID,
       CHAIN, populated.nullifiers ?? [], q.gasPrice, true," "the broadcaster is told the swap goes through the relay adapter"
-use "$ENGINE" "WakuBroadcasterClient.findBestBroadcaster(CHAIN, feeToken, true)" "a swap's broadcaster is one that carries relay-adapt sends"
+use "$ENGINE" "const selected = pickBroadcaster(feeToken, true);" "a swap's broadcaster is one that carries relay-adapt sends"
 use "$POCKET" "guard RailgunSwap.checked(quote.calls, sell: sellToken, amount: net, adapter: adapter)," "every swap's calls are checked before anything is proved"
 use "$POCKET" "YourAccountChain.swapQuote(accountNetwork, sell: sell, buy: buy, amount: net, account: adapter)" "the route sells what reaches the adapter, the adapter receiving"
 swaprun=$(awk '/case \.swap where viaFresh:/{on=1} on&&/case \.takeBack:/{exit} on' "$MOVEF")
@@ -337,5 +337,12 @@ use "Casberi/Casberi/Model/RailgunHoldings.swift" "for wait in [20, 45, 90, 180,
 use "tools/railgun-engine/src/engine.js" "      await syncTxidTree();" "the sync ties our own transactions to their notes before the proofs we owe"
 use "tools/railgun-engine/src/engine.js" "if (validated == null || after >= validated || (round > 0 && after === before)) return;" "a TXID tree stuck short of the screening node fills its missing unshields, and stops when that does not move it"
 use "Casberi/Casberi/Screens/FeedScreen+Actions.swift" "Task { await RailgunHoldings.shared.refresh(force: true) }" "a pull on the Wallet forces Railgun's read"
+use "tools/railgun-engine/src/engine.js" "const r = indexedDB.open('casberi-railgun-artifacts', 1);" "Railgun's proving files are kept on this phone (§1891)"
+use "tools/railgun-engine/src/engine.js" "if (!/Timed out downloading artifact/i.test(String(e?.message))) throw e;" "a slow download proves once more, nothing else does"
+[[ $(grep -c "await proving(() => generate" tools/railgun-engine/src/engine.js) -ge 7 ]] && echo "  ✓ every proof waits out a slow download" || { echo "  ✗ a proof skips the slow-download retry"; fail=1; }
+use "tools/railgun-engine/src/engine.js" "if (broadcaster) refusedBroadcasters.add(broadcaster);" "a broadcaster that refused is passed over"
+use "tools/railgun-engine/src/engine.js" "const REFUSED_FOR = 7 * 86400 * 1000;" "and for a week, not a launch"
+[[ $(grep -c "const selected = pickBroadcaster(feeToken" tools/railgun-engine/src/engine.js) -eq 3 ]] && echo "  ✓ every broadcast picks past a refusal" || { echo "  ✗ a broadcast picks a broadcaster that refused"; fail=1; }
+use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" '"BroadcastRefused"' "a refusal says nothing was sent"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"
