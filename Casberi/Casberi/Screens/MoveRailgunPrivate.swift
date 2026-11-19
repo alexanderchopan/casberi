@@ -1023,7 +1023,7 @@ struct MoveRailgunSentence<Head: View>: View {
             case .swap:
                 // One place, named once (prd §1875): "Swap 400 DAI for WBTC
                 // in your private balance."
-                MoveWordsClause(glue: String(localized: "for"), words: move.buy?.symbol ?? String(localized: "what"),
+                MoveWordsClause(glue: String(localized: "for"), words: move.buy?.symbol ?? String(localized: "a token"),
                                 ink: move.buy == nil ? DS.textSecondary : DS.textPrimary,
                                 action: { if picking { toggleBuy() } },
                                 hint: Text("Picks what it buys"))

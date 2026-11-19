@@ -105,7 +105,10 @@ struct MoveCostPartRow: View {
                 .lineLimit(1)
                 .layoutPriority(1)
         }
-        .frame(minHeight: MoveChoiceRowLabel.height)
+        // The public swap's Details pitch (`MoveDetails.row`), so a cost
+        // reads alike on both (user, 2026-11-18: "is it same spacing we use
+        // on the swap screen?").
+        .walletRowPitch()
         .accessibilityElement(children: .combine)
     }
 }
