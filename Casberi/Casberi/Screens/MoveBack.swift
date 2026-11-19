@@ -59,6 +59,9 @@ struct MoveChoiceRow: Identifiable {
     /// can take the focus.
     var field: AnyView?
     var typing = false
+    /// The field is an amount: typed at `MoveChoiceRowLabel.figureRung` in
+    /// the answer's place (prd §1892). A note typed in its row stays small.
+    var figure = false
     /// A fact every line shares and this sentence cannot change (its one
     /// network): grey, with no menu chevron, and no button.
     var fixed = false
@@ -79,6 +82,19 @@ struct MoveChoiceRowLabel: View {
     var mark: MoveRowMark?
     /// One amber word before the answer: "New", on a first send (prd §1805).
     var note: String?
+    /// **AN UNANSWERED ROW IS NAMED BY WHAT IT ASKS (prd §1892).** Nothing
+    /// picked yet: the row's name is its one line, in `ink` (the pick's pink
+    /// on the next row, grey on the rest). Five rows reading "Choose" read
+    /// as five disabled rows.
+    var asks = false
+    /// Its list is open under it (prd §1889): the chevron turns up.
+    var isOpen = false
+    /// A figure is being typed in it (prd §1892): the row keeps a slot at
+    /// `figureRung` for the caller's field (`figureSlot`), and grows to hold it.
+    var typing = false
+    /// The grey line under a typed figure, where it says more than the
+    /// row's name ("You have $248.40").
+    var caption: String?
 
     var body: some View {
         // **HOME'S ROW (prd §1889, the user over Home and Move side by side:
@@ -101,31 +117,61 @@ struct MoveChoiceRowLabel: View {
                 }
             }
             .frame(width: Self.markSize, height: Self.markSize)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: DS.Space.s2) {
-                    if let note {
-                        Text(verbatim: note).dsText(.heading17).foregroundStyle(DS.attentionInk).lineLimit(1)
+            VStack(alignment: .leading, spacing: Self.lineGap) {
+                if typing {
+                    // The figure's slot: the caller's field draws over it.
+                    Text(verbatim: "0").dsText(Self.figureRung).hidden().accessibilityHidden(true)
+                    Text(verbatim: caption ?? name).dsText(.fact15).foregroundStyle(DS.textSecondary).lineLimit(1)
+                } else if asks {
+                    Text(verbatim: name).dsText(.heading20).foregroundStyle(ink).lineLimit(1)
+                } else {
+                    HStack(spacing: DS.Space.s2) {
+                        if let note {
+                            Text(verbatim: note).dsText(.heading17).foregroundStyle(DS.attentionInk).lineLimit(1)
+                        }
+                        Text(verbatim: value)
+                            .dsText(.heading20)
+                            .foregroundStyle(ink)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(verbatim: value)
-                        .dsText(.heading20)
-                        .foregroundStyle(ink)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Text(verbatim: name).dsText(.fact15).foregroundStyle(DS.textSecondary).lineLimit(1)
                 }
-                Text(verbatim: name).dsText(.fact15).foregroundStyle(DS.textSecondary).lineLimit(1)
             }
             Spacer(minLength: DS.Space.s2)
-            Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
+            // **THE LIST OPENS UNDER THE ROW, SO THE CHEVRON POINTS DOWN (prd
+            // §1892):** a chevron to the right said a page would push.
+            Image(systemName: "chevron.down").dsGlyph(.caption, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
-                .opacity(chevron ? 1 : 0)
+                .rotationEffect(.degrees(isOpen ? 180 : 0))
+                .animation(DS.Motion.standard, value: isOpen)
+                .opacity(chevron && !typing ? 1 : 0)
                 .accessibilityHidden(true)
         }
-        .frame(minHeight: MoveChoiceRowLabel.height)
+        .frame(minHeight: typing ? Self.typingHeight : Self.height)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
+        .accessibilityValue(asks ? Text("Choose") : Text(verbatim: ""))
     }
 
     static let markSize: CGFloat = 36
+    /// Between a row's answer and its name.
+    static let lineGap: CGFloat = 2
+    /// **THE AMOUNT IS THE FIGURE WHILE IT IS TYPED (prd §1892).** The typed
+    /// figure was the smallest thing on the screen, at the row's far edge.
+    static let figureRung: DSTextStyle = .heading44
+    /// A row holding a typed figure and its line.
+    static let typingHeight: CGFloat = 92
+
+    /// The caller's field, laid over a typing row's slot: the same two
+    /// lines, so the figure stands exactly where the slot is at any size.
+    static func figureSlot<Field: View>(name: String, @ViewBuilder field: @escaping () -> Field) -> some View {
+        VStack(alignment: .leading, spacing: lineGap) {
+            MoveFigureFit(content: field)
+            Text(verbatim: name).dsText(.fact15).lineLimit(1).hidden().accessibilityHidden(true)
+        }
+        .padding(.leading, leadColumn)
+    }
 
     /// A row's glyph when it has no mark, by what it asks.
     static func glyph(for name: String) -> String {
@@ -134,6 +180,8 @@ struct MoveChoiceRowLabel: View {
         case String(localized: "From"): "wallet.bifold"
         case String(localized: "Network"): "globe"
         case String(localized: "Amount"): "dollarsign"
+        case String(localized: "Token"): "circle.circle"
+        case String(localized: "When"): "clock"
         default: "circle.dotted"
         }
     }
@@ -141,6 +189,54 @@ struct MoveChoiceRowLabel: View {
     /// Where a row's words start: an open list lines up under them (prd §1889).
     static var leadColumn: CGFloat { markSize + leadGap }
     static let height: CGFloat = 64
+}
+
+/// **A FACT UNDER THE CHOICES (prd §1892, every sentence since §1896).** Its
+/// name grey, its figure trailing, at the facts' pitch, in the answers'
+/// column: the private sends and Earn wrote theirs as a line at the page's
+/// edge ("about a minute", "Earns 5.1% today"). A fact with no figure is
+/// its name alone.
+struct MoveFactRow: View {
+    let name: String
+    var value: String?
+    var valueInk: Color = DS.textPrimary
+    var nameInk: Color = DS.textSecondary
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: name).dsText(.body17).foregroundStyle(nameInk)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: DS.Space.s2)
+            if let value {
+                Text(verbatim: value).dsText(.body17).foregroundStyle(valueInk)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .layoutPriority(1)
+            }
+        }
+        .frame(minHeight: MoveSentence.factHeight)
+        .padding(.leading, MoveChoiceRowLabel.leadColumn)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A typed figure at its own width, drawn smaller only when it is wider
+/// than its row (prd §1892): a field cannot shrink its own text, and
+/// eighteen decimals at `figureRung` ran off the trailing edge.
+struct MoveFigureFit<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    @State private var width: CGFloat = 0
+    @State private var room: CGFloat = 0
+
+    var body: some View {
+        content()
+            .fixedSize()
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .scaleEffect(room > 0 && width > room ? room / width : 1, anchor: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { room = $0 }
+    }
 }
 
 /// A choice's answer with its mark and the menu chevron: a whole row's
@@ -239,19 +335,24 @@ struct MoveChoiceRows<Menu: View>: View {
                     } label: {
                         MoveChoiceRowLabel(name: r.name, value: r.typing ? " " : r.empty ? String(localized: "Choose") : r.value,
                                            ink: r.id == next ? nextInk : r.empty ? DS.textSecondary : r.ink ?? DS.textPrimary,
-                                           chevron: !r.typing, mark: r.empty || r.typing ? nil : r.mark)
+                                           chevron: !r.typing, mark: r.empty || r.typing ? nil : r.mark,
+                                           asks: r.empty && !r.typing, isOpen: open.wrappedValue == r.id,
+                                           typing: r.typing && r.figure)
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
                     // The row whose list is open stays lit; the rest step back (prd §1889).
                     .opacity(open.wrappedValue == nil || open.wrappedValue == r.id ? 1 : MoveSentence.steppedBack)
                     .animation(DS.Motion.standard, value: open.wrappedValue)
-                    .overlay(alignment: .trailing) {
+                    .animation(DS.Motion.standard, value: r.typing)
+                    .overlay(alignment: r.figure ? .leading : .trailing) {
                         if let field = r.field {
-                            field
-                                .opacity(r.typing ? 1 : 0)
-                                .allowsHitTesting(r.typing)
-                                .accessibilityHidden(!r.typing)
+                            Group {
+                                if r.figure { MoveChoiceRowLabel.figureSlot(name: r.name) { field } } else { field }
+                            }
+                            .opacity(r.typing ? 1 : 0)
+                            .allowsHitTesting(r.typing)
+                            .accessibilityHidden(!r.typing)
                         }
                     }
                     // The list opens in place under its row (prd §1889).
@@ -386,6 +487,9 @@ struct MoveVerbRowLabel: View {
 /// it reads as tappable beside a pink verb ("Copy") that acts at once.
 struct MoveDoorRowLabel: View {
     let title: String
+    /// Under a row with a mark (prd §1892): its words start where that
+    /// row's name does, at a list row's height, so it reads as that row's.
+    var inColumn = false
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
@@ -395,8 +499,71 @@ struct MoveDoorRowLabel: View {
                 .foregroundStyle(DS.textSecondary)
                 .accessibilityHidden(true)
         }
-        .frame(minHeight: MoveChoiceRowLabel.height)
+        .frame(minHeight: inColumn ? MoveSentence.listRowHeight : MoveChoiceRowLabel.height)
+        .padding(.leading, inColumn ? MoveChoiceRowLabel.leadColumn : 0)
         .contentShape(Rectangle())
+    }
+}
+
+/// **A MOVE PAGE'S NAME STAYS, ITS ROWS PASS UNDER IT (prd §1892).** Every
+/// sentence Move mounts leads with its verb as the page's name; a page
+/// longer than the sheet scrolled it away and cut its top row against the
+/// grabber. It stands over the page on the page's own ground, which fades
+/// out under it as the foot's fades in (§1610).
+struct MovePinnedHead<Head: View>: View {
+    let inTray: Bool
+    @ViewBuilder let head: () -> Head
+
+    var body: some View {
+        head()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
+            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
+            .background {
+                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                    .mask {
+                        VStack(spacing: 0) {
+                            Color.black
+                            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                                .frame(height: MoveSentence.headFade)
+                        }
+                    }
+                    .padding(.bottom, -MoveSentence.headFade)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
+extension View {
+    /// **A FOOT'S GROUND FADES IN (prd §1610, every sentence since §1892).**
+    /// The page's own ground under a mounted sentence's foot, soft over
+    /// `MoveSentence.footFade` above it: a row passing under goes soft
+    /// instead of being cut in half.
+    func moveFootGround(inTray: Bool) -> some View {
+        background {
+            Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                .mask {
+                    VStack(spacing: 0) {
+                        LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                            .frame(height: MoveSentence.footFade)
+                        Color.black
+                    }
+                }
+                .padding(.top, -MoveSentence.footFade)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// **THE SENTENCE STEPS AWAY WHILE A ROW IS ANSWERED (prd §1892).** An
+    /// open list or a typed figure takes the sentence's room over the foot;
+    /// it comes back saying the pick. Collapsed, never unmounted: Move's own
+    /// rows are read off it.
+    func moveSentenceAway(_ away: Bool) -> some View {
+        frame(height: away ? 0 : nil, alignment: .top)
+            .clipped()
+            .opacity(away ? 0 : 1)
+            .accessibilityHidden(away)
+            .animation(DS.Motion.standard, value: away)
     }
 }
 

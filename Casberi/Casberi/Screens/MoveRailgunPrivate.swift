@@ -940,8 +940,7 @@ struct MoveRailgunSentence<Head: View>: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
                 // (prd §1794, §1801):** as Move's own verbs.
-                head()
-                    .allowsHitTesting(false)
+                // Its name stands over the page (`MovePinnedHead`, prd §1892).
                 Group {
                     // The tokens are a menu on their row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -956,15 +955,16 @@ struct MoveRailgunSentence<Head: View>: View {
                         if !costOpen { line }
                     }
                 }
-                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.top, MoveSentence.headFade)
+            // Scrolled to the end, the last row clears the foot's fade.
+            .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
         // Send opens whole: its rows and sentence clip in the short sheet.
         .onAppear { chrome.moveTall = true }
         .onChange(of: open) { _, now in if now { chrome.moveTall = true } }
@@ -1261,7 +1261,7 @@ struct MoveRailgunSentence<Head: View>: View {
         }
         // Its sums are a menu, and any other is typed in the row (prd §1802).
         rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
-                                  field: AnyView(amountField), typing: typing) {
+                                  field: AnyView(amountField), typing: typing, figure: true) {
             withAnimation(DS.Motion.standard) { open = false; buyOpen = false; amountOpen.toggle() }
         })
         // A note only they can read, to a private address (prd §1877).
@@ -1353,9 +1353,10 @@ struct MoveRailgunSentence<Head: View>: View {
                   prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
             .keyboardType(.decimalPad)
             .focused($typing)
-            .dsText(.heading20)
+            // The figure is the row while it is typed (prd §1892).
+            .dsText(MoveChoiceRowLabel.figureRung)
             .monospacedDigit()
-            .multilineTextAlignment(.trailing)
+            .multilineTextAlignment(.leading)
             .foregroundStyle(DS.textPrimary)
             .tint(DS.pickInk)
             .fixedSize()
@@ -1446,6 +1447,7 @@ struct MoveRailgunSentence<Head: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s3)
+                .moveSentenceAway((open && picking) || amountOpen || buyOpen || typing)
             // One thing at a time over the act (§1700x): the steps while it
             // works and after, else the cost (or what a quote waits on).
             if let run = stepsRun {
@@ -1460,7 +1462,6 @@ struct MoveRailgunSentence<Head: View>: View {
             }
             HStack(alignment: .center, spacing: DS.Space.s2) {
                 MoveBackCard(act: costBack)
-                Spacer(minLength: 0)
                 switch move.stage {
                 case .done:
                     footButton(String(localized: "Done"), on: true) {
@@ -1469,7 +1470,7 @@ struct MoveRailgunSentence<Head: View>: View {
                 case .failed:
                     footButton(String(localized: "Try again"), on: true) { Task { await move.read() } }
                 case .reading, .nothing:
-                    EmptyView()
+                    Spacer(minLength: 0)
                 case .needsFees:
                     footButton(DemoMode.isActive ? String(localized: "Not in the demo") : String(localized: "Add ETH for fees"),
                                on: !DemoMode.isActive) {
@@ -1477,14 +1478,16 @@ struct MoveRailgunSentence<Head: View>: View {
                     }
                     .disabled(DemoMode.isActive)
                 default:
-                    if typing {
-                        // Done, while a figure is typed (prd §1791 item 4).
+                    if typing, !ready {
+                        // Done, while a figure is typed and not yet a move
+                        // (prd §1791 item 4); a whole one is the act (prd §1896).
                         Button { typing = false } label: {
                             MoveSentence.actCard(String(localized: "Done"), on: true, fill: DS.fillStrong)
                         }
                         .buttonStyle(PressSpring())
                     } else {
                         footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
+                            typing = false
                             move.onAway = inTray ? { chrome.moveTray = false } : nil
                             Task { await move.run() }
                         }
@@ -1496,7 +1499,7 @@ struct MoveRailgunSentence<Head: View>: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        .moveFootGround(inTray: inTray)
     }
 
     private var footVerb: String {

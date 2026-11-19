@@ -628,9 +628,11 @@ grep -q 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decima
   || { echo "✗ the print line no longer carries the ≈ and the exact quote, or drops the ≈ for a pool's quote (prd §1479, §83, §1556)"; exit 1; }
 # The fee after it is the network's alone since §1539: the pool's is in the price (`swapFeePrint`).
 # Rows of the ledger since §1754: "You get" carries the exact quote, "Fee" the network's.
+# Since §1896 a single swap's quote is its To token's line ("You get ≈ 38.38"); the ledger keeps it for kept lines.
 grep -q 'rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back, valueInk: DS.textPrimary))' "$SENTENCE" \
+  && grep -q 'name: String(localized: "You get \\(back)")' "$SENTENCE" \
   && grep -q 'rows.append(LedgerRow(id: "fee", name: String(localized: "Fee"), value: fee))' "$SENTENCE" \
-  || { echo "✗ the swap's ledger dropped the exact quote or the whole fee (prd §1479, §1509, §1754)"; exit 1; }
+  || { echo "✗ the swap dropped the exact quote from its To row or its ledger, or the whole fee (prd §1479, §1509, §1754, §1896)"; exit 1; }
 # One ledger, one size: its last row opens Details, and no figure is pushed in by a chevron (prd §1754).
 grep -q 'ledger(door: offersDetails)' "$SENTENCE" || { echo "✗ the ledger's last row no longer opens Details (prd §1754)"; exit 1; }
 

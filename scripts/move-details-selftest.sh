@@ -202,9 +202,14 @@ grep -q 'value: String(localized: "Your public account"), fixed: true) {})' "$AZ
   || { echo "✗ Send to your private account no longer says where from and what goes (prd §1872)"; exit 1; }
 # Spacing: a line under the rows, and a head, at the rows' pitch; a place's
 # line on Receive wraps, never shrinks.
-grep -q '        .frame(minHeight: MoveChoiceRowLabel.height)$' "$MS" \
-  && [ "$(grep -c '.frame(minHeight: MoveChoiceRowLabel.height, alignment: .leading)' "$MS")" -ge 2 ] \
-  || { echo "✗ a ledger line or a head is off the rows' pitch again (prd §1872)"; exit 1; }
+# prd §1892 amends the pitch: the facts are one block at `factHeight`, the
+# Cost row among them, and a side's name ("From", "To", "Pay with") is one
+# shape; a warning's line keeps the rows' pitch.
+grep -q '        .frame(minHeight: Self.factHeight)$' "$MS" \
+  && grep -q '.frame(minHeight: MoveSentence.factHeight)' Casberi/Casberi/Screens/PrivateCostLine.swift \
+  && grep -q '.frame(minHeight: Self.sideHeadHeight, alignment: .bottomLeading)' "$MS" \
+  && [ "$(grep -c '.frame(minHeight: MoveChoiceRowLabel.height, alignment: .leading)' "$MS")" -ge 1 ] \
+  || { echo "✗ a fact, the Cost row or a side's name is off its pitch again (prd §1872, §1892)"; exit 1; }
 grep -q 'Text(verbatim: fact).dsText(.body17).foregroundStyle(factInk).lineLimit(1).minimumScaleFactor' "$MS" \
   && { echo "✗ a place's line on Receive shrinks again (prd §1872)"; exit 1; }
 # The relayer's quote is a 201 (measured 2026-11-18).

@@ -596,8 +596,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
                 // (prd §1794, §1801):** as Move's own verbs.
-                head()
-                    .allowsHitTesting(false)
+                // Its name stands over the page (`MovePinnedHead`, prd §1892).
                 // The world's rule, in view wherever Aztec is (prd §1779): a
                 // send from your private account reaches Aztec addresses.
                 // Taking money out to Ethereum is the one crossing, and its
@@ -632,13 +631,15 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.top, MoveSentence.headFade)
+            // Scrolled to the end, the last row clears the foot's fade.
+            .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
         // Send opens whole: its rows and sentence clip in the short sheet.
         .onAppear { chrome.moveTall = true }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
@@ -779,9 +780,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                   prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
             .keyboardType(.decimalPad)
             .focused($typing)
-            .dsText(.heading20)
+            // The figure is the row while it is typed (prd §1892).
+            .dsText(MoveChoiceRowLabel.figureRung)
             .monospacedDigit()
-            .multilineTextAlignment(.trailing)
+            .multilineTextAlignment(.leading)
             .foregroundStyle(DS.textPrimary)
             .tint(DS.aztecInk)
             .fixedSize()
@@ -943,7 +945,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
         // Its sums are a menu, and any other is typed in the row (prd §1802).
         rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
-                                  field: AnyView(amountField), typing: typing) { toggle(.amount) })
+                                  field: AnyView(amountField), typing: typing, figure: true) { toggle(.amount) })
         return rows
     }
 
@@ -1111,6 +1113,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s3)
+                .moveSentenceAway(menuRow.wrappedValue != nil || typing)
             // ONE THING AT A TIME over the act (prd §1700y, agreed with the
             // Railgun session): the steps while it works and after, the
             // warming row while the balance is read, the cost while ready.
@@ -1154,7 +1157,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         }
                     }
                 case .needsGas:
-                    Spacer(minLength: 0)
                     footButton(String(localized: "Add gas"), on: !DemoMode.isActive) {
                         Task {
                             move.stage = .working(String(localized: "Confirm with Face ID"))
@@ -1163,19 +1165,17 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         }
                     }
                 case .done:
-                    Spacer(minLength: 0)
                     footButton(String(localized: "Done"), on: true) {
                         if inTray { chrome.moveTray = false } else { leave(.switchOff) }
                     }
                 case .failed:
-                    Spacer(minLength: 0)
                     footButton(String(localized: "Try again"), on: true) { Task { await move.read() } }
                 case .reading, .nothingPrivate:
                     Spacer(minLength: 0)
                 default:
-                    Spacer(minLength: 0)
-                    if typing {
-                        // Done, while a figure is typed (prd §1791 item 4).
+                    if typing, !ready {
+                        // Done, while a figure is typed and not yet a move
+                        // (prd §1791 item 4); a whole one is the act (prd §1896).
                         Button { typing = false } label: {
                             MoveSentence.actCard(String(localized: "Done"), on: true, fill: DS.fillStrong)
                         }
@@ -1195,7 +1195,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        .moveFootGround(inTray: inTray)
     }
 
     /// Half · All (prd §1700y): each types its amount, exact; one Shield

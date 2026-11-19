@@ -65,8 +65,7 @@ struct MovePrivateSentence<Head: View>: View {
                 // sentence that is not yet one keeps it on a line above.
                 // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
                 // (prd §1794, §1801):** as Move's own verbs.
-                head()
-                    .allowsHitTesting(false)
+                // Its name stands over the page (`MovePinnedHead`, prd §1892).
                 // No switch (prd §1700f item 11): "from your private balance"
                 // opens Send's networks to send from somewhere else.
                 Group {
@@ -76,16 +75,17 @@ struct MovePrivateSentence<Head: View>: View {
                         line
                     }
                 }
-                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.top, MoveSentence.headFade)
+            // Scrolled to the end, the last row clears the foot's fade.
+            .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
         // Send opens whole: its rows and sentence clip in the short sheet.
         .onAppear { chrome.moveTall = true }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
@@ -281,9 +281,12 @@ struct MovePrivateSentence<Head: View>: View {
         switch move.stage {
         case .ready, .opening, .preparing, .registering, .proving, .sending:
             if move.mode == .send {
-                Text(verbatim: sendLine)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // **FACTS, IN THE ANSWERS' COLUMN (prd §1896):** one line of
+                // " · " parts at the page's edge was the one block on Move
+                // that read as a sentence of small print.
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value) }
+                }
             } else if let held = move.held {
                 if move.onEthereum {
                     // What moves in earns (prd §1563): the rate, read live, or nothing.
@@ -347,28 +350,44 @@ struct MovePrivateSentence<Head: View>: View {
         return String(localized: "At least \(least) moves in, plus \(fee) \(coin) kept for the network fee.")
     }
 
-    /// Switch on: the relayer's fee and about how long (the relayed
-    /// withdrawal measured 27 s on Sepolia, the proof a few more).
-    private var sendLine: String {
+    /// Switch on: the network where it cannot change, the relayer's fee, what
+    /// a crossing keeps and about how long (the relayed withdrawal measured
+    /// 27 s on Sepolia, the proof a few more), as facts (prd §1896).
+    private var sendFacts: [(name: String, value: String?)] {
+        var facts: [(name: String, value: String?)] = []
+        if !move.canGoAway || move.stage != .ready {
+            facts.append((String(localized: "Network"), Self.networkName(arrivesOn)))
+        }
         // To someone with a private account of their own, it stays private:
         // balance to balance (prd §1567), nothing paid out.
         if move.balanceToBalance == true, !move.away {
-            return [String(localized: "To their private balance"), String(localized: "about a minute")].joined(separator: " · ")
+            facts.append((String(localized: "Arrives"), String(localized: "in their private balance")))
+            facts.append((String(localized: "Takes"), String(localized: "about a minute")))
+            return facts
         }
         // A Sepolia fee is a few hundred-millionths: it keeps its digits.
         let fee: String? = move.symbol == "USDC"
-            ? move.fee.map { String(localized: "\(PrivateMoney.figure($0, decimals: 6, symbol: "USDC")) relayer fee") }
-            : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { String(localized: "\($0) ETH relayer fee") }
-        // To a tag, zk.money's own fee follows the relayer's (prd §1874).
-        let zkFee = move.tag == nil ? nil
-            : String(localized: "zk.money keeps about $\(ZkMoneyWire.payFeeUSD.formatted(.number.precision(.fractionLength(2))))")
+            ? move.fee.map { PrivateMoney.figure($0, decimals: 6, symbol: "USDC") }
+            : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { "\($0) ETH" }
+        if let fee { facts.append((String(localized: "Relayer fee"), fee)) }
+        if move.away {
+            // To Base or Robinhood, Across and a one-time sender's gas (prd §1879).
+            if move.symbol == "USDC" {
+                facts.append((String(localized: "Gas"), String(localized: "from your private ETH")))
+                facts.append((String(localized: "Across keeps"), String(localized: "about 0.1%")))
+            } else {
+                facts.append((String(localized: "Across and gas keep"), String(localized: "about 1–2%")))
+            }
+        } else if move.tag != nil {
+            // To a tag, zk.money's own fee follows the relayer's (prd §1874).
+            facts.append((String(localized: "zk.money keeps"),
+                          String(localized: "about $\(ZkMoneyWire.payFeeUSD.formatted(.number.precision(.fractionLength(2))))")))
+        } else {
+            facts.append((String(localized: "Takes"), String(localized: "about a minute")))
+        }
         // The relayer refused Tor and was asked directly (`TorFallback`).
-        // To Base or Robinhood, Across and a one-time sender's gas follow (prd §1879).
-        let away = !move.away ? nil : move.symbol == "USDC"
-            ? String(localized: "Its gas from your private ETH · Across keeps about 0.1%")
-            : String(localized: "Across and gas keep about 1–2%")
-        let parts = [fee, away ?? zkFee ?? String(localized: "about a minute"), move.relayerDirect ? String(localized: "not through Tor") : nil]
-        return parts.compactMap { $0 }.joined(separator: " · ")
+        if move.relayerDirect { facts.append((String(localized: "Not through Tor"), nil)) }
+        return facts
     }
 
     private var approval: String {
@@ -384,7 +403,9 @@ struct MovePrivateSentence<Head: View>: View {
     /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
     /// up; a tap outside it closes the list with no pick.
     private var menuRow: Binding<String?> {
-        Binding(get: { open.map { $0 == .amount ? "amount" : "to" } }, set: { if $0 == nil { open = nil } })
+        // Each list under its own row: Network's opened under To.
+        Binding(get: { open.map { switch $0 { case .amount: "amount"; case .recipient: "to"; case .network: "network" } } },
+                set: { if $0 == nil { open = nil } })
     }
 
     @ViewBuilder private var menu: some View { if let open { choices(open) } }
@@ -412,14 +433,37 @@ struct MovePrivateSentence<Head: View>: View {
         }
         // Its network, said as a row: fixed, unless ETH sent to an address
         // may arrive on Base or Robinhood (prd §1802, §1879).
-        let arrives = move.away ? move.destination : (move.onEthereum ? 1 : 0)
-        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
-                                  value: Self.networkName(arrives),
-                                  mark: arrives == 0 ? nil : MoveSentence.networkMark(chainId: arrives).map { MoveRowMark(network: $0) },
-                                  fixed: !(live && move.canGoAway)) { toggle(.network) })
+        // **A ROW ONLY WHERE THERE IS A CHOICE (prd §1805, here since
+        // §1896):** one it cannot change is a fact under the rows
+        // (`sendFacts`); a grey row with no chevron read as a broken choice.
+        if live && move.canGoAway {
+            rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
+                                      value: Self.networkName(arrivesOn),
+                                      mark: arrivesOn == 0 ? nil : MoveSentence.networkMark(chainId: arrivesOn).map { MoveRowMark(network: $0) }) {
+                toggle(.network)
+            })
+        }
         if live { rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: figure) { toggle(.amount) }) }
         return rows
     }
+
+    /// **MOVE'S LIST ROW (prd §1896):** the mark centred in the rows' mark
+    /// column, the words where a row's answer starts, at Move's list rung,
+    /// the pick checked; this page drew its own smaller rows.
+    private func listRow<Mark: View>(_ title: String, picked: Bool, @ViewBuilder mark: () -> Mark) -> some View {
+        HStack(spacing: MoveChoiceRowLabel.leadGap) {
+            mark().frame(width: MoveChoiceRowLabel.markSize)
+            Text(verbatim: title).dsText(MoveSentence.choiceRung).foregroundStyle(DS.textPrimary).monospacedDigit()
+            Spacer(minLength: DS.Space.s2)
+            if picked { MoveMenuCheck() }
+        }
+        .frame(maxWidth: .infinity, minHeight: MoveSentence.listRowHeight, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityAddTraits(picked ? [.isSelected] : [])
+    }
+
+    /// Where the money arrives: a picked network away, else the balance's own.
+    private var arrivesOn: Int { move.away ? move.destination : (move.onEthereum ? 1 : 0) }
 
     /// A blank's choices, on the tray in the sentence's column as Move
     /// opens them (prd §1616).
@@ -455,14 +499,9 @@ struct MovePrivateSentence<Head: View>: View {
                 }
                 DSHaptic.selection()
             } label: {
-                HStack(spacing: DS.Space.s3) {
-                    if let mark = MoveSentence.networkMark(chainId: chain) { MoveRowMark(network: mark) }
-                    Text(verbatim: Self.networkName(chain)).dsText(.body17)
-                        .foregroundStyle(move.destination == chain ? DS.pickInk : DS.textPrimary)
-                    Spacer(minLength: 0)
+                listRow(Self.networkName(chain), picked: move.destination == chain) {
+                    if let mark = MoveSentence.networkMark(chainId: chain) { MoveRowMark(network: mark, size: MoveSentence.listMark) }
                 }
-                .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight + DS.Space.s3, alignment: .leading)
-                .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
         }
@@ -486,16 +525,7 @@ struct MovePrivateSentence<Head: View>: View {
                 }
                 DSHaptic.selection()
             } label: {
-                HStack(spacing: DS.Space.s3) {
-                    AssetMark(name: token, size: DS.Face.list)
-                    Text(verbatim: shown)
-                        .dsText(.body17)
-                        .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
-                        .monospacedDigit()
-                    Spacer(minLength: DS.Space.s2)
-                }
-                .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
-                .contentShape(Rectangle())
+                listRow(shown, picked: picked) { AssetMark(name: token, size: MoveSentence.listMark) }
             }
             .buttonStyle(RowPress())
             .accessibilityAddTraits(picked ? [.isSelected] : [])
@@ -575,6 +605,7 @@ struct MovePrivateSentence<Head: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, DS.Space.s3)
+                .moveSentenceAway(menuRow.wrappedValue != nil)
         if move.stage == .ready, let hidden { hiddenLine(hidden) }
         #if DEBUG
         if hiddenPreview, move.stage != .ready, let hidden { hiddenLine(hidden) }
@@ -596,22 +627,30 @@ struct MovePrivateSentence<Head: View>: View {
                 footButton(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true) { copy(address) }
             case .done:
                 // Done ends it, as every receipt does (prd §1586).
-                Spacer(minLength: 0)
                 footButton(String(localized: "Done"), on: true) {
                     if inTray { chrome.moveTray = false } else { leave(.switchOff) }
                 }
             case .nothingPrivate:
                 Spacer(minLength: 0)
             case .failed:
-                Spacer(minLength: 0)
                 footButton(String(localized: "Try again"), on: true) { Task { await move.read() } }
             default:
-                Spacer(minLength: 0)
-                footButton(footVerb, on: ready) {
-                    open = nil
-                    Task { await move.run() }
+                if move.mode == .send, move.stage == .ready, move.recipient == nil, move.tag == nil {
+                    // **THE BUTTON NAMES WHAT IS MISSING (prd §1805, here
+                    // since §1896):** as the public Send's does; a grey
+                    // "Send" that did nothing was a dead control (§83).
+                    Button { toggle(.recipient) } label: {
+                        MoveSentence.actCard(String(localized: "Choose an address"), on: true, fill: DS.fillStrong)
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityHint(Text("Opens its row"))
+                } else {
+                    footButton(footVerb, on: ready) {
+                        open = nil
+                        Task { await move.run() }
+                    }
+                    .disabled(!ready)
                 }
-                .disabled(!ready)
             }
         }
             switch move.stage {
@@ -621,7 +660,7 @@ struct MovePrivateSentence<Head: View>: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        .moveFootGround(inTray: inTray)
     }
 
     /// **HOW HIDDEN, WHERE YOU SEND (prd §1738; was a section on the Privacy

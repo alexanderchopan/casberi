@@ -62,8 +62,7 @@ struct MoveFreshSentence<Head: View>: View {
                 // **MOVE'S LAYOUT (prd §1803, as §1794, §1801):** the verb is
                 // the title, the rows and the address stand under it, and the
                 // sentence stands over the button.
-                head()
-                    .allowsHitTesting(false)
+                // Its name stands over the page (`MovePinnedHead`, prd §1892).
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     // Its one network, said as a row and fixed (prd §1802).
                     MoveChoiceRows(rows: [MoveChoiceRow(id: "network", name: String(localized: "Network"), value: shownNetwork,
@@ -137,15 +136,16 @@ struct MoveFreshSentence<Head: View>: View {
                         DSFootnote("From your account, in the open. It links this address to you.")
                     }
                 }
-                .padding(.top, DS.Space.s6)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.top, MoveSentence.headFade)
+            // Scrolled to the end, the last row clears the foot's fade.
+            .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
         .animation(DS.Motion.standard, value: entry)
         // The rows, the address and the sentence need the tall sheet.
         .onAppear { chrome.moveTall = true }
@@ -387,6 +387,6 @@ struct MoveFreshSentence<Head: View>: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        .moveFootGround(inTray: inTray)
     }
 }

@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2074 of 2148 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2076 of 2150 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2223,7 +2223,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
 - §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
-- §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872)
+- §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872, §1892)
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
 - §1783 — The phone's bar is Feed · Wallet with Move apart; Apps leaves the bar for the top right of the title row (amends §171…
 - §1784 — A choice's list is a menu on its row, in every Move sentence (amends §1781, §1782, §1616)
@@ -2233,21 +2233,21 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1788 — Fixes from the screen-by-screen walk: the private account's door stands from the first frame, its rows carry no line,…
 - §1789 — Move's rows read To, From, Token, Amount (amends §1781)
 - §1790 — Send's rows read To, From, Network, Token, Amount (amends §1789)
-- §1791 — Move's template: the sentence says only what is picked, and the amount is typed in its row (amends §1754, §1781, §1518)
+- §1791 — Move's template: the sentence says only what is picked, and the amount is typed in its row (amends §1754, §1781, §1518) (amended by §1892, §1896)
 - §1792 — A network always shows its mark, and a token wears its network's as a badge
 - §1793 — Swap is two pairs: a token on its network, for a token on its network (amends §1754, §1600, §1555)
 - §1794 — Move: the sentence over the button, one-line rows, a network and its token on each side of a swap (amends §1781, §178…
 - §1795 — Swap is four plain rows: From, Token, To, Token (amends §1794 item 5)
 - §1796 — Swap's rows are Network, Token, To network, To token; a whole swap fits without a scroll (amends §1795, §1794 items 3…
-- §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (…
+- §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (… (amended by §1892, §1896)
 - §1798 — Shield stays Move's one way into Aztec; an app's own bridge is not added (keeps §1700d and §1700e)
 - §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (amended by §1872)
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
 - §1801 — The private sends take Move's layout (amends §1781, §1755)
-- §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro… (amended by §1889)
-- §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824)
+- §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro… (amended by §1889, §1896)
+- §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824, §1892)
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616… (amended by §1889)
-- §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w…
+- §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w… (amended by §1892)
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
 - §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one… (amended by §1871, §1893)
 - §1808 — One wallet, the first fixes: a category's name opens its page, the map names its tiles, the cards take the screen, Mo… (amended by §1828, §1893)
@@ -2314,11 +2314,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1869 — Every Move verb opens whole, and Buy's Network row says the network it will use
 - §1870 — Spending is a row in Home's Wallet section, under the Watchlist
 - §1871 — Spending is a card on the iPad's and Mac's Home, between Risks and Watchlist
-- §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another s…
+- §1872 — Move, after the user's walk: a private send gets its quote again, a clause never leaves one word alone, Add another s… (amended by §1892)
 - §1873 — Helper text fits one line
 - §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fres…
 - §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c… (amended by §1885, §1891, §1895)
-- §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired
+- §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired (amended by §1892, §1896)
 - §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva… (amended by §1895)
 - §1878 — Receive on Base or Robinhood, earn on Ethereum
 - §1879 — Send from your private balance to Base or Robinhood
@@ -2331,12 +2331,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1886 — Gas Aztec has carried is gas: a private top-up waiting for the next send no longer reads "On its way" (fixes §1700aa,…
 - §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap… (amended by §1891)
 - §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines
-- §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a…
+- §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
+- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
+- §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,…
 
 ## Dead rulings → what replaced them (generated)
 

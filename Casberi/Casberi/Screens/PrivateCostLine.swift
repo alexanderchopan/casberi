@@ -24,6 +24,8 @@ struct PrivateCost: Equatable {
 struct MoveCostRow: View {
     var name: String = String(localized: "Cost")
     let value: String
+    /// False where the caller's block already stands in the answers' column.
+    var indented = true
     let act: () -> Void
 
     var body: some View {
@@ -36,23 +38,23 @@ struct MoveCostRow: View {
                     .lineLimit(1)
                     .layoutPriority(1)
                 Spacer(minLength: DS.Space.s3)
+                // **A FACT AMONG THE FACTS (prd §1892, amending §1876's "the
+                // figure at their size"):** at the facts' size and pitch, in
+                // the answers' column, white because it is the one that opens.
                 Text(verbatim: value)
-                    .dsText(.heading20)
+                    .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                // In the menu chevron's own column, so every figure on the
-                // page ends on one edge.
-                Image(systemName: "chevron.up.chevron.down").dsGlyph(.caption, weight: .semibold)
-                    .hidden()
-                    .overlay {
-                        Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
-                            .foregroundStyle(DS.textSecondary)
-                    }
+                // A door's chevron (§1876): its list takes the rows' place,
+                // it does not open under the row.
+                Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
+                    .foregroundStyle(DS.textSecondary)
                     .accessibilityHidden(true)
             }
-            .frame(minHeight: MoveChoiceRowLabel.height)
+            .frame(minHeight: MoveSentence.factHeight)
+            .padding(.leading, indented ? MoveChoiceRowLabel.leadColumn : 0)
             .contentShape(Rectangle())
             .accessibilityElement(children: .combine)
         }

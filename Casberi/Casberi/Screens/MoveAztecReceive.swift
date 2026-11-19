@@ -37,8 +37,7 @@ struct MoveAztecReceive<Head: View>: View {
                 // **MOVE'S LAYOUT (prd §1803, as §1794, §1801):** the verb is
                 // the title, the rows and the address under it, the sentence
                 // over the button.
-                head()
-                    .allowsHitTesting(false)
+                // Its name stands over the page (`MovePinnedHead`, prd §1892).
                 // In view wherever the Aztec address is (prd §1779).
                 Text("Aztec to Aztec only.")
                     .dsText(.heading17)
@@ -77,12 +76,14 @@ struct MoveAztecReceive<Head: View>: View {
                 .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.top, MoveSentence.headFade)
+            // Scrolled to the end, the last row clears the foot's fade.
+            .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
         // The rows, the address and the sentence need the tall sheet.
         .onAppear { chrome.moveTall = true }
     }
@@ -130,6 +131,6 @@ struct MoveAztecReceive<Head: View>: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        .moveFootGround(inTray: inTray)
     }
 }

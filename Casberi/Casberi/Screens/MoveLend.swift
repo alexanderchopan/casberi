@@ -16,6 +16,8 @@ struct MoveLendSentence<Head: View>: View {
     let move: LendMove
     let account: String
     var inTray = false
+    /// The page's name over it (prd §1896); the verb word leads the sentence.
+    var title: String = String(localized: "Earn")
     @ViewBuilder let head: () -> Head
 
     @State private var open: Blank?
@@ -31,27 +33,35 @@ struct MoveLendSentence<Head: View>: View {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
                 // (prd §1794, §1800):** as Move's own verbs.
-                head()
-                    .allowsHitTesting(false)
+                // Its name stands over the page (`MovePinnedHead`, prd §1892).
+                kinds
                 Group {
                     // A row's choices are a menu on the row (prd §1784).
                     VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        // The cost is a row under them (prd §1876).
+                        // The cost is a row under them (prd §1876), the rate a
+                        // fact over it (prd §1896).
                         MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen) {
                             MoveChoiceRows(rows: choiceRows, open: menuRow) { _ in menu }
+                            if live, move.units != nil, stepsRun == nil, let fact = rateFact {
+                                MoveFactRow(name: fact.name, value: fact.value)
+                                    .padding(.top, DS.Space.s2)
+                            }
                         }
                         if !costOpen { line }
                     }
                 }
-                .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.top, MoveSentence.headFade)
+            // Scrolled to the end, the last row clears the foot's fade.
+            .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            MovePinnedHead(inTray: inTray) { MoveWord(title).accessibilityAddTraits(.isHeader) }
+        }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in
@@ -128,7 +138,6 @@ struct MoveLendSentence<Head: View>: View {
                             .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                 }
-                if live { switchMode }
             }
             }
         case .failed(let words):
@@ -153,13 +162,39 @@ struct MoveLendSentence<Head: View>: View {
         }
     }
 
-    /// The other half of the verb, as a word: Take back where something is
-    /// lent, Lend more from Take back.
-    @ViewBuilder private var switchMode: some View {
-        if move.mode == .lend, move.anyLent {
-            word(String(localized: "Take back")) { flip(.takeBack) }
-        } else if move.mode == .takeBack {
-            word(String(localized: "Lend more")) { flip(.lend) }
+    /// **EARN'S TWO KINDS, UNDER ITS NAME (prd §1896, retiring §1802's "Take
+    /// back" row):** as Swap · Sweep and Gift cards · Tokens are, the one you
+    /// are on in weight; only where something is lent to take back.
+    @ViewBuilder private var kinds: some View {
+        if live, doneHash == nil, move.anyLent || move.mode == .takeBack {
+            HStack(spacing: DS.Space.s4) {
+                kind(String(localized: "Lend"), .lend)
+                kind(String(localized: "Take back"), .takeBack)
+            }
+        }
+    }
+
+    private func kind(_ text: String, _ mode: LendMove.Mode) -> some View {
+        let on = move.mode == mode
+        return Button { if !on { flip(mode) } } label: {
+            Text(verbatim: text)
+                .dsText(.body17)
+                .fontWeight(on ? .semibold : .regular)
+                .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
+                .frame(minHeight: DS.Hit.min)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    /// What lending earns today, or where taking back lands: a fact (prd §1896).
+    private var rateFact: (name: String, value: String)? {
+        switch move.mode {
+        case .lend:
+            market.flatMap { AaveLend.rateOnly(move.rates[LendMove.key($0)]) }
+                .map { (String(localized: "Earns"), String(localized: "\($0) today")) }
+        case .takeBack: (String(localized: "Arrives"), String(localized: "in your account at once"))
         }
     }
 
@@ -170,23 +205,6 @@ struct MoveLendSentence<Head: View>: View {
             move.settle()
         }
         DSHaptic.selection()
-    }
-
-    /// The other half of the verb is a row, as Add another is (prd §1802):
-    /// white, with its glyph at the trailing edge.
-    private func word(_ text: String, act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            HStack(spacing: DS.Space.s2) {
-                Text(verbatim: text).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Spacer(minLength: DS.Space.s2)
-                Image(systemName: "arrow.left.arrow.right").dsGlyph(.caption, weight: .semibold)
-                    .foregroundStyle(DS.textPrimary)
-                    .accessibilityHidden(true)
-            }
-            .frame(minHeight: MoveChoiceRowLabel.height)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
     }
 
     private func explorer(_ hash: String) -> (name: String, url: URL)? {
@@ -337,22 +355,18 @@ struct MoveLendSentence<Head: View>: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, DS.Space.s3)
+            .moveSentenceAway(menuRow.wrappedValue != nil)
         // ONE THING AT A TIME over the act, as every Move sentence (prd
         // §1700y, §1700z): the steps while it works and after, the cost while ready.
         if let run = stepsRun {
             PrivateStepRows(run: run)
                 .padding(.bottom, DS.Space.s3)
                 .transition(.opacity)
-        } else if live, move.units != nil {
-            PrivateCostNote(cost: move.cost, tail: costTail, fallback: costTail ?? "")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s1)
-                .transition(.opacity)
         }
+        // The rate is a fact under the rows now (`rateFact`, prd §1896).
         HStack(alignment: .center, spacing: DS.Space.s2) {
             // It closes the cost's list while that is open (prd §1876).
             MoveBackCard(act: costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil)
-            Spacer(minLength: 0)
             switch move.stage {
             case .done:
                 footButton(String(localized: "Done"), on: true) {
@@ -371,20 +385,11 @@ struct MoveLendSentence<Head: View>: View {
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
-        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+        .moveFootGround(inTray: inTray)
     }
 
     // No credit under the act (prd §1754, retiring §1685's): the sentence
     // already says "on Aave".
-
-    /// What the cost line says after the dollars.
-    private var costTail: String? {
-        switch move.mode {
-        case .lend: market.flatMap { AaveLend.rateOnly(move.rates[LendMove.key($0)]) }
-            .map { String(localized: "earns \($0) today") }
-        case .takeBack: String(localized: "back in your account at once")
-        }
-    }
 
     private var footVerb: String {
         switch move.stage {

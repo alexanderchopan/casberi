@@ -1250,7 +1250,9 @@ awk '/^            walletAztecRows$/{a=NR} /^            walletAddMoneyRow$/{m=N
 [[ ! -e Casberi/Casberi/Design/DSShareSlider.swift ]] || { echo "✗ Move's slider is back (prd §1776)"; exit 1; }
 ! grep -rqE 'DSShareSlider|[^A-Za-z]Slider\(' Casberi/Casberi/Screens Casberi/Casberi/Design Casberi/Casberi/Shell \
     || { echo "✗ a slider is drawn again (prd §1776: no sliders)"; exit 1; }
-use "$SENT" 'amountPicks(with, closes: true)' "a verb's amount is no longer its rows (prd §1776, §1781)"
+# prd §1892: the amount's row raises the keys, and its sums stand under the figure.
+use "$SENT" 'if typing { amountChips.padding(.top, DS.Space.s2).transition(.opacity) }' "a verb's amount no longer offers its sums under the typed figure (prd §1776, §1892)"
+! grep -q 'Another amount' "$SENT" || { echo "✗ Send's amount is a list with Another amount again (prd §1892)"; exit 1; }
 echo "  ok   Add money: the last row under Private, the balance you have or the two to pick from; no slider anywhere"
 # prd §1778: the wiring. The token's turn is decided before the ETH's, the
 # rows are drawn in Holdings, and the empty place yields to them.
@@ -1285,7 +1287,13 @@ for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
 done
 use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1781)"
 # prd §1782: bigger rows, the next list by itself; no pay again, no token chosen.
-use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark, note: r.note)' "Move's rows no longer draw their answer and its mark (prd §1782, §1794)"
+use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark, note: r.note,' "Move's rows no longer draw their answer and its mark (prd §1782, §1794)"
+# prd §1892: an unanswered row is named by what it asks, and its chevron points where its list opens.
+use "$SENT" 'asks: r.value == Self.unpicked, isOpen: menuOpen != nil && menuOpen == r.opens)' "an unanswered Move row says Choose again, or its chevron no longer turns (prd §1892)"
+use "Casberi/Casberi/Screens/MoveBack.swift" 'Image(systemName: "chevron.down").dsGlyph(.caption, weight: .semibold)' "a choice row's chevron points to a page again (prd §1892)"
+use "$SENT" '.moveSentenceAway(sentenceAway)' "the sentence no longer steps away for an open list or a typed figure (prd §1892)"
+use "$SENT" '.safeAreaInset(edge: .top, spacing: 0) { if titlePinned { pinnedTitle } }' "a Move page scrolls its title away again (prd §1892)"
+use "$SENT" 'if !saidInItsRow(warning) {' "a first send is said twice again, in its row and under the rows (prd §1892)"
 use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
 # prd §1784: a row's list is a menu on the row, in every sentence; the next
 # one waits for the last to be gone. §1889: it opens in place under its row.
@@ -1304,7 +1312,8 @@ use "$SENT" 'tapBlank(which == .destination && !networkPicked ? .network : which
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
 use "$SENT" 'receivePlace(String(localized: "Private balance")' "Receive's private door is hidden again (prd §1779, §1803)"
-use "$SENT" 'receivePlace(String(localized: "Private account"), ink: DS.aztecInk, marks: ["brand-aztec"],' "Receive's Aztec door is hidden again (prd §1779)"
+use "$SENT" 'receivePlace(String(localized: "Private account"), ink: DS.aztecInk, mark: "brand-aztec",' "Receive's Aztec door is hidden again (prd §1779)"
+use "$SENT" 'fact: String(localized: "Base, Ethereum, or Robinhood only, new address each time"), place: "fresh",' "Receive's private balance no longer says its address is new each time (prd §1892)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let entry, let payGas, waitsForGas(entry), !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779), or Pay the gas stands where no account can pay (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'case .failed: entry.symbol != nil && shortOfGas' "a failed token move short of gas has no way on (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let pinned = chrome.moveFreshEntry, let held = book.entries.first(where: { $0.id == pinned }) { return held }' "Receive no longer opens on the address the money is at (prd §1823)"
