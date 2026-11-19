@@ -15,10 +15,12 @@ enum MoveDeck {
     /// The deck's height under its steps: room for the keys and a top row.
     /// **IT SCALES WITH THE PHONE (user, 2026-11-19: "the bottom tray could
     /// probably be taller … receive for example it should all be visible so
-    /// no need to scroll"):** 37% of the screen, never under the 288pt a
-    /// small phone keeps for its sentence and facts. One height for every
-    /// verb and step, so the panel's edge never moves.
-    static var bodyHeight: CGFloat { max(288, (UIScreen.main.bounds.height * 0.37).rounded()) }
+    /// no need to scroll"):** half the screen (prd §1910, user: "that's fine
+    /// if panel is taller if we make it in all places", of Swap's second row
+    /// of tokens cut under the foot), never under the 288pt a small phone
+    /// keeps for its sentence and facts. One height for every verb and step,
+    /// so the panel's edge never moves.
+    static var bodyHeight: CGFloat { max(288, (UIScreen.main.bounds.height * 0.5).rounded()) }
     /// One key of the keypad: the keys share what the sums and the fade leave.
     static var keyHeight: CGFloat { max(56, ((bodyHeight - presetHeight - DS.Space.s1 - fade) / 4).rounded(.down)) }
     /// How far a list fades into the foot (user, 2026-11-19: "the rows should

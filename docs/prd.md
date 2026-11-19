@@ -74532,3 +74532,15 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** None of its own; `deckWord` is the one place a step's word is named.
+
+## §1910 — The deck is half the screen, and a list's last row clears the foot (amends §1903 item 1, §1904 item 9) (user, 2026-11-19, of Send's With: "can't really see or touch the bottom of this token"; of To with the keys up: "can't see the changing selections when I hit yours and addresses because they're hidden"; "but that bottom token issue is on swap too and probably everywhere"; of Swap's From: "see the row cuts off"; then "that's fine if panel is taller if we make it in all places") — BUILT, NOT SEEN (no Mac in the session that built it)
+
+**Why.** A deck list ran to the panel's bottom edge with no margin, so scrolled to its end its last row stood under the foot and its fade, out of reach. With a name or a search typed the deck fell to half its height, and To's search, Again row and group words filled it: Yours and Addresses changed rows no one could see, while the page above stood empty. At 37% Swap's From showed its second row of tokens only as far as their faces.
+
+1. **The deck is half the screen**, never under 288pt (`MoveDeck.bodyHeight`), on every verb and on Earn: one constant. §1903's 40% covered Earn's Cost row; at 50% a long sentence with all four facts scrolls the page above the deck to reach Cost.
+2. **A list's last row clears the foot** (`MoveDeck.listTail`, the foot and its fade): scrolled to its end it stands whole and takes a tap. The list still runs under the foot and fades there at rest (§1904 item 9).
+3. **With the keys up the deck grows into the page's spare air** (`fitKeyedDeck`): half the body, plus the air between the page's last line and the panel's edge, up to the full body. The sentence does not move.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** None of its own. To see on a phone: Swap › From and Send › With at rest and scrolled to the end; Send › To with the search focused, Yours and Addresses; Earn's facts with an amount; the keys at 50%; a small phone.
