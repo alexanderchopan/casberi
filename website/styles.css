@@ -1290,16 +1290,8 @@ footer .tagline { font-size: 16px; font-weight: 600; color: var(--ink); margin-b
 #get .slab-plat { color: #A1A1A6; }
 #get .cta-ink { box-shadow: 0 0 0 1.5px rgba(255,255,255,.18); }
 .slab-get .slab-plat { margin-top: 18px; font-size: 17px; font-weight: 600; color: #EAF0FF; }
-.slab-devices { container-type: inline-size; position: relative;
-  width: min(70%, 260px); margin: 64px auto 0; }
-.slab-devices img { display: block; width: 100%; height: auto; }
-.slab-phone { width: 100%; box-sizing: border-box;
-  padding: 4.6cqw; background: #0B0B0C; border-radius: 18.5cqw;
-  box-shadow: 0 0 0 .72cqw #3A3B40, 0 0 0 3.1cqw #0A0C10; }
-.slab-phone img { border-radius: 14.4cqw; }
 @media (max-width: 760px) {
   .slab-get .slab-plat { font-size: 15px; margin-top: 14px; }
-  .slab-devices { margin-top: 44px; }
 }
 
 /* ---------- Every number gets a shape (2026-08-04) --------------------
@@ -2171,9 +2163,7 @@ body { overflow-x: clip; }
 @media (max-width: 700px) { .what-rows { grid-template-columns: 1fr; gap: 20px; } .what-h { margin-bottom: 30px; } }
 
 
-/* ===== the devices between the rows and the apps; the privacy line and its reel above the close (2026-11-16) ===== */
-.devices-sec { padding-top: 40px; }
-.devices-sec .slab-devices { margin-top: 0; }
+/* ===== the privacy line and its reel above the close (2026-11-16) ===== */
 .privacy-sec { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px;
   gap: 64px; align-items: center; }
 .privacy-sec .what-h { margin: 0; font-size: clamp(34px, 4.4vw, 56px); }
