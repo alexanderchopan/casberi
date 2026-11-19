@@ -1624,6 +1624,8 @@ struct MoveSentence: View {
                 .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
                 .padding(.bottom, DS.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
+                // The page's last line, for the keyed deck to grow to.
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { pageBottom = $0; fitKeyedDeck() }
                 .id("movePage")
             }
             // A limit order's line stands clear of the sentence: its four
@@ -2775,7 +2777,7 @@ struct MoveSentence: View {
     /// figure at `price17`, so a token reads here as it does in Holdings.
     static let choiceRung: DSTextStyle = .heading17
     /// A choice's mark: the Wallet's list size (prd §1681, was 44).
-    static let listMark: CGFloat = MoveDeck.lead
+    static let listMark: CGFloat = DS.Face.row
     /// A choice's row, at least: the word and its line with air (prd §1681).
     static let listRowHeight: CGFloat = 48
     /// The space between a phrase's words, as a share of the size: Figtree's
@@ -6991,6 +6993,33 @@ struct MoveSentence: View {
     /// The step whose list stands in the deck: every list but the verbs'.
     private var deckOpen: Blank? { open == .verb ? nil : open }
 
+    /// **THE KEYED DECK TAKES THE PAGE'S SPARE AIR (user, 2026-11-19: "can't
+    /// see the changing selections when I hit yours and addresses because
+    /// they're hidden").** While a name or a search is typed the keyboard
+    /// covers the deck's lower half; the body keeps half its height and grows
+    /// up into the air between the page's last line and the panel's edge,
+    /// never past the full height. The sentence stays where it stands.
+    private var deckRoom: CGFloat {
+        textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2 + keyedGrow
+    }
+
+    /// How far the keyed deck rose into the page's air (`fitKeyedDeck`).
+    @State private var keyedGrow: CGFloat = 0
+    /// The panel's edge and the page's last line, on screen.
+    @State private var deckTop: CGFloat = 0
+    @State private var pageBottom: CGFloat = 0
+
+    /// The air between the page and the panel is the same whatever the
+    /// deck's height (the panel's edge rises as the body grows), so one
+    /// measure settles it; the keyboard's own rise measures again.
+    private func fitKeyedDeck() {
+        guard textFocus != nil, deckTop > 0, pageBottom > 0 else { return }
+        let spare = deckTop - pageBottom - DS.Space.s2
+        let grown = min(max(keyedGrow + spare, 0), MoveDeck.bodyHeight / 2)
+        guard abs(grown - keyedGrow) > 1 else { return }
+        withAnimation(DS.Motion.standard) { keyedGrow = grown }
+    }
+
     /// **THE DECK (prd §1897 item 1, on Home's panel since §1900).** Its steps
     /// as words, what the step on asks, and the foot, at one height whichever
     /// step is on, so nothing above it moves.
@@ -7000,8 +7029,7 @@ struct MoveSentence: View {
             if !steps.isEmpty {
                 MoveDeckSteps(steps: steps, disabled: stage != nil || receipt != nil)
             }
-            let room = (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
-                + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
+            let room = deckRoom + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
             if receivePlacesUp {
                 // **RECEIVE'S PLACES ARE NEVER CUT (user, 2026-11-19, of
                 // Private account clipped over the back chevron: "this looks
@@ -7035,6 +7063,8 @@ struct MoveSentence: View {
         .padding(.horizontal, Self.sideInset(inTray))
         .padding(.top, HomePanelMetrics.cap)
         .modifier(MoveFootClearance(inTray: inTray))
+        // Where the panel's edge stands, for the keyed deck to grow to.
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { deckTop = $0; fitKeyedDeck() }
         .background(alignment: .top) {
             ZStack(alignment: .top) {
                 Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
@@ -7044,6 +7074,7 @@ struct MoveSentence: View {
             .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
             .ignoresSafeArea(edges: .bottom)
         }
+        .onChange(of: textFocus == nil) { _, down in if !down { fitKeyedDeck() } }
         .animation(DS.Motion.standard, value: deckOpen)
         .animation(DS.Motion.standard, value: keying)
         .animation(DS.Motion.standard, value: kindOpen)
@@ -7124,7 +7155,7 @@ struct MoveSentence: View {
         } else if kindOpen {
             kindRows.transition(.opacity)
         } else if let o = deckOpen {
-            choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight,
+            choices(room: deckRoom + MoveDeck.footHeight, inset: MoveDeck.listTail,
                     searches: Self.searches(o), which: o, named: false) { list(for: o) }
                 .id(o)
                 .transition(.opacity)

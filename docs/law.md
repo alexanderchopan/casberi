@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2089 of 2163 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2090 of 2164 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2352,6 +2352,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
 - §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte…
 - §1909 — Send's network and token are one step, With: To · With · Amount
+- §1910 — The deck is half the screen, and a list's last row clears the foot (amends §1903 item 1, §1904 item 9) (user, 2026-11…
 
 ## Dead rulings → what replaced them (generated)
 
