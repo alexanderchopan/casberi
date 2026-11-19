@@ -61,18 +61,30 @@ struct HomePanelFade: View {
     var body: some View {
         GeometryReader { geo in
             if let y = HomePanelPlace.shared.y {
-                UnevenRoundedRectangle(topLeadingRadius: HomePanelMetrics.radius,
-                                       topTrailingRadius: HomePanelMetrics.radius, style: .continuous)
-                    .fill(LinearGradient(stops: [
-                        .init(color: DS.fillFaint.opacity(HomePanelMetrics.ink), location: 0),
-                        .init(color: DS.fillFaint.opacity(0.55 * HomePanelMetrics.ink), location: 0.42),
-                        .init(color: DS.fillFaint.opacity(0), location: 1),
-                    ], startPoint: .top, endPoint: .bottom))
-                    .frame(height: HomePanelMetrics.fade)
+                HomePanelSurface()
                     .offset(y: y - geo.frame(in: .global).minY)
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+/// **THE PANEL ITSELF (prd §1858, Move's deck since §1900):** the curved top
+/// edge in a faint grey that fades to the page over `fade`. Home lays it under
+/// its List at the cap's place; Move stands its deck on it.
+struct HomePanelSurface: View {
+    var body: some View {
+        UnevenRoundedRectangle(topLeadingRadius: HomePanelMetrics.radius,
+                               topTrailingRadius: HomePanelMetrics.radius, style: .continuous)
+            .fill(LinearGradient(stops: [
+                .init(color: DS.fillFaint.opacity(HomePanelMetrics.ink), location: 0),
+                .init(color: DS.fillFaint.opacity(0.55 * HomePanelMetrics.ink), location: 0.42),
+                .init(color: DS.fillFaint.opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom))
+            .frame(height: HomePanelMetrics.fade)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }

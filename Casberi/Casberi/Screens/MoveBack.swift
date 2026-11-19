@@ -17,10 +17,11 @@ struct MoveBackCard: View {
                 go()
                 DSHaptic.selection()
             } label: {
+                // **A BARE CHEVRON (prd §1897 item 7):** the way back at the
+                // foot's left edge, with no card under it.
                 Image(systemName: "chevron.left").dsGlyph(.title, weight: .bold)
-                    .foregroundStyle(disabled ? DS.textSecondary : DS.textPrimary)
-                    .frame(width: MoveSentence.actHeight, height: MoveSentence.actHeight)
-                    .background(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous).fill(DS.fillStrong))
+                    .foregroundStyle(disabled ? DS.textTertiary : DS.textPrimary)
+                    .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
@@ -197,6 +198,9 @@ struct MoveFactRow: View {
     var value: String?
     var valueInk: Color = DS.textPrimary
     var nameInk: Color = DS.textSecondary
+    /// In the rows' column under a sentence still drawn with them; the
+    /// Deck's facts stand at the page's edge (prd §1897 item 1).
+    var indented = true
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -212,7 +216,7 @@ struct MoveFactRow: View {
             }
         }
         .frame(minHeight: MoveSentence.factHeight)
-        .padding(.leading, MoveChoiceRowLabel.leadColumn)
+        .padding(.leading, indented ? MoveChoiceRowLabel.leadColumn : 0)
         .accessibilityElement(children: .combine)
     }
 }

@@ -1517,8 +1517,7 @@ struct MoveRailgunSentence<Head: View>: View {
     }
 
     private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        // Move's one act: the card (prd §1755, §1801), in this place's ink.
-        Button(action: act) { MoveSentence.actCard(word, on: on, fill: DS.pickInk) }
-            .buttonStyle(PressSpring())
+        // Move's one act, held (prd §1897 item 7), in this place's ink.
+        MoveSentence.footAct(word, on: on, ink: DS.pickInk, act: act)
     }
 }

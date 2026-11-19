@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2081 of 2155 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2082 of 2156 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2197,7 +2197,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1752 — Five small things in Send: Paste link under the sentence, a fee bigger than the amount says so, a paid request says P… (amended by §1898)
 - §1753 — Your Aztec account's engine starts over when its store stops answering
 - §1754 — Move, tightened: one ledger at one size, the network said once, no "now", no slider, the act wears Face ID (amended by §1755, §1776, §1779, §1876, §1898)
-- §1755 — Move's act is a pink card
+- §1755 — Move's act is a pink card (amended by §1902)
 - §1756 — Casberi's browser gets a band, and the emoji check leaves the site in view
 - §1757 — The Aztec apps you have connected stand as tiles beside the directory (extends §1700m; keeps §1700c's "no list of app… (amended by §1758)
 - §1758 — A tile wears a vector icon, and Galactica is called Galactica
@@ -2334,7 +2334,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
-- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897)
+- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
@@ -2343,7 +2343,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899)
 - §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900)
 - §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready
-- §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places…
+- §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902)
+- §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;…
 
 ## Dead rulings → what replaced them (generated)
 

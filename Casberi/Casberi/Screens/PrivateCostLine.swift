@@ -24,7 +24,8 @@ struct PrivateCost: Equatable {
 struct MoveCostRow: View {
     var name: String = String(localized: "Cost")
     let value: String
-    /// False where the caller's block already stands in the answers' column.
+    /// In the rows' column under a sentence still drawn with them; the
+    /// Deck's facts stand at the page's edge (prd §1897 item 1).
     var indented = true
     let act: () -> Void
 
@@ -124,6 +125,8 @@ struct MoveCostRows<Rows: View>: View {
     let cost: PrivateCost?
     @Binding var open: Bool
     var ink: Color = DS.pickInk
+    /// False on the Deck, whose facts stand at the page's edge (prd §1897).
+    var indented = true
     @ViewBuilder let rows: () -> Rows
 
     var body: some View {
@@ -137,7 +140,7 @@ struct MoveCostRows<Rows: View>: View {
                 VStack(alignment: .leading, spacing: 0) {
                     rows()
                     if let cost {
-                        MoveCostRow(value: cost.amount) { withAnimation(DS.Motion.standard) { open = true } }
+                        MoveCostRow(value: cost.amount, indented: indented) { withAnimation(DS.Motion.standard) { open = true } }
                             .transition(.opacity)
                     }
                 }

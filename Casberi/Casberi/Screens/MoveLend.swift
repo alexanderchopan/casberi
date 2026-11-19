@@ -30,38 +30,41 @@ struct MoveLendSentence<Head: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
-                // (prd §1794, §1800):** as Move's own verbs.
-                // Its name stands over the page (`MovePinnedHead`, prd §1892).
-                kinds
-                Group {
-                    // A row's choices are a menu on the row (prd §1784).
-                    VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        // The cost is a row under them (prd §1876), the rate a
-                        // fact over it (prd §1896).
-                        MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen) {
-                            MoveChoiceRows(rows: choiceRows, open: menuRow) { _ in menu }
-                            if live, move.units != nil, stepsRun == nil, let fact = rateFact {
-                                MoveFactRow(name: fact.name, value: fact.value)
-                                    .padding(.top, DS.Space.s2)
-                            }
-                        }
-                        if !costOpen { line }
+            VStack(alignment: .leading, spacing: 0) {
+                // **THE SENTENCE STANDS STILL ON TOP (prd §1897 item 1, Earn
+                // since §1901):** "Earn with 0.001 ETH on Base."
+                MoveFlow { sentence }
+                    // No control (prd §1781): its choices are the deck's.
+                    .allowsHitTesting(false)
+                    .animation(DS.Motion.standard, value: move.figure)
+                    .animation(DS.Motion.standard, value: move.chainId)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if let run = stepsRun {
+                        PrivateStepRows(run: run).transition(.opacity)
                     }
+                    // The cost is a row of the facts (prd §1876), the rate a
+                    // fact over it, Aave the one it goes through (prd §1901).
+                    MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen, indented: false) {
+                        if live, move.units != nil, stepsRun == nil, let fact = rateFact {
+                            MoveFactRow(name: fact.name, value: fact.value, indented: false)
+                        }
+                        if live, stepsRun == nil {
+                            MoveFactRow(name: String(localized: "Through"), value: "Aave", indented: false)
+                        }
+                    }
+                    if !costOpen { line }
                 }
+                .padding(.top, DS.Space.s4)
             }
-            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, MoveSentence.headFade)
-            // Scrolled to the end, the last row clears the foot's fade.
-            .padding(.bottom, MoveSentence.footFade)
+            .padding(.horizontal, MoveSentence.sideInset(inTray))
+            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
+            .padding(.bottom, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            MovePinnedHead(inTray: inTray) { MoveWord(title).accessibilityAddTraits(.isHeader) }
-        }
+        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in
@@ -92,8 +95,10 @@ struct MoveLendSentence<Head: View>: View {
         } else {
             let done = doneHash != nil
             let glue: String = switch (move.mode, done) {
-            case (.lend, false): String(localized: "Lend")
-            case (.lend, true): String(localized: "Lent")
+            // **EARN SAYS EARN (prd §1901, the user: "you have 'lend' on the
+            // screen but it is now Earn").**
+            case (.lend, false): String(localized: "Earn with")
+            case (.lend, true): String(localized: "Earning with")
             case (.takeBack, false): String(localized: "Take back")
             case (.takeBack, true): String(localized: "Took back")
             }
@@ -108,8 +113,8 @@ struct MoveLendSentence<Head: View>: View {
                 .accessibilityLabel(Text("Amount, \(move.figure)"))
                 .accessibilityHint(Text("Picks how much"))
             }
-            // One "on" (prd §1800): "Lend 100 USDC to Aave on Base."
-            MovePhrase(String(localized: "Aave"), glue: move.mode == .lend ? String(localized: "to") : String(localized: "from"))
+            // One "on" (prd §1800): "Earn with 100 USDC on Base." Aave is a
+            // fact, "Through" (prd §1901).
             MoveClause(glue: String(localized: "on")) {
                 Button { toggle(.network) } label: {
                     MoveWord((move.network?.name ?? "") + ".", ink: MoveSentence.settledInk)
@@ -160,32 +165,6 @@ struct MoveLendSentence<Head: View>: View {
         case .reading:
             EmptyView()
         }
-    }
-
-    /// **EARN'S TWO KINDS, UNDER ITS NAME (prd §1896, retiring §1802's "Take
-    /// back" row):** as Swap · Sweep and Gift cards · Tokens are, the one you
-    /// are on in weight; only where something is lent to take back.
-    @ViewBuilder private var kinds: some View {
-        if live, doneHash == nil, move.anyLent || move.mode == .takeBack {
-            HStack(spacing: DS.Space.s4) {
-                kind(String(localized: "Lend"), .lend)
-                kind(String(localized: "Take back"), .takeBack)
-            }
-        }
-    }
-
-    private func kind(_ text: String, _ mode: LendMove.Mode) -> some View {
-        let on = move.mode == mode
-        return Button { if !on { flip(mode) } } label: {
-            Text(verbatim: text)
-                .dsText(.body17)
-                .fontWeight(on ? .semibold : .regular)
-                .foregroundStyle(on ? DS.textPrimary : DS.textSecondary)
-                .frame(minHeight: DS.Hit.min)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityAddTraits(on ? .isSelected : [])
     }
 
     /// What lending earns today, or where taking back lands: a fact (prd §1896).
@@ -345,47 +324,112 @@ struct MoveLendSentence<Head: View>: View {
         }
     }
 
-    private var foot: some View {
-        VStack(spacing: 0) {
-        MoveFlow { sentence }
-            // No control (prd §1781): its choices are the rows above it.
-            .allowsHitTesting(false)
-            .animation(DS.Motion.standard, value: move.figure)
-            .animation(DS.Motion.standard, value: move.chainId)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, DS.Space.s3)
-            .moveSentenceAway(menuRow.wrappedValue != nil)
-        // ONE THING AT A TIME over the act, as every Move sentence (prd
-        // §1700y, §1700z): the steps while it works and after, the cost while ready.
-        if let run = stepsRun {
-            PrivateStepRows(run: run)
-                .padding(.bottom, DS.Space.s3)
-                .transition(.opacity)
+    /// The verb's two kinds are open in the deck.
+    @State private var kindOpen = false
+    @Environment(\.moveBack) private var back
+
+    /// **EARN'S DECK (prd §1901 items 1–3):** Kind · From · Amount on Home's
+    /// panel, the foot's word held to act.
+    private var deck: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if live, doneHash == nil {
+                MoveDeckSteps(steps: steps)
+            }
+            Group {
+                if kindOpen {
+                    VStack(alignment: .leading, spacing: 0) {
+                        kindRow(String(localized: "Earn"), .lend, glyph: "chart.line.uptrend.xyaxis")
+                        kindRow(String(localized: "Take back"), .takeBack, glyph: "arrow.uturn.backward")
+                    }
+                    .transition(.opacity)
+                } else if let open {
+                    ScrollView { choices(open) }
+                        .scrollIndicators(.hidden)
+                        .transition(.opacity)
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(height: MoveDeck.bodyHeight, alignment: .top)
+            .clipped()
+            MoveDeckFoot(backDisabled: move.acting, back: {
+                withAnimation(DS.Motion.standard) {
+                    if kindOpen { kindOpen = false } else if costOpen { costOpen = false } else if open != nil { open = nil } else { back?() }
+                }
+            }) { footWord }
         }
-        // The rate is a fact under the rows now (`rateFact`, prd §1896).
-        HStack(alignment: .center, spacing: DS.Space.s2) {
-            // It closes the cost's list while that is open (prd §1876).
-            MoveBackCard(act: costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil)
-            switch move.stage {
-            case .done:
-                footButton(String(localized: "Done"), on: true) {
-                    if inTray { chrome.moveTray = false } else { Task { await move.read(account: account) } }
-                }
-            case .failed:
-                footButton(String(localized: "Try again"), on: true) { Task { await move.read(account: account) } }
-            default:
-                footButton(footVerb, on: live && move.units != nil, faceID: !move.acting) {
-                    open = nil
-                    Task { await move.run(account: account) }
-                }
-                .disabled(!(live && move.units != nil))
+        .padding(.horizontal, MoveSentence.sideInset(inTray))
+        .padding(.top, HomePanelMetrics.cap)
+        .modifier(MoveFootClearance(inTray: inTray))
+        .background(alignment: .top) {
+            ZStack(alignment: .top) {
+                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                HomePanelSurface()
+            }
+            // The panel runs edge to edge, past the tray's own inset.
+            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .animation(DS.Motion.standard, value: open)
+        .animation(DS.Motion.standard, value: kindOpen)
+    }
+
+    /// Face ID has the act.
+    private var signing: Bool { if case .working(.signing) = move.stage { true } else { false } }
+
+    /// Kind (where something is lent), From (the network), Amount.
+    private var steps: [MoveDeckStep] {
+        var out: [MoveDeckStep] = []
+        if move.anyLent || move.mode == .takeBack {
+            out.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen) {
+                withAnimation(DS.Motion.standard) { open = nil; kindOpen.toggle() }
+            })
+        }
+        out.append(MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .network && !kindOpen) {
+            kindOpen = false
+            toggle(.network)
+        })
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount && !kindOpen) {
+            kindOpen = false
+            toggle(.amount)
+        })
+        return out
+    }
+
+    private func kindRow(_ text: String, _ mode: LendMove.Mode, glyph: String) -> some View {
+        Button {
+            kindOpen = false
+            if move.mode != mode { flip(mode) }
+        } label: {
+            MoveDeckRowLabel(name: text, picked: move.mode == mode) {
+                Image(systemName: glyph).dsGlyph(.title, weight: .semibold).foregroundStyle(DS.brandInk)
+                    .accessibilityHidden(true)
             }
         }
+        .buttonStyle(RowPress())
+    }
+
+    /// **THE FOOT'S ONE WORD (prd §1897 item 7):** Hold to earn, Hold to take
+    /// back; the stage while it works; Done or Try again after.
+    @ViewBuilder private var footWord: some View {
+        switch move.stage {
+        case .done:
+            MoveFootWord(word: String(localized: "Done")) {
+                if inTray { chrome.moveTray = false } else { Task { await move.read(account: account) } }
+            }
+        case .failed:
+            MoveFootWord(word: String(localized: "Try again")) { Task { await move.read(account: account) } }
+        case .working:
+            MoveFootWord(word: footVerb, ink: DS.textSecondary,
+                         glyph: signing ? "faceid" : nil)
+        default:
+            MoveHoldWord(word: move.mode == .lend ? String(localized: "Hold to earn") : String(localized: "Hold to take back"),
+                         enabled: live && move.units != nil) {
+                open = nil
+                Task { await move.run(account: account) }
+            }
         }
-        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, DS.Space.s2)
-        .moveFootGround(inTray: inTray)
     }
 
     // No credit under the act (prd §1754, retiring §1685's): the sentence
@@ -397,13 +441,8 @@ struct MoveLendSentence<Head: View>: View {
         case .working(.signing): String(localized: "Confirm with Face ID")
         case .working(.cosigning): String(localized: "Waiting for your Signer…")
         case .working: String(localized: "Sending…")
-        default: move.mode == .lend ? String(localized: "Lend") : String(localized: "Take back")
+        default: move.mode == .lend ? String(localized: "Earn") : String(localized: "Take back")
         }
     }
 
-    private func footButton(_ word: String, on: Bool, faceID: Bool = false, act: @escaping () -> Void) -> some View {
-        // Move's one act: the pink card (prd §1755).
-        Button(action: act) { MoveSentence.actCard(word, on: on, faceID: faceID) }
-            .buttonStyle(PressSpring())
-    }
 }
