@@ -74200,7 +74200,7 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 
 **Found.** Since §1700aa a top-up goes to the shared private fee contract and is minted by the next send, not claimed on its own. `AztecGas.state` read every unclaimed deposit as waiting, so a carried one said "On its way" until you next sent on Aztec, days later. Measured on the user's Safe: 30 AZTEC to the FeeJuicePortal on Nov 5, 11, 13 and 14.
 
-**Ruling.** `AztecGas.settle()` asks Aztec whether each private deposit's message has arrived (`feeJuiceReady`) and marks it `ready`. A ready, unminted deposit is not waiting, and its amount counts as gas in the contract (`carried`), so the row reads Enough or Low. One still in transit stays "On its way". `ridesAlong` is unchanged: no second private top-up while one is unminted.
+**Ruling.** `AztecGas.settle()` asks Aztec whether each private deposit's message has arrived (`feeJuiceReady`) and marks it `ready`. A ready, unminted deposit is not waiting, and its amount counts as gas in the contract (`carried`), so the row reads Enough or Low. One still in transit stays "On its way". `ridesAlong` is unchanged: no second private top-up while one is unminted. The gas row's figure adds the carried amount, and an account whose only gas is carried shows that amount, never None (user, the same day on a Debug build: "it still says on its way but in the amount column says none").
 
 **Mac half (§1402).** Shared model; reaches the Mac's Holdings unchanged.
 

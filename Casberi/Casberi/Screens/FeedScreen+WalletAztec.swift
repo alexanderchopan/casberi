@@ -97,7 +97,9 @@ extension FeedScreen {
                 let gas = holding.kind == .feeJuice
                 // Gas is one figure wherever it is kept (prd §1700aa): the
                 // account's own and what it holds in the private fee contract.
-                let units = gas ? NSDecimalNumber(decimal: holding.gasUnits).stringValue : holding.publicUnits
+                // And what Aztec has carried for the next send to mint (prd §1886).
+                let units = gas ? NSDecimalNumber(decimal: holding.gasUnits + AztecGas.carried(store.snapshot.gas ?? [])).stringValue
+                    : holding.publicUnits
                 // Network · fact (prd §1718): "Aztec · Gas"; a public token,
                 // "Aztec" alone, as the Tokens rows above it name theirs.
                 aztecRow(title: holding.name,
@@ -114,10 +116,19 @@ extension FeedScreen {
             // An account in use that holds no gas still shows where gas is
             // added (prd §1761): the row stood only once there was some.
             if store.shown.used, !store.publicHeld.contains(where: { $0.kind == .feeJuice }) {
-                // The figure says None; the line does not say it twice.
-                aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state),
-                         figure: String(localized: "None"), mark: "AZTEC", tone: DS.attentionInk,
-                         act: { feedSheet = .aztecGas })
+                let carried = AztecGas.carried(store.snapshot.gas ?? [])
+                if carried > 0 {
+                    // Carried and waiting for the next send to mint it (prd
+                    // §1886): gas you hold, never None.
+                    aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state),
+                             figure: mask ?? Self.gasFigure(carried), mark: "AZTEC", tone: DS.textSecondary,
+                             act: { feedSheet = .aztecGas })
+                } else {
+                    // The figure says None; the line does not say it twice.
+                    aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state),
+                             figure: String(localized: "None"), mark: "AZTEC", tone: DS.attentionInk,
+                             act: { feedSheet = .aztecGas })
+                }
             }
         }
     }
@@ -176,6 +187,15 @@ extension FeedScreen {
     /// gas stands when that needs saying (prd §1761).
     /// How the gas stands for a row that holds `units`: "None" only when it
     /// holds none.
+    /// Fee Juice in base units (18 places), as the gas row draws it.
+    static func gasFigure(_ units: Decimal) -> String {
+        let amount = units / pow(10, 18)
+        if amount > 0, amount < Decimal(string: "0.01")! {
+            return amount.formatted(.number.precision(.significantDigits(1...2)))
+        }
+        return amount.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
     static func gasStanding(_ units: String?) -> AztecGas.Standing {
         let held = (units.flatMap { Decimal(string: $0) } ?? 0) > 0
         return held && AztecGas.state == .none ? .enough : AztecGas.state

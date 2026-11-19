@@ -74,6 +74,9 @@ grep -q 'return state(waiting: gas.contains { !$0.claimed && $0.ready != true },
   && grep -q 'where !deposit.claimed && deposit.isPrivate && deposit.ready != true {' "$GAS" \
   && grep -q 'AztecAccountStore.shared.markGasReady(deposit.nonce)' "$GAS" \
   || { echo "✗ private gas Aztec has carried reads On its way again until the next send (prd §1886)"; exit 1; }
+grep -q 'let carried = AztecGas.carried(store.snapshot.gas ?? \[\])' Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift \
+  && grep -q 'holding.gasUnits + AztecGas.carried(store.snapshot.gas ?? \[\])' Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift \
+  || { echo "✗ the gas row says None, or leaves out gas Aztec has carried (prd §1886)"; exit 1; }
 MOVE="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
 (( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.unminted\]) as? \[String: Any\]') == 3 )) \
   || { echo "✗ one of the three sends (a claim, a private send, an exit) no longer offers the waiting gas deposits"; exit 1; }
