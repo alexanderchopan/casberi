@@ -1435,7 +1435,7 @@ struct MoveRailgunSentence<Head: View>: View {
 
     private var foot: some View {
         VStack(spacing: 0) {
-            MoveFlow { sentence }
+            MoveFlow { sentence }.moveHoldFill()
                 // The keys bring the typed row to the foot's edge: air
                 // between that row and the sentence (prd §1802).
                 .padding(.top, typing ? DS.Space.s6 : 0)

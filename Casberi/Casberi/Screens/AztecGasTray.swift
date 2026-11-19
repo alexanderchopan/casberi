@@ -14,7 +14,7 @@ struct AztecGasTray: View {
         let store = AztecAccountStore.shared
         let juice = store.shown.holdings.first { $0.kind == .feeJuice }
         let state = adding ? AztecGas.Standing.arriving : AztecGas.state
-        DSTray(title: String(localized: "Gas on Aztec"), height: 360) {
+        DSTray(title: String(localized: "Private gas on Aztec"), height: 360) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(verbatim: juice.map { FeedScreen.aztecFigure($0, units: NSDecimalNumber(decimal: $0.gasUnits).stringValue) } ?? "0")
@@ -29,7 +29,7 @@ struct AztecGasTray: View {
                 Text("30 AZTEC from your account pays for it, about $0.45.")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                DSSlabButton(title: String(localized: "Add gas"), systemImage: "fuelpump", busy: adding,
+                DSSlabButton(title: String(localized: "Add private gas"), systemImage: "fuelpump", busy: adding,
                              enabled: !adding && state != .arriving && !DemoMode.isActive) { add() }
                 if let failed {
                     Text(verbatim: failed).dsText(.subhead12).foregroundStyle(DS.attentionInk)

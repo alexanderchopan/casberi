@@ -978,7 +978,7 @@ struct AztecAskSheet: View {
     /// Juice" whatever paid, and for a request that sends nothing.
     static func gasLine(_ kind: String) -> (words: String, missing: Bool)? {
         switch kind {
-        case "private": (String(localized: "Gas, paid privately"), false)
+        case "private": (String(localized: "Private gas"), false)
         case "own": (String(localized: "Gas, from your account, in the open"), false)
         case "app": (String(localized: "Gas, paid by the app"), false)
         case "arriving": (String(localized: "Gas is on its way to Aztec. Approve in a few minutes."), false)

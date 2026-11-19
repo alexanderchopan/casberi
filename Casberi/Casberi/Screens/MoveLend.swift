@@ -34,6 +34,7 @@ struct MoveLendSentence<Head: View>: View {
                 // **THE SENTENCE STANDS STILL ON TOP (prd §1897 item 1, Earn
                 // since §1901):** "Earn with 0.001 ETH on Base."
                 MoveFlow { sentence }
+                    .moveHoldFill()
                     // No control (prd §1781): its choices are the deck's.
                     .allowsHitTesting(false)
                     .animation(DS.Motion.standard, value: move.figure)
@@ -47,7 +48,13 @@ struct MoveLendSentence<Head: View>: View {
                     // The cost is a row of the facts (prd §1876), the rate a
                     // fact over it, Aave the one it goes through (prd §1901).
                     MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen, indented: false) {
-                        if live, move.units != nil, stepsRun == nil, let fact = rateFact {
+                        // What there is leads the facts, as Send's You have
+                        // does (prd §1898 item 6).
+                        if live, stepsRun == nil, hasAny, let have = move.haveFigure {
+                            MoveFactRow(name: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
+                                        value: have, indented: false)
+                        }
+                        if live, stepsRun == nil, hasAny, let fact = rateFact {
                             MoveFactRow(name: fact.name, value: fact.value, indented: false)
                         }
                         if live, stepsRun == nil {
@@ -67,6 +74,11 @@ struct MoveLendSentence<Head: View>: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { deck }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
+        // The deck opens on the keys once Aave is read: never an empty panel
+        // under a sentence that asks how much (prd §1782).
+        .onChange(of: live, initial: true) { _, on in
+            if on, open == nil, !kindOpen, move.units == nil { withAnimation(DS.Motion.standard) { open = .amount } }
+        }
         .onChange(of: chrome.moveTall) { _, tall in
             if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
         }
@@ -83,6 +95,8 @@ struct MoveLendSentence<Head: View>: View {
     }
 
     private var market: AaveLend.Market? { move.market }
+    /// Whether this market has anything to move: the empty line, else the facts.
+    private var hasAny: Bool { (move.market.flatMap { move.available($0) }.flatMap { Decimal(string: $0) } ?? 0) > 0 }
     private var live: Bool { move.stage == .ready }
     private var doneHash: String? { if case .done(let h) = move.stage { h } else { nil } }
     private var rateLine: String? { market.flatMap { AaveLend.rateLine(move.rates[LendMove.key($0)]) } }
@@ -137,9 +151,9 @@ struct MoveLendSentence<Head: View>: View {
                 if let market {
                     // What you have and Half · All are the amount's own
                     // menu (prd §1802); Aave's rate is the cost line's.
-                    if move.units == nil {
-                        Text(move.mode == .lend ? String(localized: "No \(market.symbol) on \(market.network) to lend")
-                             : String(localized: "Nothing lent on \(market.network)"))
+                    if !hasAny {
+                        Text(move.mode == .lend ? String(localized: "No \(market.symbol) on \(market.network) to earn with")
+                             : String(localized: "Nothing earning on \(market.network)"))
                             .dsText(.body17).foregroundStyle(DS.textTertiary)
                     }
                 }
@@ -193,122 +207,10 @@ struct MoveLendSentence<Head: View>: View {
 
     // MARK: - The blanks' choices
 
-    /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
-    /// up; a tap outside it closes the list with no pick.
-    private var menuRow: Binding<String?> {
-        Binding(get: { open.map { $0 == .amount ? "amount" : "network" } }, set: { if $0 == nil { open = nil } })
-    }
-
-    @ViewBuilder private var menu: some View { if let open { choices(open) } }
-
     private func toggle(_ blank: Blank) {
         guard live else { return }
         withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
         DSHaptic.selection()
-    }
-
-    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** How much, and on
-    /// which network: what the sentence's two words opened.
-    private var choiceRows: [MoveChoiceRow] {
-        guard live, doneHash == nil else { return [] }
-        // The network first: it decides what can be lent (prd §1797).
-        let mark = move.network.flatMap { MoveSentence.networkMark($0) }.map { MoveRowMark(network: $0) }
-        return [MoveChoiceRow(id: "network", name: String(localized: "Network"), value: move.network?.name ?? "", mark: mark) { toggle(.network) },
-                MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.figure) { toggle(.amount) }]
-    }
-
-    @ViewBuilder private func choices(_ blank: Blank) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch blank {
-            case .amount: amounts
-            case .network: networks
-            }
-        }
-        .padding(.vertical, DS.Space.s2)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Each token on this network: its amounts up the ladder, then all of it.
-    /// Picking one picks its token too.
-    @ViewBuilder private var amounts: some View {
-        if let have = move.haveLine {
-            Text(verbatim: have).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .frame(minHeight: 36, alignment: .leading)
-        }
-        ForEach(AaveLend.markets.filter { $0.chainId == move.chainId && !move.refused.contains(LendMove.key($0)) },
-                id: \.symbol) { m in
-            ForEach(move.choices(m), id: \.self) { step in
-                let units = PrivateMoney.baseUnits(step, decimals: m.decimals) ?? "0"
-                choice(PrivateMoney.figure(units, decimals: m.decimals, symbol: m.symbol), mark: m.symbol,
-                       picked: !move.all && move.amount == step && move.symbol == m.symbol) {
-                    move.symbol = m.symbol
-                    move.pick(step, all: false)
-                }
-            }
-            if m.symbol == move.market?.symbol, let half = move.half {
-                let units = PrivateMoney.baseUnits(half, decimals: m.decimals) ?? "0"
-                choice(String(localized: "Half, \(PrivateMoney.figure(units, decimals: m.decimals, symbol: m.symbol))"), mark: m.symbol,
-                       picked: !move.all && move.amount == half && move.symbol == m.symbol) {
-                    move.symbol = m.symbol
-                    move.pick(half, all: false)
-                }
-            }
-            if let all = move.available(m), all != "0" {
-                choice(String(localized: "All, \(PrivateMoney.figure(all, decimals: m.decimals, symbol: m.symbol))"), mark: m.symbol,
-                       picked: move.all && move.symbol == m.symbol) {
-                    move.symbol = m.symbol
-                    move.pick(nil, all: true)
-                }
-            }
-        }
-    }
-
-    /// Base and Ethereum, each with what it holds for this verb.
-    private var networks: some View {
-        ForEach(AaveLend.chainIds, id: \.self) { id in
-            let name = YourAccountOp.networks.first { $0.chainId == id }?.name ?? ""
-            let there = AaveLend.markets.filter { $0.chainId == id }.compactMap { m -> String? in
-                guard let a = move.available(m), (Decimal(string: a) ?? 0) > 0 else { return nil }
-                return PrivateMoney.figure(a, decimals: m.decimals, symbol: m.symbol)
-            }
-            choice(name, mark: nil, line: there.isEmpty ? nil : there.joined(separator: " · "), picked: id == move.chainId) {
-                move.chainId = id
-                move.pick(nil, all: false)
-                if let m = move.market, (Decimal(string: move.available(m) ?? "0") ?? 0) <= 0,
-                   let other = AaveLend.markets.first(where: { $0.chainId == id && (Decimal(string: move.available($0) ?? "0") ?? 0) > 0 }) {
-                    move.symbol = other.symbol
-                }
-                move.settle()
-            }
-        }
-    }
-
-    private func choice(_ title: String, mark: String?, line: String? = nil, picked: Bool, act: @escaping () -> Void) -> some View {
-        Button {
-            withAnimation(DS.Motion.standard) {
-                act()
-                open = nil
-            }
-            DSHaptic.selection()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                if let mark { AssetMark(name: mark, size: DS.Face.list) }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: title)
-                        .dsText(.body17)
-                        .foregroundStyle(picked ? DS.textSecondary : DS.textPrimary)
-                        .monospacedDigit()
-                    if let line {
-                        Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    }
-                }
-                Spacer(minLength: DS.Space.s2)
-            }
-            .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityAddTraits(picked ? [.isSelected] : [])
     }
 
     // MARK: - The foot
@@ -335,29 +237,41 @@ struct MoveLendSentence<Head: View>: View {
             if live, doneHash == nil {
                 MoveDeckSteps(steps: steps)
             }
-            Group {
-                if kindOpen {
-                    VStack(alignment: .leading, spacing: 0) {
-                        kindRow(String(localized: "Earn"), .lend, glyph: "chart.line.uptrend.xyaxis")
-                        kindRow(String(localized: "Take back"), .takeBack, glyph: "arrow.uturn.backward")
-                    }
-                    .transition(.opacity)
-                } else if let open {
-                    ScrollView { choices(open) }
-                        .scrollIndicators(.hidden)
+            // The body runs under the foot and fades there (prd §1904 item 9).
+            ZStack(alignment: .bottom) {
+                Group {
+                    if kindOpen {
+                        VStack(alignment: .leading, spacing: 0) {
+                            kindRow(String(localized: "Earn"), .lend, glyph: "chart.line.uptrend.xyaxis")
+                            kindRow(String(localized: "Take back"), .takeBack, glyph: "arrow.uturn.backward")
+                        }
                         .transition(.opacity)
-                } else {
-                    Color.clear
+                    } else if open == .amount {
+                        // **EARN TYPES ITS AMOUNT (prd §1897 item 4, user
+                        // 2026-11-19: "earn looks weird"):** Send's keypad, Half
+                        // and All as its sums, never a ladder of rows.
+                        MoveKeypad(text: typed, presets: keypadPresets,
+                                   places: min(move.market?.decimals ?? 6, 6), disabled: !live)
+                            .padding(.top, DS.Space.s1)
+                            .transition(.opacity)
+                    } else if open == .network {
+                        ScrollView { fromRows.padding(.vertical, DS.Space.s2) }
+                            .scrollIndicators(.hidden)
+                            .transition(.opacity)
+                    } else {
+                        Color.clear
+                    }
                 }
+                .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight, alignment: .top)
+                .deckUnderFoot()
+                MoveDeckFoot(backDisabled: move.acting, back: {
+                    withAnimation(DS.Motion.standard) {
+                        if kindOpen { kindOpen = false } else if costOpen { costOpen = false } else if open != nil { open = nil } else { back?() }
+                    }
+                }) { footWord }
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .frame(height: MoveDeck.bodyHeight, alignment: .top)
-            .clipped()
-            MoveDeckFoot(backDisabled: move.acting, back: {
-                withAnimation(DS.Motion.standard) {
-                    if kindOpen { kindOpen = false } else if costOpen { costOpen = false } else if open != nil { open = nil } else { back?() }
-                }
-            }) { footWord }
         }
         .padding(.horizontal, MoveSentence.sideInset(inTray))
         .padding(.top, HomePanelMetrics.cap)
@@ -375,6 +289,58 @@ struct MoveLendSentence<Head: View>: View {
         .animation(DS.Motion.standard, value: kindOpen)
     }
 
+    /// The keypad's figure: what was typed, or all of it written out.
+    private var typed: Binding<String> {
+        Binding(get: {
+            guard move.all, let m = move.market, let units = move.units, let u = Decimal(string: units) else { return move.amount ?? "" }
+            return NSDecimalNumber(decimal: u / pow(10, m.decimals)).stringValue
+        }, set: { text in
+            move.pick(text.isEmpty ? nil : text, all: false)
+        })
+    }
+
+    /// Half and All of what there is, dimmed when there is nothing.
+    private var keypadPresets: [MoveKeypadPreset] {
+        let have = move.market.flatMap { move.available($0) }.flatMap { Decimal(string: $0) } ?? 0
+        return [
+            MoveKeypadPreset(id: "half", title: String(localized: "Half"), enabled: move.half != nil,
+                             picked: !move.all && move.half != nil && move.amount == move.half) {
+                if let half = move.half { move.pick(half, all: false) }
+            },
+            MoveKeypadPreset(id: "all", title: String(localized: "All"), enabled: have > 0, picked: move.all) {
+                move.pick(nil, all: true)
+            },
+        ]
+    }
+
+    /// **FROM IS A TOKEN ON A NETWORK (prd §1898 item 1):** every market Aave
+    /// takes here, with what you have of it (or have earning), as Send's
+    /// From rows; one with nothing is dimmed, never hidden.
+    private var fromRows: some View {
+        // At Home's app-icon size, as Send's From is (prd §1904 item 11).
+        MoveDeckGrid {
+            ForEach(AaveLend.markets.filter { !move.refused.contains(LendMove.key($0)) }.map { (LendMove.key($0), $0) }, id: \.0) { _, m in
+                let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? ""
+                let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
+                let worth = move.available(m).flatMap { move.dollars($0, in: m) }
+                MoveDeckTile(title: m.symbol,
+                             sub: worth.map { MoveSentence.money($0, whole: true) } ?? PrivateMoney.figure(move.available(m) ?? "0", decimals: m.decimals, symbol: ""),
+                             picked: m.chainId == move.chainId && m.symbol == move.symbol, dim: have <= 0) {
+                    withAnimation(DS.Motion.standard) {
+                        move.chainId = m.chainId
+                        move.symbol = m.symbol
+                        move.pick(nil, all: false)
+                        move.settle()
+                        open = .amount
+                    }
+                } face: {
+                    MoveRowMark(token: m.symbol, network: MoveSentence.networkMark(chainId: m.chainId), size: DSHomeCircleMetrics.face)
+                }
+                .accessibilityLabel(Text("\(m.symbol) on \(name)"))
+            }
+        }
+    }
+
     /// Face ID has the act.
     private var signing: Bool { if case .working(.signing) = move.stage { true } else { false } }
 
@@ -382,15 +348,15 @@ struct MoveLendSentence<Head: View>: View {
     private var steps: [MoveDeckStep] {
         var out: [MoveDeckStep] = []
         if move.anyLent || move.mode == .takeBack {
-            out.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen) {
+            out.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen, answered: true) {
                 withAnimation(DS.Motion.standard) { open = nil; kindOpen.toggle() }
             })
         }
-        out.append(MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .network && !kindOpen) {
+        out.append(MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .network && !kindOpen, answered: hasAny) {
             kindOpen = false
             toggle(.network)
         })
-        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount && !kindOpen) {
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount && !kindOpen, answered: move.units != nil) {
             kindOpen = false
             toggle(.amount)
         })

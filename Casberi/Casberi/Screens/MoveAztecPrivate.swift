@@ -217,23 +217,29 @@ final class AztecMove {
                 // Bought with a little of what you move (prd §1700aa).
                 guard let sale = gasSale, let along = dollars(sale, symbol: symbol) else { return nil }
                 usd += along
-                parts.append(.init(words: String(localized: "Aztec's gas, bought with your \(symbol)"),
+                parts.append(.init(words: String(localized: "Private gas, bought with your \(symbol)"),
                                    figure: PrivateMoney.figure(sale, decimals: decimals, symbol: symbol)))
             } else if bringsGas {
                 guard let along = dollars(AztecGas.rideAlong, symbol: "AZTEC") else { return nil }
                 usd += along
-                parts.append(.init(words: String(localized: "Aztec's gas, for your account there"), figure: "30 AZTEC"))
+                parts.append(.init(words: String(localized: "Private gas, for your account there"), figure: "30 AZTEC"))
             }
         case .send where toEthereum:
             guard shieldCut(), let gas = aztecGas(Self.exitMana) else { return nil }
             usd += gas
-            parts.append(.init(words: String(localized: "Gas, from your Fee Juice"), figure: String(localized: "about \(Self.usd(gas))")))
+            parts.append(.init(words: Self.gasWords, figure: String(localized: "about \(Self.usd(gas))")))
         case .send:
             guard let gas = aztecGas(Self.sendMana) else { return nil }
             usd += gas
-            parts.append(.init(words: String(localized: "Gas, from your Fee Juice"), figure: String(localized: "about \(Self.usd(gas))")))
+            parts.append(.init(words: Self.gasWords, figure: String(localized: "about \(Self.usd(gas))")))
         }
         return PrivateCost(usd: usd, parts: parts)
+    }
+
+    /// A send's gas on Aztec: "Private gas" when the private fee contract
+    /// pays it, else the account's own Fee Juice, which names it.
+    @MainActor static var gasWords: String {
+        AztecGas.paysPrivately ? String(localized: "Private gas") : String(localized: "Gas, from your Fee Juice")
     }
 
     /// What the cost line says after the dollars: what the move buys you.
@@ -849,7 +855,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         if case .working(let words) = move.stage { return words }
         switch move.mode {
         case .deposit:
-            let gas = move.bringsGas ? String(localized: "with 30 AZTEC as its gas") : nil
+            let gas = move.bringsGas ? String(localized: "with 30 AZTEC of private gas") : nil
             // Who moves it, said once, when it is not your account (prd
             // §1720): Shield takes it from the wallet it scored.
             let who = move.viaCoSigner.map { String(localized: "From your co-signer (\(AddressTail.short($0)))") }
@@ -1099,7 +1105,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private var foot: some View {
         VStack(spacing: 0) {
-            MoveFlow { sentence }
+            MoveFlow { sentence }.moveHoldFill()
                 // The keys bring the typed row to the foot's edge: air
                 // between that row and the sentence (prd §1802).
                 .padding(.top, typing ? DS.Space.s6 : 0)

@@ -1650,6 +1650,10 @@ struct MoveSentence: View {
             }
             }
         }
+        // **A LANDING RAINS (prd §1904 item 10, user: "rain is good if they
+        // use the same rain our pull to refresh does"):** the pull's own
+        // shower, over this page, once when a move lands.
+        .overlay { TileRain(trigger: landedPulse, roster: [Self.rainSeat]) }
         // An open list reaches the sheet's bottom edge: past the tray's own
         // air and under the home bar (prd §1616 item 5).
         .ignoresSafeArea(.container, edges: reachesEdge ? .bottom : [])
@@ -1704,6 +1708,15 @@ struct MoveSentence: View {
             }
             guard picksUpDraft, receipt == nil, stage == nil else { return }
             if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }
+            // **ON THE PHONE THE VERBS ARE THE MENU (prd §1852; user,
+            // 2026-11-19, of the old list page: "this is old build").** A
+            // door that opens Move with no verb raises the menu over the
+            // page, never the list of verbs in the tray.
+            if inTray, MoveMenu.rises {
+                chrome.moveTray = false
+                withAnimation(DS.Motion.standard) { chrome.moveMenu = true }
+                return
+            }
             open = .verb
         }
         .onDisappear { chrome.moveDraft = keptDraft }
@@ -1962,6 +1975,8 @@ struct MoveSentence: View {
             // word, figure or kept line in it takes a touch. The rows under
             // it do; the amount's field is focused from its row.
             .allowsHitTesting(false)
+            // The hold fills it, left to right (prd §1904 item 6).
+            .moveHoldFill()
         }
         .animation(DS.Motion.standard, value: verb)
         .animation(DS.Motion.standard, value: receipt)
@@ -2038,6 +2053,14 @@ struct MoveSentence: View {
             if group.hasCurrent, lines.isEmpty, sendGap == .with {
                 MoveClause(glue: g == 0 ? lead : String(localized: "and")) {
                     word(String(localized: "a token"), ink: DS.pickInk)
+                }
+            }
+            // **PUBLIC IS SAID (prd §1904 item 8, user: "the word public is
+            // important for privacy and security and users need to be
+            // aware"):** where the money leaves from, once, after what goes.
+            if g == 0, sellShown || !lines.isEmpty {
+                MoveClause(glue: String(localized: "from")) {
+                    word(String(localized: "your public account"), ink: MoveSentence.settledInk)
                 }
             }
             if !group.hasCurrent || toShown {
@@ -2508,11 +2531,11 @@ struct MoveSentence: View {
             VStack(alignment: .leading, spacing: 0) {
                 if receiveNetworks.isEmpty {
                     // Never an address the account cannot follow (§1442k).
-                    receivePlace(String(localized: "Public account"), glyph: "wallet.bifold",
+                    receivePlace(String(localized: "Your public account"), glyph: "wallet.bifold",
                                  fact: String(localized: "Not on any network from this \(ThisDevice.name) yet"),
                                  factInk: DS.attentionInk, place: "public", open: nil, copy: nil)
                 } else {
-                    receivePlace(String(localized: "Public account"), glyph: "wallet.bifold",
+                    receivePlace(String(localized: "Your public account"), glyph: "wallet.bifold",
                                  fact: Self.onlyOn(receiveNetworks.map(\.name)), place: "public",
                                  open: { receivePublic = true },
                                  copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })
@@ -2524,7 +2547,7 @@ struct MoveSentence: View {
                 // watched, and only there is its rule said (prd §1779).
                 // "New address each time" (user, 2026-11-18, of the board:
                 // "this should say new address each time").
-                receivePlace(String(localized: "Private balance"), glyph: "eye.slash",
+                receivePlace(String(localized: "Your private balance"), glyph: "eye.slash",
                              fact: String(localized: "Base, Ethereum, or Robinhood only, new address each time"), place: "fresh",
                              open: { goFresh() },
                              copy: {
@@ -2536,7 +2559,7 @@ struct MoveSentence: View {
                              })
             }
             if AztecProver.isAvailable, let aztec = AztecAccountStore.shared.shown.address {
-                receivePlace(String(localized: "Private account"), ink: DS.aztecInk, mark: "brand-aztec",
+                receivePlace(String(localized: "Your private account"), ink: DS.aztecInk, mark: "brand-aztec",
                              fact: String(localized: "Aztec to Aztec only"), factInk: DS.aztecInk, copyInk: DS.aztecInk, place: "aztec",
                              open: { open = nil; aztecReceive = true },
                              copy: {
@@ -2615,7 +2638,10 @@ struct MoveSentence: View {
                         Text(verbatim: fact).dsText(.fact15).foregroundStyle(factInk).lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Spacer(minLength: DS.Space.s2)
+                    // The words own the row up to Copy: a spacer beside them
+                    // wrapped "Base, Ethereum, Robinhood only" with half the
+                    // row empty (user, 2026-11-19: "this doesn't need to wrap").
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.vertical, Self.placeGap / 2)
                 .contentShape(Rectangle())
@@ -3100,9 +3126,27 @@ struct MoveSentence: View {
     /// The amount as the sentence says it: a figure, never a field. It is
     /// typed in its row (prd §1791).
     private func amountFigure(dollars: Bool) -> some View {
-        word((dollars ? "$" : "") + amount, ink: MoveSentence.settledInk)
-            .monospacedDigit()
-            .contentTransition(.numericText())
+        // **THE FIGURE IS TYPED IN THE SENTENCE (prd §1904 item 3):** a pink
+        // caret after it while the keys are up, so the typing is where it reads.
+        HStack(alignment: .center, spacing: 2) {
+            word((dollars ? "$" : "") + amount, ink: MoveSentence.settledInk)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+            if focus == .amount { MoveCaret().transition(.opacity) }
+        }
+    }
+
+    /// "That is 25.00 USDC" while a figure is typed (prd §1904 item 3): the
+    /// figure in the other unit, the one the keys are not typing.
+    @ViewBuilder private var thatIsLine: some View {
+        if focus == .amount, let with, let price = with.price, price > 0,
+           let typed = Double(amount), typed > 0, verb == .send || verb == .swap {
+            let other = amountInDollars
+                ? (typed / price).formatted(.number.precision(.significantDigits(1...6))) + " " + with.token.symbol
+                : Self.money(typed * price)
+            MoveFactRow(name: String(localized: "That is"), value: other, indented: false)
+                .transition(.opacity)
+        }
     }
 
     /// A kept line: tap it to edit it in place, hold it to remove it.
@@ -3613,11 +3657,10 @@ struct MoveSentence: View {
     /// A token list's search, its first row: the sentence's word never turns
     /// into a field, so the line never reflows (§1442b).
     private func searchRow(for which: Blank) -> some View {
-        HStack(spacing: MoveDeck.leadGap) {
+        HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
-                .frame(width: MoveDeck.lead)
                 .accessibilityHidden(true)
             if which == .to {
                 // To opens like a token list (§1442b, §1442h): keyboard down,
@@ -3649,7 +3692,13 @@ struct MoveSentence: View {
                 }
             }
         }
-        .frame(minHeight: Self.listRowHeight)
+        // **THE FIELD IS A BAR (user, 2026-11-19: "the name search bar should
+        // also be in its own bar, not just letters to tap"):** the entry well
+        // Apps' field stands on, the one box a page draws (prd §708).
+        .padding(.horizontal, DS.Space.s3)
+        .frame(minHeight: DS.Hit.min)
+        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, DS.Space.s1)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { searchHeight = $0 }
     }
 
@@ -3828,7 +3877,7 @@ struct MoveSentence: View {
         // step into your private balance or your private account.
         if verb == .send, sendsPrivately || sendsFromAztec {
             rows.append((Self.rowRank(.from), LedgerRow(id: "choiceFrom", name: Self.rowName(.from, verb: verb),
-                                                        value: String(localized: "Public"), opens: .from)))
+                                                        value: String(localized: "Your public account"), opens: .from)))
         }
         var seen: Set<String> = []
         for b in sentenceBlanks {
@@ -4104,13 +4153,13 @@ struct MoveSentence: View {
     /// where its rules are said; an Aztec address already typed goes along.
     private var fromList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            listRow(String(localized: "Public"), sub: network.name, symbol: "chart.pie", picked: true) {
+            listRow(String(localized: "Your public account"), sub: String(localized: "Anyone can see it"), symbol: "wallet.bifold", picked: true) {
                 withAnimation(DS.Motion.standard) { open = nil }
                 DSHaptic.selection()
             }
             if sendsPrivately {
                 listRow(String(localized: "Your private balance"),
-                        sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name, symbol: "eye.slash") {
+                        sub: String(localized: "Only you can see it"), symbol: "eye.slash") {
                     goPrivate(.send)
                 }
             }
@@ -4429,9 +4478,83 @@ struct MoveSentence: View {
         }
     }
 
+    /// **AGAIN LEADS THE FIRST STEP (prd §1904 item 5).** The last send
+    /// taken from this account, kept on this phone: one row at To's head that
+    /// fills the whole sentence again. A batch of several is not one send to
+    /// repeat, so only a lone send is kept.
+    struct Again: Codable, Equatable {
+        let to: String
+        let address: String
+        let chainId: Int
+        let symbol: String
+        let tokenID: String
+        let amount: String
+        let at: Date
+
+        static func key(_ account: String) -> String { "move.again.\(account.lowercased())" }
+        static func read(_ account: String) -> Again? {
+            UserDefaults.standard.data(forKey: key(account)).flatMap { try? JSONDecoder().decode(Again.self, from: $0) }
+        }
+        static func remember(_ batch: [Chain.Item], account: String) {
+            guard batch.count == 1, case .send(let p) = batch[0],
+                  let units = Decimal(string: p.amount) else { return }
+            let whole = units / pow(10, p.token.decimals)
+            let again = Again(to: p.toName ?? p.to, address: p.to, chainId: p.network.chainId, symbol: p.token.symbol,
+                              tokenID: p.token.contract?.lowercased() ?? p.token.symbol,
+                              amount: NSDecimalNumber(decimal: whole).stringValue, at: Date())
+            if let data = try? JSONEncoder().encode(again) { DefaultsWrite.set(data, forKey: key(account)) }
+        }
+        /// "Today", "Yesterday", "Tuesday", or the date.
+        var day: String {
+            let cal = Calendar.current
+            if cal.isDateInToday(at) { return String(localized: "Today") }
+            if cal.isDateInYesterday(at) { return String(localized: "Yesterday") }
+            if let days = cal.dateComponents([.day], from: at, to: .now).day, days < 7 { return at.formatted(.dateTime.weekday(.wide)) }
+            return at.formatted(.dateTime.month().day())
+        }
+    }
+    @State private var again: Again?
+    /// Bumped once when a move lands: the page's shower (prd §1904 item 10).
+    @State private var landedPulse = 0
+    /// The tile that rains: the Wallet's own seat.
+    static let rainSeat = "Wallet"
+
     private func readRecentTo() {
         recentTo = RecentTo.read(account)
+        again = Again.read(account)
+        #if DEBUG
+        // `-moveAgainSample YES`: Again over the demo, which keeps no sends.
+        if UserDefaults.standard.bool(forKey: "moveAgainSample") {
+            again = Again(to: "ana.eth", address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72", chainId: 8453,
+                          symbol: "USDC", tokenID: "usdc", amount: "20", at: Date().addingTimeInterval(-2 * 86_400))
+        }
+        #endif
         readPeople()
+    }
+
+    /// Again taken: the whole sentence as it was, the token matched to the
+    /// one held there now, the deck on to what is left (prd §1904 item 5).
+    private func takeAgain(_ a: Again) {
+        guard let net = Op.networks.first(where: { $0.chainId == a.chainId }) else { return }
+        withAnimation(DS.Motion.standard) {
+            if !networkPicked || network != net { switchNetwork(net) }
+            let there = heldBy[net.chainId] ?? []
+            if let held = there.first(where: { $0.id == a.tokenID })
+                ?? there.first(where: { $0.token.symbol.caseInsensitiveCompare(a.symbol) == .orderedSame }) {
+                choose(held)
+                inDollars = false
+                amount = a.amount
+            }
+            to = a.to
+            resolved = Recipient(address: a.address, name: a.to == a.address ? nil : a.to, imitates: nil)
+            open = nil
+        }
+        focus = nil
+        DSHaptic.selection()
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(280))
+            advance()
+        }
     }
 
     /// **TO READS YOUR CONTACTS (prd §1773).** Someone in Contacts with a
@@ -4539,21 +4662,8 @@ struct MoveSentence: View {
                     Text(verbatim: Self.lineCase(fact)).dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if let link = receipt.link, let name = receipt.linkName {
-                    Button { openURL(link) } label: {
-                        Text(verbatim: receipt.linkTitle ?? String(localized: "View on \(name)")).dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
-                    }
-                    .buttonStyle(RowPress())
-                }
-                // Where the move is kept (prd §1805).
-                Button {
-                    DSHaptic.selection()
-                    chrome.moveTray = false
-                    chrome.openWalletActivity()
-                } label: {
-                    Text("See in your activity").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
-                }
-                .buttonStyle(RowPress())
+                // The explorer and Activity are the deck's rows now (prd
+                // §1904 item 7): `receiptRows`.
                 // A first send to an unnamed address: name it here, and the
                 // next send is a pick from your book (prd §1586).
                 ForEach(receipt.names, id: \.self) { address in
@@ -5374,6 +5484,13 @@ struct MoveSentence: View {
         return v.formatted(.number.precision(.significantDigits(1...4)))
     }
 
+    /// A tile's dollars (prd §1904 item 11): whole dollars from ten up, so
+    /// "$324" fits Home's column; under ten, with cents.
+    static func money(_ usd: Double, whole: Bool) -> String {
+        guard whole, usd >= 10 else { return money(usd) }
+        return usd.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+    }
+
     /// Dollars, with cents; under a cent, two significant figures.
     static func money(_ usd: Double) -> String {
         let text: String
@@ -5483,6 +5600,18 @@ struct MoveSentence: View {
         .buttonStyle(RowPress())
     }
 
+    /// A person, a company or a tag at Home's app-icon size (prd §1904 item
+    /// 11): their face, else their mark, the name under it.
+    private func personTile(_ name: String, address: String?, mark: String?, act: @escaping () -> Void) -> some View {
+        MoveDeckTile(title: name, act: act) {
+            if let address {
+                WalletFace(address: address, size: DSHomeCircleMetrics.face, circular: true)
+            } else {
+                MoveRowMark(token: mark ?? name, size: DSHomeCircleMetrics.face)
+            }
+        }
+    }
+
     private var withList: some View {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
         // Spend looks on every network (prd §1666): what pays is turned into
@@ -5500,19 +5629,25 @@ struct MoveSentence: View {
         // Biggest first, whichever network it is on.
         .sorted { ($0.held.usd ?? -1) > ($1.held.usd ?? -1) }
         return VStack(alignment: .leading, spacing: 0) {
-            ForEach(rows, id: \.key) { row in
-                let h = row.held
-                let worth = h.usd.map { Self.money($0) }
-                // Holdings' grammar (prd §1719): the network, then the
-                // amount; the dollars trail, as every Wallet row's do.
-                listRow(h.token.symbol,
-                        sub: "\(row.net.name) · \(Op.spoken(left(h), decimals: h.token.decimals))",
-                        trailing: worth, mark: h.token.symbol) {
-                    pick {
-                        if !networkPicked || row.net != network { switchNetwork(row.net) }
-                        // Spend's amount is the card's value in dollars, whatever pays.
-                        if verb == .buy { with = h } else { choose(h) }
+            // **TOKENS AT HOME'S APP-ICON SIZE (prd §1904 item 11):** each a
+            // face with its network's badge, the symbol, the dollars; under
+            // the place they are in, said in full (§1904 item 8).
+            let privateHere = (verb == .send && !privateWithRows(q).isEmpty) || (verb == .swap && !privateSwapRows(q).isEmpty)
+            if !rows.isEmpty, privateHere { listHeader(String(localized: "Your public account")) }
+            MoveDeckGrid {
+                ForEach(rows, id: \.key) { row in
+                    let h = row.held
+                    MoveDeckTile(title: h.token.symbol, sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
+                                 picked: with?.id == h.id && networkPicked && row.net == network) {
+                        pick {
+                            if !networkPicked || row.net != network { switchNetwork(row.net) }
+                            // Spend's amount is the card's value in dollars, whatever pays.
+                            if verb == .buy { with = h } else { choose(h) }
+                        }
+                    } face: {
+                        MoveRowMark(token: h.token.symbol, network: Self.networkMark(row.net), size: DSHomeCircleMetrics.face)
                     }
+                    .accessibilityLabel(Text("\(h.token.symbol) on \(row.net.name)"))
                 }
             }
             // **PRIVATE MONEY IS ROWS HERE (prd §1719).** Send's "what" lists
@@ -5521,12 +5656,16 @@ struct MoveSentence: View {
             // from your private balance to …"). No switch, no network to
             // pick first; network and token pin down the one place.
             if verb == .send, !privateWithRows(q).isEmpty {
-                listHeader(String(localized: "Private"))
-                ForEach(privateWithRows(q), id: \.key) { p in
-                    listRow(p.symbol, sub: "\(p.network) · \(p.amount)", trailing: p.usd.map { Self.money($0) },
-                            mark: p.symbol) {
-                        pick {}
-                        p.act()
+                listHeader(String(localized: "Your private balance"))
+                MoveDeckGrid {
+                    ForEach(privateWithRows(q), id: \.key) { p in
+                        MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
+                            pick {}
+                            p.act()
+                        } face: {
+                            MoveRowMark(token: p.symbol, size: DSHomeCircleMetrics.face)
+                        }
+                        .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
                     }
                 }
             }
@@ -5534,12 +5673,16 @@ struct MoveSentence: View {
             // your private balance holds on Railgun under the same header:
             // picking one swaps it without it leaving your private balance.
             if verb == .swap, !privateSwapRows(q).isEmpty {
-                listHeader(String(localized: "Private"))
-                ForEach(privateSwapRows(q), id: \.key) { p in
-                    listRow(p.symbol, sub: "\(p.network) · \(p.amount)", trailing: p.usd.map { Self.money($0) },
-                            mark: p.symbol) {
-                        pick {}
-                        p.act()
+                listHeader(String(localized: "Your private balance"))
+                MoveDeckGrid {
+                    ForEach(privateSwapRows(q), id: \.key) { p in
+                        MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
+                            pick {}
+                            p.act()
+                        } face: {
+                            MoveRowMark(token: p.symbol, size: DSHomeCircleMetrics.face)
+                        }
+                        .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
                     }
                 }
             }
@@ -5727,10 +5870,20 @@ struct MoveSentence: View {
             // "Groups"):** Recent · Private · Addresses as words, the rows of
             // the one picked under them; a search spans all three.
             let groups = [recent.isEmpty ? nil : String(localized: "Recent"),
-                          poolsHere || aztecHere ? String(localized: "Private") : nil,
+                          poolsHere || aztecHere ? String(localized: "Yours") : nil,
                           String(localized: "Addresses")].compactMap { $0 }
             let grouped: String? = q.isEmpty ? (toGroup.flatMap { groups.contains($0) ? $0 : nil } ?? groups.first) : nil
             let shows: (String) -> Bool = { grouped == nil || grouped == $0 }
+            // Again, the last send whole, leads (prd §1904 item 5).
+            if q.isEmpty, items.isEmpty, verb == .send, let a = again,
+               Op.networks.contains(where: { $0.chainId == a.chainId }) {
+                let net = Op.networks.first { $0.chainId == a.chainId }?.name ?? ""
+                let who = a.to == a.address ? AddressTail.short(a.address) : a.to
+                listRow(String(localized: "Again: \(a.amount) \(a.symbol) to \(who)"),
+                        sub: String(localized: "On \(net) · \(a.day)"), symbol: "arrow.clockwise", bareSymbol: true) {
+                    takeAgain(a)
+                }
+            }
             if let grouped, groups.count > 1 {
                 MoveDeckGroups(words: groups, picked: grouped) { g in withAnimation(DS.Motion.standard) { toGroup = g } }
             }
@@ -5738,7 +5891,6 @@ struct MoveSentence: View {
             // To is someone's private balance: the send stays inside Railgun,
             // and nothing public names either side or the amount.
             if RailgunPocket.available, RailgunSwap.isPrivateAddress(q) {
-                listHeader(String(localized: "Private"))
                 listRow(String(localized: "Their private balance"), sub: YourAccount.short(q), symbol: "eye.slash") {
                     goRailgun(.takeBack, contract: nil, recipient: q)
                 }
@@ -5748,22 +5900,24 @@ struct MoveSentence: View {
             // the book, so the three stand only while the field is blank.
             if !recent.isEmpty, shows(String(localized: "Recent")) {
                 if grouped == nil { listHeader(String(localized: "Recent")) }
-                ForEach(recent, id: \.self) { entry in
-                    if ZkMoneyWire.tag(entry) != nil {
-                        // A tag is resolved as a typed one is: To looks it up.
-                        // One you saved wears the name you gave it (prd §1767).
-                        let saved = ContactBook.shared.name(for: Identity.key(.zkMoney, entry))
-                        listRow(saved ?? entry, sub: saved == nil ? "zk.money" : entry, mark: entry) {
-                            to = entry
-                            pick {}
-                        }
-                    } else {
-                        let name = AddressBook.shared.name(for: entry)
-                        listRow(name ?? YourAccount.short(entry), sub: name == nil ? nil : YourAccount.short(entry),
-                                mark: name, face: name.map(AssetMark.hasAsset) == true ? nil : entry) {
-                            to = name ?? entry
-                            resolved = Recipient(address: EIP55.checksum(entry), name: name, imitates: nil)
-                            pick {}
+                // People at Home's app-icon size (prd §1904 item 11).
+                MoveDeckGrid {
+                    ForEach(recent, id: \.self) { entry in
+                        if ZkMoneyWire.tag(entry) != nil {
+                            // A tag is resolved as a typed one is: To looks it up.
+                            // One you saved wears the name you gave it (prd §1767).
+                            let saved = ContactBook.shared.name(for: Identity.key(.zkMoney, entry))
+                            personTile(saved ?? entry, address: nil, mark: entry) {
+                                to = entry
+                                pick {}
+                            }
+                        } else {
+                            let name = AddressBook.shared.name(for: entry)
+                            personTile(name ?? YourAccount.short(entry), address: entry, mark: name) {
+                                to = name ?? entry
+                                resolved = Recipient(address: EIP55.checksum(entry), name: name, imitates: nil)
+                                pick {}
+                            }
                         }
                     }
                 }
@@ -5775,9 +5929,11 @@ struct MoveSentence: View {
             // protocol is ever picked: on Ethereum the token decides
             // (ETH and USDC to Privacy Pools, any other token to Railgun),
             // named only in the sentence's foot. One tap, never typed.
-            if grouped == nil, poolsHere || aztecHere { listHeader(String(localized: "Private")) }
-            if poolsHere, shows(String(localized: "Private")) {
-                listRow(balanceWord, sub: privateNet, symbol: "eye.slash") {
+            if grouped == nil, poolsHere || aztecHere { listHeader(String(localized: "Yours")) }
+            if shows(String(localized: "Yours")), poolsHere || aztecHere {
+            MoveDeckGrid {
+            if poolsHere {
+                MoveDeckTile(title: balanceWord) {
                     // The token decides (prd §1713 item 1): ETH and USDC to
                     // Privacy Pools, any other token on Ethereum to Railgun.
                     if RailgunPocket.available, let held = with, network == Op.ethereum,
@@ -5786,15 +5942,23 @@ struct MoveSentence: View {
                     } else {
                         goPrivate(.deposit)
                     }
+                } face: {
+                    Circle().fill(DS.fillFaint)
+                        .overlay(Image(systemName: "eye.slash").dsGlyph(.title, weight: .semibold).foregroundStyle(DS.brandInk))
                 }
             }
-            if aztecHere, shows(String(localized: "Private")) {
+            if aztecHere {
                 // Two nouns (prd §1779, reversing §1719's one): your private
-                // balance is Ethereum's, your private account is Aztec.
-                // Aztec's own mark, as Receive's row wears it (prd §1896).
-                listRow(String(localized: "Your private account"), sub: Self.aztecRule, image: "brand-aztec") {
+                // balance is Ethereum's, your private account is Aztec, each
+                // said in full (prd §1904 item 11: "we want users to think in
+                // terms of what they are trying to do not brand names").
+                MoveDeckTile(title: String(localized: "Your private account"), titleInk: DS.aztecInk) {
                     goAztec(.deposit)
+                } face: {
+                    Image("brand-aztec").resizable().scaledToFill()
                 }
+            }
+            }
             }
             // An Aztec address typed: a private send from Aztec (prd §1700f item 14).
             if AztecAddressText.isAztec(to), AztecProver.isAvailable {
@@ -5836,17 +6000,19 @@ struct MoveSentence: View {
                     pick {}
                 }
             }
-            ForEach(Array(book.filter { e in
-                (above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true)
-                    && !recent.contains { WalletWatch.sameAddress($0, e.address) }
-            }.prefix(20)), id: \.address) { e in
-                // A company in the book (Uniswap, Coinbase) wears its logo; a
-                // person, their face (prd §1534).
-                listRow(e.name, sub: YourAccount.short(e.address), mark: e.name,
-                        face: AssetMark.hasAsset(e.name) ? nil : e.address) {
-                    to = e.name
-                    resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
-                    pick {}
+            // The book at Home's app-icon size too (prd §1904 item 11).
+            MoveDeckGrid {
+                ForEach(Array(book.filter { e in
+                    (above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true)
+                        && !recent.contains { WalletWatch.sameAddress($0, e.address) }
+                }.prefix(20)), id: \.address) { e in
+                    // A company in the book (Uniswap, Coinbase) wears its logo; a
+                    // person, their face (prd §1534).
+                    personTile(e.name, address: AssetMark.hasAsset(e.name) ? nil : e.address, mark: e.name) {
+                        to = e.name
+                        resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
+                        pick {}
+                    }
                 }
             }
             ForEach(Array(found.prefix(8))) { p in
@@ -5893,7 +6059,7 @@ struct MoveSentence: View {
             let receivesPools = PrivateMove.freshAvailable
             let receivesAztec = AztecProver.isAvailable && AztecAccountStore.shared.shown.address != nil
             if receivesPools || receivesAztec {
-                listHeader(String(localized: "Private"))
+                listHeader(String(localized: "Your private balance"))
             }
             if receivesPools {
                 listRow(String(localized: "Your private balance"),
@@ -6757,17 +6923,36 @@ struct MoveSentence: View {
             if !steps.isEmpty {
                 MoveDeckSteps(steps: steps, disabled: stage != nil || receipt != nil)
             }
-            deckBody
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                // The keyboard covers the deck while a name or a search is
-                // typed: the deck keeps its field and first rows over it.
-                // With no steps (Receive) the body takes their row too, so the
-                // panel's edge stands where it does on every verb.
-                .frame(height: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
-                       + (steps.isEmpty ? MoveDeck.stepsHeight : 0), alignment: .top)
-                .clipped()
-            MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } }) {
-                footWord
+            let room = (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
+                + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
+            if receivePlacesUp {
+                // **RECEIVE'S PLACES ARE NEVER CUT (user, 2026-11-19, of
+                // Private account clipped over the back chevron: "this looks
+                // off").** Three places and two doors outgrow the deck's
+                // height; the panel rises to hold them all, never lower than
+                // every verb's edge.
+                deckBody
+                    .frame(maxWidth: .infinity, minHeight: room, alignment: .topLeading)
+                MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } }) {
+                    footWord
+                }
+            } else {
+                // The body runs under the foot and fades there (§1904 item 9).
+                ZStack(alignment: .bottom) {
+                    deckBody
+                        // A list's scroll rises above the foot it runs under.
+                        .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        // The keyboard covers the deck while a name or a search is
+                        // typed: the deck keeps its field and first rows over it.
+                        // With no steps (Receive) the body takes their row too, so the
+                        // panel's edge stands where it does on every verb.
+                        .frame(height: room + MoveDeck.footHeight, alignment: .top)
+                        .deckUnderFoot()
+                    MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } }) {
+                        footWord
+                    }
+                }
             }
         }
         .padding(.horizontal, Self.sideInset(inTray))
@@ -6794,6 +6979,60 @@ struct MoveSentence: View {
         }
     }
 
+    /// **DONE STAYS ON THE PAGE (prd §1904 item 7).** The sentence is in the
+    /// past tense and the facts are its receipt; the deck offers what comes
+    /// next: the same send again, the explorer, Activity, the receipt shared.
+    @ViewBuilder private func receiptRows(_ r: Receipt) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if verb == .send, let a = Again.read(account) {
+                Button {
+                    withAnimation(DS.Motion.standard) { receipt = nil; orderShown = nil }
+                    takeAgain(a)
+                } label: {
+                    MoveDeckRowLabel(name: String(localized: "Send again")) { receiptGlyph("arrow.clockwise") }
+                }
+                .buttonStyle(RowPress())
+            }
+            if let link = r.link, let name = r.linkName {
+                Button { openURL(link) } label: {
+                    MoveDeckRowLabel(name: r.linkTitle ?? String(localized: "View on \(name)")) { receiptGlyph("arrow.up.right") }
+                }
+                .buttonStyle(RowPress())
+            }
+            // Where the move is kept (prd §1805).
+            Button {
+                DSHaptic.selection()
+                chrome.moveTray = false
+                chrome.openWalletActivity()
+            } label: {
+                MoveDeckRowLabel(name: String(localized: "See in your activity")) { receiptGlyph("list.bullet") }
+            }
+            .buttonStyle(RowPress())
+            ShareLink(item: Self.receiptWords(r)) {
+                MoveDeckRowLabel(name: String(localized: "Share the receipt")) { receiptGlyph("square.and.arrow.up") }
+            }
+            .buttonStyle(RowPress())
+        }
+        .padding(.top, DS.Space.s2)
+    }
+
+    private func receiptGlyph(_ name: String) -> some View {
+        Image(systemName: name).dsGlyph(.title, weight: .semibold).foregroundStyle(DS.brandInk).accessibilityHidden(true)
+    }
+
+    /// "Sent 25 USDC to ana.eth on Base.": the receipt as one sentence.
+    static func receiptWords(_ r: Receipt) -> String {
+        let words = r.lines.map { line in [line.glue, line.text].compactMap { $0 }.joined(separator: " ") }
+        let text = ([r.past] + words).joined(separator: " ")
+        return text.hasSuffix(".") ? text : text + "."
+    }
+
+    /// Receive's places fill the deck (the same test `deckBody` draws them by).
+    private var receivePlacesUp: Bool {
+        receipt == nil && stage == nil && !kindOpen && deckOpen == nil && focus != .amount
+            && verb == .receive && receiveList
+    }
+
     /// The verb's two kinds are open in the deck (Buy: Gift cards · Tokens;
     /// Swap: Swap · Sweep), prd §1897 item 5.
     @State private var kindOpen = false
@@ -6801,12 +7040,14 @@ struct MoveSentence: View {
     /// What the step on asks: its list, the keys, the verb's kinds, Receive's
     /// places, or at Ready, Add another.
     @ViewBuilder private var deckBody: some View {
-        if receipt != nil || stage != nil {
+        if let receipt {
+            receiptRows(receipt).transition(.opacity)
+        } else if stage != nil {
             Color.clear
         } else if kindOpen {
             kindRows.transition(.opacity)
         } else if let o = deckOpen {
-            choices(room: textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2,
+            choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight,
                     searches: Self.searches(o), which: o, named: false) { list(for: o) }
                 .id(o)
                 .transition(.opacity)
@@ -6818,9 +7059,8 @@ struct MoveSentence: View {
                        disabled: stage != nil)
                 .padding(.top, DS.Space.s1)
                 .transition(.opacity)
-        } else if verb == .receive, receiveList {
-            ScrollView { receiveAddresses.padding(.vertical, DS.Space.s2) }
-                .scrollIndicators(.hidden)
+        } else if receivePlacesUp {
+            receiveAddresses.padding(.vertical, DS.Space.s2)
                 .transition(.opacity)
         } else if canAddAnother {
             addAnotherRow.transition(.opacity)
@@ -6835,7 +7075,9 @@ struct MoveSentence: View {
         switch (verb, which) {
         case (.send, .from), (.send, .network), (.send, .with): String(localized: "From")
         case (.swap, .network), (.swap, .with): String(localized: "From")
-        case (.swap, .destination), (.swap, .buy): String(localized: "To")
+        // **FOR, NEVER TO (prd §1904 item 2):** To is always a person or a
+        // place; what a swap buys is "for", as the sentence says it.
+        case (.swap, .destination), (.swap, .buy): String(localized: "For")
         case (.buy, .network), (.buy, .with): String(localized: "Pay with")
         case (.buy, .group), (.buy, .merchant): String(localized: "Merchant")
         case (.sweep, .under): String(localized: "Under")
@@ -6870,7 +7112,7 @@ struct MoveSentence: View {
         }
         var steps: [MoveDeckStep] = []
         if verbKinds.count == 2, stage == nil {
-            steps.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen) {
+            steps.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen, answered: true) {
                 withAnimation(DS.Motion.standard) {
                     open = nil
                     kindOpen.toggle()
@@ -6882,7 +7124,8 @@ struct MoveSentence: View {
             let group = members[w] ?? []
             let target = group.first { $0.value == Self.unpicked }?.opens ?? group.last?.opens
             let on = !kindOpen && group.contains { $0.opens != nil && $0.opens == current }
-            steps.append(MoveDeckStep(id: "step\(w)", word: w, on: on) {
+            let answered = !group.isEmpty && group.allSatisfy { $0.value != Self.unpicked }
+            steps.append(MoveDeckStep(id: "step\(w)", word: w, on: on, answered: answered) {
                 kindOpen = false
                 if on {
                     withAnimation(DS.Motion.standard) { open = nil }
@@ -6891,7 +7134,10 @@ struct MoveSentence: View {
                 }
                 guard var which = target else { return }
                 if which == .destination, !networkPicked { which = .network }
-                if which == .amount, with == nil, verb == .send || verb == .swap { which = .with }
+                // **AMOUNT ALWAYS RAISES THE KEYS (user, 2026-11-19: "clicking
+                // amount on send doesn't always pull up the keypad").** With
+                // no token yet it opened From instead; dollars typed first
+                // stay and become the token's units once one is picked.
                 tapBlank(which)
             })
         }
@@ -6980,6 +7226,14 @@ struct MoveSentence: View {
                                         act: done { inDollars = false; share.wrappedValue = 100 }))
             return out
         }
+        // No token yet: the sums stand dimmed in their row, so the keys never
+        // jump when one is picked (dollars typed first stay, §1898 item 6).
+        if with == nil, verb == .send || verb == .swap {
+            let step = Self.amountSteps.first.map { Self.money(Double($0)).replacingOccurrences(of: ".00", with: "") } ?? "$20"
+            return [MoveKeypadPreset(id: "step", title: step, enabled: false, act: {}),
+                    MoveKeypadPreset(id: "half", title: String(localized: "Half"), enabled: false, act: {}),
+                    MoveKeypadPreset(id: "all", title: String(localized: "All"), enabled: false, act: {})]
+        }
         if verb == .deposit {
             return Self.amountSteps.map { step in
                 MoveKeypadPreset(id: "\(step)", title: Self.money(Double(step)).replacingOccurrences(of: ".00", with: ""),
@@ -7018,6 +7272,7 @@ struct MoveSentence: View {
     private var deckFacts: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             unitLine
+            thatIsLine
             keptFacts
             line
             credits
@@ -7128,8 +7383,25 @@ struct MoveSentence: View {
     /// The chevron: a list or the keys close first, then Receive's page or
     /// the cost's list, then the menu.
     private func deckBack() {
-        if kindOpen { kindOpen = false; return }
+        // Kind is always the first step: back from it leaves the verb.
+        if kindOpen { kindOpen = false; backToMenu(); return }
         if costShown { details = false; return }
+        // **BACK WALKS THE STEPS (user, 2026-11-19, of an empty panel after
+        // back from the keys):** the step before the one on opens; back from
+        // the first leaves the verb. The deck is never left blank.
+        let steps = deckSteps
+        if let at = steps.firstIndex(where: \.on) {
+            if at > 0 {
+                if open != nil { open = nil }
+                if focus != nil { focus = nil }
+                steps[at - 1].act()
+                return
+            }
+            open = nil
+            focus = nil
+            backToMenu()
+            return
+        }
         if open != nil { open = nil; return }
         if focus != nil { focus = nil; return }
         if verb == .receive, elsewhere == nil, receivePublic || receiveOther {
@@ -7180,7 +7452,15 @@ struct MoveSentence: View {
         } else if nothingToMove {
             MoveFootWord(word: title(.receive)) { pickVerb(.receive) }
         } else if typingNotReady {
-            MoveFootWord(word: String(localized: "Done")) { focus = nil }
+            MoveFootWord(word: String(localized: "Done")) {
+                focus = nil
+                // The next step still to answer opens (prd §1782): Done never
+                // leaves the deck blank.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(280))
+                    advance()
+                }
+            }
         } else if let missingRow {
             MoveFootWord(word: missingWords(missingRow), ink: DS.textSecondary) {
                 tapBlank(missingRow == .amount && with == nil && (verb == .send || verb == .swap) ? .with : missingRow)
@@ -7839,12 +8119,14 @@ struct MoveSentence: View {
                 // Wallet next reads the account (§1442l).
                 if case .landed = sent.outcome {
                     for item in batch { if case .swap(let x) = item { Tokens.remember(x.buy, on: net) } }
+                    landedPulse &+= 1
                 }
                 settleRequest(batch, outcome: sent.outcome)
                 // Who Send sent to leads To next time (prd §1752): a send taken,
                 // never a dry run, a sweep or the demo's.
                 if verb == .send, !sweeping, sent.outcome != .dryRun, !YourAccountDemo.isDemo(account) {
                     RecentTo.remember(batch, account: account)
+                    Again.remember(batch, account: account)
                     readRecentTo()
                     // Who each one-time address was for, so Activity names
                     // the person and not "zk.money" (prd §1767).
@@ -8790,10 +9072,11 @@ struct MoveSentence: View {
         return VStack(alignment: .leading, spacing: 0) {
             if !spend.isEmpty {
                 listHeader(String(localized: "Where you spend"))
-                ForEach(spend) { merchantRow($0) }
+                MoveDeckGrid { ForEach(spend) { merchantTile($0) } }
                 listHeader(buyGroup.map { String(localized: "\($0.title) · popular") } ?? String(localized: "Popular"))
             }
-            ForEach(rows.prefix(60)) { merchantRow($0) }
+            // Merchants at Home's app-icon size (prd §1904 item 11).
+            MoveDeckGrid { ForEach(rows.prefix(60)) { merchantTile($0) } }
             if rows.isEmpty, spend.isEmpty, needsBitrefillSignIn {
                 // Face ID only on this press, never on picking Spend (user,
                 // 2026-11-02: "Face id happening before I press anything").
@@ -8828,12 +9111,17 @@ struct MoveSentence: View {
             .frame(minHeight: 32, alignment: .bottomLeading)
     }
 
-    private func merchantRow(_ p: BitrefillBuy.Product) -> some View {
+    private func merchantTile(_ p: BitrefillBuy.Product) -> some View {
         let name = BitrefillBuy.shortName(p.name)
-        return listRow(name, sub: p.packages.isEmpty ? BitrefillBuy.group(of: p).title : p.denominationsLine,
-                       mark: name, brand: Self.merchantMark(name), picked: buyProduct?.id == p.id) {
+        return MoveDeckTile(title: name, picked: buyProduct?.id == p.id) {
             pick {}
             Task { await chooseProduct(p) }
+        } face: {
+            if let brand = Self.merchantMark(name) {
+                BridgeIcon(name: brand, size: DSHomeCircleMetrics.face, circular: true)
+            } else {
+                MoveRowMark(token: name, size: DSHomeCircleMetrics.face)
+            }
         }
     }
 

@@ -715,7 +715,7 @@ grep -q 'MoveDeckRowLabel(name: String(localized: "From another network")' "$TMP
   && ! grep -q 'zk.money' "$TMP/from.txt" \
   || { echo "✗ Receive's ways in changed, or a zk.money claim came back without reading the link's voucher"; exit 1; }
 awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND" \
-  | awk '/String\(localized: "Public account"\), glyph: "wallet.bifold",/{p=NR} /receiveFromRows/{f=NR} /"Private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
+  | awk '/String\(localized: "Your public account"\), glyph: "wallet.bifold",/{p=NR} /receiveFromRows/{f=NR} /"Your private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
   || { echo "✗ the ways in no longer stand under the public account, before the private places"; exit 1; }
 
 # Paying a tag from your private balance (prd §1874): the tag goes to the

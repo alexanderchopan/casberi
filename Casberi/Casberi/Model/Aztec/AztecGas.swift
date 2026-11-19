@@ -147,6 +147,15 @@ enum AztecGas {
     /// in the private fee contract AND too little of its own, and none on its
     /// way. (Its own Fee Juice still pays, in the open, when the contract's
     /// cannot.)
+    /// **PRIVATE GAS (user, 2026-11-19: "wherever we do gas for aztec and pay
+    /// gas privately we say private gas").** The next send pays from the
+    /// private fee contract: what is inside, or a carried deposit it mints.
+    @MainActor
+    static var paysPrivately: Bool {
+        let (gas, inside, _) = standing
+        return inside + carried(gas) >= enoughPrivate
+    }
+
     @MainActor
     static var needed: Bool {
         let (gas, inside, own) = standing

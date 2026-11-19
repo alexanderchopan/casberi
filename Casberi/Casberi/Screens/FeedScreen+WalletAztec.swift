@@ -201,9 +201,12 @@ extension FeedScreen {
         return held && AztecGas.state == .none ? .enough : AztecGas.state
     }
 
-    static func gasLine(_ state: AztecGas.Standing) -> String {
-        guard let word = AztecGasTray.word(state) else { return String(localized: "Aztec · Gas") }
-        return String(localized: "Aztec · Gas") + " · " + word.words
+    @MainActor static func gasLine(_ state: AztecGas.Standing) -> String {
+        // Private gas is said so (user, 2026-11-19): what the private fee
+        // contract holds pays the next send without naming the account.
+        let name = AztecGas.paysPrivately ? String(localized: "Aztec · Private gas") : String(localized: "Aztec · Gas")
+        guard let word = AztecGasTray.word(state) else { return name }
+        return name + " · " + word.words
     }
 
     @ViewBuilder

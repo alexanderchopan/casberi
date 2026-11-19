@@ -7,15 +7,25 @@ import SwiftUI
 /// the foot is the way back and one word, held to act.
 enum MoveDeck {
     /// A step word's row, and the group words' row under it.
-    static let stepsHeight: CGFloat = 44
+    static let stepsHeight: CGFloat = 52
     /// Between two step words.
     static let stepGap: CGFloat = 22
     /// Between two group words.
     static let groupGap: CGFloat = 20
     /// The deck's height under its steps: room for the keys and a top row.
-    static let bodyHeight: CGFloat = 288
-    /// One key of the keypad.
-    static let keyHeight: CGFloat = 56
+    /// **IT SCALES WITH THE PHONE (user, 2026-11-19: "the bottom tray could
+    /// probably be taller … receive for example it should all be visible so
+    /// no need to scroll"):** 37% of the screen, never under the 288pt a
+    /// small phone keeps for its sentence and facts. One height for every
+    /// verb and step, so the panel's edge never moves.
+    static var bodyHeight: CGFloat { max(288, (UIScreen.main.bounds.height * 0.37).rounded()) }
+    /// One key of the keypad: the keys share what the sums and the fade leave.
+    static var keyHeight: CGFloat { max(56, ((bodyHeight - presetHeight - DS.Space.s1 - fade) / 4).rounded(.down)) }
+    /// How far a list fades into the foot (user, 2026-11-19: "the rows should
+    /// fade into the bottom not have a hard clip").
+    static let fade: CGFloat = 32
+    /// The foot's row: the back chevron and the act's word.
+    static var footHeight: CGFloat { stepsHeight + DS.Space.s2 }
     /// The keypad's top row of sums.
     static let presetHeight: CGFloat = 44
     /// A row of a step's list.
@@ -36,6 +46,9 @@ struct MoveDeckStep: Identifiable {
     let id: String
     let word: String
     var on = false
+    /// Its question has an answer (prd §1904 item 1): white, where one still
+    /// to answer stays grey.
+    var answered = false
     let act: () -> Void
 }
 
@@ -54,11 +67,18 @@ struct MoveDeckSteps: View {
                         s.act()
                         DSHaptic.selection()
                     } label: {
-                        Text(verbatim: s.word)
-                            .dsText(.heading17)
-                            .foregroundStyle(s.on && !disabled ? DS.textPrimary : DS.textSecondary)
-                            .frame(minHeight: MoveDeck.stepsHeight)
-                            .contentShape(Rectangle())
+                        // **WHAT IS ANSWERED SHOWS (prd §1904 item 1):** the
+                        // open step pink over a dot, an answered one white,
+                        // one still to answer grey; at Home's section rung.
+                        VStack(spacing: 3) {
+                            Text(verbatim: s.word)
+                                .dsText(.heading24)
+                                .foregroundStyle(ink(s))
+                            Circle().fill(DS.pickInk).frame(width: 5, height: 5)
+                                .opacity(s.on && !disabled ? 1 : 0)
+                        }
+                        .frame(minHeight: MoveDeck.stepsHeight)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
                     .disabled(disabled)
@@ -69,7 +89,22 @@ struct MoveDeckSteps: View {
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
         .frame(height: MoveDeck.stepsHeight)
+        // A row wider than the phone goes out under a soft edge (§1904 item 1).
+        .mask {
+            HStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: MoveDeck.fade)
+            }
+        }
         .animation(DS.Motion.standard, value: steps.map(\.on))
+        .animation(DS.Motion.standard, value: steps.map(\.answered))
+    }
+
+    private func ink(_ s: MoveDeckStep) -> Color {
+        if disabled { return DS.textSecondary }
+        if s.on { return DS.pickInk }
+        return s.answered ? DS.textPrimary : DS.textSecondary
     }
 }
 
@@ -290,14 +325,17 @@ struct MoveHoldWord: View {
                     try? await Task.sleep(for: .milliseconds(400))
                     fill = 0
                     fired = false
+                    MoveHoldState.shared.held = false
                 }
             } onPressingChanged: { pressing in
                 guard enabled else { return }
                 if pressing {
                     DSHaptic.selection()
                     withAnimation(.linear(duration: MoveDeck.hold)) { fill = 1 }
+                    MoveHoldState.shared.held = true
                 } else if !fired {
                     withAnimation(DS.Motion.standard) { fill = 0 }
+                    MoveHoldState.shared.held = false
                 }
             }
             .accessibilityElement(children: .ignore)
@@ -369,6 +407,157 @@ struct MoveDeckFoot<Word: View>: View {
             Spacer(minLength: DS.Space.s2)
             word()
         }
-        .frame(minHeight: MoveDeck.stepsHeight + DS.Space.s2)
+        .frame(minHeight: MoveDeck.footHeight)
     }
+}
+
+extension View {
+    /// **LISTS GO UNDER THE FOOT (prd §1904 item 9, user: "i don't want the
+    /// scrolling lists to feel like they hit a hard black wall at the
+    /// bottom").** The body runs on under the foot, its scroll inset by the
+    /// foot so the last row can rise above it, and fades out as it passes
+    /// under the act's word: one surface to the panel's bottom, never a cut.
+    func deckUnderFoot() -> some View {
+        mask {
+                VStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .black.opacity(0.2), .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: MoveDeck.fade + MoveDeck.footHeight * 0.3)
+                    Color.clear.frame(height: MoveDeck.footHeight * 0.7)
+                }
+            }
+    }
+}
+
+
+/// **A CHOICE AT HOME'S APP-ICON SIZE (prd §1904 item 11, user: "i really
+/// liked seeing the tokens as icons in horizontal rows … why not make them
+/// the size of the app icons on home screen?").** Home's circle and column
+/// (`DSHomeCircleMetrics`): the face, its name under it, a grey line under
+/// that; five across, so a deck shows what a list of rows took a scroll for.
+/// The pick wears a ring in the pick's ink; one left out is dimmed.
+struct MoveDeckTile<Face: View>: View {
+    let title: String
+    var sub: String?
+    var subInk: Color = DS.textSecondary
+    var titleInk: Color = DS.textPrimary
+    var picked = false
+    var dim = false
+    let act: () -> Void
+    @ViewBuilder let face: () -> Face
+
+    var body: some View {
+        Button {
+            act()
+            DSHaptic.selection()
+        } label: {
+            VStack(spacing: DS.Space.s1) {
+                face()
+                    .frame(width: DSHomeCircleMetrics.face, height: DSHomeCircleMetrics.face)
+                    .clipShape(Circle())
+                    .padding(3)
+                    .overlay(Circle().strokeBorder(DS.pickInk, lineWidth: 2).opacity(picked ? 1 : 0))
+                    .accessibilityHidden(true)
+                Text(verbatim: title)
+                    .dsText(.label12)
+                    .foregroundStyle(picked ? DS.pickInk : titleInk)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.8)
+                    // Wraps inside its own column, never into a neighbour's.
+                    .frame(width: DSHomeCircleMetrics.column)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let sub {
+                    Text(verbatim: sub)
+                        .dsText(.label12)
+                        .foregroundStyle(subInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            .frame(width: DSHomeCircleMetrics.column + DS.Space.s3)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .opacity(dim ? 0.4 : 1)
+        }
+        .buttonStyle(PressSpring())
+        .disabled(dim)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(picked ? [.isSelected] : [])
+    }
+}
+
+/// Five across, Home's app row folded into rows (prd §1904 item 11).
+struct MoveDeckGrid<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .top), count: 5),
+                  alignment: .leading, spacing: DS.Space.s3) {
+            content()
+        }
+        .padding(.vertical, DS.Space.s2)
+    }
+}
+
+/// The keys' caret in the sentence (prd §1904 item 3): the pick's ink, the
+/// figure's height, blinking unless Reduce Motion is on.
+struct MoveCaret: View {
+    @Environment(\.accessibilityReduceMotion) private var still
+    @State private var on = true
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1.5)
+            .fill(DS.pickInk)
+            .frame(width: 3, height: 34)
+            .opacity(still || on ? 1 : 0.15)
+            .accessibilityHidden(true)
+            .task {
+                guard !still else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(530))
+                    withAnimation(.easeInOut(duration: 0.18)) { on.toggle() }
+                }
+            }
+    }
+}
+
+
+/// Whether the act's word is being held, for the sentence to fill with it
+/// (prd §1904 item 6). One hold at a time: one Move page is up.
+@MainActor @Observable final class MoveHoldState {
+    static let shared = MoveHoldState()
+    var held = false
+}
+
+/// **THE HOLD FILLS THE SENTENCE (prd §1904 item 6).** While the act is
+/// held the sentence turns the pick's ink left to right, at the hold's own
+/// pace; let go early and it drains. Reduce Motion fills it at once.
+struct MoveHoldFill: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var still
+    @State private var fill: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .topLeading) {
+                content
+                    .colorMultiply(DS.pickInk)
+                    .mask(alignment: .leading) {
+                        GeometryReader { geo in Rectangle().frame(width: geo.size.width * fill) }
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+            .onChange(of: MoveHoldState.shared.held) { _, held in
+                if held {
+                    withAnimation(still ? nil : .linear(duration: MoveDeck.hold)) { fill = 1 }
+                } else {
+                    withAnimation(DS.Motion.standard) { fill = 0 }
+                }
+            }
+    }
+}
+
+extension View {
+    func moveHoldFill() -> some View { modifier(MoveHoldFill()) }
 }

@@ -163,20 +163,6 @@ final class LendMove {
         }
     }
 
-    /// The amounts offered: the token's ladder under what is available, then
-    /// all of it.
-    func choices(_ m: Market) -> [String] {
-        guard let have = available(m).flatMap({ Decimal(string: $0) }), have > 0 else { return [] }
-        let ladder = m.native ? Self.ethLadder : Self.usdcLadder
-        return ladder.filter { step in
-            guard let units = PrivateMoney.baseUnits(step, decimals: m.decimals).flatMap({ Decimal(string: $0) }) else { return false }
-            return units < have
-        }
-    }
-
-    static let usdcLadder = ["1", "5", "10", "25", "50", "100", "250", "500", "1000", "2500", "5000", "10000"]
-    static let ethLadder = ["0.001", "0.005", "0.01", "0.025", "0.05", "0.1", "0.25", "0.5", "1", "2.5", "5"]
-
     /// The amount in base units: what was picked, or all of what is available.
     var units: String? {
         guard let m = market else { return nil }
@@ -208,23 +194,11 @@ final class LendMove {
         value.formatted(.currency(code: "USD").precision(.fractionLength(2)))
     }
 
-    /// Under the sentence: "$100.00 · you have $250.00" (lend) or
-    /// "$100.00 · $500.00 lent" (take back); no price, the token.
-    var amountLine: String? {
+    /// "$250.00" (or "0.08 ETH" with no price): what the amount may come out
+    /// of, the You have fact's value (prd §1898 item 6).
+    var haveFigure: String? {
         guard let m = market, let have = available(m) else { return nil }
-        var parts: [String] = []
-        if let units, let usd = dollars(units, in: m) { parts.append(Self.usd(usd)) }
-        let haveText = dollars(have, in: m).map(Self.usd) ?? PrivateMoney.figure(have, decimals: m.decimals, symbol: m.symbol)
-        parts.append(mode == .lend ? String(localized: "you have \(haveText)") : String(localized: "\(haveText) lent"))
-        return parts.joined(separator: " · ")
-    }
-
-    /// "You have $250.00" (lend) or "$500.00 lent" (take back): the head of
-    /// the amount's menu (prd §1802).
-    var haveLine: String? {
-        guard let m = market, let have = available(m) else { return nil }
-        let text = dollars(have, in: m).map(Self.usd) ?? PrivateMoney.figure(have, decimals: m.decimals, symbol: m.symbol)
-        return mode == .lend ? String(localized: "You have \(text)") : String(localized: "\(text) lent")
+        return dollars(have, in: m).map(Self.usd) ?? PrivateMoney.figure(have, decimals: m.decimals, symbol: m.symbol)
     }
 
     /// Half of what is available, in the token's own places, rounded down;
@@ -282,10 +256,8 @@ final class LendMove {
                 symbol = first.symbol
             }
         }
-        if let m = market, amount == nil, !all {
-            amount = choices(m).last
-            all = amount == nil && (Decimal(string: available(m) ?? "0") ?? 0) > 0
-        }
+        // No amount is picked for you: the deck opens on the keys (prd §1897
+        // item 4, the ladder that pre-picked one is deleted).
         stage = .ready
     }
 

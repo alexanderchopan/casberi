@@ -595,7 +595,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// where there is a second thing to do.
     private var foot: some View {
         VStack(spacing: 0) {
-            MoveFlow { sentence }
+            MoveFlow { sentence }.moveHoldFill()
                 // The sentence says the move and is no control (prd
                 // §1781): its choices are the rows under it.
                 .allowsHitTesting(false)

@@ -261,14 +261,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2082 of 2156 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2085 of 2159 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
 - §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
 - §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a)
-- §7 — Outcomes — Bob (amended by §1100, §1498, §1666)
+- §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
 - §9 — Problems (amended by §1556, §1567, §1568)
 - §10 — Solutions (amended by §1208)
@@ -1930,7 +1930,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1531 — Your own model is always asked, and a reply that is only its marker is not an answer (amends §1478)
 - §1532 — Move offers the tokens you would know, and asks a failed network again (amends §1438, §1440)
 - §1533 — Search takes the paste, and every stablecoin wears its mark (amends §1532, §1440)
-- §1534 — Every row in Move wears a mark, and the first list opens itself (amends §1438c, §1440, §1442b, §1486)
+- §1534 — Every row in Move wears a mark, and the first list opens itself (amends §1438c, §1440, §1442b, §1486) (amended by §1905)
 - §1535 — The Wallet page's box follows a scope switch (amends §1403)
 - §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530) (amended by §1590)
 - §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §… (amended by §1547, §1558)
@@ -2107,7 +2107,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1699 — L2BEAT is ETHBEAT
 - §1700 — Your Aztec account: a second account for Aztec's apps, on mainnet, signed on this iPhone; Aztec apps open in Casberi'… (amended by §1700a, §1700b, §1700c, §1700f, §1700j, §1753, §1756)
 - §1700a — No create step: your Aztec account comes with Your account, its row appears once it is used, and the Safe funds it (amended by §1700t)
-- §1700aa — Gas on Aztec is private and is bought with what you move: it goes to the ecosystem's shared private fee contract, the… (amended by §1759)
+- §1700aa — Gas on Aztec is private and is bought with what you move: it goes to the ecosystem's shared private fee contract, the… (amended by §1759, §1905)
 - §1700ab — Half · All is one control, as Round-ups' is: its halves share the row's width, never two small pills on the left (ame…
 - §1700ac — A deposit into Aztec arrives on its own: it is claimed on the Wallet's open, stands in Holdings › Private as a grey r…
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
@@ -2203,7 +2203,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1758 — A tile wears a vector icon, and Galactica is called Galactica
 - §1759 — An app's transaction on Aztec pays its gas as Casberi's own sends do
 - §1760 — Casberi answers `grantPublicAuthwit`, the Nulo wallet's method, so an app can ask for a public authorization (extends…
-- §1761 — Gas on Aztec is added where it is found missing: on an app's approval sheet and from Holdings' gas row (extends §1700…
+- §1761 — Gas on Aztec is added where it is found missing: on an app's approval sheet and from Holdings' gas row (extends §1700… (amended by §1905)
 - §1762 — The authorizations you gave Aztec apps are listed in Wallet › Permissions and can be taken back (extends §1760, which…
 - §1763 — An approval sheet says what each call says (extends §1700j's sheet, which named the function alone)
 - §1764 — An app's transaction lands in the Wallet's Activity (extends §1700's Activity, which Aztec apps never reached)
@@ -2339,12 +2339,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
 - §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898, §1900, §1901)
-- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899)
-- §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899)
+- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904)
+- §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904)
 - §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900)
-- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready
-- §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902)
-- §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;…
+- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904)
+- §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902, §1903, §1904)
+- §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;… (amended by §1903)
+- §1903 — The Deck after its first walk: the deck takes 37% of the phone, its lists fade into the foot, Amount always raises th… (amended by §1904)
+- §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show…
+- §1905 — Private gas is said so, and Base's mark is its own tile
 
 ## Dead rulings → what replaced them (generated)
 
