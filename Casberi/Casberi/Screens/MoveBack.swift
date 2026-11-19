@@ -81,23 +81,66 @@ struct MoveChoiceRowLabel: View {
     var note: String?
 
     var body: some View {
-        // **ONE LINE (prd §1794, the user of the Apple canvas: "board 3 is
-        // better").** The name at the leading edge in grey, the answer at
-        // the trailing edge a step under the sentence, and the system's
-        // menu chevron after it: a menu opens here, never a page.
-        HStack(alignment: .center, spacing: DS.Space.s2) {
-            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .layoutPriority(1)
-            Spacer(minLength: DS.Space.s3)
-            MoveChoiceValue(value: value, ink: ink, chevron: chevron, mark: mark, note: note)
+        // **HOME'S ROW (prd §1889, the user over Home and Move side by side:
+        // "i like it").** The mark leads, what is picked is the row's name,
+        // and what the row asks is its grey line under it, as every Wallet
+        // row reads; a chevron because something opens. A row with no mark
+        // keeps the column, so every answer starts at one edge.
+        HStack(alignment: .center, spacing: Self.leadGap) {
+            Group {
+                if let mark {
+                    MoveRowMark(token: mark.token, network: mark.network, brand: mark.brand, size: Self.markSize)
+                } else {
+                    // No mark yet: the row's own glyph on a quiet disc, as
+                    // Home's rows lead (prd §1889).
+                    Image(systemName: Self.glyph(for: name)).dsGlyph(.body, weight: .medium)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(width: Self.markSize, height: Self.markSize)
+                        .background(Circle().fill(DS.fillFaint))
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(width: Self.markSize, height: Self.markSize)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: DS.Space.s2) {
+                    if let note {
+                        Text(verbatim: note).dsText(.heading17).foregroundStyle(DS.attentionInk).lineLimit(1)
+                    }
+                    Text(verbatim: value)
+                        .dsText(.heading20)
+                        .foregroundStyle(ink)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(verbatim: name).dsText(.fact15).foregroundStyle(DS.textSecondary).lineLimit(1)
+            }
+            Spacer(minLength: DS.Space.s2)
+            Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+                .opacity(chevron ? 1 : 0)
+                .accessibilityHidden(true)
         }
         .frame(minHeight: MoveChoiceRowLabel.height)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
-    static let height: CGFloat = 44
+    static let markSize: CGFloat = 36
+
+    /// A row's glyph when it has no mark, by what it asks.
+    static func glyph(for name: String) -> String {
+        switch name {
+        case String(localized: "To"): "person"
+        case String(localized: "From"): "wallet.bifold"
+        case String(localized: "Network"): "globe"
+        case String(localized: "Amount"): "dollarsign"
+        default: "circle.dotted"
+        }
+    }
+    static let leadGap: CGFloat = DS.Space.s4
+    /// Where a row's words start: an open list lines up under them (prd §1889).
+    static var leadColumn: CGFloat { markSize + leadGap }
+    static let height: CGFloat = 64
 }
 
 /// A choice's answer with its mark and the menu chevron: a whole row's
@@ -200,8 +243,8 @@ struct MoveChoiceRows<Menu: View>: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Changes it"))
-                    // The row whose menu is up stays lit (prd §1804).
-                    .opacity(open.wrappedValue == nil || open.wrappedValue == r.id ? 1 : 0.5)
+                    // The row whose list is open stays lit; the rest step back (prd §1889).
+                    .opacity(open.wrappedValue == nil || open.wrappedValue == r.id ? 1 : MoveSentence.steppedBack)
                     .animation(DS.Motion.standard, value: open.wrappedValue)
                     .overlay(alignment: .trailing) {
                         if let field = r.field {
@@ -211,11 +254,11 @@ struct MoveChoiceRows<Menu: View>: View {
                                 .accessibilityHidden(!r.typing)
                         }
                     }
-                    .popover(isPresented: Binding(get: { open.wrappedValue == r.id },
-                                                  set: { if !$0, open.wrappedValue == r.id { open.wrappedValue = nil } }),
-                             attachmentAnchor: .point(UnitPoint(x: 0.82, y: 1)), arrowEdge: .top) {
+                    // The list opens in place under its row (prd §1889).
+                    if open.wrappedValue == r.id {
                         MoveMenuBox { menu(r.id) }
                             .environment(chrome)
+                            .transition(.opacity)
                     }
                     }
                 }
@@ -285,23 +328,10 @@ struct MoveMenuBox<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            box
-            ScrollView { box }.scrollIndicators(.hidden)
-        }
-        .frame(width: MoveSentence.menuWidth)
-        .frame(maxHeight: MoveSentence.menuRoom)
-        .presentationCompactAdaptation(.popover)
-        // **GLASS, NOT A SLAB (prd §1804):** the rows and the sentence
-        // show through it, blurred.
-        .dsMenuGlass()
-    }
-
-    private var box: some View {
+        // **IN PLACE, NOT A BOX (prd §1889, retiring §1804's glass):** the
+        // list stands under its row in the rows' column; the page scrolls.
         VStack(alignment: .leading, spacing: 0) { content() }
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
+            .padding(.vertical, DS.Space.s2)
     }
 }
 

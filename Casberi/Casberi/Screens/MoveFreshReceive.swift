@@ -70,7 +70,7 @@ struct MoveFreshSentence<Head: View>: View {
                                                         mark: MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) },
                                                         fixed: true) {},
                                           MoveChoiceRow(id: "from", name: String(localized: "From"),
-                                                        value: fromPrivate ? String(localized: "A private balance") : String(localized: "Anyone")) {
+                                                        value: fromPrivate ? String(localized: "A private balance") : String(localized: "Any address")) {
                                               withAnimation(DS.Motion.standard) { fromOpen.toggle() }
                                               DSHaptic.selection()
                                           }],
@@ -223,7 +223,7 @@ struct MoveFreshSentence<Head: View>: View {
                     if priv, privateAddress == nil { Task { await readPrivateAddress() } }
                 } label: {
                     HStack {
-                        Text(priv ? "A private balance" : "Anyone").dsText(.body17)
+                        Text(priv ? "A private balance" : "Any address").dsText(.body17)
                             .foregroundStyle(priv == fromPrivate ? DS.textSecondary : DS.textPrimary)
                         Spacer(minLength: DS.Space.s2)
                     }

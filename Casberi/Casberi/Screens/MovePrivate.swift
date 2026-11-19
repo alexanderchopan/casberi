@@ -225,7 +225,7 @@ struct MovePrivateSentence<Head: View>: View {
                 MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
-                                hint: Text("Picks who it goes to"))
+                                hint: Text("Picks the address"))
             } else if move.recipient != nil || move.tag != nil {
                 // Nobody picked is not said (prd §1791): no "to address".
                 MoveClause(glue: String(localized: "to")) { recipientWord }
@@ -251,7 +251,7 @@ struct MovePrivateSentence<Head: View>: View {
                 MoveWord(String(localized: "your private balance"), ink: MoveSentence.settledInk)
             }
             .buttonStyle(RowPress())
-            .accessibilityHint(Text("Picks who it goes to"))
+            .accessibilityHint(Text("Picks the address"))
         } else {
             // A failed read leaves the address open: the relayer's fee does
             // not wait on it, and taking one reads again (`take`).
@@ -271,7 +271,7 @@ struct MovePrivateSentence<Head: View>: View {
                 }
             }
             .buttonStyle(RowPress())
-            .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick who it goes to")))
+            .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick an address")))
         }
     }
 

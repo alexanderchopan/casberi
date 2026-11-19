@@ -5435,6 +5435,39 @@ struct FlowLayout: Layout {
     /// can wrap or shrink inside it (Move's sentence, prd §1501). Off for
     /// every other flow, which lays out as it always has.
     var fitsWide = false
+    /// **BALANCED LINES (prd §1889, the user: "these ways it wraps make our
+    /// sentences look like errors").** Lays out at the narrowest width that
+    /// keeps the same number of lines, so a wrapped sentence splits evenly
+    /// and no word is left alone on its last line ("Send 0.01 ETH / on
+    /// Base."), as CSS's `text-wrap: balance`. Move's sentence only.
+    var balances = false
+
+    /// How many lines the pieces take at `width`.
+    private func lineCount(_ subviews: Subviews, _ width: CGFloat) -> Int {
+        var x: CGFloat = 0, lines = 1
+        for view in subviews {
+            let (size, _) = measure(view, width)
+            let breaks = view[FlowBreak.self] && x > 0
+            if breaks || (x + size.width > width && x > 0) { lines += 1; x = 0 }
+            x += size.width + spacing
+        }
+        return lines
+    }
+
+    /// The width to lay out at: the offer, or with `balances` the narrowest
+    /// that keeps its line count (found by halving, to the half point).
+    private func layoutWidth(_ subviews: Subviews, _ offered: CGFloat) -> CGFloat {
+        guard balances, offered.isFinite, offered > 0 else { return offered }
+        let lines = lineCount(subviews, offered)
+        guard lines > 1 else { return offered }
+        let widest = subviews.map { measure($0, offered).0.width }.max() ?? 0
+        var lo = max(widest, 1), hi = offered
+        while hi - lo > 0.5 {
+            let mid = (lo + hi) / 2
+            if lineCount(subviews, mid) <= lines { hi = mid } else { lo = mid }
+        }
+        return hi
+    }
 
     private func measure(_ view: LayoutSubview, _ width: CGFloat) -> (CGSize, ProposedViewSize) {
         let natural = view.sizeThatFits(.unspecified)
@@ -5444,7 +5477,8 @@ struct FlowLayout: Layout {
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? .infinity
+        let offered = proposal.width ?? .infinity
+        let width = layoutWidth(subviews, offered)
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
         for view in subviews {
             let (size, _) = measure(view, width)
@@ -5455,7 +5489,7 @@ struct FlowLayout: Layout {
             x += size.width + spacing
             rowH = max(rowH, size.height)
         }
-        return CGSize(width: width, height: y + rowH)
+        return CGSize(width: offered.isFinite ? offered : width, height: y + rowH)
     }
 
     /// Wraps against the width it was MEASURED for, not the placed bounds,
@@ -5463,7 +5497,7 @@ struct FlowLayout: Layout {
     /// the edge would otherwise hop at placement, under a height that left
     /// it no room (prd §1511).
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let width = proposal.width ?? bounds.width
+        let width = layoutWidth(subviews, proposal.width ?? bounds.width)
         var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
         for view in subviews {
             let (size, offer) = measure(view, width)

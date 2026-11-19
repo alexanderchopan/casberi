@@ -745,7 +745,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
                                 ink: move.stage == .ready ? DS.aztecInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
-                                hint: Text("Picks who it goes to"))
+                                hint: Text("Picks the address"))
                 MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
             } else {
                 MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private account on Aztec"),
@@ -769,7 +769,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
         }
         .buttonStyle(RowPress())
-        .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick who it goes to")))
+        .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick an address")))
     }
 
     /// The amount, typed (prd §1700q): the decimal pad, the token's places

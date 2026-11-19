@@ -72,11 +72,13 @@ struct MoveMenuVerbs: View {
         VStack(alignment: .trailing, spacing: 0) {
             ForEach(MoveMenu.offered, id: \.self) { verb in
                 Button { MoveMenu.pick(verb, chrome) } label: {
+                    // Home's section rung (prd §1889, retiring heading44):
+                    // the menu reads as the app's own rows.
                     Text(verbatim: verb.label)
-                        .dsText(.heading44)
+                        .dsText(.heading24)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                        .frame(minHeight: 62, alignment: .trailing)
+                        .frame(minHeight: 48, alignment: .trailing)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())

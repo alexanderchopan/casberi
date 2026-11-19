@@ -2022,7 +2022,8 @@ struct MoveSentence: View {
                 }
             } else if sendGap == .to {
                 MoveClause(glue: String(localized: "to")) {
-                    word(String(localized: "someone") + (networkPicked ? "" : "."), ink: DS.pickInk)
+                    // An address, never "someone": it may not be a person (prd §1889).
+                    word(String(localized: "an address") + (networkPicked ? "" : "."), ink: DS.pickInk)
                 }
             }
         }
@@ -2687,8 +2688,8 @@ struct MoveSentence: View {
     /// the only pink one, so it needs no help standing out (retires
     /// §1616's step-back).
     static var settledInk: Color { DS.textPrimary }
-    static var glueInk: Color { DS.textSecondary }
-    static let rung: DSTextStyle = .heading34
+    static var glueInk: Color { DS.textPrimary }
+    static let rung: DSTextStyle = .sentence32
     /// A choice is the Wallet's own row (prd §1731, retiring §1681's
     /// heading24): the name at `body17` over its line at `subhead12`, the
     /// figure at `price17`, so a token reads here as it does in Holdings.
@@ -3439,11 +3440,11 @@ struct MoveSentence: View {
     /// A token list's search, its first row: the sentence's word never turns
     /// into a field, so the line never reflows (§1442b).
     private func searchRow(for which: Blank) -> some View {
-        HStack(spacing: DS.Space.s3) {
+        HStack(spacing: MoveChoiceRowLabel.leadGap) {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.textSecondary)
-                .frame(width: Self.listMark)
+                .frame(width: MoveChoiceRowLabel.markSize)
                 .accessibilityHidden(true)
             if which == .to {
                 // To opens like a token list (§1442b, §1442h): keyboard down,
@@ -3612,18 +3613,13 @@ struct MoveSentence: View {
         choices(room: which == .amount ? Self.menuRoom + 120 : Self.menuRoom, searches: Self.searches(which), which: which, named: false) {
             list(for: which)
         }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.top, DS.Space.s4)
-        .padding(.bottom, DS.Space.s2)
-        .frame(width: Self.menuWidth)
-        // As tall as its rows: the popover is sized by what it holds.
+        // In place under its row (prd §1889): the page's edge, its marks
+        // under the rows' marks, no box.
+        .padding(.vertical, DS.Space.s2)
         .fixedSize(horizontal: false, vertical: true)
         .environment(chrome)
         .onAppear { menuUp = true }
         .onDisappear { menuGone() }
-        .presentationCompactAdaptation(.popover)
-        // Thick enough that the foot's act does not read through the rows.
-        .presentationBackground(.ultraThickMaterial)
     }
 
     /// A menu has left the screen: after a pick, the next row still to be
@@ -3639,7 +3635,10 @@ struct MoveSentence: View {
     }
 
     static let menuWidth: CGFloat = 280
-    static let menuRoom: CGFloat = 300
+    /// How far the rows not being chosen step back while a list is open (prd §1889).
+    static let steppedBack: Double = 0.25
+    /// As tall as a list needs, in place (prd §1889): the page scrolls, not the list.
+    static let menuRoom: CGFloat = 2000
 
     /// **ROWS CHANGE IT, THE SENTENCE SAYS IT (prd §1781, completing §1779;
     /// a tester, 2026-11-13: "I had no idea words are tappable"; the user:
@@ -3789,7 +3788,7 @@ struct MoveSentence: View {
 
     private func missingWords(_ which: Blank) -> String {
         switch which {
-        case .to: String(localized: "Choose who")
+        case .to: String(localized: "Choose an address")
         case .network, .destination, .elsewhere, .depositNetwork: String(localized: "Choose a network")
         case .with, .buy, .elsewhereCoin, .depositCoin: String(localized: "Choose a token")
         case .amount: String(localized: "Choose an amount")
@@ -4054,6 +4053,7 @@ struct MoveSentence: View {
             } else if follows, r.opens == .network || r.opens == .destination || (r.opens == .buy && verb == .swap) {
                 fixedRow(r.name, r.value, r.mark)
             } else {
+                VStack(alignment: .leading, spacing: 0) {
                 Group {
                     if r.opens == .amount {
                         amountRow(r).id("moveAmountRow")
@@ -4069,11 +4069,15 @@ struct MoveSentence: View {
                         .accessibilityHint(Text("Changes it"))
                     }
                 }
-                // Always under its row (user, 2026-11-13: "token menu opens
-                // downward, but network one opens upward").
-                .popover(isPresented: menuShown(r.opens), attachmentAnchor: .point(UnitPoint(x: 0.82, y: 1)), arrowEdge: .top) {
-                    if let which = r.opens { menu(which) }
+                // **THE LIST OPENS IN PLACE (prd §1889, the user's Version 2
+                // over the glass box: "small and difficult").** Under its
+                // own row, at the page's size; every other row steps back.
+                if menuShown(r.opens).wrappedValue, let which = r.opens {
+                    menu(which).transition(.opacity)
                 }
+                }
+                .opacity(menuOpen == nil || menuOpen == r.opens ? 1 : MoveSentence.steppedBack)
+                .animation(DS.Motion.standard, value: menuOpen)
                 // What is asked of the whole swap stands apart (prd §1795).
                 .padding(.top, verb == .swap && r.opens == .amount ? DS.Space.s1 : 0)
             }
@@ -5191,8 +5195,13 @@ struct MoveSentence: View {
         // mark, the word and its line under it, the figure trailing. The current
         // pick wears the pick's ink, the sentence's word in the list (prd
         // §1616); `dim` is for a row left out.
+        let hasLead = face != nil || brand != nil || image != nil || remote != nil || symbol != nil || mark != nil
         return Button(action: act) {
-            HStack(spacing: DS.Space.s3) {
+            // The words stand in the rows' column (`MoveChoiceRowLabel`): the
+            // mark centred in the row mark's width, the same gap after it, so
+            // an open list's words start where the row's answer does.
+            HStack(spacing: MoveChoiceRowLabel.leadGap) {
+                if hasLead { Group {
                 if let face {
                     // A person: the face the Wallet draws for that address
                     // (its ENS avatar, else its tinted mark), never initials
@@ -5236,6 +5245,7 @@ struct MoveSentence: View {
                 } else if let mark {
                     MoveRowMark(token: mark, network: net.flatMap { Self.networkMark($0) }, size: Self.listMark)
                 }
+                }.frame(width: MoveChoiceRowLabel.markSize) }
                 VStack(alignment: .leading, spacing: 2) {
                     // A long name wraps at its size (prd §1805).
                     Text(verbatim: title).dsText(rung)
@@ -6881,7 +6891,7 @@ struct MoveSentence: View {
             if let quoteNote { return quoteNote }
             if quote == nil { return String(localized: "Waiting for the price") }
         case .send:
-            if resolved == nil { return String(localized: "Pick who it goes to") }
+            if resolved == nil { return String(localized: "Pick an address") }
         case .receive, .buy, .sweep, .deposit, .lend:
             break
         }
@@ -8686,9 +8696,20 @@ struct MoveSentence: View {
 struct MoveFlow<Content: View>: View {
     @ViewBuilder let content: () -> Content
     var body: some View {
-        FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0, breakGap: DS.Space.s4, fitsWide: true) { content() }
+        // **ONE QUIET PARAGRAPH (prd §1888, user: "i don't like the way it
+        // breaks up and looks like errors").** Every word is its own piece
+        // (`moveFlat`), so the sentence fills each line as prose does
+        // instead of hopping whole clauses to the next.
+        FlowLayout(spacing: MoveSentence.rung.size * MoveSentence.wordSpace, lineSpacing: 0, breakGap: DS.Space.s4, fitsWide: true,
+                   balances: true) { content() }
             .environment(\.moveRung, MoveSentence.rung)
+            .environment(\.moveFlat, true)
     }
+}
+
+/// Inside `MoveFlow`: a clause hands the flow its words one by one.
+private struct MoveFlatKey: EnvironmentKey {
+    static let defaultValue = false
 }
 
 /// The rung the sentence is drawn at, set by `MoveFlow`; the floor outside one.
@@ -8700,6 +8721,10 @@ extension EnvironmentValues {
     var moveRung: DSTextStyle {
         get { self[MoveRungKey.self] }
         set { self[MoveRungKey.self] = newValue }
+    }
+    var moveFlat: Bool {
+        get { self[MoveFlatKey.self] }
+        set { self[MoveFlatKey.self] = newValue }
     }
 }
 
@@ -8815,6 +8840,7 @@ struct MoveWord: View {
     let text: String
     var ink: Color = DS.textPrimary
     @Environment(\.moveRung) private var rung
+    @Environment(\.moveFlat) private var flat
     init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
     var body: some View {
         let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
@@ -8829,10 +8855,14 @@ struct MoveWord: View {
         }
     }
 
+    /// One ink in the sentence (prd §1888): every word white, but Aztec's
+    /// own words keep Aztec's colour (prd §1700, a different world).
+    private var shownInk: Color { flat && ink != DS.aztecInk ? DS.textPrimary : ink }
+
     private func piece(_ word: String) -> some View {
         Text(verbatim: word)
             .dsText(rung)
-            .foregroundStyle(ink)
+            .foregroundStyle(shownInk)
             .monospacedDigit()
             .contentTransition(.numericText())
             .lineLimit(1)
@@ -8848,7 +8878,25 @@ struct MoveClause<Value: View>: View {
     var glueInk: Color = MoveSentence.glueInk
     var trail: String? = nil
     @ViewBuilder let value: () -> Value
+    @Environment(\.moveFlat) private var flat
     var body: some View {
+        if flat {
+            // Its words straight into the sentence's flow (prd §1888).
+            if let glue { MoveWord(glue, ink: glueInk) }
+            if let trail {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    value()
+                    MoveWord(trail)
+                }
+            } else {
+                value()
+            }
+        } else {
+            clause
+        }
+    }
+
+    private var clause: some View {
         MoveClauseLayout(spacing: MoveSentence.clauseGap) {
             if let glue { MoveWord(glue, ink: glueInk) }
             if let trail {
@@ -8876,9 +8924,38 @@ struct MoveWordsClause: View {
     var ink: Color = DS.textPrimary
     var action: (() -> Void)? = nil
     var hint: Text? = nil
+    /// Starts a new line (a second sentence, prd §1494): set on its first word only.
+    var breaks = false
     @Environment(\.moveRung) private var rung
+    @Environment(\.moveFlat) private var flat
     var body: some View {
         let list = words.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        if flat {
+            // Its words straight into the sentence's flow (prd §1888).
+            if let glue { MoveWord(glue, ink: glueInk).layoutValue(key: FlowBreak.self, value: breaks) }
+            ForEach(Array(list.enumerated()), id: \.offset) { i, word in
+                wordView(i, word, list: list)
+                    .layoutValue(key: FlowBreak.self, value: breaks && glue == nil && i == 0)
+            }
+        } else {
+            clause(list)
+        }
+    }
+
+    @ViewBuilder private func wordView(_ i: Int, _ word: String, list: [String]) -> some View {
+        if let action {
+            Button(action: action) { MoveWord(word, ink: ink) }
+                .buttonStyle(RowPress())
+                .accessibilityLabel(Text(verbatim: words))
+                .accessibilityHint(hint ?? Text(verbatim: ""))
+                .accessibilityHidden(i > 0)
+        } else {
+            MoveWord(word, ink: ink).accessibilityHidden(i > 0)
+                .accessibilityLabel(Text(verbatim: words))
+        }
+    }
+
+    private func clause(_ list: [String]) -> some View {
         MoveClauseLayout(spacing: rung.size * MoveSentence.wordSpace) {
             if let glue { MoveWord(glue, ink: glueInk) }
             ForEach(Array(list.enumerated()), id: \.offset) { i, word in
@@ -8910,12 +8987,18 @@ struct MovePhrase: View {
          breaks: Bool = false) {
         self.text = text; self.glue = glue; self.glueInk = glueInk; self.ink = ink; self.breaks = breaks
     }
+    @Environment(\.moveFlat) private var flat
     var body: some View {
         let pieces = Self.pieces(text)
         ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
-            MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink,
-                            words: piece.words, ink: ink)
-            .layoutValue(key: FlowBreak.self, value: breaks && i == 0)
+            if flat {
+                MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink,
+                                words: piece.words, ink: ink, breaks: breaks && i == 0)
+            } else {
+                MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink,
+                                words: piece.words, ink: ink)
+                .layoutValue(key: FlowBreak.self, value: breaks && i == 0)
+            }
         }
     }
 

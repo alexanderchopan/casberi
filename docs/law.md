@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2066 of 2140 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2068 of 2142 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1897,7 +1897,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amended by §1519, §1527)
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
-- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518, §1679, §1872)
+- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518, §1679, §1872, §1888)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
@@ -2014,7 +2014,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1614 — Safe and 0xBow Privacy Pools show your account's own money: who signs each Safe and what waits on you, and how much i… (amended by §1738)
 - §1614a — Your Safes stands under Home while the box is the queue, and the demo's Safe figure counts the demo's account (closes… (amended by §1738)
 - §1615 — The rooms after the merge: an app's own page draws its own shape again, Telegram's chats lead with who they're with,…
-- §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th… (amended by §1754, §1755)
+- §1616 — Move's choices stand on the tray: no glass card, the rest of the sentence steps back, the pick wears pink (retires th… (amended by §1754, §1755, §1888)
 - §1617 — A coin list offers what you hold, then ETH and USDC on each network, until you type (retires §1532's "stablecoins and… (amended by §1665)
 - §1618 — A Wallet app's pages are its own again: an account row and Needs you on Home, what it holds in Holdings and the box,… (amended by §1729)
 - §1619 — Muse signs in on muse.ai, as Beeper connects it, and answers in your own Muse chat; an agent seat may send what you t…
@@ -2243,9 +2243,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (amended by §1872)
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
 - §1801 — The private sends take Move's layout (amends §1781, §1755)
-- §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro…
+- §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro… (amended by §1889)
 - §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824)
-- §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616…
+- §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616… (amended by §1889)
 - §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w…
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
 - §1807 — One wallet: Home and Activity are the two places, Home is the map and six cards, Activity is Needs you, Money and one… (amended by §1871)
@@ -2293,7 +2293,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1849 — Home's acts are four round buttons, the day stands on a pill, the watchlist is the card's, the Wallet's rows open its…
 - §1850 — Home's doors are words with a chevron, its jumps are circles, its head stands on the page with no card, and the map's…
 - §1851 — Home's head is type on the page's left edge: the balance large, one row of facts, Holdings as a row, and the watchlis…
-- §1852 — Move's menu is five verbs that rise over the page above its button; Buy and Swap pick their kind on their own page (r…
+- §1852 — Move's menu is five verbs that rise over the page above its button; Buy and Swap pick their kind on their own page (r… (amended by §1889)
 - §1853 — Receive's "From a zk.money link" is deleted: Casberi cannot tell a link that pays out to Ethereum from one that only…
 - §1854 — A Safe settings change is named by the move, not the moment it was seen, its sheet lists no History, and a key you ex…
 - §1855 — Home's head stands on one grey plate, its doors with it, and the feed's sections keep their old gap (amends §1851 ite…
@@ -2329,6 +2329,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1885 — The first Railgun sync says it is the first, how far it is, and that only leaving Casberi stops it; a toast says when…
 - §1886 — Gas Aztec has carried is gas: a private top-up waiting for the next send no longer reads "On its way" (fixes §1700aa,…
 - §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap…
+- §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines
+- §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a…
 
 ## Dead rulings → what replaced them (generated)
 

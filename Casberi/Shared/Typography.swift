@@ -276,6 +276,11 @@ extension DSTextStyle {
     /// only caller; a room has no title and takes nothing from here.
     static let heading34 = DSTextStyle(size: 34, weight: .bold, tracking: 0, lineHeight: 41, relative: .largeTitle)
 
+    // ============================================================ 32 · SENTENCE
+    /// MOVE'S SENTENCE (prd §1888): one quiet paragraph, regular weight, so
+    /// it reads as words, not as a heading broken into pieces.
+    static let sentence32 = DSTextStyle(size: 32, weight: .regular, tracking: 0, lineHeight: 38, relative: .largeTitle)
+
     // ============================================================ 28 · LEAD
     /// A room lead's statement when it has room to grow (prd §1006): the
     /// large tier of `FeedLedeCard`'s fit ladder. It was `heading40`, so the

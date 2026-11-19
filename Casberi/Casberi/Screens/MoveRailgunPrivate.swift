@@ -1005,7 +1005,7 @@ struct MoveRailgunSentence<Head: View>: View {
                 MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
-                                hint: Text("Picks who it goes to"))
+                                hint: Text("Picks the address"))
                 MovePhrase(String(localized: "Ethereum."), glue: String(localized: "on"))
             case .takeBack:
                 MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance"),
@@ -1019,7 +1019,7 @@ struct MoveRailgunSentence<Head: View>: View {
                                     : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account."),
                                 ink: DS.textPrimary,
                                 action: { if picking { leave(.pickRecipient) } },
-                                hint: Text("Picks who it goes to"))
+                                hint: Text("Picks the address"))
             case .swap:
                 // One place, named once (prd §1875): "Swap 400 DAI for WBTC
                 // in your private balance."

@@ -323,7 +323,7 @@ use "$FRESHV" 'arrived; needs a little private ETH to move' "the line no longer 
 use "$MOVE" 'return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: usdcLadder, minimum: usdcMinimum)' "USDC's amounts do not start at the pool's minimum"
 use "$MOVE" 'PrivateMoney.ladder(PrivateMoney.usdcLadder, from: usdcMinimum ?? "0", decimals: 6, places: 2)' "USDC's first step is a round number over the pool's minimum, not the minimum (prd §1694)"
 use "$MOVE" 'let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,' "a private send on Ethereum ignores the token or the recipient"
-use "$MOVE" 'balanceToBalance: tag == nil && balanceToBalance == true)' "a private send on Ethereum ignores the recipient's private account (a zk.money tag is paid as an address, §1874)"
+use "$MOVE" 'balanceToBalance: tag == nil && balanceToBalance == true' "a private send on Ethereum ignores the recipient's private account (a zk.money tag is paid as an address, §1874)"
 use "$ETH" 'let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)' "balance to balance is not a transfer inside the pool"
 use "$ETH" 'return PrivateMoney.hasViewingKey(answer)' "a recipient's private account is not read off the keystore"
 awk '/static func hasPrivateAccount\(/,/^    }$/' "$ETH" | grep -q 'return nil' || { echo "✗ an unanswered keystore read is taken for no private account (it would pay out publicly)"; exit 1; }
@@ -1284,12 +1284,12 @@ use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1
 use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark, note: r.note)' "Move's rows no longer draw their answer and its mark (prd §1782, §1794)"
 use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
 # prd §1784: a row's list is a menu on the row, in every sentence; the next
-# one waits for the last to be gone.
-use "$SENT" '.popover(isPresented: menuShown(r.opens), attachmentAnchor: .point(UnitPoint(x: 0.82, y: 1)), arrowEdge: .top) {' "Move's rows no longer open their lists as menus (prd §1784)"
+# one waits for the last to be gone. §1889: it opens in place under its row.
+use "$SENT" 'if menuShown(r.opens).wrappedValue, let which = r.opens {' "Move's rows no longer open their lists in place under them (prd §1889)"
 use "$SENT" 'guard let open, open != .verb, choiceRowList.contains(where: { $0.opens == open }) else { return nil }' "the verbs' menu is a popover, or a list with no row has nowhere to open (prd §1784)"
 use "$SENT" '.onDisappear { menuGone() }' "the next menu no longer waits for the last to leave (prd §1784)"
 use "$SENT" '.safeAreaInset(edge: .bottom, spacing: 0) { if inlineOpen == nil, !rawOpen { foot.transition(.opacity) } }' "the foot leaves while a menu is up (prd §1784)"
-use "Casberi/Casberi/Screens/MoveBack.swift" 'MoveMenuBox { menu(r.id) }' "the private sentences' rows no longer open menus (prd §1784)"
+use "Casberi/Casberi/Screens/MoveBack.swift" 'MoveMenuBox { menu(r.id) }' "the private sentences' rows no longer open their lists in place (prd §1889)"
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
     ! grep -q 'MoveListBack' "Casberi/Casberi/Screens/$f.swift" || { echo "✗ $f opens a list in the page again (prd §1784)"; exit 1; }
 done
