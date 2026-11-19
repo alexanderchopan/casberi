@@ -109,11 +109,7 @@ struct MoveChoiceRowLabel: View {
                 } else {
                     // No mark yet: the row's own glyph on a quiet disc, as
                     // Home's rows lead (prd §1889).
-                    Image(systemName: Self.glyph(for: name)).dsGlyph(.body, weight: .medium)
-                        .foregroundStyle(DS.textSecondary)
-                        .frame(width: Self.markSize, height: Self.markSize)
-                        .background(Circle().fill(DS.fillFaint))
-                        .accessibilityHidden(true)
+                    MoveRowGlyph(symbol: Self.glyph(for: name))
                 }
             }
             .frame(width: Self.markSize, height: Self.markSize)
@@ -236,6 +232,21 @@ struct MoveFigureFit<Content: View>: View {
             .scaleEffect(room > 0 && width > room ? room / width : 1, anchor: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { room = $0 }
+    }
+}
+
+/// **A ROW'S GLYPH ON A QUIET DISC (prd §1889, Receive's places since
+/// §1892):** the lead of a Move row with no token, network or app mark of
+/// its own, at the mark's size, so every answer starts at one edge.
+struct MoveRowGlyph: View {
+    let symbol: String
+
+    var body: some View {
+        Image(systemName: symbol).dsGlyph(.body, weight: .medium)
+            .foregroundStyle(DS.textSecondary)
+            .frame(width: MoveChoiceRowLabel.markSize, height: MoveChoiceRowLabel.markSize)
+            .background(Circle().fill(DS.fillFaint))
+            .accessibilityHidden(true)
     }
 }
 

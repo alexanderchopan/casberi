@@ -47,7 +47,8 @@ fi
 # The fallback asks Tor first, only with Tor up, and counts the direct read.
 use "$FUNNEL" 'if answer == nil, TorRoute.fallsBack(host: request.url?.host()), TorClient.shared.isConnected {' "the relayer's fallback no longer waits for Tor's refusal with Tor up"
 use "$FUNNEL" 'NetworkLedger.shared.record(request, as: service, throughTor: false)' "a direct read after Tor's refusal is not counted as one"
-use "Casberi/Casberi/Screens/MovePrivate.swift" 'move.relayerDirect ? String(localized: "not through Tor") : nil' "a private send reached directly no longer says it is not through Tor"
+# Since §1896 the private send's line is facts: "Not through Tor" is one.
+use "Casberi/Casberi/Screens/MovePrivate.swift" 'if move.relayerDirect { facts.append((String(localized: "Not through Tor"), nil)) }' "a private send reached directly no longer says it is not through Tor"
 echo "  ok   the funnel routes through the rule, never fails over, has no bypass, and counts what went through Tor"
 
 # Every move Relay carries says it left Tor (prd §1512): the foot reads one

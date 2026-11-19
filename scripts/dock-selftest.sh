@@ -385,8 +385,11 @@ grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
   || { echo "✗ the Settings folder is back in Apps — settings are on Account (prd §1808)."; fail=1; }
 grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1111)."; fail=1; }
+# `.settings` is the Mac's own Settings page since §1893 (the Mac has no
+# Account page to hold them); it must say so, or it is §1111's second node back.
 ! grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
-  || { echo "✗ a second Settings node is back — Settings is .casberi (prd §1111)."; fail=1; }
+  || grep -q "SETTINGS' OWN PAGE on the Mac (prd §1893)" "Casberi/Casberi/Shell/HomeRoute.swift" \
+  || { echo "✗ a second Settings node is back — Settings is .casberi, and .settings the Mac's alone (prd §1111, §1893)."; fail=1; }
 strip_comments "Casberi/Casberi/Shell/LibrarySearch.swift" > "$TMP/tray.nc"
 # The rooms tray is deleted (prd §1715): its search is Library's field, and
 # the Settings it finds opens the Account page, where Casberi's settings are

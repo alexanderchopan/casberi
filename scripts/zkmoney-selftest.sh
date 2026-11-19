@@ -543,7 +543,8 @@ mutate "a paid request still titled as open" \
 VERBS="Casberi/Casberi/Model/Verbs.swift"
 ZK="Casberi/Casberi/Model/ZkMoney.swift"
 SEND="Casberi/Casberi/Screens/MoveSentence.swift"
-grep -q 'if YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {' "$VERBS" \
+# The Mac carries no wallet (prd §1893): Pay is gated on `WalletHere.isOn` too.
+grep -q 'if WalletHere.isOn, YourAccountDemo.shownAddress != nil, ZkMoney.payableRequest(thing) != nil {' "$VERBS" \
   || { echo "✗ Pay is drawn with no account to pay from, or on a row that is not an open request"; exit 1; }
 grep -q 'guard thing.kind == .link, thing.mark != .done, thing.title.hasPrefix(ZkMoneyLink.requestTitleLead),' "$ZK" \
   && grep -q 'guard ZkMoneyWire.requestOpen(expires: expires, now: now) else { return nil }' "$ZK" \
@@ -710,11 +711,11 @@ awk '/to: ZkMoneyWire.ensRegistry/{e=NR} /resolver = named/{n=NR} /to: resolver,
 # claims a zk.money link — Casberi cannot tell a link that pays to Ethereum
 # from one that only signs you up.
 awk '/private var receiveFromRows: some View \{/,/^    }/' "$SEND" > "$TMP/from.txt"
-grep -q 'MoveDoorRowLabel(title: String(localized: "From another network"))' "$TMP/from.txt" \
+grep -q 'MoveDoorRowLabel(title: String(localized: "From another network"), inColumn: true)' "$TMP/from.txt" \
   && ! grep -q 'zk.money' "$TMP/from.txt" \
   || { echo "✗ Receive's ways in changed, or a zk.money claim came back without reading the link's voucher"; exit 1; }
 awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND" \
-  | awk '/String\(localized: "Public account"\), marks: receiveNetworks/{p=NR} /receiveFromRows/{f=NR} /"Private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
+  | awk '/String\(localized: "Public account"\), glyph: "wallet.bifold",/{p=NR} /receiveFromRows/{f=NR} /"Private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
   || { echo "✗ the ways in no longer stand under the public account, before the private places"; exit 1; }
 
 # Paying a tag from your private balance (prd §1874): the tag goes to the

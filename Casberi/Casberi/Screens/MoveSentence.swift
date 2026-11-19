@@ -2596,11 +2596,7 @@ struct MoveSentence: View {
                         if let mark {
                             MoveRowMark(network: mark, size: MoveChoiceRowLabel.markSize)
                         } else {
-                            Image(systemName: glyph ?? "circle.dotted").dsGlyph(.body, weight: .medium)
-                                .foregroundStyle(DS.textSecondary)
-                                .frame(width: MoveChoiceRowLabel.markSize, height: MoveChoiceRowLabel.markSize)
-                                .background(Circle().fill(DS.fillFaint))
-                                .accessibilityHidden(true)
+                            MoveRowGlyph(symbol: glyph ?? "circle.dotted")
                         }
                     }
                     .frame(width: MoveChoiceRowLabel.markSize, height: MoveChoiceRowLabel.markSize)

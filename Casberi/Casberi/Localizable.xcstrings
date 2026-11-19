@@ -4350,6 +4350,34 @@
         }
       }
     },
+    "%@ confirmed this key can't trade or withdraw." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ confirmó que esta clave no puede operar ni retirar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ はこのキーで取引も出金もできないことを確認しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 이 키로 거래나 출금을 할 수 없음을 확인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已确认此密钥无法交易或提现。"
+          }
+        }
+      }
+    },
     "%@ connected addresses across %@ of yours" : {
       "localizations" : {
         "en" : {
@@ -9492,6 +9520,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 需要其 %lld 位所有者中的 %lld 位，因此每一位都不可或缺。如果这台手机丢失或重新录入 Face ID，那个 Safe 将再也无法签名，也无法更改所有者——因为更改同样需要签名。请再添加一位所有者。"
+          }
+        }
+      }
+    },
+    "%@ needs all %lld of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ needs all %2$lld of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ necesita a sus %2$lld propietarios. Si pierdes este teléfono, no se podrá volver a firmar nunca — ni reparar, porque eso también requiere una firma. Añade un propietario más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ には%2$lld人の所有者全員が必要です。このスマートフォンを失くすと二度と署名できず — 修復にも署名が必要なため、修復もできません。所有者をもう1人追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에는 소유자 %2$lld명 전원이 필요합니다. 이 휴대폰을 잃어버리면 다시는 서명할 수 없고 — 복구에도 서명이 필요하므로 복구할 수도 없습니다. 소유자를 한 명 더 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 需要全部 %2$lld 位所有者。丢失这部手机后将再也无法签名——也无法修复，因为修复同样需要签名。请再添加一位所有者。"
           }
         }
       }
@@ -18018,6 +18080,40 @@
         }
       }
     },
+    "%@ — not rated is not yet examined, never a verdict.\n\nAs of %@; followed wallets are read live." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — not rated is not yet examined, never a verdict.\n\nAs of %2$@; followed wallets are read live."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — sin calificar significa que aún no se ha examinado, nunca es un veredicto.\n\nA fecha de %2$@; las carteras que sigues se leen en directo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — 未評価はまだ審査されていないという意味で、判定ではありません。\n\n%2$@時点。フォロー中のウォレットはリアルタイムで読み込みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — 평가 없음은 아직 검토되지 않았다는 뜻이며 판정이 아닙니다.\n\n%2$@ 기준. 팔로우한 지갑은 실시간으로 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — 未评级表示尚未审查，并非结论。\n\n截至 %2$@；关注的钱包为实时读取。"
+          }
+        }
+      }
+    },
     "%@ — not rated is not yet examined, never a verdict.\n\nAs of %@; watched wallets are read live." : {
       "localizations" : {
         "en" : {
@@ -18048,6 +18144,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ — 未评级表示尚未检查，并非结论。\n\n截至 %@；关注的钱包为实时读取。"
+          }
+        }
+      }
+    },
+    "%@ — nothing flagged is nothing they flagged, not a clean bill.\n\nBundled as of %@; read live once connected." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ — nothing flagged is nothing they flagged, not a clean bill.\n\nBundled as of %2$@; read live once connected."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — sin alertas significa que no marcaron nada, no que todo esté bien.\n\nIncluido a fecha de %2$@; se lee en directo una vez conectado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — 警告なしは何も指摘されていないという意味で、安全の保証ではありません。\n\n%2$@時点の同梱データ。接続後はリアルタイムで読み込みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — 표시 없음은 그들이 아무것도 표시하지 않았다는 뜻일 뿐, 안전하다는 보증이 아닙니다.\n\n%2$@ 기준 내장 데이터. 연결하면 실시간으로 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ — 无标记仅表示他们未标记任何内容，并非安全证明。\n\n内置数据截至 %2$@；连接后实时读取。"
           }
         }
       }
@@ -26904,6 +27034,34 @@
         }
       }
     },
+    "%lld more today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld más hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日はあと%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 %lld개 더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天还有 %lld 条"
+          }
+        }
+      }
+    },
     "%lld more tokens" : {
       "localizations" : {
         "es" : {
@@ -26928,6 +27086,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "另有 %lld 个代币"
+          }
+        }
+      }
+    },
+    "%lld more values aren't shown here. Open it in your Safe app before signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí no se muestran %lld valores más. Ábrelo en tu app de Safe antes de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここに表示されていない値があと%lld個あります。署名する前に Safe アプリで開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에 표시되지 않은 값이 %lld개 더 있습니다. 서명하기 전에 Safe 앱에서 여세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此处还有 %lld 个值未显示。签名前请在 Safe 应用中打开。"
           }
         }
       }
@@ -46428,6 +46614,34 @@
         }
       }
     },
+    "A target for your private balance. Round-ups and what you send there fill it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una meta para tu saldo privado. Se llena con los redondeos y lo que envíes allí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高の目標です。端数の積み立てとそこへの送金で貯まります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액의 목표입니다. 잔돈 모으기와 그곳으로 보내는 금액으로 채워집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密余额的目标。零钱凑整和你转入的资金会把它填满。"
+          }
+        }
+      }
+    },
     "A token approval, a Safe module, a delegate." : {
       "localizations" : {
         "es" : {
@@ -47856,6 +48070,34 @@
         }
       }
     },
+    "Acorns answered, but Casberi didn't recognise the shape." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns respondió, pero Casberi no reconoció el formato."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns から応答がありましたが、Casberi はその形式を認識できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns이(가) 응답했지만 Casberi가 형식을 인식하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 已响应，但 Casberi 无法识别其格式。"
+          }
+        }
+      }
+    },
     "Acorns didn't hand back a session — tap Try again." : {
       "localizations" : {
         "es" : {
@@ -47964,6 +48206,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "共 %lld 个钱包"
+          }
+        }
+      }
+    },
+    "Across and gas keep" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across y el gas cobran"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across とガス代"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 및 가스비"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 和 Gas 收取"
           }
         }
       }
@@ -48160,6 +48430,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Across 不支持从 %1$@ 到 %2$@ 转移此资产"
+          }
+        }
+      }
+    },
+    "Across keeps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across cobra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across の手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 收取"
           }
         }
       }
@@ -57936,6 +58234,34 @@
         }
       }
     },
+    "Apps holding nothing that you haven't used in 90 days." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apps sin fondos que no has usado en 90 días."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高がなく、90日間使っていないアプリ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 자산이 없고 90일 동안 사용하지 않은 앱."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有资产且 90 天未使用的应用。"
+          }
+        }
+      }
+    },
     "Apps in your feed" : {
       "localizations" : {
         "es" : {
@@ -58156,6 +58482,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已到达 %@"
+          }
+        }
+      }
+    },
+    "Arrives" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "着金"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "도착"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到账"
           }
         }
       }
@@ -62537,6 +62891,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Base、Ethereum 或 Robinhood"
+          }
+        }
+      }
+    },
+    "Base, Ethereum, or Robinhood only, new address each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo Base, Ethereum o Robinhood, dirección nueva cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood のみ、毎回新しいアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum, Robinhood만, 매번 새 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 Base、Ethereum 或 Robinhood，每次使用新地址"
           }
         }
       }
@@ -67214,6 +67596,34 @@
         }
       }
     },
+    "Casberi can't control your node. Your network can see that you're reaching it, but not what it reports." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi no puede controlar tu nodo. Tu red puede ver que te conectas a él, pero no lo que informa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi はあなたのノードを制御できません。ネットワークからはノードへの接続は見えますが、ノードが返す内容は見えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi는 사용자의 노드를 제어할 수 없습니다. 네트워크는 노드에 접속하는 것은 볼 수 있지만 노드가 보고하는 내용은 볼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 无法控制你的节点。你的网络能看到你在连接它，但看不到它返回的内容。"
+          }
+        }
+      }
+    },
     "Casberi can't reach that folder" : {
       "localizations" : {
         "es" : {
@@ -67854,6 +68264,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi 在此设备上读取你的聊天，绝不发送消息。"
+          }
+        }
+      }
+    },
+    "Casberi sends %@ ETH from your account to your co-signer, then asks it to send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi envía %@ ETH de tu cuenta a tu cofirmante y luego le pide que envíe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi があなたのアカウントから共同署名者へ %@ ETH を送り、その後共同署名者に送金を依頼します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 계정에서 공동 서명자에게 %@ ETH를 보낸 다음, 공동 서명자에게 전송을 요청합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 会从你的账户向共同签名者发送 %@ ETH，然后请它发送。"
           }
         }
       }
@@ -77712,6 +78150,34 @@
         }
       }
     },
+    "Couldn't reach ETHBEAT, and this chain isn't in the copy bundled with the app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con ETHBEAT y esta red no está en la copia incluida en la app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT に接続できませんでした。このチェーンはアプリに同梱されたデータにも含まれていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETHBEAT에 연결할 수 없으며, 이 체인은 앱에 내장된 사본에도 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 ETHBEAT，且应用内置的副本中没有此链。"
+          }
+        }
+      }
+    },
     "Couldn't reach Fileverse — try again in a moment." : {
       "localizations" : {
         "es" : {
@@ -78604,6 +79070,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法连接 Walletbeat——请检查网络。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Walletbeat. The counts above are from when this app was last updated." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar con Walletbeat. Los recuentos de arriba son de la última actualización de la app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Walletbeat に接続できませんでした。上の件数はこのアプリの最終アップデート時点のものです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Walletbeat에 연결할 수 없습니다. 위의 수치는 이 앱이 마지막으로 업데이트되었을 때의 것입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Walletbeat。以上数量来自本应用上次更新时。"
           }
         }
       }
@@ -83736,6 +84230,34 @@
         }
       }
     },
+    "Deposits are read off the accounts you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los depósitos se leen de las cuentas que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金はフォロー中のアカウントから読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "입금 내역은 팔로우하는 계정에서 읽어 옵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存款从你关注的账户中读取。"
+          }
+        }
+      }
+    },
     "Deposits are read off the wallets you follow." : {
       "localizations" : {
         "es" : {
@@ -87238,6 +87760,34 @@
         }
       }
     },
+    "Each service sees your IP; iCloud Private Relay covers Safari, not apps." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada servicio ve tu IP; iCloud Private Relay protege Safari, no las apps."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各サービスにはあなたの IP が見えます。iCloud Private Relay が保護するのは Safari で、アプリは対象外です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 서비스는 사용자의 IP를 볼 수 있습니다. iCloud Private Relay는 앱이 아닌 Safari만 보호합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每个服务都能看到你的 IP；iCloud Private Relay 只保护 Safari，不保护应用。"
+          }
+        }
+      }
+    },
     "Each wallet you follow, and what it holds." : {
       "localizations" : {
         "es" : {
@@ -87542,6 +88092,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "收益中 · 1 个持仓"
+          }
+        }
+      }
+    },
+    "Earns" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rinde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利回り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수익률"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收益"
           }
         }
       }
@@ -87991,6 +88569,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅在开启“高级数据保护”时为端到端加密。"
+          }
+        }
+      }
+    },
+    "End-to-end only with Advanced Data Protection: %@ › your name › iCloud." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cifrado de extremo a extremo solo con Protección de datos avanzada: %@ › tu nombre › iCloud."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "エンドツーエンド暗号化は高度なデータ保護を有効にした場合のみ：%@ › 自分の名前 › iCloud。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "고급 데이터 보호를 켠 경우에만 종단 간 암호화: %@ › 사용자 이름 › iCloud."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅在开启高级数据保护时端到端加密：%@ › 你的姓名 › iCloud。"
           }
         }
       }
@@ -88664,6 +89270,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Ethereum 没有响应"
+          }
+        }
+      }
+    },
+    "Ethereum only · new address each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo Ethereum · dirección nueva cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum のみ · 毎回新しいアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum만 · 매번 새 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 Ethereum · 每次使用新地址"
           }
         }
       }
@@ -90151,6 +90785,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "下方的每个请求都从 %@ 直接发往对应的服务。"
+          }
+        }
+      }
+    },
+    "Every request below goes straight from %@ to the service named." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada solicitud de abajo va directamente de %@ al servicio indicado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以下の各リクエストは %@ から記載のサービスへ直接送られます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아래의 모든 요청은 %@에서 명시된 서비스로 바로 전송됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以下每个请求都直接从 %@ 发往所列服务。"
           }
         }
       }
@@ -96266,6 +96928,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注一个 Safe，或为其签名的钱包。"
+          }
+        }
+      }
+    },
+    "Follow a Safe, or an account that signs for one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue un Safe o una cuenta que firme por él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe、または Safe の署名者であるアカウントをフォローします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 또는 Safe에 서명하는 계정을 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个 Safe，或为其签名的账户。"
           }
         }
       }
@@ -108354,6 +109044,34 @@
         }
       }
     },
+    "It lets %@ make this call in your name, once. Anyone can see it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permite que %@ haga esta llamada en tu nombre, una vez. Cualquiera puede verlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ があなたの名義でこの呼び出しを1回だけ実行できるようになります。誰でも閲覧できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에게 사용자 명의로 이 호출을 한 번 허용합니다. 누구나 볼 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它允许 %@ 以你的名义执行一次此调用。任何人都能看到。"
+          }
+        }
+      }
+    },
     "It must hold %@'s key." : {
       "localizations" : {
         "es" : {
@@ -108434,6 +109152,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它需要共同签名人钱包才能登录。"
+          }
+        }
+      }
+    },
+    "It needs a sign-in from an Ethereum wallet outside Casberi, like MetaMask. Add that wallet as your co-signer, then sign in with it here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Requiere iniciar sesión con una cartera de Ethereum fuera de Casberi, como MetaMask. Añade esa cartera como tu cofirmante y luego inicia sesión con ella aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask など、Casberi 以外の Ethereum ウォレットでのサインインが必要です。そのウォレットを共同署名者として追加し、ここでサインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MetaMask 같은 Casberi 외부의 Ethereum 지갑으로 로그인해야 합니다. 그 지갑을 공동 서명자로 추가한 다음 여기서 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要用 Casberi 之外的 Ethereum 钱包登录，例如 MetaMask。将该钱包添加为共同签名者，然后在这里用它登录。"
+          }
+        }
+      }
+    },
+    "It needs a sign-in from an Ethereum wallet outside Casberi. Sign in with your co-signer (%@)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Requiere iniciar sesión con una cartera de Ethereum fuera de Casberi. Inicia sesión con tu cofirmante (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 以外の Ethereum ウォレットでのサインインが必要です。共同署名者（%@）でサインインしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 외부의 Ethereum 지갑으로 로그인해야 합니다. 공동 서명자(%@)로 로그인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要用 Casberi 之外的 Ethereum 钱包登录。请用你的共同签名者（%@）登录。"
           }
         }
       }
@@ -108658,6 +109432,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它会先在 Ethereum 上运行，若会失败则不签署任何内容。"
+          }
+        }
+      }
+    },
+    "It sees your Aztec account's address. Casberi asks you before anything it sends." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ve la dirección de tu cuenta de Aztec. Casberi te pregunta antes de cualquier cosa que envíe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントのアドレスが見えます。何かを送る前に Casberi が必ず確認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정의 주소를 볼 수 있습니다. 무엇이든 보내기 전에 Casberi가 먼저 묻습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它能看到你的 Aztec 账户地址。它发送任何内容前，Casberi 都会先询问你。"
+          }
+        }
+      }
+    },
+    "It sees your account's address. Casberi asks before every signature and every send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ve la dirección de tu cuenta. Casberi pregunta antes de cada firma y cada envío."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントのアドレスが見えます。署名や送金のたびに Casberi が確認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 주소를 볼 수 있습니다. Casberi는 서명과 전송 전마다 묻습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它能看到你的账户地址。每次签名和发送前，Casberi 都会询问。"
+          }
+        }
+      }
+    },
+    "It sees your account's address. Casberi asks before every signature and sends nothing from this page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ve la dirección de tu cuenta. Casberi pregunta antes de cada firma y no envía nada desde esta página."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントのアドレスが見えます。署名のたびに Casberi が確認し、このページからは何も送りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 주소를 볼 수 있습니다. Casberi는 서명 전마다 묻고, 이 페이지에서는 아무것도 보내지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它能看到你的账户地址。每次签名前 Casberi 都会询问，且不会从此页面发送任何内容。"
           }
         }
       }
@@ -109380,6 +110238,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "其日程将从“即将到来”和 Day 中移除。"
+          }
+        }
+      }
+    },
+    "Its events show in Coming up and Day — nothing is added to your Calendar app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sus eventos aparecen en Coming up y Day — no se añade nada a tu app Calendar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "イベントは Coming up と Day に表示されます — Calendar アプリには何も追加されません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일정은 Coming up과 Day에 표시됩니다 — Calendar 앱에는 아무것도 추가되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其日程显示在 Coming up 和 Day 中——不会向你的 Calendar 应用添加任何内容。"
           }
         }
       }
@@ -121942,6 +122828,34 @@
         }
       }
     },
+    "Names screenshots and reads long chats so they can be found." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pone nombre a las capturas de pantalla y lee los chats largos para que se puedan encontrar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スクリーンショットに名前を付け、長いチャットを読み込んで検索できるようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스크린샷에 이름을 붙이고 긴 채팅을 읽어 찾을 수 있게 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为截图命名并读取长聊天记录，以便查找。"
+          }
+        }
+      }
+    },
     "Names screenshots and reads long chats so they can be found. No free on-device model here." : {
       "localizations" : {
         "es" : {
@@ -132175,6 +133089,34 @@
         }
       }
     },
+    "Not through Tor" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No a través de Tor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor 経由ではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor를 거치지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不经过 Tor"
+          }
+        }
+      }
+    },
     "Not traded" : {
       "localizations" : {
         "es" : {
@@ -139083,6 +140025,34 @@
         }
       }
     },
+    "On %@ only. Any token but ETH needs a little ETH sent with it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo en %@. Cualquier token que no sea ETH necesita que se envíe un poco de ETH con él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のみ。ETH 以外のトークンには少量の ETH を一緒に送る必要があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서만 가능합니다. ETH 외의 토큰은 소량의 ETH를 함께 보내야 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限 %@。除 ETH 外的任何代币都需要同时发送少量 ETH。"
+          }
+        }
+      }
+    },
     "On %@ · %@ pool fee" : {
       "localizations" : {
         "es" : {
@@ -139593,6 +140563,34 @@
         }
       }
     },
+    "On automatically — both doors land as they happen." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activado automáticamente — las dos vías llegan en cuanto ocurren."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動でオン — 両方の経路がその都度届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자동으로 켜짐 — 두 경로 모두 발생하는 즉시 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自动开启——两条通道都会实时送达。"
+          }
+        }
+      }
+    },
     "On automatically — both doors land in your feed as they happen." : {
       "localizations" : {
         "es" : {
@@ -139617,6 +140615,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "自动开启 — 两个入口的内容发生时都会进入你的订阅流。"
+          }
+        }
+      }
+    },
+    "On automatically — tells you the moment screening clears a deposit." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activado automáticamente — te avisa en cuanto la revisión aprueba un depósito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動でオン — 審査で入金が承認された瞬間にお知らせします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자동으로 켜짐 — 심사에서 입금이 승인되는 즉시 알려 줍니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自动开启——审查通过存款时立即通知你。"
           }
         }
       }
@@ -142039,6 +143065,34 @@
         }
       }
     },
+    "Only the photos you picked are visible, so new screenshots don't arrive on their own." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo se ven las fotos que elegiste, así que las nuevas capturas de pantalla no llegan solas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "選択した写真しか見えないため、新しいスクリーンショットは自動では届きません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "선택한 사진만 볼 수 있으므로 새 스크린샷이 자동으로 들어오지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只有你选择的照片可见，因此新截图不会自动进来。"
+          }
+        }
+      }
+    },
     "Only the photos you picked are visible." : {
       "localizations" : {
         "es" : {
@@ -142319,6 +143373,34 @@
         }
       }
     },
+    "Only words your things already contain — a chat summary is never shown." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo palabras que ya contienen tus cosas — nunca se muestra un resumen del chat."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アイテムにすでにある言葉だけ — チャットの要約は表示されません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "항목에 이미 있는 단어만 — 채팅 요약은 표시되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只使用你的内容中已有的文字——绝不显示聊天摘要。"
+          }
+        }
+      }
+    },
     "Only you" : {
       "localizations" : {
         "es" : {
@@ -142511,6 +143593,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开 Casberi 查看它在哪里"
+          }
+        }
+      }
+    },
+    "Open Casberi to see your balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre Casberi para ver tu saldo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi を開いて残高を確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액을 보려면 Casberi를 여세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 Casberi 查看余额"
           }
         }
       }
@@ -164015,6 +165125,34 @@
         }
       }
     },
+    "Relayer fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comisión del relayer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リレイヤー手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "릴레이어 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "中继费"
+          }
+        }
+      }
+    },
     "Release" : {
       "localizations" : {
         "es" : {
@@ -168591,6 +169729,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Robinhood"
+          }
+        }
+      }
+    },
+    "Rocket Money answered, but Casberi didn't recognise the shape." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money respondió, pero Casberi no reconoció el formato."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money から応答がありましたが、Casberi はその形式を認識できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money이(가) 응답했지만 Casberi가 형식을 인식하지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 已响应，但 Casberi 无法识别其格式。"
           }
         }
       }
@@ -184717,6 +185883,34 @@
         }
       }
     },
+    "Some models won't be served that way — you'll be told which." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Algunos modelos no se servirán así — se te indicará cuáles."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一部のモデルはこの方法では提供されません — どれかはお知らせします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일부 모델은 이 방식으로 제공되지 않습니다 — 어떤 모델인지 알려 드립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "部分模型无法以这种方式提供——会告诉你是哪些。"
+          }
+        }
+      }
+    },
     "Somebody else paid" : {
       "localizations" : {
         "es" : {
@@ -190943,6 +192137,34 @@
         }
       }
     },
+    "Takes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tarda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "所要時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "소요 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "耗时"
+          }
+        }
+      }
+    },
     "Takes it back" : {
       "localizations" : {
         "es" : {
@@ -196934,6 +198156,34 @@
         }
       }
     },
+    "The librarian sends things to %@ on its own to name and summarize them." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El bibliotecario envía cosas a %@ por su cuenta para ponerles nombre y resumirlas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ライブラリアンが自動でアイテムを %@ に送り、名前と要約を付けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사서가 자동으로 항목을 %@에 보내 이름을 붙이고 요약합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "图书管理员会自动将内容发送到 %@，为其命名并生成摘要。"
+          }
+        }
+      }
+    },
     "The librarian sends your things to %@ on its own." : {
       "localizations" : {
         "es" : {
@@ -197602,6 +198852,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新密钥未通过验证 — 未保存任何内容。"
+          }
+        }
+      }
+    },
+    "The newest from your apps today." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo más reciente de tus apps hoy."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日のアプリの最新情報。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 앱의 최신 소식."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的应用今天的最新内容。"
           }
         }
       }
@@ -198982,6 +200260,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的代币"
+          }
+        }
+      }
+    },
+    "The tokens you watch, and today's move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los tokens que sigues y su variación de hoy."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォッチ中のトークンと今日の値動き。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "관심 토큰과 오늘의 변동."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的代币及今日涨跌。"
           }
         }
       }
@@ -200729,6 +202035,34 @@
         }
       }
     },
+    "This %@ can't share financial data. It needs iOS 17.4 in the US, or iOS 18.4 in the UK." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este %@ no puede compartir datos financieros. Necesita iOS 17.4 en US o iOS 18.4 en UK."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この %@ は金融データを共有できません。US では iOS 17.4、UK では iOS 18.4 が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 %@에서는 금융 데이터를 공유할 수 없습니다. US에서는 iOS 17.4, UK에서는 iOS 18.4가 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 %@ 无法共享财务数据。在 US 需要 iOS 17.4，在 UK 需要 iOS 18.4。"
+          }
+        }
+      }
+    },
     "This %@ can't share financial data. It's US-only, and needs iOS 17.4." : {
       "localizations" : {
         "es" : {
@@ -202359,6 +203693,34 @@
         }
       }
     },
+    "This key alone can move everything in your account. Use a wallet whose key only you hold, like a Ledger, never an exchange's deposit address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta clave por sí sola puede mover todo lo de tu cuenta. Usa una cartera cuya clave solo tengas tú, como una Ledger, nunca la dirección de depósito de un exchange."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このキーだけでアカウント内のすべてを動かせます。Ledger のように自分だけが鍵を持つウォレットを使い、取引所の入金アドレスは絶対に使わないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 키 하나로 계정의 모든 자산을 옮길 수 있습니다. Ledger처럼 본인만 키를 가진 지갑을 사용하고, 거래소 입금 주소는 절대 사용하지 마세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅凭这把密钥就能转走你账户中的一切。请使用只有你持有密钥的钱包，例如 Ledger，切勿使用交易所的充值地址。"
+          }
+        }
+      }
+    },
     "This month" : {
       "localizations" : {
         "es" : {
@@ -203031,6 +204393,34 @@
         }
       }
     },
+    "This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap the old address out of the Safe." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave de firma de este teléfono ya no existe — se volvió a registrar Face ID, lo que la borra por diseño. Pide a otro propietario que quite la dirección antigua del Safe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このスマートフォンの署名鍵は消去されました — Face ID が再登録されたためで、仕様により消去されます。別の所有者に Safe から古いアドレスを差し替えてもらってください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰의 서명 키가 사라졌습니다 — Face ID가 다시 등록되어 설계상 삭제되었습니다. 다른 소유자에게 Safe에서 이전 주소를 교체해 달라고 하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这部手机的签名密钥已不存在——Face ID 已重新录入，按设计会将其清除。请让另一位所有者将旧地址从 Safe 中换掉。"
+          }
+        }
+      }
+    },
     "This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen and have another owner swap the old address out." : {
       "localizations" : {
         "es" : {
@@ -203059,6 +204449,34 @@
         }
       }
     },
+    "This phone's signing key is gone — Face ID was re-enrolled, which erases it by design. Make a new one in the Safe screen." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave de firma de este teléfono ya no existe — se volvió a registrar Face ID, lo que la borra por diseño. Crea una nueva en la pantalla de Safe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このスマートフォンの署名鍵は消去されました — Face ID が再登録されたためで、仕様により消去されます。Safe 画面で新しい鍵を作成してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰의 서명 키가 사라졌습니다 — Face ID가 다시 등록되어 설계상 삭제되었습니다. Safe 화면에서 새 키를 만드세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这部手机的签名密钥已不存在——Face ID 已重新录入，按设计会将其清除。请在 Safe 页面中新建一个。"
+          }
+        }
+      }
+    },
     "This phone's signing key is gone. Face ID was re-enrolled on this device, which erases it by design — there is no copy. Make a new one, and have another owner swap the old address out of the Safe." : {
       "localizations" : {
         "es" : {
@@ -203083,6 +204501,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "本机的签名密钥已不存在。此设备重新录入了 Face ID，按设计会将其抹除——没有副本。请创建新密钥，并让另一位所有者把 Safe 中的旧地址替换掉。"
+          }
+        }
+      }
+    },
+    "This phone's vault-chip key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap its signer address out of the Safe." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave del chip seguro de este teléfono ya no existe — se volvió a registrar Face ID, lo que la borra por diseño. Pide a otro propietario que quite su dirección de firmante del Safe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このスマートフォンのセキュアチップの鍵は消去されました — Face ID が再登録されたためで、仕様により消去されます。別の所有者に Safe からその署名者アドレスを差し替えてもらってください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰의 보안 칩 키가 사라졌습니다 — Face ID가 다시 등록되어 설계상 삭제되었습니다. 다른 소유자에게 Safe에서 해당 서명자 주소를 교체해 달라고 하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这部手机的安全芯片密钥已不存在——Face ID 已重新录入，按设计会将其清除。请让另一位所有者将其签名者地址从 Safe 中换掉。"
           }
         }
       }
@@ -214608,6 +216054,34 @@
         }
       }
     },
+    "Watch a token in Casberi" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue un token en Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi でトークンをウォッチ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi에서 토큰 관심 등록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Casberi 中关注代币"
+          }
+        }
+      }
+    },
     "Watch a wallet" : {
       "localizations" : {
         "es" : {
@@ -224000,6 +225474,34 @@
         }
       }
     },
+    "You approve each send in your wallet. Each network keeps a little of its own token to pay for them." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apruebas cada envío en tu cartera. Cada red se queda con un poco de su propio token para pagarlos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各送金はウォレットで承認します。各ネットワークは手数料として自身のトークンを少量差し引きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 전송은 지갑에서 승인합니다. 각 네트워크는 수수료로 자체 토큰을 조금 가져갑니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次发送都需在你的钱包中批准。每个网络会扣除少量自身代币作为费用。"
+          }
+        }
+      }
+    },
     "You approve each send. Fees are kept back." : {
       "localizations" : {
         "es" : {
@@ -224668,6 +226170,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你将收到"
+          }
+        }
+      }
+    },
+    "You get %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibes %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取る額 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 금액 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你将收到 %@"
           }
         }
       }
@@ -225856,6 +227386,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你从本机为你的 Safe 签署了一条声明"
+          }
+        }
+      }
+    },
+    "You signed in here with your co-signer (%@) before." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya iniciaste sesión aquí con tu cofirmante (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以前ここで共同署名者（%@）でサインインしました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전에 여기서 공동 서명자(%@)로 로그인했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你之前在这里用共同签名者（%@）登录过。"
           }
         }
       }
@@ -230040,6 +231598,34 @@
         }
       }
     },
+    "Your balance, public and private." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu saldo, público y privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開とプライベートの残高。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 및 비공개 잔액."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的余额，公开与私密。"
+          }
+        }
+      }
+    },
     "Your bitcoin balance sits in %lld pieces — consolidating costs about %@ today" : {
       "localizations" : {
         "en" : {
@@ -230406,6 +231992,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的云端会话"
+          }
+        }
+      }
+    },
+    "Your co-signer (%@) holds %@ ETH. This needs %@ ETH and its fee." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Your co-signer (%1$@) holds %2$@ ETH. This needs %3$@ ETH and its fee."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante (%1$@) tiene %2$@ ETH. Esto necesita %3$@ ETH más su comisión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者（%1$@）の保有額は %2$@ ETH です。これには %3$@ ETH と手数料が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자(%1$@)는 %2$@ ETH를 보유하고 있습니다. 이 작업에는 %3$@ ETH와 수수료가 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名者（%1$@）持有 %2$@ ETH。此操作需要 %3$@ ETH 及其手续费。"
           }
         }
       }
@@ -232161,6 +233781,34 @@
         }
       }
     },
+    "Your node sees your address. Tor doesn't hide it from your own node." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu nodo ve tu dirección. Tor no la oculta de tu propio nodo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードにはあなたのアドレスが見えます。Tor でも自分のノードからは隠せません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드는 사용자의 주소를 볼 수 있습니다. Tor도 자신의 노드에게는 주소를 숨기지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点能看到你的地址。Tor 无法对你自己的节点隐藏它。"
+          }
+        }
+      }
+    },
     "Your node stopped" : {
       "localizations" : {
         "es" : {
@@ -233307,6 +234955,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的公开账户"
+          }
+        }
+      }
+    },
+    "Your question and the saved things that answer it go to Apple's Private Cloud Compute, which Apple says keeps none of it. Everything else stays on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu pregunta y las cosas guardadas que la responden van a Private Cloud Compute de Apple, que según Apple no conserva nada. Todo lo demás se queda en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "質問とそれに答える保存済みアイテムは Apple の Private Cloud Compute に送られます。Apple によれば何も保持されません。それ以外はすべて %@ に残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "질문과 이에 답하는 저장된 항목은 Apple의 Private Cloud Compute로 전송되며, Apple은 아무것도 보관하지 않는다고 밝힙니다. 그 밖의 모든 것은 %@에 남습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的问题以及能回答它的已保存内容会发送到 Apple 的 Private Cloud Compute，Apple 表示不会保留任何内容。其余一切都留在 %@ 上。"
           }
         }
       }
@@ -237170,6 +238846,34 @@
         }
       }
     },
+    "about $%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unos $%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約$%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 $%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 $%@"
+          }
+        }
+      }
+    },
     "about %@" : {
       "localizations" : {
         "es" : {
@@ -237334,6 +239038,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "约 %lld 秒"
+          }
+        }
+      }
+    },
+    "about 0.1%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "alrededor del 0,1%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約0.1%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 0.1%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 0.1%"
+          }
+        }
+      }
+    },
+    "about 1–2%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "alrededor del 1–2%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約1〜2%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1–2%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 1–2%"
           }
         }
       }
@@ -242971,6 +244731,34 @@
         }
       }
     },
+    "from your private ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "de tu ETH privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベートの ETH から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 ETH에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你的私密 ETH 中"
+          }
+        }
+      }
+    },
     "from your session" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -244412,6 +246200,34 @@
         }
       }
     },
+    "in their private balance" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en su saldo privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相手のプライベート残高に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "상대방의 비공개 잔액으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到对方的私密余额"
+          }
+        }
+      }
+    },
     "in your" : {
       "localizations" : {
         "es" : {
@@ -244436,6 +246252,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "到你的"
+          }
+        }
+      }
+    },
+    "in your account at once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en tu cuenta al instante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すぐにアカウントへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "즉시 계정으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "立即到你的账户"
           }
         }
       }
@@ -261096,6 +262940,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "zk.money"
+          }
+        }
+      }
+    },
+    "zk.money keeps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money cobra"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money の手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 收取"
           }
         }
       }

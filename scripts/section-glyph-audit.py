@@ -36,7 +36,8 @@ HEADING = re.compile(r"dsText\(\.heading(2\d|3\d)\)")
 # The same shape, not a section name.
 ALLOW = {
     "Casberi/Casberi/Design/DSTraySearchField.swift": "a field's own glyph beside its words",
-    "Casberi/Casberi/Screens/MoveBack.swift": "a back row: the chevron is the control",
+    "Casberi/Casberi/Screens/MoveBack.swift": "a back row: the chevron is the control; and `MoveRowGlyph`, "
+                                              "a Move row's lead on its disc, never a section name (prd §1892)",
 }
 
 
