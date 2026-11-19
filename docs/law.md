@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2076 of 2150 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2077 of 2151 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1869,7 +1869,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485)
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 - §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
-- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599, §1666, §1668)
+- §1473 — Buy is Move's fourth verb: a gift card from Bitrefill's accountless door, paid by your account in USDC on Base (build… (amended by §1599, §1666, §1668, §1897)
 - §1474 — A Logos node row names no address, and an unreachable node is "Not on the same network as your node"
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
@@ -1997,7 +1997,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1596 — Swap on Robinhood asks Sushi too: MUSEGOD's only pool there is Sushi's, so it swaps for ETH and USDG
 - §1597 — A failed circuit is never asked again: a return resets Tor's connections, a token read tries the next node after a 42…
 - §1598 — Peer: Deposit comes before Cash out, both are Move's verbs, the proof runs in the app, never handed to Peer's app (di… (amended by §1599, §1603, §1606)
-- §1599 — Buy is a card buying crypto; gift cards are Spend
+- §1599 — Buy is a card buying crypto; gift cards are Spend (amended by §1897)
 - §1600 — Swap names both networks, always: "on <network>" after what is sold and "on <network>" after what it buys, each its o… (amended by §1754)
 - §1601 — A send waits on nothing it need not, and never on a Signer that will not answer: Cancel, a declined connection, two m… (amended by §1602, §1605, §1609, §1644, §1687)
 - §1602 — A send is timed on the phone, and what the account is is read once, ahead (amended by §1605)
@@ -2223,7 +2223,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
 - §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
-- §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872, §1892)
+- §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872, §1892, §1897)
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
 - §1783 — The phone's bar is Feed · Wallet with Move apart; Apps leaves the bar for the top right of the title row (amends §171…
 - §1784 — A choice's list is a menu on its row, in every Move sentence (amends §1781, §1782, §1616)
@@ -2294,7 +2294,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1849 — Home's acts are four round buttons, the day stands on a pill, the watchlist is the card's, the Wallet's rows open its…
 - §1850 — Home's doors are words with a chevron, its jumps are circles, its head stands on the page with no card, and the map's…
 - §1851 — Home's head is type on the page's left edge: the balance large, one row of facts, Holdings as a row, and the watchlis…
-- §1852 — Move's menu is five verbs that rise over the page above its button; Buy and Swap pick their kind on their own page (r… (amended by §1889)
+- §1852 — Move's menu is five verbs that rise over the page above its button; Buy and Swap pick their kind on their own page (r… (amended by §1889, §1897)
 - §1853 — Receive's "From a zk.money link" is deleted: Casberi cannot tell a link that pays out to Ethereum from one that only…
 - §1854 — A Safe settings change is named by the move, not the moment it was seen, its sheet lists no History, and a key you ex…
 - §1855 — Home's head stands on one grey plate, its doors with it, and the feed's sections keep their old gap (amends §1851 ite…
@@ -2334,11 +2334,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
-- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896)
+- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
-- §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,…
+- §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897)
+- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a…
 
 ## Dead rulings → what replaced them (generated)
 
