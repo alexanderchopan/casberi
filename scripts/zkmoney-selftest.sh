@@ -747,4 +747,11 @@ grep -q 'if sendsFromAztec, aztecCanPay {' "$SEND" \
   && grep -q 'return paysZkMoney || ZkMoneyWire.tag(typed) != nil || ZkMoneyWire.atTag(typed) != nil' "$SEND" \
   || { echo "✗ Send offers your Aztec account to pay a zk.money tag, which it cannot (prd §1907)"; exit 1; }
 
+# Send's token list: your private account on Aztec is its own heading, in
+# Aztec's ink, and offered only where Aztec can pay the To (prd §1908).
+grep -q 'let aztecRows = aztecCanPay ? privateWithRows(q).filter { $0.key.hasPrefix("aztec|") } : \[\]' "$SEND" \
+  && grep -q 'placeHeader(String(localized: "Your private account"), ink: DS.aztecInk)' "$SEND" \
+  && grep -q 'let balanceRows = privateWithRows(q).filter { !$0.key.hasPrefix("aztec|") }' "$SEND" \
+  || { echo "✗ Send lists Aztec's tokens under Your private balance, or offers them to a To Aztec cannot pay (prd §1908)"; exit 1; }
+
 echo "✓ zk.money self-test passed"

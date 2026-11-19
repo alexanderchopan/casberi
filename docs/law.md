@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2087 of 2161 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2088 of 2162 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2157,7 +2157,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
 - §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
 - §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720, §1776, §1778)
-- §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private… (amended by §1779, §1877)
+- §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private… (amended by §1779, §1877, §1908)
 - §1720 — Into your private balance on Aztec from your co-signer: when Shield scores your co-signer and not your account, Move'… (amended by §1890)
 - §1721 — Railgun in Holdings and Move, in every build: its tokens in the one Private block, moving in by the token you picked,… (amended by §1727, §1877)
 - §1722 — The balance is dated when it is old and read again when it changed, and Zerion is read three at a time with holdings…
@@ -2349,7 +2349,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show…
 - §1905 — Private gas is said so, and Base's mark is its own tile
 - §1906 — A fake transfer is one somebody else sent
-- §1907 — With a zk.money tag in To, From offers no Aztec account
+- §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
+- §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte…
 
 ## Dead rulings → what replaced them (generated)
 

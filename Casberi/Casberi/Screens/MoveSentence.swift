@@ -5681,13 +5681,21 @@ struct MoveSentence: View {
             // public ones: picking one is the whole choice ("Send 0.1 ETH
             // from your private balance to …"). No switch, no network to
             // pick first; network and token pin down the one place.
-            if verb == .send, !privateWithRows(q).isEmpty {
+            // **TWO PLACES, TWO HEADINGS (prd §1908, user: "it has from your
+            // private balance as a section but not private account. it just
+            // lists aztec token in the same group").** Your private balance
+            // (Privacy Pools, Railgun) under its own name, then your private
+            // account on Aztec under its own, in Aztec's ink, and only where
+            // Aztec can pay the To (`aztecCanPay`, prd §1907).
+            let balanceRows = privateWithRows(q).filter { !$0.key.hasPrefix("aztec|") }
+            let aztecRows = aztecCanPay ? privateWithRows(q).filter { $0.key.hasPrefix("aztec|") } : []
+            if verb == .send, !balanceRows.isEmpty {
                 placeHeader(String(localized: "Your private balance"))
-                let privateNets: [String] = privateWithRows(q).reduce(into: []) { if !$0.contains($1.network) { $0.append($1.network) } }
+                let privateNets: [String] = balanceRows.reduce(into: []) { if !$0.contains($1.network) { $0.append($1.network) } }
                 ForEach(privateNets, id: \.self) { net in
                 listHeader(net)
                 MoveDeckGrid {
-                    ForEach(privateWithRows(q).filter { $0.network == net }, id: \.key) { p in
+                    ForEach(balanceRows.filter { $0.network == net }, id: \.key) { p in
                         MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
                             pick {}
                             p.act()
@@ -5700,6 +5708,21 @@ struct MoveSentence: View {
                         .accessibilityLabel(Text("\(p.symbol), your private balance, \(p.network)"))
                     }
                 }
+                }
+            }
+            if verb == .send, !aztecRows.isEmpty {
+                placeHeader(String(localized: "Your private account"), ink: DS.aztecInk)
+                listHeader(Self.aztecRule)
+                MoveDeckGrid {
+                    ForEach(aztecRows, id: \.key) { p in
+                        MoveDeckTile(title: p.symbol, sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
+                            pick {}
+                            p.act()
+                        } face: {
+                            MoveRowMark(token: p.symbol, network: "brand-aztec", size: DSHomeCircleMetrics.face)
+                        }
+                        .accessibilityLabel(Text("\(p.symbol), your private account, Aztec"))
+                    }
                 }
             }
             // **A PRIVATE SWAP (prd §1875).** Swap's "what" lists the tokens
@@ -9148,10 +9171,10 @@ struct MoveSentence: View {
 
     /// A place over its networks (prd §1904 item 8): your public account,
     /// your private balance, white at the row's size.
-    private func placeHeader(_ text: String) -> some View {
+    private func placeHeader(_ text: String, ink: Color = DS.textPrimary) -> some View {
         Text(verbatim: text)
             .dsText(.heading17)
-            .foregroundStyle(DS.textPrimary)
+            .foregroundStyle(ink)
             .frame(minHeight: 36, alignment: .bottomLeading)
             .accessibilityAddTraits(.isHeader)
     }

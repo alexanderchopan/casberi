@@ -457,7 +457,9 @@ struct MoveDeckTile<Face: View>: View {
                     // past its circle (user, 2026-11-19: "badges don't show").
                     .frame(width: DSHomeCircleMetrics.face, height: DSHomeCircleMetrics.face)
                     .padding(3)
-                    .overlay(Circle().strokeBorder(DS.pickInk, lineWidth: 2).opacity(picked ? 1 : 0))
+                    // Behind the face, so a network badge stands over the
+                    // ring (user, 2026-11-19: "redline should go under badge").
+                    .background(Circle().strokeBorder(DS.pickInk, lineWidth: 2).opacity(picked ? 1 : 0))
                     .accessibilityHidden(true)
                 Text(verbatim: title)
                     .dsText(.label12)

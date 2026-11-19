@@ -74507,3 +74507,13 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The same list in the tray.
 
 **Checks.** `zkmoney-selftest.sh` holds the guard and its tag test.
+
+## §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Aztec can pay (amends §1719's one header, §1907) (user, 2026-11-19, on 1047: "on send it has from your private balance as a section but not private account. it just lists aztec token in the same group", "it lists usdc on aztec i mean") — BUILT
+
+**Found.** Send's token list (the Deck's From) stood every private token under "Your private balance", Aztec's USDC among them under an "Aztec" network line, while Receive and To name two places (§1779, §1904 item 11). And §1907 hid Aztec only from the old From menu: this list still offered Aztec's USDC beside a zk.money tag or a 0zk address.
+
+**Ruling.** "Your private balance" holds Privacy Pools' and Railgun's tokens by network; "Your private account", in Aztec's ink, with "Aztec to Aztec only" under it, holds Aztec's, each token wearing Aztec's mark. Aztec's tokens stand only while `aztecCanPay` (§1907).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `zkmoney-selftest.sh` holds the split, the heading and the gate.
