@@ -74381,3 +74381,17 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Not done.** Nothing is built. Tokens' Kind glyph is owed. `creditcard` is also Bitrefill's Money category (`BitrefillBuy`), a screen apart: one must change. Merchant artwork and the token marks on the canvas are stand-ins. The other four verbs take the Deck after Buy is built.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with tile with your private places as rows, Half and All are keys on the keypad, and a sum you cannot cover is dimmed (amends §1781, §1752, §1754, §1896 item 3, §1896 item 10, §1897 item 6) (user, 2026-11-19, of Send drawn in the Deck: "To needs rwork"; of a private place drawn as a tile: "teh private looks terrible for azec to aztec only", "we'd have tor emove 'onnly'"; "paste and type are usually one field for a user a search / empty bar"; of three ways to do To: "Groups"; of a sum on the keypad's top row: "what if user doesn't have …", then "ok"; "Write it up") — DESIGNED, NOT BUILT; the canvas https://claude.ai/artifact/HVBRdokcFujcjdy6eGdyMx, rows "Deck · Send", "Send · To, three ways" and "Send · Under $20, and after the hold"
+
+1. **Send's steps are To · From · Amount**, in §1897's deck. The sentence reads "Send $20 of USDC on Base to Leo."
+2. **To is one field and three groups.** One field, "Name or address", a magnifier and grey words with no backing, takes a paste or typing; Paste and Type are not verbs of their own. Under it the group words Recent · Private · Addresses (Merchant's category row, §1897 item 6) show one group at a time as rows: a 30pt lead, the name, the address tail grey (`AddressTail.short`). A list and a keyboard-first To were drawn and refused.
+3. **While typing, the matches stand above the steps**, in the facts' place, as rows nearest the field; the keyboard covers the deck, so nothing is listed under the field. The group words step aside: a search covers all three.
+4. **A private place is a row, never a tile** (amends §1897 item 6 for private places): "Your private account" over "Aztec to Aztec only" in `DS.aztecInk`, whole on every screen it stands on ("we'd have to remove 'only'" was the tile's cost, refused). "Your private balance" over its token and network. Recent leads as §1752 has it; the book keeps the heading Addresses (§1896 item 10).
+5. **From is the Pay with tile** (§1897 item 6): your public balances as tiles, balance first; your private places under "Private" as rows with the balance trailing. A place the To cannot take is dimmed: Aztec to a public address.
+6. **Amount is the keypad** with $20 · Half · All as its top row (amends §1754's five sums and §1896 item 3's chip row): Half and All are keys among the digits, not chips. **A sum you cannot cover is dimmed and takes no tap**, the row never reshuffles; one rule with §1897's tiles.
+7. **The act and after** are §1897's: Hold to send on the back chevron's row; then Face ID in the foot, "Sending" (the verb pink in the sentence, the foot grey), then "Sent", the Cost fact what the send cost, and Done. From Aztec the fill and the rule are Aztec's lime.
+
+**Not done.** Nothing is built. Swap, Earn and Receive are not drawn in the Deck. The address book past what the deck shows scrolls inside it, undrawn.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
