@@ -476,3 +476,12 @@ Starts the engine headless and logs `aztecEngine| probe | <step> | <ms> | <detai
 
 - **The index line this file took over (2026-11-16, the rule sheet's byte budget).** It read, whole: **Tabs (§1809): Move alone, Home ↔ Activity on the swipe, Search is Apps' field (`PlaceTabBar`); Move: a sentence (§1438); keys, Revoke: Wallet › Security (§1436, 7); §1424 §1427; swaps direct (§1542), Relay for Receive only; `your-account-selftest.sh`; `-yourAccount{ForgetDevice,Probe,RecoverProbe,ApproveProbe}` `-moveSwapDraft` `-moveSendDraft` `-moveHoldings` `-movePreview` `-moveOutsideDraft` `-recoveryNudgePreview` `-keysWalk` `-keysStep` `-keysSetupProbe` (§1457) `-moveReceiveFrom` (§1470); Spend §1473: `-openMove` `-bitrefillSample` `-moveBuyDraft` `-bitrefillPayProbe`; Buy §1599: `-moveDepositDraft` `-rampHostKey`; Deposit §1603, §1607: `-peerAttestProbe` `-peerCapture "cashapp[|<template>]"`; §1542: `-moveSimulateETH <wei>` (`direct-swap-selftest.sh`); `-moveSweepDraft` (§1537); signing hooks §1510–§1515 → docs/hooks/wallet.md; Day, Notes: Feed sections, §1343**
   Since prd §1843 the phone has no Home ↔ Activity swipe: Home is the feed's page with the Wallet at its head.
+
+
+## Railgun, every build (moved from the rule sheet, 2026-11-18)
+
+- **Railgun, every build: your account sends only to you, a broadcaster to anyone else (`railgun-selftest.sh`, `-moveRailgun in|back|send|swap|private`, `-receiveFromPrivate`); a swap stays inside Railgun through its classic relay adapter, ETH and USDC never (§1875); a send to a 0zk address stays inside Railgun, Receive shows yours (§1877); Move says dollars and one cost, the wallet syncs on the Wallet's open (`-railgunDemoUnder YES`: under $10)** → prd §1721 · §1723 · §1728
+
+## The watchlist hooks (moved from the hooks index, 2026-11-18)
+
+- `-watchlistAdd "<id>|<SYMBOL>|<Name>[,…]"|clear` `-watchlistProbe YES` `-watchToken YES` `-watchlistSearch "<words>"` `-watchedToken <id>` — the Wallet's watchlist (prd §1632): a Home door trailing the day's biggest mover, its page, the Watch a token tray, a token's page (`-openSection watchlist|watchedToken`); keyless DeFiLlama + CoinGecko search, never Zerion (`watchlist-selftest.sh`); its box draws the first five side by side in % (§1634); `-watchHeldSample "SYM|<network>:<contract>|<usd>"` puts a holding in the tray on the sim
