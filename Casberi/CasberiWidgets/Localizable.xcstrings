@@ -153,6 +153,34 @@
         }
       }
     },
+    "%@ today": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘 %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天 %@"
+          }
+        }
+      }
+    },
     "%lld": {
       "localizations": {
         "es": {
@@ -301,6 +329,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "另有 %lld 项"
+          }
+        }
+      }
+    },
+    "%lld more today": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld más hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日はあと %lld 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘 %lld개 더"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天还有 %lld 条"
           }
         }
       }
@@ -1297,6 +1353,34 @@
         }
       }
     },
+    "Open Casberi to see your balance": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre Casberi para ver tu saldo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi を開いて残高を確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi를 열어 잔액을 확인하세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开 Casberi 查看你的余额"
+          }
+        }
+      }
+    },
     "Open Casberi to see your watchlist": {
       "localizations": {
         "es": {
@@ -1489,6 +1573,62 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "流出"
+          }
+        }
+      }
+    },
+    "Private": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Privado"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "非公開"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "비공개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "私密"
+          }
+        }
+      }
+    },
+    "Public": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Público"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "公開"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "공개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "公开"
           }
         }
       }
@@ -1829,6 +1969,62 @@
         }
       }
     },
+    "The newest from your apps today.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo más nuevo de tus apps hoy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日のアプリの最新情報。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘 앱의 최신 소식."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的应用今天的最新内容。"
+          }
+        }
+      }
+    },
+    "The tokens you watch, and today's move.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Los tokens que sigues y su movimiento de hoy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォッチ中のトークンと今日の値動き。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "관심 토큰과 오늘의 변동."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你关注的代币及今日涨跌。"
+          }
+        }
+      }
+    },
     "Then %@, %@.": {
       "localizations": {
         "en": {
@@ -1887,6 +2083,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "然后是 %@。"
+          }
+        }
+      }
+    },
+    "Today": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天"
           }
         }
       }
@@ -2149,6 +2373,34 @@
         }
       }
     },
+    "Watch a token in Casberi": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue un token en Casberi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi でトークンをウォッチ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberi에서 토큰을 관심 등록하세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在 Casberi 中关注代币"
+          }
+        }
+      }
+    },
     "Watchlist": {
       "localizations": {
         "es": {
@@ -2341,6 +2593,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "随时随地写新笔记。"
+          }
+        }
+      }
+    },
+    "Your balance, public and private.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tu saldo, público y privado."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "公開と非公開の残高。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "공개 및 비공개 잔액."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你的余额，公开与私密。"
           }
         }
       }
