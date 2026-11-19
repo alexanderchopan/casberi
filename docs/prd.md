@@ -74235,3 +74235,18 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 3. **The list stands in the rows' column:** its marks centred in the row mark's width, its words, its search field's glyph and words starting where the row's answer starts (`MoveChoiceRowLabel.leadColumn`), no indent.
 4. **The Move menu** still rises on the right above the Move button, its verbs at Home's section rung (`heading24`, 48pt rows), no glyphs.
 5. **Never "someone":** Send's blank is "an address" ("Send ETH to an address on Base."), its foot "Choose an address"; Receive's From is "Any address"; the spoken hint is "Pick an address". The recipient may be an app, an exchange or a contract.
+
+## §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says (amends §1720, §1700r) (user, 2026-11-18, moving 1.405844 USDC into Aztec: "Shield refused the sign-in: Validation error: signature — Too big: expected string to have <=256 characters") — BUILT; NOT yet run with real money
+
+**Measured 2026-11-18.** Shield's `l1-eligibility` now answers every address with tiers `screeningUsd: 100`, `passportUsd: 1000`, `cleanHandsUsd: 25000`. Your Safe reads `eligible: true`, `method: null`, `passportScore: 0`, the screening tier; your co-signer reads `eligible: true`, `method: "passport"`, score 62. Casberi chose the co-signer only when the Safe was NOT eligible, so it now signed in as the Safe. A Safe answers SIWE with its owners' signatures and the contract's data (ERC-1271), well over the 256 characters `api/auth/authenticate` takes, and §1719 item 2 had already found Shield wants one key's signature.
+
+**Ruling.**
+1. **Move's deposit into Aztec is always your co-signer's** (`viaCoSigner`), when Shield finds it eligible and not sanctioned. With no eligible co-signer the sentence shows Shield's refusal (`shieldNo`) and the way in, never a Safe sign-in.
+2. **An exit's limit is always signed in by your co-signer**, the same rule; otherwise "Shield needs a Human Passport score of 20 on your co-signer; it has N".
+3. **Your account's own sign-in to Shield and its own deposit are deleted** (`ShieldBridge.deposit`, the `signText` branch of `token`): a path Shield always refuses is a dead control (§83, §723).
+
+**Not seen.** A real deposit or exit through the co-signer (§1720's flow) from TestFlight; the simulator has no co-signer wallet.
+
+**Mac half (§1402).** Shared model and Move; the Signer sheet shows its code where no wallet opens.
+
+**Checks.** `shield-bridge-selftest.sh`: Move reaches only the co-signer's deposit, no Safe sign-in or Safe deposit remains, an exit signs in only by the co-signer.

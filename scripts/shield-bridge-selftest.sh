@@ -411,8 +411,12 @@ grep -q 'try await coSend(\["from": coSigner, "to": asset.portal, "data": deposi
 grep -q 'personalSignDigest(message), signer: account' "$APP" \
   || { echo "✗ the co-signer's sign-in is not checked against the message Casberi wrote (prd §1720)"; exit 1; }
 MOVEAZ="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
-awk '/if !standing.eligible, !standing.sanctioned,/{a=NR} /theirs.eligible \{/{b=NR} /viaCoSigner = found/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
-  || { echo "✗ Move deposits from your co-signer other than when your account is not eligible and it is (prd §1720)"; exit 1; }
+awk '/if !standing.sanctioned,$/{a=NR} /if theirs.eligible, !theirs.sanctioned \{/{b=NR} /viaCoSigner = found/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
+  && grep -q 'if standing.sanctioned || viaCoSigner == nil {' "$MOVEAZ" \
+  || { echo "✗ Move deposits into Aztec other than from your co-signer: a Safe's sign-in is refused by Shield (prd §1720, §1890)"; exit 1; }
+! grep -q 'ShieldBridge.deposit(\|static func deposit(' "$MOVEAZ" "$APP" \
+  && ! grep -q 'Sign in to Shield with your account' "$APP" \
+  || { echo "✗ your account signs in to Shield again: its signature is refused, over 256 characters (prd §1890)"; exit 1; }
 # Any amount (prd §1700q): typed, never a list; Send and run() both wait on a clear amount.
 ! grep -q 'usdcSteps\|wethSteps' "$MOVEAZ" \
   || { echo "✗ Move's Aztec amount is a fixed list again (prd §1700q)"; exit 1; }
@@ -420,8 +424,8 @@ grep -q 'guard stage == .ready, amountOK, let units' "$MOVEAZ" \
   || { echo "✗ an Aztec move runs without a clear amount (prd §1700q)"; exit 1; }
 grep -q 'move.stage == .ready && move.amountOK &&' "$MOVEAZ" \
   || { echo "✗ Send stands lit over an unclear amount (prd §1700q)"; exit 1; }
-awk '/static func exit\(/{e=1} e&&/let theirs = await eligibility\(coSigner\), theirs.eligible/{t=NR} e&&/limit\(.outOfAztec, asset: asset, units: units, account: signer, aztec: aztec, coSigner: byCoSigner\)/{l=NR} END{exit !(t && l && t<l)}' "$APP" \
-  || { echo "✗ an exit asks Shield only for your account, never your co-signer (prd §1700r)"; exit 1; }
+awk '/static func exit\(/{e=1} e&&/guard let coSigner = found, let theirs, theirs.eligible, !theirs.sanctioned else \{/{t=NR} e&&/limit\(.outOfAztec, asset: asset, units: units, account: signer, aztec: aztec, coSigner: byCoSigner\)/{l=NR} END{exit !(t && l && t<l)}' "$APP" \
+  || { echo "✗ an exit signs in to Shield other than by your co-signer (prd §1700r, §1890)"; exit 1; }
 grep -q 'guard stage == .reading || stage == .ready else { return }' "$MOVEAZ" \
   || { echo "✗ a refresh behind the stored balance can undo a move under way (prd §1700r)"; exit 1; }
 grep -q 'if typed.hasPrefix(".") { typed = "0" + typed }' "$MOVEAZ" \

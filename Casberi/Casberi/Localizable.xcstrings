@@ -178725,6 +178725,34 @@
         }
       }
     },
+    "Shield needs a Human Passport score of %lld on your co-signer; it has %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield necesita una puntuación de Human Passport de %lld en tu cofirmante; tiene %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldには共同署名者のHuman Passportスコア%lldが必要です。現在は%lldです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 공동 서명자의 Human Passport 점수 %lld이 필요합니다. 현재 %lld입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 需要你的共同签名人 Human Passport 分数达到 %lld；目前为 %lld"
+          }
+        }
+      }
+    },
     "Shield needs a Human Passport score of %lld; yours is %lld" : {
       "localizations" : {
         "es" : {
@@ -178777,6 +178805,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Shield 拒绝了登录：%@"
+          }
+        }
+      }
+    },
+    "Shield takes a sign-in from your co-signer, not your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield acepta el inicio de sesión de tu cofirmante, no de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldはアカウントではなく共同署名者からのサインインを受け付けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 계정이 아니라 공동 서명자의 로그인을 받습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 只接受你的共同签名人登录，而不是你的账户"
           }
         }
       }

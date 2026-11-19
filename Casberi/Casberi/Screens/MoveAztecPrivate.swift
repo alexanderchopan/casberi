@@ -395,16 +395,21 @@ final class AztecMove {
             // can. When your account is not eligible and your co-signer is,
             // the deposit is the co-signer's, and what it holds counts too
             // (your account moves it the rest).
+            // **ALWAYS THE CO-SIGNER (prd §1890).** Shield's sign-in takes one
+            // key's signature (256 characters at most); a Safe answers with
+            // its owners' and the contract's, so it can never sign in, even
+            // where Shield's screening tier calls it eligible (measured
+            // 2026-11-18: the Safe "eligible", method none, up to $100).
             viaCoSigner = nil
             coSigner = nil
             coSignerScore = nil
-            if !standing.eligible, !standing.sanctioned,
+            if !standing.sanctioned,
                let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, safe).first {
                 // Remembered short of the score too: the way in names it (prd §1820).
                 coSigner = found
                 if let theirs = await ShieldBridge.eligibility(found) {
                     coSignerScore = Int(theirs.score)
-                    if theirs.eligible {
+                    if theirs.eligible, !theirs.sanctioned {
                         viaCoSigner = found
                         standing = theirs
                         for asset in ShieldBridge.assets {
@@ -417,7 +422,7 @@ final class AztecMove {
             safeHeld = held
             holdings = depositHoldings(held)
             maxUSD = standing.maxUSD
-            if standing.sanctioned || !standing.eligible {
+            if standing.sanctioned || viaCoSigner == nil {
                 stage = .shieldNo(score: AztecWayIn.shownScore(coSignerScore: coSignerScore, accountScore: Int(standing.score)),
                                   threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
                 return
@@ -493,17 +498,12 @@ final class AztecMove {
                 // Railgun's is: Checking · Signing · Sent on Ethereum.
                 steps.begin(.move, plan: .signed(.ethereum))
                 let gas = try await gasPlan(asset)
-                if let coSigner = viaCoSigner {
-                    let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas) { words in
-                        self.stage = .working(words)
-                    }
-                    steps.finish()
-                    stage = .done(sent.transaction)
-                } else {
-                    let sent = try await ShieldBridge.deposit(asset, units: units, gas: gas, stage: report)
-                    steps.finish()
-                    stage = .done(sent.transaction)
+                guard let coSigner = viaCoSigner else { return }
+                let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas) { words in
+                    self.stage = .working(words)
                 }
+                steps.finish()
+                stage = .done(sent.transaction)
             case .send:
                 guard let recipient else { return }
                 if toAztec {

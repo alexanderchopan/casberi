@@ -34,18 +34,14 @@ extension ShieldBridge {
             throw Failure(message: String(localized: "Shield did not answer"))
         }
         let message = siwe(account: EIP55.checksum(account), aztec: aztec, nonce: nonce, now: .now)
-        let signature: [UInt8]
-        if coSigner {
-            let hex = "0x" + Array(message.utf8).map { String(format: "%02x", $0) }.joined()
-            signature = try await SignerRequestSheet.asking(signer: account, title: String(localized: "Your co-signer signs in to Shield")) { ask in
-                try await YourAccountSignerLink.signForApp(method: "personal_sign", params: [hex, account],
-                                                          digest: NearAIVerify.personalSignDigest(message), signer: account,
-                                                          resend: ask.resends, sent: { ask.ask(kept: $0) },
-                                                          show: { ask.pair($0); openCoSignerWallet(account, onto: $0) })
-            }
-        } else {
-            signature = try await YourAccountMessage.signText(message, on: YourAccountOp.ethereum, account: account,
-                                                              reason: String(localized: "Sign in to Shield with your account"))
+        // Only one key's signature signs in (prd §1890): a Safe's is refused.
+        guard coSigner else { throw Failure(message: String(localized: "Shield takes a sign-in from your co-signer, not your account")) }
+        let hex = "0x" + Array(message.utf8).map { String(format: "%02x", $0) }.joined()
+        let signature = try await SignerRequestSheet.asking(signer: account, title: String(localized: "Your co-signer signs in to Shield")) { ask in
+            try await YourAccountSignerLink.signForApp(method: "personal_sign", params: [hex, account],
+                                                      digest: NearAIVerify.personalSignDigest(message), signer: account,
+                                                      resend: ask.resends, sent: { ask.ask(kept: $0) },
+                                                      show: { ask.pair($0); openCoSignerWallet(account, onto: $0) })
         }
         let body: [String: Any] = [
             "message": message, "signature": "0x" + signature.map { String(format: "%02x", $0) }.joined(),
@@ -100,52 +96,6 @@ extension ShieldBridge {
 // MARK: - Into Aztec
 
 extension ShieldBridge {
-    /// Moves `units` of `asset` from your Safe into your Aztec account,
-    /// privately: where you stand, Shield's signed limit (signing in with the
-    /// Safe, Face ID), then one Safe operation — approve and the portal's
-    /// deposit — through `privateCalls` (simulated, Face ID). The claim on Aztec
-    /// follows in `settle()` once Aztec has the message.
-    @MainActor
-    static func deposit(_ asset: Asset, units: String, gas: AztecGas.Plan? = nil,
-                        stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> AztecAccountStore.ShieldDeposit {
-        guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
-        guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
-        guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
-        guard standing.eligible else {
-            throw Failure(message: standing.sanctioned
-                ? String(localized: "Shield will not take money from this account")
-                : String(localized: "Shield needs a Human Passport score of \(Int(standing.threshold)); yours is \(Int(standing.score))"))
-        }
-        let aztec = try await AztecEngine.shared.accountAddress()
-        let limit = try await limit(.intoAztec, asset: asset, units: units, account: account, aztec: aztec)
-        let nonce = UInt64.random(in: 1...UInt64.max)
-        guard let plan = try await AztecEngine.shared.call("shieldPlan", [String(nonce)]) as? [String: Any],
-              let secretHash = plan["secretHash"] as? String,
-              let deposit = depositCalldata(units: units, secretHash: secretHash, limit: limit),
-              let amount = word(decimal: units) else {
-            throw Failure(message: String(localized: "This move could not be written"))
-        }
-        let approve = "0x095ea7b3" + (word(hex: asset.portal) ?? "") + amount
-        // Gas rides along in the same operation when the account needs it
-        // (prd §1700f item 13): one Face ID.
-        let sent = try await YourAccountChain.privateCalls(
-            (gas?.calls ?? []) + [(to: asset.ethToken, data: approve, value: "0"), (to: asset.portal, data: deposit, value: "0")],
-            on: YourAccountOp.ethereum, reason: String(localized: "Move \(asset.symbol) into your Aztec account"), stage: stage)
-        guard case .landed(let transaction?, _) = sent.outcome else {
-            throw Failure(message: String(localized: "Sent; Aztec will see it once Ethereum shows it"))
-        }
-        guard let receipt = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_getTransactionReceipt", [transaction]) as? [String: Any],
-              let message = message(in: receipt, portal: asset.portal) else {
-            throw Failure(message: String(localized: "Sent, but its message to Aztec could not be read yet"))
-        }
-        if let gas { AztecGas.record(gas, transaction: transaction, receipt: receipt) }
-        let pending = AztecAccountStore.ShieldDeposit(nonce: nonce, symbol: asset.symbol, amountUnits: message.amount,
-                                                      transaction: transaction, messageHash: message.key,
-                                                      leafIndex: message.index, claimed: false, at: .now)
-        AztecAccountStore.shared.addShield(pending)
-        return pending
-    }
-
     /// **INTO AZTEC FROM YOUR CO-SIGNER (prd §1720).** Shield scores the
     /// wallet that signs in, and its portal takes a deposit only from that
     /// wallet (`depositToAztecPrivateFor` answers `NotTrustedForwarder` to
@@ -332,18 +282,16 @@ extension ShieldBridge {
         // eligible and your co-signer is, the co-signer signs in to Shield for
         // the exit's limit. The exit itself is proved here and pays only the
         // address in the sentence.
-        var signer = account
-        var byCoSigner = false
-        if !standing.eligible, !standing.sanctioned,
-           let coSigner = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first,
-           let theirs = await eligibility(coSigner), theirs.eligible {
-            signer = coSigner
-            byCoSigner = true
-        } else if !standing.eligible {
-            throw Failure(message: standing.sanctioned
-                ? String(localized: "Shield will not move money for this account")
-                : String(localized: "Shield needs a Human Passport score of \(Int(standing.threshold)); yours is \(Int(standing.score))"))
+        // Always by your co-signer (prd §1890): your account's own sign-in
+        // is refused, whatever Shield's screening tier says of it.
+        guard !standing.sanctioned else { throw Failure(message: String(localized: "Shield will not move money for this account")) }
+        let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first
+        let theirs: Eligibility? = if let found { await eligibility(found) } else { nil }
+        guard let coSigner = found, let theirs, theirs.eligible, !theirs.sanctioned else {
+            throw Failure(message: String(localized: "Shield needs a Human Passport score of \(Int(theirs?.threshold ?? standing.threshold)) on your co-signer; it has \(Int(theirs?.score ?? 0))"))
         }
+        let signer = coSigner
+        let byCoSigner = true
         let aztec = try await AztecEngine.shared.accountAddress()
         let limit = try await limit(.outOfAztec, asset: asset, units: units, account: signer, aztec: aztec, coSigner: byCoSigner)
         guard let max = Decimal(string: limit.maxAmount), let want = Decimal(string: units), want <= max else {
