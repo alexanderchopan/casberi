@@ -26,6 +26,11 @@ enum MoveDeck {
     static let fade: CGFloat = 32
     /// The foot's row: the back chevron and the act's word.
     static var footHeight: CGFloat { stepsHeight + DS.Space.s2 }
+    /// **A LIST'S LAST ROW CLEARS THE FOOT (user, 2026-11-19: "can't really
+    /// see or touch the bottom of this token").** A list runs on under the
+    /// foot (§1904 item 9), so scrolled to its end it rises past the foot
+    /// and its fade, whole and tappable.
+    static var listTail: CGFloat { footHeight + fade }
     /// The keypad's top row of sums.
     static let presetHeight: CGFloat = 44
     /// A row of a step's list.
