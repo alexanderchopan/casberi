@@ -257,6 +257,10 @@ struct MoveLendSentence<Head: View>: View {
                     } else if open == .network {
                         ScrollView { fromRows.padding(.vertical, DS.Space.s2) }
                             .scrollIndicators(.hidden)
+                            // Scrolled to its end the last row rises past the
+                            // foot and its fade, as Send's lists do.
+                            .contentMargins(.bottom, MoveDeck.listTail, for: .scrollContent)
+                            .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight, alignment: .top)
                             .transition(.opacity)
                     } else {
                         Color.clear
