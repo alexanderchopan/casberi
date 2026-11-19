@@ -152,7 +152,7 @@ enum WidgetPublish {
             let file = dir.appendingPathComponent(WidgetFeedTile.markFile(source))
             let made = (try? FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate]) as? Date
             if let made, Date().timeIntervalSince(made) < 7 * 86_400 { continue }
-            let renderer = ImageRenderer(content: BridgeIcon(name: source, size: 40))
+            let renderer = ImageRenderer(content: BridgeIcon(name: source, size: DS.Mark.hero))
             renderer.scale = 2
             guard let data = renderer.uiImage?.pngData() else { continue }
             try? data.write(to: file, options: .atomic)
