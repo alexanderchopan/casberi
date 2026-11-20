@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2104 of 2178 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2106 of 2180 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2125,7 +2125,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700n — Apps on Aztec's browser says it is a Mac, so a RainbowKit picker draws Casberi under Installed
 - §1700o — A sign-in reads as a sign-in: the app's sentence, the account, the chain, until when and what else it reaches, the wh…
 - §1700p — Aztec's directory has one door, Library's tile; the Wallet's Home loses Apps on Aztec (amended by §1700s)
-- §1700q — Your private balance on Aztec takes any amount: typed, never picked from a list; the first real Shield deposit
+- §1700q — Your private balance on Aztec takes any amount: typed, never picked from a list; the first real Shield deposit (amended by §1925)
 - §1700r — Sending from Aztec lists your addresses, reads ".5", exits by your co-signer's score and shows the last balance at once (amended by §1890)
 - §1700s — Aztec's directory tile stands for anyone with Your account on an iPhone, never waiting for the Aztec account to be used (amended by §1700t)
 - §1700t — Your Aztec account shows once you have it: on an iPhone, from the moment there is Your account, never waiting for fir…
@@ -2221,7 +2221,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 - §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar…
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
-- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885, §1921)
+- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885, §1921, §1924)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
 - §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872, §1892, §1897, §1898)
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
@@ -2350,7 +2350,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1905 — Private gas is said so, and Base's mark is its own tile
 - §1906 — A fake transfer is one somebody else sent
 - §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
-- §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte…
+- §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte… (amended by §1924)
 - §1909 — Send's network and token are one step, With: To · With · Amount (amended by §1910, §1913)
 - §1910 — Every token list in Move is one template, and a token and its network are one pick on every verb (amended by §1916)
 - §1911 — A verb's kinds are chips over its steps, back is the menu, and Move's lists run to the home indicator
@@ -2367,6 +2367,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1921 — Receive's private account carries its Add money door
 - §1922 — Into Aztec, this iPhone first: the co-signer only past $100 a day
 - §1923 — Send's To is rows, the token's row, with Yours first
+- §1924 — "Aztec to Aztec only" is the address's rule, not the account's
+- §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs
 
 ## Dead rulings → what replaced them (generated)
 
