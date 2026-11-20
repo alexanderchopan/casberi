@@ -782,6 +782,27 @@ func home(_ to: String, _ data: String, _ value: String, chain: Int = 8453, from
                to: to, value: value, data: data) != nil
 }
 check(FreshTx.homeSelector == "0xad5425c6", "the home deposit's selector is not Across's deposit(bytes32,…)")
+// The Shield key (prd §1920): approve a Shield token to its own portal,
+// deposit into a portal, or send home to your account; nothing else.
+let shieldYou = "0x00000000000000000000000000000000000000aa"
+func shieldTx(_ to: String, _ data: String, _ value: String = "0x0") -> Bool {
+    FreshTx.Tx(shield: shieldYou, nonce: "0x0", maxPriorityFeePerGas: "0x1", maxFeePerGas: "0x2", gas: "0x30d40",
+               to: to, value: value, data: data) != nil
+}
+let sUSDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", sPortal = "0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c"
+let sWETHPortal = "0x477a911f76c44a5d3e5e692c59945263f61426c4"
+func shieldWord(_ a: String) -> String { String(repeating: "0", count: 24) + a.dropFirst(2) }
+let tenUSDC = String(repeating: "0", count: 58) + "989680"
+check(shieldTx(sUSDC, "0x095ea7b3" + shieldWord(sPortal) + tenUSDC), "the Shield key cannot approve USDC to its portal")
+check(!shieldTx(sUSDC, "0x095ea7b3" + shieldWord(sWETHPortal) + tenUSDC), "the Shield key approves USDC to another token's portal")
+check(!shieldTx(sUSDC, "0x095ea7b3" + shieldWord("0x00000000000000000000000000000000000000bb") + tenUSDC), "the Shield key approves a stranger")
+check(shieldTx(sPortal, "0x62470a10" + String(repeating: "0", count: 64)), "the Shield key cannot deposit into Shield's portal")
+check(!shieldTx(sPortal, "0x6641be24" + String(repeating: "0", count: 64)), "the Shield key calls a portal for something but a deposit")
+check(shieldTx(sUSDC, "0xa9059cbb" + shieldWord(shieldYou) + tenUSDC), "the Shield key cannot send USDC home to your account")
+check(!shieldTx(sUSDC, "0xa9059cbb" + shieldWord("0x00000000000000000000000000000000000000bb") + tenUSDC), "the Shield key pays someone else")
+check(shieldTx(shieldYou, "0x", "0x2386f26fc10000"), "the Shield key cannot send ETH home")
+check(!shieldTx("0x00000000000000000000000000000000000000bb", "0x", "0x2386f26fc10000"), "the Shield key sends ETH to someone else")
+check(!shieldTx(sPortal, "0x62470a10" + String(repeating: "0", count: 64), "0x1"), "the Shield key carries ETH into a token's portal")
 check(home(homeBase.spoke, homeData, "0x11c37937e08000"), "a fresh address cannot send its Base ETH home")
 check(!home(homeBase.spoke, homeData, "0x11c37937e08001"), "a home deposit carries more ETH than it deposits")
 check(!home(homeBase.spoke, homeData, "0x11c37937e08000", chain: 1), "a home deposit is signed on Ethereum")
@@ -1100,6 +1121,8 @@ mutate "a rate past 100% is a rate" "$YIELD" 's/guard apr < 1 else \{ return nil
 mutate "a fresh key may make any transaction" "$FTX" 's/guard FreshTx\.allowed\(to: to, data: data, value: value, network: network\) else \{ return nil \}//'
 mutate "a fresh key approves any spender" "$FTX" 's/return spender == String\(repeating: "0", count: 24\) \+ pool\.router\.dropFirst\(2\)\.lowercased\(\)/return true/'
 mutate "a fresh key signs on a test network" "$FTX" 's/guard !network\.isTest, PrivateMoney/guard PrivateMoney/'
+mutate "the Shield key pays anyone" "$FTX" 's/if d\.hasPrefix\("0xa9059cbb"\) \{ return who == you \}/if d.hasPrefix("0xa9059cbb") { return true }/'
+mutate "the Shield key approves any spender" "$FTX" 's/if d\.hasPrefix\("0x095ea7b3"\) \{ return who == pair\.portal \}/if d.hasPrefix("0x095ea7b3") { return true }/'
 mutate "a native deposit may carry nothing" "$FTX" 's/d\.hasPrefix\(nativeDeposit\) && !carried\.isEmpty/d.hasPrefix(nativeDeposit)/'
 mutate "the fresh gas is not kept back on Ethereum" "$FRESH" 's/let budget = have - reserve\n/let budget = have\n/'
 mutate "too little forgets the pool's minimum" "$FRESH" 's/guard budget >= max\(floor, reserve, 1\) else/guard budget >= max(reserve, 1) else/'

@@ -52,6 +52,8 @@ enum ShieldBridge {
         let threshold: Double
         let maxUSD: Double
         let reason: String?
+        /// What Shield's screening tier moves a day with no score (prd §1918a: 100).
+        var screeningUSD: Double = 100
     }
 
     /// EIP-4361, as the `siwe` library Shield uses writes it.

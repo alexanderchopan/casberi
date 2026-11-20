@@ -74684,3 +74684,17 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 
 **Checks.** `your-account-selftest.sh` holds the red-until-seen glyph, the section's filter and the stamp.
 
+## §1920 — Into Aztec without a co-signer: your Shield key, up to $100 a day (user, 2026-11-20, after §1918a's measurement and "ELI5 on why do this?": "ok build it") — BUILT, UNPROVEN WITH MONEY
+
+**Ruling.** When no co-signer of yours is one Shield scores, a move-in to your private account on Aztec goes through **your Shield key** (`Model/Aztec/ShieldKey.swift`): one ordinary key that can sign in to Shield where your account (a Safe) never can (§1890). Shield's screening tier lets it move in up to $100 a day with no score (§1918a). The co-signer still comes first when Shield scores it (its limits are higher); the key is the way in for everyone else.
+
+1. **One key, kept.** Derived from the private root in iCloud Keychain (`PrivateRoot.shieldKey`, purpose "aztec shield key"), so it is the same key on every phone of yours and nothing new is stored; made for each signature and zeroed. Never a fresh key per move: Shield's $100 is per address per day, and a new key each time would walk around its rule.
+2. **It can only do this** (`FreshTx.shieldAllowed`, tested in `private-money-selftest.sh` with two mutations): on Ethereum, a Shield token's approval of its own portal, a deposit into a Shield portal, or what it holds sent back to your account (a token transfer or plain ETH). Its one message is Shield's sign-in (`ShieldKey.signIn` refuses anything else). Shield's token/portal pairs are spelled in `FreshTx` and held equal to `ShieldWire`'s by `shield-bridge-selftest.sh`.
+3. **The flow** (`ShieldBridge.depositFromKey`): the key signs in on the phone; Shield gives the signed limit; your account hands the key what it lacks, the token and ETH for its two sends, in one operation with Face ID; the key approves the portal (only if it must) and deposits. What the key already holds counts, so a move stopped half way is finished by the next.
+4. **On screen.** The move-in's rows say **Limit · Up to $100 a day** (no co-signer row); over it, "Up to $100 a day without a co-signer." Shield's own refusal past the day's limit is drawn in its words.
+
+**Unproven:** a real deposit through the key (Shield's portal taking it from the key, the claim on Aztec after). The money-moving tap is the user's. Like the co-signer's, the key's gas comes from ETH your account holds on Ethereum.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator with `-aztecWayInSample key`: Limit · Up to $100 a day under Ethereum to Aztec, no co-signer row.

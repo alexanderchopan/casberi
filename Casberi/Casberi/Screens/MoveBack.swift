@@ -180,6 +180,7 @@ struct MoveChoiceRowLabel: View {
         case String(localized: "Token"): "circle.circle"
         case String(localized: "When"): "clock"
         case String(localized: "Co-signer"): "person.2"
+        case String(localized: "Limit"): "gauge.with.needle"
         default: "circle.dotted"
         }
     }

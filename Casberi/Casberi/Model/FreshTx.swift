@@ -614,3 +614,50 @@ extension FreshTx.Tx {
                   gas: gas, to: to, value: value, data: data)
     }
 }
+
+// MARK: - The Shield key (prd §1920)
+
+extension FreshTx {
+    /// What the Shield key may sign, and nothing else: on Ethereum, a Shield
+    /// token's approval of that token's own portal, a deposit into one of
+    /// Shield's portals, or a return of what it holds to `account` (your own
+    /// account): a token's transfer to it, or plain ETH to it. It can pay no
+    /// one else and call nothing else.
+    /// Shield's two tokens on Ethereum and each one's portal (`ShieldBridge.assets`,
+    /// held equal by `shield-bridge-selftest.sh`): spelled here so this file
+    /// stands alone in its own harness.
+    static let shieldPairs: [(token: String, portal: String)] = [
+        ("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c"),
+        ("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", "0x477a911f76c44a5d3e5e692c59945263f61426c4"),
+    ]
+
+    static func shieldAllowed(to: String, data: String, value: String, chainId: Int, account: String) -> Bool {
+        guard chainId == homeChain, PrivateMoney.isAddress(account), let carried = TestnetTx.quantity(value) else { return false }
+        let t = to.lowercased(), d = data.lowercased(), you = account.lowercased()
+        // Plain ETH home: to your account, no call.
+        if t == you { return (d == "0x" || d.isEmpty) && !carried.isEmpty }
+        guard carried.isEmpty else { return false }
+        if let pair = shieldPairs.first(where: { $0.token == t }) {
+            guard d.count == 2 + 8 + 128, let amount = Decimal(string: PrivateMoney.decimal(hex: "0x" + String(d.dropFirst(74)))),
+                  amount > 0 else { return false }
+            let who = wordAddress(String(d.dropFirst(10).prefix(64)))
+            if d.hasPrefix("0x095ea7b3") { return who == pair.portal }
+            if d.hasPrefix("0xa9059cbb") { return who == you }
+            return false
+        }
+        if shieldPairs.contains(where: { $0.portal == t }) { return d.hasPrefix("0x62470a10") && d.count > 10 }
+        return false
+    }
+}
+
+extension FreshTx.Tx {
+    /// One of the Shield key's moves, nil unless `shieldAllowed`.
+    init?(shield account: String, nonce: String, maxPriorityFeePerGas: String, maxFeePerGas: String,
+          gas: String, to: String, value: String, data: String) {
+        guard FreshTx.shieldAllowed(to: to, data: data, value: value, chainId: FreshTx.homeChain, account: account) else { return nil }
+        for q in [nonce, maxPriorityFeePerGas, maxFeePerGas, gas, value] where TestnetTx.quantity(q) == nil { return nil }
+        guard let address = TestnetTx.bytes(to), address.count == 20, TestnetTx.bytes(data) != nil else { return nil }
+        self.init(chainId: FreshTx.homeChain, nonce: nonce, maxPriorityFeePerGas: maxPriorityFeePerGas, maxFeePerGas: maxFeePerGas,
+                  gas: gas, to: to, value: value, data: data)
+    }
+}

@@ -14,7 +14,8 @@ extension ShieldBridge {
                            score: (o["passportScore"] as? NSNumber)?.doubleValue ?? 0,
                            threshold: (o["passportThreshold"] as? NSNumber)?.doubleValue ?? 20,
                            maxUSD: (o["passportMaxUsd"] as? NSNumber)?.doubleValue ?? 1000,
-                           reason: o["reason"] as? String)
+                           reason: o["reason"] as? String,
+                           screeningUSD: ((o["tiers"] as? [String: Any])?["screeningUsd"] as? NSNumber)?.doubleValue ?? 100)
     }
 
     // MARK: - Signing in with the Safe
@@ -40,14 +41,22 @@ extension ShieldBridge {
             throw Failure(message: String(localized: "Shield did not answer"))
         }
         let message = siwe(account: EIP55.checksum(account), aztec: aztec, nonce: nonce, now: .now)
-        // Only one key's signature signs in (prd §1890): a Safe's is refused.
-        guard coSigner else { throw Failure(message: String(localized: "Shield takes a sign-in from your co-signer, not your account")) }
-        let hex = "0x" + Array(message.utf8).map { String(format: "%02x", $0) }.joined()
-        let signature = try await SignerRequestSheet.asking(signer: account, title: String(localized: "Your co-signer signs in to Shield")) { ask in
-            try await YourAccountSignerLink.signForApp(method: "personal_sign", params: [hex, account],
-                                                      digest: NearAIVerify.personalSignDigest(message), signer: account,
-                                                      resend: ask.resends, sent: { ask.ask(kept: $0) },
-                                                      show: { ask.pair($0); openCoSignerWallet(account, onto: $0) })
+        let signature: [UInt8]
+        if let key = ShieldKey.address, key.lowercased() == account.lowercased() {
+            // Your Shield key signs in on this phone, asking no one (prd §1920).
+            do { signature = try ShieldKey.signIn(message) } catch {
+                throw Failure(message: String(localized: "This iPhone could not sign in to Shield"))
+            }
+        } else {
+            // Only one key's signature signs in (prd §1890): a Safe's is refused.
+            guard coSigner else { throw Failure(message: String(localized: "Shield takes a sign-in from your co-signer, not your account")) }
+            let hex = "0x" + Array(message.utf8).map { String(format: "%02x", $0) }.joined()
+            signature = try await SignerRequestSheet.asking(signer: account, title: String(localized: "Your co-signer signs in to Shield")) { ask in
+                try await YourAccountSignerLink.signForApp(method: "personal_sign", params: [hex, account],
+                                                          digest: NearAIVerify.personalSignDigest(message), signer: account,
+                                                          resend: ask.resends, sent: { ask.ask(kept: $0) },
+                                                          show: { ask.pair($0); openCoSignerWallet(account, onto: $0) })
+            }
         }
         let body: [String: Any] = [
             "message": message, "signature": "0x" + signature.map { String(format: "%02x", $0) }.joined(),
@@ -176,6 +185,96 @@ extension ShieldBridge {
         AztecAccountStore.shared.addShield(pending)
         NSLog("shieldBridge| co-signer deposited | %@ | %@ %@", tx, units, asset.symbol)
         return pending
+    }
+
+    /// **INTO AZTEC THROUGH YOUR SHIELD KEY (prd §1920).** No co-signer: the
+    /// key on this phone (`ShieldKey`) signs in, Shield's screening tier
+    /// gives it up to $100 a day, your account hands it what it lacks (the
+    /// token, and ETH for its two sends) in one operation with Face ID, and
+    /// the key approves the portal (only if it must) and deposits. What it
+    /// already holds counts, so a move that stopped half way is finished by
+    /// the next. The claim on Aztec follows in `settle()`.
+    @MainActor
+    static func depositFromKey(_ asset: Asset, units: String, gas: AztecGas.Plan? = nil,
+                               said: @escaping @MainActor (String) -> Void) async throws -> AztecAccountStore.ShieldDeposit {
+        guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
+        guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
+        guard let key = ShieldKey.address else { throw Failure(message: String(localized: "Private money is not set up on this iPhone")) }
+        guard let standing = await eligibility(key), standing.eligible, !standing.sanctioned else {
+            throw Failure(message: String(localized: "Shield does not take money from this iPhone"))
+        }
+        let aztec = try await AztecEngine.shared.accountAddress()
+        said(String(localized: "Signing in to Shield…"))
+        let limit = try await limit(.intoAztec, asset: asset, units: units, account: key, aztec: aztec)
+        let nonce = UInt64.random(in: 1...UInt64.max)
+        guard let plan = try await AztecEngine.shared.call("shieldPlan", [String(nonce)]) as? [String: Any],
+              let secretHash = plan["secretHash"] as? String,
+              let deposit = depositCalldata(units: units, secretHash: secretHash, limit: limit),
+              let amount = word(decimal: units), let portalWord = word(hex: asset.portal) else {
+            throw Failure(message: String(localized: "This move could not be written"))
+        }
+        let approve = "0x095ea7b3" + portalWord + amount
+        let net = YourAccountOp.ethereum
+        let held = Decimal(string: await AztecMove.balance(of: asset.ethToken, at: key)) ?? 0
+        let wanted = Decimal(string: units) ?? 0
+        let allowed = Decimal(string: await allowance(of: asset.ethToken, owner: key, spender: asset.portal)) ?? 0
+        let ethNeeded = try await keyGas(key, approves: allowed < wanted)
+        var calls: [(to: String, data: String, value: String)] = gas?.calls ?? []
+        if held < wanted, let short = word(decimal: NSDecimalNumber(decimal: wanted - held).stringValue), let to = word(hex: key) {
+            calls.append((to: asset.ethToken, data: "0xa9059cbb" + to + short, value: "0"))
+        }
+        if let ethNeeded { calls.append((to: key, data: "0x", value: ethNeeded)) }
+        if !calls.isEmpty {
+            said(String(localized: "Confirm with Face ID"))
+            let sent = try await YourAccountChain.appCalls(calls, on: net,
+                reason: String(localized: "Move \(asset.symbol) into Aztec"),
+                signer: { SignerRequestSheet.coSigner(owner: $0, chainId: net.chainId) }) { _ in }
+            guard case .landed = sent.outcome else {
+                throw Failure(message: String(localized: "On its way to your Shield key. Try again once it lands."))
+            }
+            if let gas, case .landed(let tx?, _) = sent.outcome,
+               let receipt = try? await YourAccountChain.rpc(net, "eth_getTransactionReceipt", [tx]) as? [String: Any] {
+                AztecGas.record(gas, transaction: tx, receipt: receipt)
+            }
+        }
+        do {
+            if allowed < wanted {
+                said(String(localized: "Letting Shield take it…"))
+                _ = try await mined(try await ShieldKey.send(to: asset.ethToken, data: approve, gas: ShieldKey.approveGas, account: account))
+            }
+            said(String(localized: "Moving it into Aztec…"))
+            let tx = try await ShieldKey.send(to: asset.portal, data: deposit, gas: ShieldKey.depositGas, account: account)
+            let receipt = try await mined(tx)
+            guard let message = message(in: receipt, portal: asset.portal) else {
+                throw Failure(message: String(localized: "Sent, but its message to Aztec could not be read yet"))
+            }
+            let pending = AztecAccountStore.ShieldDeposit(nonce: nonce, symbol: asset.symbol, amountUnits: message.amount,
+                                                          transaction: tx, messageHash: message.key,
+                                                          leafIndex: message.index, claimed: false, at: .now)
+            AztecAccountStore.shared.addShield(pending)
+            NSLog("shieldBridge| key deposited | %@ | %@ %@", tx, units, asset.symbol)
+            return pending
+        } catch ShieldKey.Failure.refused(let why) {
+            NSLog("shieldBridge| key refused | %@", why)
+            throw Failure(message: String(localized: "Your Shield key could not send it. Try again: it keeps what it holds."))
+        }
+    }
+
+    /// ETH the Shield key lacks for its sends, wei, or nil: as the co-signer's.
+    private static func keyGas(_ key: String, approves: Bool) async throws -> String? {
+        let net = YourAccountOp.ethereum
+        guard let balanceHex = try await YourAccountChain.rpc(net, "eth_getBalance", [key, "latest"]) as? String,
+              let priceHex = try await YourAccountChain.rpc(net, "eth_gasPrice", []) as? String,
+              let balance = Decimal(string: decimal(hex: String(balanceHex.dropFirst(2))) ?? ""),
+              let price = Decimal(string: decimal(hex: String(priceHex.dropFirst(2))) ?? "") else {
+            throw Failure(message: String(localized: "Ethereum did not answer"))
+        }
+        let units = Decimal((approves ? ShieldKey.approveGas : 0) + ShieldKey.depositGas)
+        let need = units * price * 2
+        guard balance < need else { return nil }
+        var rounded = Decimal(), short = need - balance
+        NSDecimalRound(&rounded, &short, 0, .up)
+        return NSDecimalNumber(decimal: rounded).stringValue
     }
 
     /// One send by the co-signer's own wallet, through the Signer sheet.

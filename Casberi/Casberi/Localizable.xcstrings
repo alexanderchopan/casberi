@@ -114448,6 +114448,34 @@
         }
       }
     },
+    "Letting Shield take it…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Permitiendo que Shield lo tome…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldに受け取りを許可中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield가 가져가도록 허용 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在允许 Shield 取用…"
+          }
+        }
+      }
+    },
     "Leveraged" : {
       "localizations" : {
         "es" : {
@@ -120952,6 +120980,34 @@
         }
       }
     },
+    "Move %@ into Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover %@ a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@をAztecへ移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@을(를) Aztec으로 이동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 移入 Aztec"
+          }
+        }
+      }
+    },
     "Move %@ into your Aztec account" : {
       "localizations" : {
         "es" : {
@@ -122040,6 +122096,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "转入起点为 %@。"
+          }
+        }
+      }
+    },
+    "Moving it into Aztec…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Moviéndolo a Aztec…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecへ移動中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로 이동 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在移入 Aztec…"
           }
         }
       }
@@ -141549,6 +141633,34 @@
         }
       }
     },
+    "On its way to your Shield key. Try again once it lands." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En camino a tu clave de Shield. Vuelve a intentarlo cuando llegue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldキーへ移動中です。届いたらもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 키로 이동 중입니다. 도착하면 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在转入你的 Shield 密钥。到账后请重试。"
+          }
+        }
+      }
+    },
     "On its way to your co-signer. Try again once it lands." : {
       "localizations" : {
         "es" : {
@@ -156681,6 +156793,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "私钥"
+          }
+        }
+      }
+    },
+    "Private money is not set up on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El dinero privado no está configurado en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneではプライベートマネーが設定されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에 비공개 자금이 설정되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 iPhone 未设置私密资金"
           }
         }
       }
@@ -180955,6 +181095,34 @@
         }
       }
     },
+    "Shield does not take money from this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield no acepta dinero de este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldはこの iPhoneからの入金を受け付けません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield가 이 iPhone의 자금을 받지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 不接受来自此 iPhone 的资金"
+          }
+        }
+      }
+    },
     "Shield does not take money from your co-signer yet" : {
       "localizations" : {
         "es" : {
@@ -185339,6 +185507,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "签名在你的 Safe App 中完成 — 从不在这里。"
+          }
+        }
+      }
+    },
+    "Signing in to Shield…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Iniciando sesión en Shield…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldにサインイン中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield에 로그인 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在登录 Shield…"
           }
         }
       }
@@ -204337,6 +204533,34 @@
         }
       }
     },
+    "This iPhone could not sign in to Shield" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este iPhone no pudo iniciar sesión en Shield"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneはShieldにサインインできませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone이 Shield에 로그인하지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 iPhone 无法登录 Shield"
+          }
+        }
+      }
+    },
     "This iPhone holds no recovery key for this account" : {
       "localizations" : {
         "es" : {
@@ -212158,6 +212382,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从你的 USDC 支付最多 $%@"
+          }
+        }
+      }
+    },
+    "Up to $%lld a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta $%lld al día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日$%lldまで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 최대 $%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天最多 $%lld"
+          }
+        }
+      }
+    },
+    "Up to $%lld a day without a co-signer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta $%lld al día sin cofirmante."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者なしでは1日$%lldまで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 없이 하루 최대 $%lld."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有共同签名人时每天最多 $%lld。"
           }
         }
       }
@@ -231342,6 +231622,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的 Safe"
+          }
+        }
+      }
+    },
+    "Your Shield key could not send it. Try again: it keeps what it holds." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu clave de Shield no pudo enviarlo. Vuelve a intentarlo: conserva lo que tiene."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shieldキーが送信できませんでした。もう一度お試しください。保有分はそのままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 키가 보내지 못했습니다. 다시 시도하세요. 보유한 자금은 그대로입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Shield 密钥未能发送。请重试：它会保留所持资金。"
           }
         }
       }

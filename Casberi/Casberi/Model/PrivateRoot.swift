@@ -38,6 +38,8 @@ enum PrivateRoot {
         case testnetOwner = "testnet owner"
         case railgunWallet = "railgun wallet"
         case railgunDatabase = "railgun database"
+        /// The one key that moves money into Aztec without a co-signer (prd §1920).
+        case shieldKey = "aztec shield key"
     }
 
     /// The 32 bytes `purpose` takes from `root`; nil for a root that is not 32 bytes.
@@ -53,6 +55,15 @@ enum PrivateRoot {
     static func ownerKey(_ root: [UInt8]) -> [UInt8]? {
         for counter in UInt32(0)..<64 {
             if let k = derive(root, .testnetOwner, counter: counter), FreshAddress.isScalar(k) { return k }
+        }
+        return nil
+    }
+
+    /// The Shield key's secp256k1 scalar (prd §1920): the first counter whose
+    /// output is a scalar, as the owner's is.
+    static func shieldKey(_ root: [UInt8]) -> [UInt8]? {
+        for counter in UInt32(0)..<64 {
+            if let k = derive(root, .shieldKey, counter: counter), FreshAddress.isScalar(k) { return k }
         }
         return nil
     }

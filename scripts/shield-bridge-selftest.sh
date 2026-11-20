@@ -412,8 +412,25 @@ grep -q 'personalSignDigest(message), signer: account' "$APP" \
   || { echo "✗ the co-signer's sign-in is not checked against the message Casberi wrote (prd §1720)"; exit 1; }
 MOVEAZ="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
 awk '/if !standing.sanctioned,$/{a=NR} /if theirs.eligible, !theirs.sanctioned \{/{b=NR} /viaCoSigner = found/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
-  && grep -q 'if standing.sanctioned || viaCoSigner == nil {' "$MOVEAZ" \
-  || { echo "✗ Move deposits into Aztec other than from your co-signer: a Safe's sign-in is refused by Shield (prd §1720, §1890)"; exit 1; }
+  && grep -q 'if standing.sanctioned || (viaCoSigner == nil && viaKey == nil) {' "$MOVEAZ" \
+  || { echo "✗ Move deposits into Aztec other than from your co-signer or your Shield key: a Safe's sign-in is refused by Shield (prd §1720, §1890, §1920)"; exit 1; }
+# **THE SHIELD KEY (prd §1920).** The co-signer first; the key only when
+# there is none Shield scores; it signs in on the phone; its sends pass
+# FreshTx's allowlist, whose pinned pairs are ShieldWire's own.
+awk '/viaCoSigner = found/{a=NR} /if viaCoSigner == nil, !standing.sanctioned, let key = ShieldKey.address,/{b=NR} END{exit !(a && b && a<b)}' "$MOVEAZ" \
+  || { echo "✗ the Shield key is tried before your co-signer, or not at all (prd §1920)"; exit 1; }
+grep -q 'if let key = ShieldKey.address, key.lowercased() == account.lowercased() {' "$APP" \
+  && grep -q 'signature = try ShieldKey.signIn(message)' "$APP" \
+  || { echo "✗ the Shield key does not sign in on this phone (prd §1920)"; exit 1; }
+grep -q 'guard let tx = FreshTx.Tx(shield: account,' Casberi/Casberi/Model/Aztec/ShieldKey.swift \
+  || { echo "✗ the Shield key signs a transaction its allowlist did not build (prd §1920)"; exit 1; }
+for pair in "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:0x6c34d66633ffc36be2dfddc7b0c652fbb305e74c" \
+            "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0x477a911f76c44a5d3e5e692c59945263f61426c4"; do
+  tok="${pair%%:*}"; portal="${pair##*:}"
+  grep -q "ethToken: \"$tok\"" "$WIRE" && grep -q "portal: \"$portal\"" "$WIRE" \
+    && grep -q "(\"$tok\", \"$portal\")" Casberi/Casberi/Model/FreshTx.swift \
+    || { echo "✗ FreshTx's Shield pairs drifted from ShieldWire's assets (prd §1920)"; exit 1; }
+done
 ! grep -q 'ShieldBridge.deposit(\|static func deposit(' "$MOVEAZ" "$APP" \
   && ! grep -q 'Sign in to Shield with your account' "$APP" \
   || { echo "✗ your account signs in to Shield again: its signature is refused, over 256 characters (prd §1890)"; exit 1; }
