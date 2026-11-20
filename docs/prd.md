@@ -74549,3 +74549,16 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Checks.** `move-token-grid-audit.py` (new, in verify) fails a token tile or a token row drawn by hand on any Move screen, with per-file allowances that are a ceiling and a floor.
 
 **Seen** on an iPhone 17 Pro simulator over the demo: Swap's From and For (a pick on Robinhood keeping "for ETH on Base"), Buy by card's Token. **Not seen:** Earn, Receive from another network (Relay is not asked in the demo), the Aztec and Railgun screens, a small phone, Dynamic Type.
+
+## §1911 — A verb's kinds are chips over its steps, back is the menu, and Move's lists run to the home indicator (amends §1897 item 5, §1852, §1903's "back walks the steps", §1904 item 9, §1731) (user, 2026-11-19, on 1050: "the private account token is clipped", "in for and from the bottom row doesn't clear the screen", "why can't the area at the bottom w/ choose an address be shorter?", "so the scrolling part of the window is longer"; "having Kind be one of the titles and choice options is too many extra taps and just sounds weird. we need an alternative way to tap and choose what kind it is", of three mocked ways, `design/mockups/move-kind-options.html`: "c is clearest", "lets go w c"; "when i tap the chevron to go back, i think i am going back to the move menu, instead it goes back through the titles on the tray. i don't think it should") — BUILT
+
+**Ruling.**
+
+1. **Kind is no step.** A verb with two kinds draws them as two `Chip`s over its steps, A–Z, the one on selected, always in view (`MoveDeckKinds`, `Screens/MoveDeck.swift`): Gift cards · Tokens on Buy, Swap · Sweep on Swap, Earn · Take back on Earn (when there is something lent). One tap switches. The chips take their row out of the body, so the panel's edge stands where it does on every verb. Not in the sentence: it takes no touch (§1781). Not in the foot: that is the act's.
+2. **Back is the Move menu.** The foot's chevron leaves the verb whatever step is on; steps are tapped by name. A page inside a verb (Cost details, Receive's own page) still steps back to it first.
+3. **The last row clears the foot.** A Deck list scrolls on by the foot and its fade (`MoveDeck.listClearance`), so at its end the last row stands whole above "Choose a token".
+4. **The foot stands on the home indicator's line.** Move's tray drops its 24pt bottom padding (`DSTray.flushBottom`) and the Deck its 8pt; the list takes the height, the panel's top unmoved.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** None of its own. **Seen** on an iPhone 17 Pro simulator over the demo: Swap's chips, Sweep picked from them, back from Buy to the menu, the last row of With clear of the foot, the lower foot. **Not seen:** Earn's chips (no lent position in the demo), a small phone, Dynamic Type.

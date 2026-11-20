@@ -8,6 +8,8 @@ import SwiftUI
 enum MoveDeck {
     /// A step word's row, and the group words' row under it.
     static let stepsHeight: CGFloat = 52
+    /// The kinds' chips over the steps (`MoveDeckKinds`): one Chip's target.
+    static let kindsHeight: CGFloat = DS.Hit.min
     /// Between two step words.
     static let stepGap: CGFloat = 22
     /// Between two group words.
@@ -111,6 +113,43 @@ struct MoveDeckSteps: View {
         if disabled { return DS.textSecondary }
         if s.on { return DS.pickInk }
         return s.answered ? DS.textPrimary : DS.textSecondary
+    }
+}
+
+/// One kind of a verb: Swap or Sweep, Gift cards or Tokens, Earn or Take back.
+struct MoveDeckKind: Identifiable {
+    let id: String
+    let word: String
+    let glyph: String
+    let picked: Bool
+    let act: () -> Void
+}
+
+/// **A VERB'S KINDS ARE CHIPS OVER ITS STEPS (prd §1911, user, 2026-11-19:
+/// "having Kind be one of the titles and choice options is too many extra
+/// taps and just sounds weird", of three mocked ways: "c is clearest").**
+/// The two kinds as `Chip`s, A–Z, the one on selected, always in view: one
+/// tap switches, and no step is spent on it.
+struct MoveDeckKinds: View {
+    let kinds: [MoveDeckKind]
+    var disabled = false
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            ForEach(kinds.sorted { $0.word.localizedStandardCompare($1.word) == .orderedAscending }) { k in
+                Button {
+                    k.act()
+                    DSHaptic.selection()
+                } label: {
+                    Chip(text: k.word, glyph: k.glyph, selected: k.picked)
+                }
+                .buttonStyle(PressSpring())
+                .disabled(disabled)
+                .accessibilityAddTraits(k.picked ? [.isSelected] : [])
+            }
+        }
+        .frame(height: MoveDeck.kindsHeight, alignment: .leading)
+        .animation(DS.Motion.standard, value: kinds.map(\.picked))
     }
 }
 

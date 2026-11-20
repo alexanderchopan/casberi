@@ -78,7 +78,7 @@ struct MoveLendSentence<Head: View>: View {
         // The deck opens on the keys once Aave is read: never an empty panel
         // under a sentence that asks how much (prd §1782).
         .onChange(of: live, initial: true) { _, on in
-            if on, open == nil, !kindOpen, move.units == nil { withAnimation(DS.Motion.standard) { open = .amount } }
+            if on, open == nil, move.units == nil { withAnimation(DS.Motion.standard) { open = .amount } }
         }
         .onChange(of: chrome.moveTall) { _, tall in
             if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
@@ -227,27 +227,29 @@ struct MoveLendSentence<Head: View>: View {
         }
     }
 
-    /// The verb's two kinds are open in the deck.
-    @State private var kindOpen = false
     @Environment(\.moveBack) private var back
 
-    /// **EARN'S DECK (prd §1901 items 1–3):** Kind · From · Amount on Home's
-    /// panel, the foot's word held to act.
+    /// **EARN'S DECK (prd §1901 items 1–3, §1911):** Earn · Take back as
+    /// chips over From · Amount on Home's panel, the foot's word held to act.
     private var deck: some View {
         VStack(alignment: .leading, spacing: 0) {
             if live, doneHash == nil {
+                if kindsShown {
+                    MoveDeckKinds(kinds: [
+                        MoveDeckKind(id: "lend", word: String(localized: "Earn"), glyph: "chart.line.uptrend.xyaxis", picked: move.mode == .lend) {
+                            if move.mode != .lend { flip(.lend) }
+                        },
+                        MoveDeckKind(id: "takeBack", word: String(localized: "Take back"), glyph: "arrow.uturn.backward", picked: move.mode == .takeBack) {
+                            if move.mode != .takeBack { flip(.takeBack) }
+                        },
+                    ], disabled: move.acting)
+                }
                 MoveDeckSteps(steps: steps)
             }
             // The body runs under the foot and fades there (prd §1904 item 9).
             ZStack(alignment: .bottom) {
                 Group {
-                    if kindOpen {
-                        VStack(alignment: .leading, spacing: 0) {
-                            kindRow(String(localized: "Earn"), .lend, glyph: "chart.line.uptrend.xyaxis")
-                            kindRow(String(localized: "Take back"), .takeBack, glyph: "arrow.uturn.backward")
-                        }
-                        .transition(.opacity)
-                    } else if open == .amount {
+                    if open == .amount {
                         // **EARN TYPES ITS AMOUNT (prd §1897 item 4, user
                         // 2026-11-19: "earn looks weird"):** Send's keypad, Half
                         // and All as its sums, never a ladder of rows.
@@ -270,11 +272,14 @@ struct MoveLendSentence<Head: View>: View {
                 // The bar's band is the list's (`MoveFootClearance.intoBody`).
                 .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
                        + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
-                       + MoveFootClearance.gained(inTray: inTray), alignment: .top)
+                       + MoveFootClearance.gained(inTray: inTray)
+                       // The chips take their row out of the body (§1911).
+                       - (kindsShown ? MoveDeck.kindsHeight : 0), alignment: .top)
                 .deckUnderFoot()
                 MoveDeckFoot(backDisabled: move.acting, back: {
                     withAnimation(DS.Motion.standard) {
-                        if kindOpen { kindOpen = false } else if costOpen { costOpen = false } else if open != nil { open = nil } else { back?() }
+                        // Back is the menu, never the step before (prd §1911).
+                        if costOpen { costOpen = false } else { open = nil; back?() }
                     }
                 }) { footWord }
             }
@@ -292,7 +297,6 @@ struct MoveLendSentence<Head: View>: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .animation(DS.Motion.standard, value: open)
-        .animation(DS.Motion.standard, value: kindOpen)
     }
 
     /// The keypad's figure: what was typed, or all of it written out.
@@ -346,36 +350,18 @@ struct MoveLendSentence<Head: View>: View {
     /// Face ID has the act.
     private var signing: Bool { if case .working(.signing) = move.stage { true } else { false } }
 
-    /// Kind (where something is lent), From (the network), Amount.
-    private var steps: [MoveDeckStep] {
-        var out: [MoveDeckStep] = []
-        if move.anyLent || move.mode == .takeBack {
-            out.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen, answered: true) {
-                withAnimation(DS.Motion.standard) { open = nil; kindOpen.toggle() }
-            })
-        }
-        out.append(MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .network && !kindOpen, answered: hasAny) {
-            kindOpen = false
-            toggle(.network)
-        })
-        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount && !kindOpen, answered: move.units != nil) {
-            kindOpen = false
-            toggle(.amount)
-        })
-        return out
-    }
+    /// Earn and Take back are chips over the steps (§1911): there is
+    /// something to take back, or Take back is on.
+    private var kindsShown: Bool { move.anyLent || move.mode == .takeBack }
 
-    private func kindRow(_ text: String, _ mode: LendMove.Mode, glyph: String) -> some View {
-        Button {
-            kindOpen = false
-            if move.mode != mode { flip(mode) }
-        } label: {
-            MoveDeckRowLabel(name: text, picked: move.mode == mode) {
-                Image(systemName: glyph).dsGlyph(.title, weight: .semibold).foregroundStyle(DS.brandInk)
-                    .accessibilityHidden(true)
-            }
-        }
-        .buttonStyle(RowPress())
+    /// From (the network), Amount.
+    private var steps: [MoveDeckStep] {
+        [MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .network, answered: hasAny) {
+            toggle(.network)
+        },
+         MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: move.units != nil) {
+            toggle(.amount)
+        }]
     }
 
     /// **THE FOOT'S ONE WORD (prd §1897 item 7):** Hold to earn, Hold to take

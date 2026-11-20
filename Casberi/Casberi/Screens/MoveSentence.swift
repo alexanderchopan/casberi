@@ -6951,11 +6951,19 @@ struct MoveSentence: View {
     private var deck: some View {
         let steps = deckSteps
         return VStack(alignment: .leading, spacing: 0) {
+            if kindsShown {
+                MoveDeckKinds(kinds: verbKinds.map { v in
+                    MoveDeckKind(id: "\(v)", word: kindWord(v), glyph: Self.kindGlyph(v), picked: v == verb) { pickVerb(v) }
+                }, disabled: stage != nil)
+            }
             if !steps.isEmpty {
                 MoveDeckSteps(steps: steps, disabled: stage != nil || receipt != nil)
             }
+            // The chips take their row out of the body, so the panel's edge
+            // stands where it does on every verb.
             let room = (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
                 + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
+                - (kindsShown ? MoveDeck.kindsHeight : 0)
                 + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
                 + MoveFootClearance.gained(inTray: inTray)
             if receivePlacesUp {
@@ -7002,8 +7010,6 @@ struct MoveSentence: View {
         }
         .animation(DS.Motion.standard, value: deckOpen)
         .animation(DS.Motion.standard, value: keying)
-        .animation(DS.Motion.standard, value: kindOpen)
-        .onChange(of: open) { _, now in if now != nil { kindOpen = false } }
         // **THE DECK OPENS ON THE FIRST STEP STILL TO ANSWER (prd §1782):**
         // never an empty panel under a sentence that asks.
         .task(id: verb) {
@@ -7062,13 +7068,10 @@ struct MoveSentence: View {
 
     /// Receive's places fill the deck (the same test `deckBody` draws them by).
     private var receivePlacesUp: Bool {
-        receipt == nil && stage == nil && !kindOpen && deckOpen == nil && focus != .amount
+        receipt == nil && stage == nil && deckOpen == nil && focus != .amount
             && verb == .receive && receiveList
     }
 
-    /// The verb's two kinds are open in the deck (Buy: Gift cards · Tokens;
-    /// Swap: Swap · Sweep), prd §1897 item 5.
-    @State private var kindOpen = false
 
     /// What the step on asks: its list, the keys, the verb's kinds, Receive's
     /// places, or at Ready, Add another.
@@ -7077,8 +7080,6 @@ struct MoveSentence: View {
             receiptRows(receipt).transition(.opacity)
         } else if stage != nil {
             Color.clear
-        } else if kindOpen {
-            kindRows.transition(.opacity)
         } else if let o = deckOpen {
             choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight
                         + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
@@ -7152,22 +7153,12 @@ struct MoveSentence: View {
             order.sort { (preferred.firstIndex(of: $0) ?? preferred.count) < (preferred.firstIndex(of: $1) ?? preferred.count) }
         }
         var steps: [MoveDeckStep] = []
-        if verbKinds.count == 2, stage == nil {
-            steps.append(MoveDeckStep(id: "kind", word: String(localized: "Kind"), on: kindOpen, answered: true) {
-                withAnimation(DS.Motion.standard) {
-                    open = nil
-                    kindOpen.toggle()
-                }
-                focus = nil
-            })
-        }
         for w in order {
             let group = members[w] ?? []
             let target = group.first { $0.value == Self.unpicked }?.opens ?? group.last?.opens
-            let on = !kindOpen && group.contains { $0.opens != nil && $0.opens == current }
+            let on = group.contains { $0.opens != nil && $0.opens == current }
             let answered = !group.isEmpty && group.allSatisfy { $0.value != Self.unpicked }
             steps.append(MoveDeckStep(id: "step\(w)", word: w, on: on, answered: answered) {
-                kindOpen = false
                 if on {
                     withAnimation(DS.Motion.standard) { open = nil }
                     focus = nil
@@ -7183,27 +7174,6 @@ struct MoveSentence: View {
             })
         }
         return steps
-    }
-
-    /// The verb's two kinds, as rows (prd §1897 item 5): A–Z, the one on in
-    /// the pick's ink.
-    private var kindRows: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(verbKinds, id: \.self) { v in
-                Button {
-                    kindOpen = false
-                    pickVerb(v)
-                } label: {
-                    MoveDeckRowLabel(name: kindWord(v), picked: v == verb) {
-                        Image(systemName: Self.kindGlyph(v)).dsGlyph(.title, weight: .semibold)
-                            .foregroundStyle(DS.brandInk)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .buttonStyle(RowPress())
-            }
-        }
-        .padding(.top, DS.Space.s1)
     }
 
     /// A kind's glyph: Gift cards wear a card ("they aren't always bought as
@@ -7424,33 +7394,22 @@ struct MoveSentence: View {
     /// The chevron: a list or the keys close first, then Receive's page or
     /// the cost's list, then the menu.
     private func deckBack() {
-        // Kind is always the first step: back from it leaves the verb.
-        if kindOpen { kindOpen = false; backToMenu(); return }
         if costShown { details = false; return }
-        // **BACK WALKS THE STEPS (user, 2026-11-19, of an empty panel after
-        // back from the keys):** the step before the one on opens; back from
-        // the first leaves the verb. The deck is never left blank.
-        let steps = deckSteps
-        if let at = steps.firstIndex(where: \.on) {
-            if at > 0 {
-                if open != nil { open = nil }
-                if focus != nil { focus = nil }
-                steps[at - 1].act()
-                return
-            }
-            open = nil
-            focus = nil
-            backToMenu()
-            return
-        }
-        if open != nil { open = nil; return }
-        if focus != nil { focus = nil; return }
+        // Receive's own page (public, another network) steps back to its
+        // places, a page inside the verb.
         if verb == .receive, elsewhere == nil, receivePublic || receiveOther {
             receivePublic = false
             receiveOther = false
             open = nil
             return
         }
+        // **BACK IS THE MENU (prd §1911, user, 2026-11-19: "when i tap the
+        // chevron to go back, i think i am going back to the move menu,
+        // instead it goes back through the titles on the tray. i don't think
+        // it should"; retiring "back walks the steps").** The steps are
+        // tapped by name; the chevron leaves the verb, whatever step is on.
+        open = nil
+        focus = nil
         backToMenu()
     }
 
