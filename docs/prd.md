@@ -74698,3 +74698,9 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator with `-aztecWayInSample key`: Limit · Up to $100 a day under Ethereum to Aztec, no co-signer row.
+
+## §1921 — Receive's private account carries its Add money door (amends §1779's door, which stood only on the Aztec page) (user, 2026-11-20, of the canvas "Aztec: add money" board 1A: "i like all yours do it") — BUILT
+
+**Ruling.** Under "Your private account · Aztec to Aztec only" on Receive stands one door, **Add money** (a plus on the quiet disc, the Receive row's height), as the public account's "From another network" and "From another wallet" stand under it (§1824: a way in stands under the place it lands). It opens Send's sentence to your private account, as the Aztec page's "Add money from Ethereum" row does (§1779); that row stays. Holdings keeps its own Add money row under Private (§1776).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

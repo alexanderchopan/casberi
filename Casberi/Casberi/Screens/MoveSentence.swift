@@ -2576,6 +2576,16 @@ struct MoveSentence: View {
                                  DSHaptic.tap()
                                  markCopied("aztec")
                              })
+                // **ADD MONEY, UNDER THE PLACE IT LANDS (prd §1921, as §1824's
+                // ways in under the public account; user: "i always feel
+                // confused how i put money into it").** Send's sentence to your
+                // private account, as the Aztec page's own row opens it (§1779).
+                Button {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { open = nil; verb = .send }
+                    goAztec(.deposit)
+                } label: { receiveDoor(String(localized: "Add money"), glyph: "plus") }
+                    .buttonStyle(RowPress())
             }
         }
     }
