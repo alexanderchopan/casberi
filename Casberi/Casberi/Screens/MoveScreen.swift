@@ -33,7 +33,8 @@ struct MoveTray: View {
     var body: some View {
         DSTray(title: "Move", height: 600, detents: [Self.short, .large], titled: false,
                selection: Binding(get: { chrome.moveTall ? .large : Self.short },
-                                  set: { chrome.moveTall = $0 == .large })) {
+                                  set: { chrome.moveTall = $0 == .large }),
+               flushBottom: true) {
             MoveScreen(inTray: true)
         }
     }

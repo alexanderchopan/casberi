@@ -25,6 +25,7 @@ struct MoveLendSentence<Head: View>: View {
     @State private var costOpen = false
     @Environment(\.openURL) private var openURL
     @Environment(ShellChrome.self) private var chrome
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     enum Blank { case amount, network }
 
@@ -266,7 +267,10 @@ struct MoveLendSentence<Head: View>: View {
                 }
                 .safeAreaPadding(.bottom, MoveDeck.footHeight)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight, alignment: .top)
+                // The bar's band is the list's (`MoveFootClearance.intoBody`).
+                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
+                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
+                       + MoveFootClearance.gained(inTray: inTray), alignment: .top)
                 .deckUnderFoot()
                 MoveDeckFoot(backDisabled: move.acting, back: {
                     withAnimation(DS.Motion.standard) {
@@ -277,7 +281,7 @@ struct MoveLendSentence<Head: View>: View {
         }
         .padding(.horizontal, MoveSentence.sideInset(inTray))
         .padding(.top, HomePanelMetrics.cap)
-        .modifier(MoveFootClearance(inTray: inTray))
+        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
         .background(alignment: .top) {
             ZStack(alignment: .top) {
                 Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }

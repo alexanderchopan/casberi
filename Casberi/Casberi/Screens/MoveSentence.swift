@@ -6956,6 +6956,8 @@ struct MoveSentence: View {
             }
             let room = (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
                 + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
+                + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
+                + MoveFootClearance.gained(inTray: inTray)
             if receivePlacesUp {
                 // **RECEIVE'S PLACES ARE NEVER CUT (user, 2026-11-19, of
                 // Private account clipped over the back chevron: "this looks
@@ -6988,7 +6990,7 @@ struct MoveSentence: View {
         }
         .padding(.horizontal, Self.sideInset(inTray))
         .padding(.top, HomePanelMetrics.cap)
-        .modifier(MoveFootClearance(inTray: inTray))
+        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
         .background(alignment: .top) {
             ZStack(alignment: .top) {
                 Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
@@ -7078,7 +7080,9 @@ struct MoveSentence: View {
         } else if kindOpen {
             kindRows.transition(.opacity)
         } else if let o = deckOpen {
-            choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight,
+            choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight
+                        + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
+                        + MoveFootClearance.gained(inTray: inTray),
                     inset: MoveDeck.listClearance, searches: Self.searches(o), which: o, named: false) { list(for: o) }
                 .id(o)
                 .transition(.opacity)
@@ -9880,16 +9884,31 @@ struct MoveClauseLayout: Layout {
 /// and the keys walk's: the last two had a plain `s2` and stood under the bar.
 struct MoveFootClearance: ViewModifier {
     let inTray: Bool
+    /// **THE DECK TAKES THE BAR'S BAND (user, of 1050's Send: "why can't the
+    /// area at the bottom w/ choose an address be shorter?", "so the scrolling
+    /// part of the window is longer").** No Move button stands under the
+    /// Deck, so the band §1731 kept for it goes to the list: the Deck pads
+    /// by `DS.Space.s2` and adds `bar` to its body, its top where it was.
+    var intoBody = false
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     func body(content: Content) -> some View {
-        content.padding(.bottom, clearance)
+        content.padding(.bottom, intoBody ? Self.flush(inTray: inTray) : Self.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome) + DS.Space.s2)
     }
 
-    private var clearance: CGFloat {
-        guard !inTray, sizeClass == .compact, !chrome.keyboardUp else { return DS.Space.s2 }
-        return DSDock.agentSize(fold: chrome.fold) + DSDock.agentBottomInset(fold: chrome.fold) + DS.Space.s2
+    /// Under the Deck in Move's tray: nothing, the foot on the home
+    /// indicator's line (`DSTray.flushBottom`); on a page, the 8pt it had.
+    static func flush(inTray: Bool) -> CGFloat { inTray ? 0 : DS.Space.s2 }
+
+    /// What the Deck gains by standing flush: the tray's 24pt and the 8pt it
+    /// padded, given to the list so the panel's top stays where it was.
+    static func gained(inTray: Bool) -> CGFloat { inTray ? DSTray<EmptyView>.bottomPadding + DS.Space.s2 : 0 }
+
+    /// The tab bar's band on a phone: what a foot over the bar must clear.
+    @MainActor static func bar(inTray: Bool, sizeClass: UserInterfaceSizeClass?, chrome: ShellChrome) -> CGFloat {
+        guard !inTray, sizeClass == .compact, !chrome.keyboardUp else { return 0 }
+        return DSDock.agentSize(fold: chrome.fold) + DSDock.agentBottomInset(fold: chrome.fold)
     }
 }
 

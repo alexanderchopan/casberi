@@ -45,6 +45,11 @@ struct DSTray<Content: View>: View {
     /// The detent the caller moves, for a tray that grows when its content
     /// does (Move's choices, prd §1442). Nil keeps the sheet's own.
     var selection: Binding<PresentationDetent>? = nil
+    /// The content stands on the home indicator's line, with no 24pt under
+    /// it: Move's Deck, whose foot is its last row and whose list wants the
+    /// height (user, 2026-11-19: "why can't the area at the bottom w/ choose
+    /// an address be shorter?").
+    var flushBottom: Bool = false
     @ViewBuilder var content: () -> Content
 
     /// **THE MAC'S WAY OUT (2026-09-22, user: "when i click language in
@@ -219,7 +224,7 @@ struct DSTray<Content: View>: View {
         .padding(.top, DS.Space.s6)
         // A find tray's field is the bottom edge: it brings its own air, and
         // 24pt more under it stood the field off the keyboard (below).
-        .padding(.bottom, liftsField ? 0 : Self.bottomPadding)
+        .padding(.bottom, liftsField || flushBottom ? 0 : Self.bottomPadding)
         .modifier(DSKeyboardLift(active: liftsField))
         // The overflow is paid ONLY where this component owns the number.
         // A caller that passes its own set has already put `.large` in it —
