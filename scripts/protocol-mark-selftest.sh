@@ -125,7 +125,9 @@ guard "a swap's feed row asks the rule (it carries no direction)" "$BAND" \
 guard "the feed row's carried lead is the action glyph with the badge" "$BAND" \
   'case \.carried\(let mark\):'
 guard_absent "Lend's foot repeats no credit: the sentence says Aave (prd §1754)" "$LEND" 'Powered by Aave'
-guard "the private send's foot credits Privacy Pools (prd §1718)" "$PRIVATE" 'Text\("Powered by Privacy Pools"\)'
+# §1927: on the deck, the protocol is a fact (Through), as Earn's Aave is.
+guard "the private send names Privacy Pools as its Through fact (prd §1927)" "$PRIVATE" 'MoveFactRow\(name: String\(localized: "Through"\), value: "Privacy Pools"'
+guard_absent "the private send's foot repeats no credit (prd §1927)" "$PRIVATE" 'Powered by Privacy Pools'
 guard "Move's mark door falls back to the rule" \
   "Casberi/Casberi/Screens/MoveSentence.swift" 'ProtocolMark\.mark\(forVenue: service\)'
 # No small mark on a Holdings row's second line (prd §1718, user: "even aave

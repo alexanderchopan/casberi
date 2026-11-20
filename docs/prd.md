@@ -74770,3 +74770,16 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: Aztec's move-in ("20" with Aztec's caret over Half · All) and Railgun's ("25" over $10 · Half · All).
+
+## §1927 — The three private sentences stand on Move's deck (amends §1794/§1801's "the sentence over the button" for Privacy Pools, Railgun and Aztec; §1685's and §1700y's credits under the act; §1925–§1926's keys in the foot) (user, 2026-11-20, of Railgun's page: "is this how it is going to look. i can't believe we still have inconsistencies", "we need to be consistent!", "by on to the deck you mean the sentence stays on top?" — yes, "ok") — BUILT
+
+**Ruling.** Privacy Pools' (`MovePrivateSentence`), Railgun's (`MoveRailgunSentence`) and Aztec's (`MoveAztecPrivateSentence`) sentences take the anatomy Send, Swap and Earn already wear (§1897, §1901, §1916): **the sentence stands still on top, the deck under it** on Home's panel (`HomePanelSurface`).
+
+1. **Steps** (`MoveDeckSteps`): Aztec To · Token · Amount (a move-in's To goes back to Send's recipients); Railgun To · Token · Amount, a swap Swap · For · Amount, Note added to a private address; Privacy Pools To · (Network, where ETH may arrive away) · Amount.
+2. **The deck's body**: the step's list (tokens, recipients, what a swap buys, networks, Privacy Pools' fixed amounts) or Move's keys (`MoveKeypad`, its sums the top row); with nothing open, **the receipt**: the facts (From, To, Network, Takes, Signs or Co-signer, You get, Arrives on), how hidden, the cost a row of them, and **Through** the protocol, as Earn's "Through · Aave". The deck opens on what is missing once read: the keys, or To.
+3. **The foot's one word** (`MoveDeckFoot`): Hold to send / Hold to swap (`MoveHoldWord`, Aztec's in its ink); the stage while it works; what unblocks it (Copy address, Add a co-signer, Raise your score, Add gas, Add ETH for fees, Choose an address); Done, Try again. "Check again" is a word in the line above.
+4. **Gone**: the rows under a pinned title with the sentence over the button, the "Powered by …" credits under the act (Through says it), the rows' Amount field and its scroll to the keys.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: Aztec's move-in (receipt, then Amount on the keys), Railgun's move-in (receipt with Cost), Privacy Pools' send (To open, Choose an address) and move-in (receipt, Hold to send).

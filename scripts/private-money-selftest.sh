@@ -166,7 +166,8 @@ use "$HOLD" '.id(ShellChrome.privateAnchor)' "Privacy Pools' and Railgun's tiles
 use "Casberi/Casberi/Model/RoomAccounts.swift" 'holder: nil, group: trades, mark: "Privacy Pools", landing: .privateHoldings),' "Privacy Pools is a Wallet pick again (prd §1738)"
 use "Casberi/Casberi/Model/RoomAccounts.swift" 'holder: nil, group: trades, mark: "Railgun", landing: .privateHoldings),' "Railgun is a Wallet pick again (prd §1738)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletTiles.swift" 'guard let seat = RoomAccounts.seat(chrome.roomScope(source), in: source), seat.picks,' "a stored scope or a hook picks an app that has no pick (prd §1738)"
-use "Casberi/Casberi/Screens/MovePrivate.swift" 'if move.stage == .ready, let hidden { hiddenLine(hidden) }' "a private send no longer says how hidden it is (prd §1738)"
+# On the deck it stands in the receipt, ready (prd §1927).
+use "Casberi/Casberi/Screens/MovePrivate.swift" 'if let hidden { hiddenLine(hidden) }' "a private send no longer says how hidden it is (prd §1738)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" 'let tokens = portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []' "the Tokens rows count private, lent or an app's money twice (prd §1696)"
 use "Casberi/Casberi/Model/WalletPortfolio.swift" 'holder != Self.privateHolderID && holder != Self.lentHolderID && !(appsApart && Self.isVenue(holder))' "Tokens keeps a holder another section counts (prd §1696)"
 use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'let portfolio = whole.hiding(walletHidden).tokensOnly(appsApart: walletOnAll)' "the Tokens sheet counts private, lent or an app's money twice (prd §1696)"
@@ -1302,18 +1303,16 @@ done
 for f in MoveFreshReceive MoveAztecReceive; do
     use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard(act: leave' "$f has no way back to Receive's addresses (prd §1803)"
 done
-for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
-    # A page with an open list (§1888) passes the back card what closes it first.
-    use "Casberi/Casberi/Screens/$f.swift" 'MoveBackCard(' "$f has no way back to Move's menu (prd §1781)"
-done
-# Earn stands on the Deck (prd §1901): its foot's chevron is the way back,
-# closing an open step first, then the environment's back to the menu.
-for f in MoveLend; do
+# Earn and the three private sentences stand on the Deck (prd §1901, §1927):
+# the foot's chevron is the way back, closing an open step first, then the
+# environment's back to the menu.
+for f in MoveLend MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
     use "Casberi/Casberi/Screens/$f.swift" 'MoveDeckFoot(' "$f has no way back to Move's menu (prd §1781, §1901)"
     use "Casberi/Casberi/Screens/$f.swift" 'back?()' "$f's chevron no longer goes back to Move's menu (prd §1781, §1901)"
 done
+# Their choices are the deck's steps (prd §1927).
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
-    use "Casberi/Casberi/Screens/$f.swift" 'MoveChoiceRows(rows: choiceRows' "$f's choices are not rows (prd §1781)"
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveDeckSteps(steps: steps' "$f's choices are not the deck's steps (prd §1927)"
 done
 # Earn's choices are the deck's steps (prd §1901 item 1).
 use "Casberi/Casberi/Screens/MoveLend.swift" 'MoveDeckSteps(steps: steps)' "MoveLend's choices are not the deck's steps (prd §1901)"

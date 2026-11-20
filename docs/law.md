@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2107 of 2181 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2108 of 2182 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2236,14 +2236,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1791 — Move's template: the sentence says only what is picked, and the amount is typed in its row (amends §1754, §1781, §1518) (amended by §1892, §1896)
 - §1792 — A network always shows its mark, and a token wears its network's as a badge
 - §1793 — Swap is two pairs: a token on its network, for a token on its network (amends §1754, §1600, §1555)
-- §1794 — Move: the sentence over the button, one-line rows, a network and its token on each side of a swap (amends §1781, §178…
+- §1794 — Move: the sentence over the button, one-line rows, a network and its token on each side of a swap (amends §1781, §178… (amended by §1927)
 - §1795 — Swap is four plain rows: From, Token, To, Token (amends §1794 item 5)
 - §1796 — Swap's rows are Network, Token, To network, To token; a whole swap fits without a scroll (amends §1795, §1794 items 3…
 - §1797 — Move, as settled on the mocks: "To" on its own line, no badge on a token, "And" for every added line, facts in grey (… (amended by §1892, §1896, §1899, §1900)
 - §1798 — Shield stays Move's one way into Aztec; an app's own bridge is not added (keeps §1700d and §1700e)
 - §1799 — Sweep, Buy and Spend on Move's settled layout (amends §1537, §1599, §1666, §1791 item 6) (amended by §1872)
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
-- §1801 — The private sends take Move's layout (amends §1781, §1755)
+- §1801 — The private sends take Move's layout (amends §1781, §1755) (amended by §1927)
 - §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro… (amended by §1889, §1896)
 - §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824, §1892, §1901)
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616… (amended by §1889)
@@ -2370,6 +2370,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1924 — "Aztec to Aztec only" is the address's rule, not the account's
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
+- §1927 — The three private sentences stand on Move's deck
 
 ## Dead rulings → what replaced them (generated)
 

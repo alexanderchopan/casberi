@@ -197,9 +197,9 @@ grep -q 'if let row = missingRow { tapBlank(row) }' "$MS" \
   || { echo "✗ an early Add no longer opens the row it needs"; exit 1; }
 # 3. Into your private account: from where, and which tokens.
 AZP="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
-grep -q 'value: String(localized: "Your public account"), fixed: true) {})' "$AZP" \
-  && grep -q 'Text("USDC or ETH only.")' "$AZP" \
-  && grep -q 'value: move.mode == .deposit ? String(localized: "Ethereum to Aztec") : String(localized: "Aztec"),' "$AZP" \
+grep -q 'out.append((String(localized: "From"), String(localized: "Your public account"), DS.textPrimary))' "$AZP" \
+  && grep -q 'out.append((String(localized: "Takes"), String(localized: "USDC or ETH"), DS.aztecInk))' "$AZP" \
+  && grep -q 'out.append((String(localized: "Network"), String(localized: "Ethereum to Aztec"), DS.textPrimary))' "$AZP" \
   || { echo "✗ Send to your private account no longer says where from and what goes (prd §1872)"; exit 1; }
 # Spacing: a line under the rows, and a head, at the rows' pitch; a place's
 # line on Receive wraps, never shrinks.

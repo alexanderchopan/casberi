@@ -60,32 +60,43 @@ struct MovePrivateSentence<Head: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // The verb leads the sentence it acts in (prd §1681); a
-                // sentence that is not yet one keeps it on a line above.
-                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
-                // (prd §1794, §1801):** as Move's own verbs.
-                // Its name stands over the page (`MovePinnedHead`, prd §1892).
-                // No switch (prd §1700f item 11): "from your private balance"
-                // opens Send's networks to send from somewhere else.
-                Group {
-                    // A row's choices are a menu on the row (prd §1784).
-                    VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        MoveChoiceRows(rows: choiceRows, open: menuRow) { _ in menu }
+            VStack(alignment: .leading, spacing: 0) {
+                // **THE SENTENCE STANDS STILL ON TOP, THE DECK UNDER IT (prd
+                // §1927, user: "we need to be consistent!"):** as Send's,
+                // Swap's and Earn's.
+                MoveFlow { sentence }
+                    .moveHoldFill()
+                    .allowsHitTesting(false)
+                    .animation(DS.Motion.standard, value: move.stage)
+                    .animation(DS.Motion.standard, value: move.amount)
+                    .animation(DS.Motion.standard, value: move.recipient)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Ready, the facts are the deck's receipt; else the line here.
+                if move.stage != .ready {
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        #if DEBUG
+                        if hiddenPreview, let hidden { hiddenLine(hidden) }
+                        #endif
                         line
                     }
+                    .padding(.top, DS.Space.s4)
                 }
             }
-            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, MoveSentence.headFade)
-            // Scrolled to the end, the last row clears the foot's fade.
-            .padding(.bottom, MoveSentence.footFade)
+            .padding(.horizontal, MoveSentence.sideInset(inTray))
+            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
+            .padding(.bottom, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
-        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
+        // The deck opens on what is missing once read (prd §1782, as Earn's).
+        .onChange(of: move.stage == .ready, initial: true) { _, on in
+            guard on, open == nil else { return }
+            if move.mode == .send, move.recipient == nil, move.tag == nil {
+                withAnimation(DS.Motion.standard) { open = .recipient }
+            }
+        }
         // Send opens whole: its rows and sentence clip in the short sheet.
         .onAppear { chrome.moveTall = true }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
@@ -309,6 +320,13 @@ struct MovePrivateSentence<Head: View>: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Button {
+                Task { await move.read() }
+                DSHaptic.selection()
+            } label: {
+                Text("Check again").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+            }
+            .buttonStyle(RowPress())
         case .nothingPrivate:
             Button {
                 DSHaptic.selection()
@@ -400,51 +418,51 @@ struct MovePrivateSentence<Head: View>: View {
 
     // MARK: - The blanks' choices
 
-    /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
-    /// up; a tap outside it closes the list with no pick.
-    private var menuRow: Binding<String?> {
-        // Each list under its own row: Network's opened under To.
-        Binding(get: { open.map { switch $0 { case .amount: "amount"; case .recipient: "to"; case .network: "network" } } },
-                set: { if $0 == nil { open = nil } })
-    }
-
-    @ViewBuilder private var menu: some View { if let open { choices(open) } }
-
     private func toggle(_ blank: Blank) {
         withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
         DSHaptic.selection()
     }
 
-    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** Where it leaves
-    /// from, who it goes to and how much: what the sentence's words opened.
-    private var choiceRows: [MoveChoiceRow] {
-        let live = move.stage == .ready
-        guard live || failed, !isDone else { return [] }
-        let yours = String(localized: "Your private balance")
-        var rows: [MoveChoiceRow] = []
-        // To, From, Network, Amount (prd §1789, §1802).
+    /// **THE DECK'S STEPS (prd §1927):** To, the network where ETH may
+    /// arrive away (prd §1879), and the amount; a move-in's To goes back to
+    /// Send's recipients.
+    private var steps: [MoveDeckStep] {
+        var out: [MoveDeckStep] = []
         if move.mode == .send {
-            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
-                                      value: move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short) ?? "",
-                                      empty: move.recipient == nil && move.tag == nil) { toggle(.recipient) })
-            if live { rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) }) }
-        } else if live {
-            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), on: open == .recipient,
+                                    answered: move.recipient != nil || move.tag != nil) { toggle(.recipient) })
+            if move.canGoAway {
+                out.append(MoveDeckStep(id: "network", word: String(localized: "Network"), on: open == .network,
+                                        answered: true) { toggle(.network) })
+            }
+        } else {
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true) { leave(.pickRecipient) })
         }
-        // Its network, said as a row: fixed, unless ETH sent to an address
-        // may arrive on Base or Robinhood (prd §1802, §1879).
-        // **A ROW ONLY WHERE THERE IS A CHOICE (prd §1805, here since
-        // §1896):** one it cannot change is a fact under the rows
-        // (`sendFacts`); a grey row with no chevron read as a broken choice.
-        if live && move.canGoAway {
-            rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
-                                      value: Self.networkName(arrivesOn),
-                                      mark: arrivesOn == 0 ? nil : MoveSentence.networkMark(chainId: arrivesOn).map { MoveRowMark(network: $0) }) {
-                toggle(.network)
-            })
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
+                                answered: !move.amount.isEmpty) { toggle(.amount) })
+        return out
+    }
+
+    /// The deck's receipt, nothing open (prd §1927): where it goes and from,
+    /// the facts, how hidden.
+    @ViewBuilder private var receipt: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if move.mode == .send {
+                MoveFactRow(name: String(localized: "From"), value: String(localized: "Your private balance"), indented: false)
+                if let to = move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short) {
+                    MoveFactRow(name: String(localized: "To"), value: to, indented: false)
+                }
+                if move.canGoAway {
+                    MoveFactRow(name: String(localized: "Arrives on"), value: Self.networkName(arrivesOn), indented: false)
+                }
+                ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value, indented: false) }
+                if let hidden { hiddenLine(hidden) }
+            } else {
+                MoveFactRow(name: String(localized: "To"), value: String(localized: "Your private balance"), indented: false)
+                line
+            }
+            MoveFactRow(name: String(localized: "Through"), value: "Privacy Pools", indented: false)
         }
-        if live { rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: figure) { toggle(.amount) }) }
-        return rows
     }
 
     /// **MOVE'S LIST ROW (prd §1896):** the mark centred in the rows' mark
@@ -591,76 +609,99 @@ struct MovePrivateSentence<Head: View>: View {
 
     // MARK: - The foot
 
-    /// The act at the trailing edge, Move's rung; a quiet word beside it
-    /// where there is a second thing to do.
-    private var foot: some View {
-        VStack(spacing: 0) {
-            MoveFlow { sentence }.moveHoldFill()
-                // The sentence says the move and is no control (prd
-                // §1781): its choices are the rows under it.
-                .allowsHitTesting(false)
-                .animation(DS.Motion.standard, value: move.stage)
-                .animation(DS.Motion.standard, value: move.amount)
-                .animation(DS.Motion.standard, value: move.recipient)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s3)
-                .moveSentenceAway(menuRow.wrappedValue != nil)
-        if move.stage == .ready, let hidden { hiddenLine(hidden) }
-        #if DEBUG
-        if hiddenPreview, move.stage != .ready, let hidden { hiddenLine(hidden) }
-        #endif
-        HStack(alignment: .center, spacing: DS.Space.s2) {
-            MoveBackCard()
-            switch move.stage {
-            case .needsFunds(let address):
-                Button {
-                    Task { await move.read() }
-                    DSHaptic.selection()
-                } label: {
-                    // Fits beside the act, never cut (prd §1700f item 13).
-                    Text("Check again").dsText(.heading24).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).fixedSize().frame(minHeight: 48)
-                }
-                .buttonStyle(RowPress())
-                Spacer(minLength: DS.Space.s3)
-                footButton(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true) { copy(address) }
-            case .done:
-                // Done ends it, as every receipt does (prd §1586).
-                footButton(String(localized: "Done"), on: true) {
-                    if inTray { chrome.moveTray = false } else { leave(.switchOff) }
-                }
-            case .nothingPrivate:
-                Spacer(minLength: 0)
-            case .failed:
-                footButton(String(localized: "Try again"), on: true) { Task { await move.read() } }
-            default:
-                if move.mode == .send, move.stage == .ready, move.recipient == nil, move.tag == nil {
-                    // **THE BUTTON NAMES WHAT IS MISSING (prd §1805, here
-                    // since §1896):** as the public Send's does; a grey
-                    // "Send" that did nothing was a dead control (§83).
-                    Button { toggle(.recipient) } label: {
-                        MoveSentence.actCard(String(localized: "Choose an address"), on: true, fill: DS.fillStrong)
+    @Environment(\.moveBack) private var back
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    private var live: Bool { move.stage == .ready || failed }
+
+    /// **PRIVACY POOLS' DECK (prd §1927, as Earn's §1901).**
+    private var deck: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if live, !isDone {
+                MoveDeckSteps(steps: steps)
+                    .padding(.bottom, MoveDeck.stepsGap)
+            }
+            ZStack(alignment: .bottom) {
+                Group {
+                    if let open, live {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 0) {
+                                switch open {
+                                case .amount: amounts
+                                case .recipient: recipients
+                                case .network: networks
+                                }
+                            }
+                            .padding(.vertical, DS.Space.s2)
+                        }
+                        .scrollIndicators(.hidden)
+                        .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+                        .transition(.opacity)
+                    } else if move.stage == .ready {
+                        ScrollView { receipt.padding(.vertical, DS.Space.s2) }
+                            .scrollIndicators(.hidden)
+                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+                            .transition(.opacity)
+                    } else {
+                        Color.clear
                     }
-                    .buttonStyle(PressSpring())
-                    .accessibilityHint(Text("Opens its row"))
-                } else {
-                    footButton(footVerb, on: ready) {
-                        open = nil
-                        Task { await move.run() }
-                    }
-                    .disabled(!ready)
                 }
+                .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
+                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
+                       + MoveFootClearance.gained(inTray: inTray)
+                       - MoveDeck.stepsGap, alignment: .top)
+                .deckUnderFoot()
+                MoveDeckFoot(back: {
+                    withAnimation(DS.Motion.standard) {
+                        // Back is the menu, never the step before (prd §1911).
+                        open = nil; back?()
+                    }
+                }) { footWord }
             }
         }
-            switch move.stage {
-            case .done, .nothingPrivate: EmptyView()
-            default: credit
+        .padding(.horizontal, MoveSentence.sideInset(inTray))
+        .padding(.top, HomePanelMetrics.cap)
+        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
+        .background(alignment: .top) {
+            ZStack(alignment: .top) {
+                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                HomePanelSurface()
             }
+            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+            .ignoresSafeArea(edges: .bottom)
         }
-        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, DS.Space.s2)
-        .moveFootGround(inTray: inTray)
+        .animation(DS.Motion.standard, value: open)
+    }
+
+    /// **THE FOOT'S ONE WORD (prd §1897 item 7).**
+    @ViewBuilder private var footWord: some View {
+        switch move.stage {
+        case .needsFunds(let address):
+            MoveFootWord(word: copied ? String(localized: "Copied") : String(localized: "Copy address")) { copy(address) }
+        case .done:
+            // Done ends it, as every receipt does (prd §1586).
+            MoveFootWord(word: String(localized: "Done")) {
+                if inTray { chrome.moveTray = false } else { leave(.switchOff) }
+            }
+        case .nothingPrivate:
+            EmptyView()
+        case .failed:
+            MoveFootWord(word: String(localized: "Try again")) { Task { await move.read() } }
+        case .ready:
+            if move.mode == .send, move.recipient == nil, move.tag == nil {
+                // The word names what is missing (prd §1805).
+                MoveFootWord(word: String(localized: "Choose an address")) { toggle(.recipient) }
+            } else {
+                MoveHoldWord(word: String(localized: "Hold to send"), enabled: ready) {
+                    open = nil
+                    Task { await move.run() }
+                }
+            }
+        default:
+            MoveFootWord(word: footVerb, ink: DS.textSecondary)
+        }
     }
 
     /// **HOW HIDDEN, WHERE YOU SEND (prd §1738; was a section on the Privacy
@@ -719,20 +760,6 @@ struct MovePrivateSentence<Head: View>: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// **POWERED BY 0XBOW (prd §1685):** the protocol that does the move signs
-    /// the foot as Relay and CoW Swap do, its mark beside its name, while
-    /// there is a move to make.
-    private var credit: some View {
-        HStack(spacing: DS.Space.s1) {
-            Text("Powered by Privacy Pools")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-            MoveSentence.mark(of: "Privacy Pools").accessibilityHidden(true)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s1)
-    }
-
     /// Each stage in the foot's own words, as Move's verb says its own.
     private var footVerb: String {
         switch move.stage {
@@ -745,11 +772,6 @@ struct MovePrivateSentence<Head: View>: View {
                 : move.onEthereum ? String(localized: "Waiting for Ethereum…") : String(localized: "Waiting for Sepolia…")
         default: String(localized: "Send")
         }
-    }
-
-    private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        // Move's one act, held (prd §1897 item 7), in this place's ink.
-        MoveSentence.footAct(word, on: on, ink: DS.pickInk, act: act)
     }
 
     /// One Activity row for the move, by its transaction: the eye-slash
