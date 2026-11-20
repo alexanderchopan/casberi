@@ -123,6 +123,49 @@ struct MoveDeckSteps: View {
     }
 }
 
+/// **AFTER THE HOLD THE TRACK IS WHERE IT IS (prd §1917).** The steps' own
+/// track, its segments now the move's stages: one reached wears a tick and
+/// the lighter fill, the one under way the pick's ink, the rest grey. Never
+/// a control: nothing in it takes a touch.
+struct MoveStageTrack: View {
+    enum Phase: Equatable { case done, now, next }
+    struct Segment: Identifiable {
+        let id: Int
+        let word: String
+        let state: Phase
+    }
+    let segments: [Segment]
+
+    var body: some View {
+        HStack(spacing: MoveDeckSteps.inset) {
+            ForEach(segments) { s in
+                HStack(spacing: DS.Space.s1) {
+                    if s.state == .done {
+                        Image(systemName: "checkmark").dsGlyph(.caption, weight: .bold).accessibilityHidden(true)
+                    }
+                    Text(verbatim: s.word).dsText(.heading17).lineLimit(1).minimumScaleFactor(0.8)
+                }
+                .foregroundStyle(s.state == .next ? DS.textSecondary : DS.textPrimary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    switch s.state {
+                    case .done: RoundedRectangle(cornerRadius: MoveDeckSteps.segmentRadius, style: .continuous).fill(DS.fillStrong)
+                    case .now: RoundedRectangle(cornerRadius: MoveDeckSteps.segmentRadius, style: .continuous).fill(DS.pickInk)
+                    case .next: Color.clear
+                    }
+                }
+            }
+        }
+        .padding(MoveDeckSteps.inset)
+        .frame(height: MoveDeck.stepsHeight)
+        .background(DS.fillQuiet, in: RoundedRectangle(cornerRadius: MoveDeckSteps.segmentRadius + MoveDeckSteps.inset, style: .continuous))
+        .animation(DS.Motion.standard, value: segments.map(\.state))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: segments.first { $0.state == .now }?.word ?? segments.last?.word ?? ""))
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+}
+
 /// One kind of a verb: Swap or Sweep, Gift cards or Tokens, Earn or Take back.
 struct MoveDeckKind: Identifiable {
     let id: String
@@ -221,6 +264,9 @@ struct MoveKeypad: View {
     /// The most places after the point: a dollar's two, a token's decimals.
     var places: Int = 2
     var disabled = false
+    /// A key's height: the deck's, or less where the hero figure and its
+    /// token row stand over the keys (prd §1917).
+    var keyHeight: CGFloat = MoveDeck.keyHeight
 
     private static let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
@@ -270,7 +316,7 @@ struct MoveKeypad: View {
                 }
             }
             .foregroundStyle(DS.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: MoveDeck.keyHeight)
+            .frame(maxWidth: .infinity, minHeight: keyHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
@@ -547,9 +593,8 @@ struct MoveTokenPlace: Identifiable {
 /// **EVERY TOKEN LIST IN MOVE IS THIS ONE (prd §1910, user, 2026-11-19: "make
 /// it consistent", "it shouldn't be hand rolled on any screen in move").** A
 /// token and its network are one pick: each place under its title, each
-/// network under its own, the tokens as tiles at Home's app-icon size, each
-/// face wearing its network's badge. No Move screen lays a token list out by
-/// hand (`move-token-grid-audit.py`).
+/// token Home's own row (`TokenRowLabel`, prd §1917). No Move screen lays a
+/// token list out by hand (`move-token-grid-audit.py`).
 struct MoveTokenGrid: View {
     let places: [MoveTokenPlace]
 
@@ -562,8 +607,10 @@ struct MoveTokenGrid: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(shown.enumerated()), id: \.element.id) { n, place in
                 if titled, let title = place.title {
+                    // Home's side head (prd §1917): bold, a label.
                     Text(verbatim: title)
                         .dsText(.heading17)
+                        .fontWeight(.bold)
                         .foregroundStyle(place.ink)
                         .padding(.top, n == 0 ? 0 : DS.Space.s4)
                         .frame(minHeight: DS.Hit.min, alignment: .bottomLeading)
@@ -572,16 +619,38 @@ struct MoveTokenGrid: View {
                 if let rule = place.rule {
                     Text(verbatim: rule).dsText(.body17).foregroundStyle(place.ink.opacity(0.75))
                 }
-                MoveDeckGrid {
-                    ForEach(place.choices) { c in
-                        MoveDeckTile(title: c.symbol, sub: c.sub, subInk: c.subInk, picked: c.picked, dim: c.dim, act: c.act) {
-                            MoveRowMark(token: c.symbol, network: c.badge, size: DSHomeCircleMetrics.face)
-                        }
-                        .accessibilityLabel(Text("\(c.symbol) on \(c.network)"))
+                ForEach(place.choices) { c in
+                    Button {
+                        c.act()
+                        DSHaptic.selection()
+                    } label: {
+                        Self.row(c)
                     }
+                    .buttonStyle(RowPress())
+                    .disabled(c.dim)
+                    .opacity(c.dim ? 0.4 : 1)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(verbatim: [String(localized: "\(c.symbol) on \(c.network)"), c.sub].compactMap { $0 }.joined(separator: ". ")))
+                    .accessibilityAddTraits(c.picked ? [.isButton, .isSelected] : .isButton)
                 }
             }
         }
+    }
+
+    /// **HOME'S ROW, NOT A TILE (prd §1917, amending §1904 item 11 and
+    /// §1910's tiles; user, 2026-11-20, of tiles against rows: "i liked that
+    /// we had token horizontal rows but understand its probably better on
+    /// vertical rows").** The network is a word under the symbol, never a
+    /// badge three ETHs differ by; dollars trail in bold. A line that is not
+    /// a figure (a seller, "Unlisted") joins the network's line.
+    static func row(_ c: MoveTokenChoice) -> TokenRowLabel {
+        let sub = c.sub ?? ""
+        let figure = sub.first.map { $0 == "$" || $0.isNumber } ?? false
+        let line = figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)"
+        return TokenRowLabel(symbol: c.symbol, line: line,
+                             lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
+                             figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,
+                             picked: c.picked)
     }
 }
 

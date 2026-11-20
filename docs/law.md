@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2099 of 2173 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2100 of 2174 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2330,7 +2330,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1885 — The first Railgun sync says it is the first, how far it is, and that only leaving Casberi stops it; a toast says when…
 - §1886 — Gas Aztec has carried is gas: a private top-up waiting for the next send no longer reads "On its way" (fixes §1700aa,…
 - §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap… (amended by §1891)
-- §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines
+- §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines (amended by §1917)
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892, §1912)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
@@ -2359,6 +2359,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amended by §1916)
 - §1915 — Swap's flip is a pick, never a button
 - §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip…
+- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track
 - §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round
 - §1918a — No co-signer, up to $100: Shield's sign-in and limit MEASURED for a fresh key
 - §1919 — Risks: a seen finding is stamped and leaves, three a kind, the findings' own head ("N new", "All seen"), and Without…

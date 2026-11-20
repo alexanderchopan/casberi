@@ -393,32 +393,11 @@ extension FeedScreen {
             DSHaptic.selection()
             act()
         } label: {
-            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                AssetMark(name: symbol, size: DS.Mark.row)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: symbol).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                    if let line, !line.isEmpty {
-                        Text(verbatim: line).dsText(.subhead12).foregroundStyle(lineInk).lineLimit(1)
-                    }
-                }
-                Spacer(minLength: DS.Space.s2)
-                VStack(alignment: .trailing, spacing: 2) {
-                    walletRowFigure(figure)
-                    // A day that rounds to zero draws nothing (prd §1862, §83).
-                    if let day, day.tone == .up || day.tone == .down {
-                        Text(verbatim: day.words)
-                            .dsText(.subhead12)
-                            .monospacedDigit()
-                            .foregroundStyle(day.tone == .up ? DS.confirmInk
-                                             : day.tone == .down ? DS.destructiveInk : DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-            }
-            .frame(minHeight: DSFeed.headHeight)
-            .contentShape(Rectangle())
+            // A day that rounds to zero draws nothing (prd §1862, §83).
+            let moved = day.flatMap { $0.tone == .up || $0.tone == .down ? $0 : nil }
+            TokenRowLabel(symbol: symbol, line: line, lineInk: lineInk, figure: figure,
+                          under: moved?.words,
+                          underInk: moved?.tone == .up ? DS.confirmInk : moved?.tone == .down ? DS.destructiveInk : DS.textSecondary)
         }
         .buttonStyle(RowPress())
         .accessibilityLabel(Text(verbatim: [symbol, line, figure, day?.words].compactMap { $0 }.joined(separator: ". ")))

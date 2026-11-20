@@ -3,8 +3,8 @@
 "make it consistent", "it shouldn't be hand rolled on any screen in move").
 
 A token and its network are one pick, drawn one way: each place under its
-title, each network under its own, the tokens as tiles at Home's app-icon
-size wearing their network's badge (`Screens/MoveDeck.swift`). Before this,
+title, each token Home's own row (`TokenRowLabel`, prd §1917; tiles at
+Home's app-icon size until then) (`Screens/MoveDeck.swift`). Before this,
 Send's With drew tiles, Swap's For and Buy's card list drew rows, Earn drew
 tiles with no network titles, and the private screens drew rows of their own,
 so a token looked different on every verb. Every one of them renders, so

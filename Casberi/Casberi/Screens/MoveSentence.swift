@@ -2782,7 +2782,12 @@ struct MoveSentence: View {
     /// the only pink one, so it needs no help standing out (retires
     /// §1616's step-back).
     static var settledInk: Color { DS.textPrimary }
-    static var glueInk: Color { DS.textPrimary }
+    /// **THE SMALL WORDS ARE GREY, WHAT YOU PICKED IS WHITE AND BOLD (prd
+    /// §1917, amending §1888's one ink and regular weight; user, 2026-11-20,
+    /// of the canvas "Move, next round": "i like all your suggestions").**
+    /// The sentence reads as Home does: the figures and names you chose
+    /// stand out, the words joining them step back.
+    static var glueInk: Color { DS.textSecondary }
     static let rung: DSTextStyle = .sentence32
     /// A choice is the Wallet's own row (prd §1731, retiring §1681's
     /// heading24): the name at `body17` over its line at `subhead12`, the
@@ -3154,9 +3159,13 @@ struct MoveSentence: View {
             word((dollars ? "$" : "") + amount, ink: MoveSentence.settledInk)
                 .monospacedDigit()
                 .contentTransition(.numericText())
-            if focus == .amount { MoveCaret().transition(.opacity) }
+            // Send's and Swap's caret is the hero figure's (prd §1917).
+            if focus == .amount, !heroShown { MoveCaret().transition(.opacity) }
         }
     }
+
+    /// The deck draws the amount as its hero (`unitLine`, prd §1917).
+    private var heroShown: Bool { focus == .amount && with != nil && (verb == .send || verb == .swap) }
 
     /// A kept line: tap it to edit it in place, hold it to remove it.
     @ViewBuilder private func keptSellClause(_ id: UUID, glue: String?, trail: String?, leads: Bool = false) -> some View {
@@ -4092,6 +4101,18 @@ struct MoveSentence: View {
         return missingRow
     }
 
+    /// "$76 more than you have": the amount over what is left of the token,
+    /// in the unit it is typed in (prd §1917). Nil when it is not over.
+    private var overWords: String? {
+        guard verb == .send || verb == .swap, stage == nil, receipt == nil, over, let with, let units else { return nil }
+        let extra = Op.difference(units, left(with))
+        if amountInDollars, let price = with.price {
+            let usd = Op.dollars(extra, decimals: with.token.decimals, price: price)
+            return String(localized: "\(Self.money(usd)) more than you have")
+        }
+        return String(localized: "\(Self.figure(extra, decimals: with.token.decimals)) \(with.token.symbol) more than you have")
+    }
+
     private func missingWords(_ which: Blank) -> String {
         switch which {
         case .to: String(localized: "Choose an address")
@@ -4911,7 +4932,9 @@ struct MoveSentence: View {
                 }
                 // **MORE THAN YOU HAVE, WITH THE FIX (prd §1586):** the amount's
                 // rows stay, and the note is a door to all of it.
-                if verb == .send || verb == .swap, over {
+                // While the keys are up the hero's row carries Use all and the
+                // foot says by how much (prd §1917), so the note steps away.
+                if verb == .send || verb == .swap, over, !heroShown {
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         Text("More than you have").dsText(.body17).foregroundStyle(DS.attentionInk)
                         Button {
@@ -7028,21 +7051,30 @@ struct MoveSentence: View {
     /// step is on, so nothing above it moves.
     private var deck: some View {
         let steps = deckSteps
+        // **THE KINDS LEAVE ONCE THEY HAVE DONE THEIR JOB (prd §1917):** the
+        // chips stand while the first step is open or nothing is answered;
+        // back on the first step they return.
+        let kindsUp = kindsShown && (steps.first?.on ?? true || !steps.contains { $0.answered })
         return VStack(alignment: .leading, spacing: 0) {
-            if kindsShown {
+            if kindsUp {
                 MoveDeckKinds(kinds: verbKinds.map { v in
                     MoveDeckKind(id: "\(v)", word: kindWord(v), glyph: Self.kindGlyph(v), picked: v == verb) { pickVerb(v) }
                 }, disabled: stage != nil)
+                .opacity(holdDim)
             }
-            if !steps.isEmpty {
+            if let track = stageTrack {
+                MoveStageTrack(segments: track)
+                    .padding(.bottom, MoveDeck.stepsGap)
+            } else if !steps.isEmpty {
                 MoveDeckSteps(steps: steps, disabled: stage != nil || receipt != nil)
                     .padding(.bottom, MoveDeck.stepsGap)
+                    .opacity(holdDim)
             }
             // The chips take their row out of the body, so the panel's edge
             // stands where it does on every verb.
             let room = (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
                 + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
-                - (kindsShown ? MoveDeck.kindsHeight : 0)
+                - (kindsUp ? MoveDeck.kindsHeight : 0)
                 - (steps.isEmpty ? 0 : MoveDeck.stepsGap)
                 + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
                 + MoveFootClearance.gained(inTray: inTray)
@@ -7061,6 +7093,7 @@ struct MoveSentence: View {
                 // The body runs under the foot and fades there (§1904 item 9).
                 ZStack(alignment: .bottom) {
                     deckBody
+                        .opacity(holdDim)
                         // A list's scroll rises above the foot it runs under.
                         .safeAreaPadding(.bottom, MoveDeck.footHeight)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -7159,7 +7192,10 @@ struct MoveSentence: View {
         if let receipt {
             receiptRows(receipt).transition(.opacity)
         } else if stage != nil {
-            Color.clear
+            // What is changing, while it changes (prd §1917).
+            VStack(alignment: .leading, spacing: 0) { changeRows }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .transition(.opacity)
         } else if let o = deckOpen {
             choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight
                         + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
@@ -7178,7 +7214,8 @@ struct MoveSentence: View {
                 Spacer(minLength: DS.Space.s2)
                 MoveKeypad(text: $amount, presets: keypadPresets,
                            places: amountInDollars ? 2 : min(with?.token.decimals ?? 18, 18),
-                           disabled: stage != nil)
+                           disabled: stage != nil,
+                           keyHeight: heroShown ? 56 : MoveDeck.keyHeight)
             }
             .padding(.bottom, MoveDeck.fade)
             .transition(.opacity)
@@ -7188,6 +7225,7 @@ struct MoveSentence: View {
         } else if deckReady {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    changeRows
                     if canAddAnother { addAnotherRow }
                     if verb == .sweep, let plan = sweepPlan {
                         ForEach(plan.rows) { row in sweepRow(row) }
@@ -7205,6 +7243,59 @@ struct MoveSentence: View {
             addAnotherRow.transition(.opacity)
         } else {
             Color.clear
+        }
+    }
+
+    /// **THE HOLD DIMS THE DECK (prd §1917):** while the act is held, all but
+    /// the sentence filling and the held word step back.
+    private var holdDim: Double { MoveHoldState.shared.held && stage == nil ? 0.35 : 1 }
+
+    /// The move's stages on the steps' track once it is held (prd §1917):
+    /// signed, sent, then its end in its own word. Nil before the hold.
+    private var stageTrack: [MoveStageTrack.Segment]? {
+        guard let stage, receipt == nil, verb == .send || verb == .swap || verb == .sweep else { return nil }
+        let at = switch stage {
+        case .preparing, .signing, .cosigning: 0
+        case .sending: 1
+        case .landing: 2
+        }
+        let last = switch verb {
+        case .send: String(localized: "Arrived")
+        case .sweep: String(localized: "Swept")
+        default: String(localized: "Swapped")
+        }
+        let words = [String(localized: "Signed"), String(localized: "Sent"), last]
+        return words.enumerated().map { n, w in
+            MoveStageTrack.Segment(id: n, word: w, state: n < at ? .done : n == at ? .now : .next)
+        }
+    }
+
+    /// **READY LEADS WITH WHAT CHANGES (prd §1917).** Home's rows for what
+    /// you hold: the token that leaves, less, with what is left after; on a
+    /// swap the token that comes back, more, in the confirm ink. Dollars
+    /// where there is a price, the token's own figure where there is none.
+    /// One line of a move only: a batch's lines are its facts.
+    @ViewBuilder private var changeRows: some View {
+        if verb == .send || verb == .swap, items.isEmpty, let with, let units, units != "0" {
+            let minus = "\u{2212}"
+            let sold = with.price.map { Self.money(Op.dollars(units, decimals: with.token.decimals, price: $0)) }
+                ?? Self.figure(units, decimals: with.token.decimals) + " " + with.token.symbol
+            let after = with.price.map { Self.money(Op.dollars(Op.difference(left(with), units), decimals: with.token.decimals, price: $0)) }
+            TokenRowLabel(symbol: with.token.symbol,
+                          line: [network.name, after.map { String(localized: "\($0) after") }].compactMap { $0 }.joined(separator: " · "),
+                          figure: minus + sold)
+                .accessibilityElement(children: .combine)
+            if verb == .swap, let buy, let back = buyTotal {
+                let token = crossBuy ?? buy.token
+                let held = heldBy[buyHome.chainId]?.first { $0.token == token }
+                let got = held?.price.map { Self.money(Op.dollars(back, decimals: token.decimals, price: $0)) }
+                    ?? Self.figure(back, decimals: token.decimals) + " " + token.symbol
+                let then = held.flatMap { h in h.price.map { Self.money(Op.dollars(Op.sum(h.units, back), decimals: token.decimals, price: $0)) } }
+                TokenRowLabel(symbol: token.symbol,
+                              line: [buyHome.name, then.map { String(localized: "\($0) after") }].compactMap { $0 }.joined(separator: " · "),
+                              figure: "+" + got, figureInk: DS.confirmInk)
+                    .accessibilityElement(children: .combine)
+            }
         }
     }
 
@@ -7371,40 +7462,74 @@ struct MoveSentence: View {
             // the other unit and the flip of units; what you have and Use all.
             let other = units != nil ? otherUnit(with) : nil
             let have = with.usd.map { Self.money($0) } ?? Op.spoken(left(with), decimals: with.token.decimals) + " " + with.token.symbol
-            VStack(alignment: .leading, spacing: 0) {
-                if other != nil || flips {
-                    HStack(alignment: .center, spacing: DS.Space.s2) {
-                        Text(verbatim: other ?? "").dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        Spacer(minLength: DS.Space.s2)
-                        if flips {
-                            Button { setDollars(!inDollars, with) } label: {
-                                Text(verbatim: "$ \u{21C5} \(with.token.symbol)").dsText(.heading17).foregroundStyle(DS.pickInk)
-                                    .frame(minHeight: DS.Hit.min)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PressSpring())
-                            .disabled(stage != nil)
-                            .accessibilityLabel(inDollars ? Text("Type in \(with.token.symbol)") : Text("Type in dollars"))
-                        }
-                    }
-                    .frame(minHeight: Self.factHeight)
+            VStack(spacing: 0) {
+                // **THE FIGURE IS THE HERO (prd §1917):** what you type, at
+                // Home's balance size, centred over its keys, the caret after
+                // it; the sentence says it again in its place.
+                HStack(alignment: .center, spacing: DS.Space.s1) {
+                    Text(verbatim: heroFigure(with))
+                        .dsText(.price52)
+                        .monospacedDigit()
+                        .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textPrimary)
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        // Never squeezed by the deck's height: only a figure
+                        // too wide for the line shrinks.
+                        .fixedSize(horizontal: false, vertical: true)
+                    MoveCaret()
                 }
-                HStack(alignment: .center, spacing: DS.Space.s2) {
-                    Text("You have \(have)").dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .layoutPriority(1)
+                .animation(DS.Motion.standard, value: amount)
+                // The other unit under it, the flip beside it.
+                HStack(alignment: .center, spacing: DS.Space.s1) {
+                    Text(verbatim: other ?? " ").dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
                         .minimumScaleFactor(0.8)
-                    Spacer(minLength: DS.Space.s2)
-                    Button { useAll(with) } label: {
-                        Text("Use all").dsText(.heading17).foregroundStyle(DS.pickInk)
-                            .frame(minHeight: DS.Hit.min)
-                            .contentShape(Rectangle())
+                    if flips {
+                        Button { setDollars(!inDollars, with) } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .dsGlyph(.body, weight: .bold)
+                                .foregroundStyle(DS.pickInk)
+                                .frame(width: DS.Hit.min, height: DS.Hit.min)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressSpring())
+                        .disabled(stage != nil)
+                        .accessibilityLabel(inDollars ? Text("Type in \(with.token.symbol)") : Text("Type in dollars"))
                     }
-                    .buttonStyle(PressSpring())
-                    .disabled(stage != nil)
                 }
-                .frame(minHeight: Self.factHeight)
+                .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
+                // **WHAT YOU HAVE IS HOME'S ROW (prd §1917):** the token, where
+                // it is, what you hold of it, and Use all under the figure. The
+                // figure turns amber when the amount is more (§83).
+                Button { useAll(with) } label: {
+                    TokenRowLabel(symbol: with.token.symbol, line: network.name,
+                                  figure: have, figureInk: over ? DS.attentionInk : DS.textPrimary,
+                                  under: String(localized: "Use all"), underInk: DS.pickInk)
+                }
+                .buttonStyle(RowPress())
+                .disabled(stage != nil)
+                .accessibilityLabel(Text("Use all, \(have) of \(with.token.symbol)"))
             }
         }
+    }
+
+    /// The hero's figure: what is typed, in the unit it is typed in; "$0"
+    /// before a digit, grey.
+    private func heroFigure(_ with: Tokens.Held) -> String {
+        if amount.isEmpty { return amountInDollars ? "$0" : "0 \(with.token.symbol)" }
+        let shown = Self.grouped(amount)
+        return amountInDollars ? "$" + shown : shown + " " + with.token.symbol
+    }
+
+    /// A typed figure with its thousands grouped, as typed otherwise: the
+    /// point and every place after it kept ("20,999.5").
+    static func grouped(_ typed: String) -> String {
+        let parts = typed.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+        guard let whole = Int(parts[0]) else { return typed }
+        let head = whole.formatted(.number.grouping(.automatic))
+        return parts.count > 1 ? head + "." + parts[1] : head
     }
 
     /// Every unit of the token, in its units: dollars round, and could land a
@@ -7594,8 +7719,13 @@ struct MoveSentence: View {
             }
         } else if nothingToMove {
             MoveFootWord(word: title(.receive)) { pickVerb(.receive) }
+        } else if let words = overWords {
+            // **THE FOOT NAMES WHAT IS MISSING (prd §1917):** never a dead
+            // grey act; how much is over, in amber, and Use all on the row
+            // over it.
+            MoveFootWord(word: words, ink: DS.attentionInk)
         } else if typingNotReady {
-            MoveFootWord(word: String(localized: "Done")) {
+            MoveFootWord(word: String(localized: "Next")) {
                 focus = nil
                 // The next step still to answer opens (prd §1782): Done never
                 // leaves the deck blank.
@@ -10024,9 +10154,12 @@ struct MoveFootClearance: ViewModifier {
 struct MoveWord: View {
     let text: String
     var ink: Color = DS.textPrimary
+    /// A small word joining the picks ("of", "for", "on"): regular weight,
+    /// never bold (prd §1917).
+    var glue = false
     @Environment(\.moveRung) private var rung
     @Environment(\.moveFlat) private var flat
-    init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
+    init(_ text: String, ink: Color = DS.textPrimary, glue: Bool = false) { self.text = text; self.ink = ink; self.glue = glue }
     var body: some View {
         let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
         if words.count > 1 {
@@ -10040,14 +10173,16 @@ struct MoveWord: View {
         }
     }
 
-    /// One ink in the sentence (prd §1888): every word white, but Aztec's
-    /// own words keep Aztec's colour (prd §1700, a different world).
-    private var shownInk: Color { flat && ink != DS.aztecInk ? DS.textPrimary : ink }
+    /// **TWO INKS (prd §1917, amending §1888's one):** a pick white and
+    /// bold, a small word grey; the blank being asked keeps the pick's pink
+    /// and Aztec's words Aztec's colour (prd §1700).
+    private var bold: Bool { !glue && ink == DS.textPrimary }
 
     private func piece(_ word: String) -> some View {
         Text(verbatim: word)
             .dsText(rung)
-            .foregroundStyle(shownInk)
+            .fontWeight(bold ? .semibold : .regular)
+            .foregroundStyle(ink)
             .monospacedDigit()
             .contentTransition(.numericText())
             .lineLimit(1)
@@ -10067,7 +10202,7 @@ struct MoveClause<Value: View>: View {
     var body: some View {
         if flat {
             // Its words straight into the sentence's flow (prd §1888).
-            if let glue { MoveWord(glue, ink: glueInk) }
+            if let glue { MoveWord(glue, ink: glueInk, glue: true) }
             if let trail {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     value()
@@ -10083,7 +10218,7 @@ struct MoveClause<Value: View>: View {
 
     private var clause: some View {
         MoveClauseLayout(spacing: MoveSentence.clauseGap) {
-            if let glue { MoveWord(glue, ink: glueInk) }
+            if let glue { MoveWord(glue, ink: glueInk, glue: true) }
             if let trail {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     value()
@@ -10117,7 +10252,7 @@ struct MoveWordsClause: View {
         let list = words.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
         if flat {
             // Its words straight into the sentence's flow (prd §1888).
-            if let glue { MoveWord(glue, ink: glueInk).layoutValue(key: FlowBreak.self, value: breaks) }
+            if let glue { MoveWord(glue, ink: glueInk, glue: true).layoutValue(key: FlowBreak.self, value: breaks) }
             ForEach(Array(list.enumerated()), id: \.offset) { i, word in
                 wordView(i, word, list: list)
                     .layoutValue(key: FlowBreak.self, value: breaks && glue == nil && i == 0)
@@ -10142,7 +10277,7 @@ struct MoveWordsClause: View {
 
     private func clause(_ list: [String]) -> some View {
         MoveClauseLayout(spacing: rung.size * MoveSentence.wordSpace) {
-            if let glue { MoveWord(glue, ink: glueInk) }
+            if let glue { MoveWord(glue, ink: glueInk, glue: true) }
             ForEach(Array(list.enumerated()), id: \.offset) { i, word in
                 if let action {
                     Button(action: action) { MoveWord(word, ink: ink) }
@@ -10177,10 +10312,10 @@ struct MovePhrase: View {
         let pieces = Self.pieces(text)
         ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
             if flat {
-                MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink,
+                MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : MoveSentence.glueInk,
                                 words: piece.words, ink: ink, breaks: breaks && i == 0)
             } else {
-                MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink,
+                MoveWordsClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : MoveSentence.glueInk,
                                 words: piece.words, ink: ink)
                 .layoutValue(key: FlowBreak.self, value: breaks && i == 0)
             }

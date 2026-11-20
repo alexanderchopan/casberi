@@ -74619,6 +74619,25 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 
 **Seen** on an iPhone 17 Pro simulator: Send (Token, To, Amount, ready), Swap's flip by pick, Sweep's network step, Buy's tokens on Amount, Receive.
 
+## §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track (amends §1888's one ink and regular weight, §1904 item 11's tiles, §1910's tiles, §1911's chips always in view, §1916 items 2 and 3) (user, 2026-11-20: "the home screen is very very good. it's where i'm proud of. i still feel like things are confusing or hard when i am in move, or that the design could be elevated", of the canvas "Move, next round", tokens as tiles against rows: "i liked that we had token horizontal rows but understand its probably better on vertical rows", then "ya. i like all your suggestions. lets make them") — BUILT
+
+**Ruling.** Move borrows Home's anatomy: one big figure, one token row, colour only for state.
+
+1. **The sentence has two inks** (`MoveWord`, `MoveSentence.glueInk`): what you picked is white and semibold, the small words joining the picks ("of", "for", "on") are grey and regular; the blank being asked keeps the pick's pink, Aztec's words Aztec's colour. §1888's line balancing stands.
+2. **Every token list is Home's row** (`TokenRowLabel`, shared with Home's holdings): mark, symbol over its network as a word, dollars trailing in bold. No badges, no tiles. A place's title is Home's bold side head. A line that is not a figure (a seller, "Unlisted") joins the network's line.
+3. **Amount's figure is the hero** (`unitLine`): what is typed at Home's balance size (`price52`), centred, the caret after it (not in the sentence on Send and Swap); the other unit under it with a flip glyph; then the token you spend as Home's row, what you have trailing and **Use all** under it (the row is the button). Over what you have, the figure turns amber.
+4. **The kinds leave once they have done their job** (`kindsUp`): Swap/Sweep's chips stand while the first step is open or nothing is answered.
+5. **Ready leads with what changes** (`changeRows`): the token that leaves, "−$20.00", its line "Base · $304 after"; on a swap the token that comes back, "+$19.97" in the confirm ink. Dollars where there is a price, the token's figure where there is none. One line of a move only.
+6. **The foot names what is missing** (`overWords`): "$76 more than you have" in amber in place of a dead act; Done over the keys is **Next**.
+7. **The hold dims the deck** (`holdDim`) while the sentence fills.
+8. **After the hold the track is the stages** (`MoveStageTrack`): Signed · Sent · Arrived (Send), Swapped (Swap), Swept (Sweep); reached ones ticked on the lighter fill, the one under way in pink; the deck shows what is changing.
+
+**Kept:** the search field stays in its bar (user, 2026-11-19); the mock had dropped it.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: Swap's two Token lists as Home's rows ("Base · Unlisted" in amber), the chips leaving after the first pick with the panel's edge still, the sentence's two inks (Swap and Sweep), the hero at `price52` over 56pt keys, Ready's "−$20.00 · $304.17 after" and "+$19.94", "$20,674.83 more than you have" in the foot. Not seen: the hold's dim and the stage track (no signing on the simulator's demo), Send's and Earn's Amount.
+
 ## §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round (user, 2026-11-20: "how can we make our aztec experience 'easier' i always feel confused how i put money into it", of the canvas "Aztec: add money": "i like all yours do it") — BUILT IN PART
 
 **Ruling.** A move-in to your private account on Aztec says, before the hold, how many times your co-signer's wallet will ask: one fixed row, **Co-signer · Signs N times**, after Network (`AztecMove.coSignerAsks`). N counts Shield's sign-in (none while one stands, `ShieldBridge.signedIn`), the portal's approval (none when the co-signer already lets the portal take this much, read once per sentence), the deposit, and the hand-over when your account sends with both keys (`knownThreshold ≥ 2`). Face ID is every move's and goes unsaid. Before this, the asks came one by one after the hold, and nothing said there would be three.
@@ -74664,3 +74683,4 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** The same page on iPad and Mac, compiled only as part of the iPhone build; not looked at there.
 
 **Checks.** `your-account-selftest.sh` holds the red-until-seen glyph, the section's filter and the stamp.
+
