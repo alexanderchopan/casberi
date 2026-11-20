@@ -257,6 +257,8 @@ struct MoveLendSentence<Head: View>: View {
                     } else if open == .network {
                         ScrollView { fromRows.padding(.vertical, DS.Space.s2) }
                             .scrollIndicators(.hidden)
+                            // The last row clears the foot and its fade.
+                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
                             .transition(.opacity)
                     } else {
                         Color.clear

@@ -7079,7 +7079,7 @@ struct MoveSentence: View {
             kindRows.transition(.opacity)
         } else if let o = deckOpen {
             choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight,
-                    searches: Self.searches(o), which: o, named: false) { list(for: o) }
+                    inset: MoveDeck.listClearance, searches: Self.searches(o), which: o, named: false) { list(for: o) }
                 .id(o)
                 .transition(.opacity)
                 .onAppear { menuUp = true }

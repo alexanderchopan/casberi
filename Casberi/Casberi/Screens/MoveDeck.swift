@@ -26,6 +26,12 @@ enum MoveDeck {
     static let fade: CGFloat = 32
     /// The foot's row: the back chevron and the act's word.
     static var footHeight: CGFloat { stepsHeight + DS.Space.s2 }
+    /// **THE LAST ROW CLEARS THE FOOT (user, of 1050's Send: "the private
+    /// account token is clipped", "it can't clear the screen below it", "in
+    /// for and from the bottom row doesn't clear the screen").** A deck list
+    /// scrolls on by the foot and its fade, so at its end the last row
+    /// stands above both, whole.
+    static var listClearance: CGFloat { footHeight + fade }
     /// The keypad's top row of sums.
     static let presetHeight: CGFloat = 44
     /// A row of a step's list.
