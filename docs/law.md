@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2092 of 2166 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2094 of 2168 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1930,7 +1930,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1531 — Your own model is always asked, and a reply that is only its marker is not an answer (amends §1478)
 - §1532 — Move offers the tokens you would know, and asks a failed network again (amends §1438, §1440)
 - §1533 — Search takes the paste, and every stablecoin wears its mark (amends §1532, §1440)
-- §1534 — Every row in Move wears a mark, and the first list opens itself (amends §1438c, §1440, §1442b, §1486) (amended by §1905)
+- §1534 — Every row in Move wears a mark, and the first list opens itself (amends §1438c, §1440, §1442b, §1486) (amended by §1905, §1913)
 - §1535 — The Wallet page's box follows a scope switch (amends §1403)
 - §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530) (amended by §1590)
 - §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §… (amended by §1547, §1558)
@@ -2318,7 +2318,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1873 — Helper text fits one line
 - §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fres…
 - §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c… (amended by §1885, §1891, §1895)
-- §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired (amended by §1892, §1896)
+- §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired (amended by §1892, §1896, §1914)
 - §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva… (amended by §1895)
 - §1878 — Receive on Base or Robinhood, earn on Ethereum
 - §1879 — Send from your private balance to Base or Robinhood
@@ -2334,7 +2334,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892, §1912)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
-- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902)
+- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902, §1914)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
@@ -2346,15 +2346,17 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902, §1903, §1904)
 - §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;… (amended by §1903)
 - §1903 — The Deck after its first walk: the deck takes 37% of the phone, its lists fade into the foot, Amount always raises th… (amended by §1904, §1911)
-- §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show… (amended by §1911)
+- §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show… (amended by §1911, §1914)
 - §1905 — Private gas is said so, and Base's mark is its own tile
 - §1906 — A fake transfer is one somebody else sent
 - §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
 - §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte…
-- §1909 — Send's network and token are one step, With: To · With · Amount (amended by §1910)
+- §1909 — Send's network and token are one step, With: To · With · Amount (amended by §1910, §1913)
 - §1910 — Every token list in Move is one template, and a token and its network are one pick on every verb
 - §1911 — A verb's kinds are chips over its steps, back is the menu, and Move's lists run to the home indicator
 - §1912 — Move's menu words are an act's size and one width
+- §1913 — Send and Swap open on their tokens, Send's step is Token, and Swap's sides flip (amended by §1914)
+- §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller
 
 ## Dead rulings → what replaced them (generated)
 

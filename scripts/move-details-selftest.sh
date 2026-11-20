@@ -148,10 +148,10 @@ grep -q 'try? await Task.sleep(for: .seconds(40))' "$SENTENCE" \
 # A refusal dims the verb; "Not checked" is never green.
 grep -q 'stage == nil && !all.isEmpty && failNote == nil' "$SENTENCE" \
   || { echo "✗ a send the simulation refuses no longer dims its verb (canvas figure 9)"; exit 1; }
-awk '/case .notChecked:/{getline; print}' "$DETAILS" | grep -q 'Lands as written\|confirmInk' \
+awk '/case .notChecked:/{getline; print}' "$DETAILS" | grep -q 'Goes through\|confirmInk' \
   && { echo "✗ 'Not checked' is drawn as checked (§83)"; exit 1; }
-grep -q 'case .lands:' "$DETAILS" && grep -q '"Lands as written"' "$DETAILS" \
-  || { echo "✗ a simulated send no longer says it lands as written"; exit 1; }
+grep -q 'case .lands:' "$DETAILS" && grep -q '"Goes through"' "$DETAILS" \
+  || { echo "✗ a simulated send no longer says its test run goes through"; exit 1; }
 
 # The demo reaches nothing (§1475): its preview is its table's.
 awk '/static func preview\(/,/^    }$/' "$CHAINPREVIEW" | grep -q 'if YourAccountDemo.isDemo(account) { return demoPreview' \
@@ -161,10 +161,11 @@ awk '/static func preview\(/,/^    }$/' "$CHAINPREVIEW" | grep -q 'if YourAccoun
 MS="Casberi/Casberi/Screens/MoveSentence.swift"
 grep -q '.onChange(of: verb, initial: true) { _, _ in if inTray { chrome.moveTall = true } }' "$MS" \
   || { echo "✗ a verb's page opens in the short sheet again, where its rows stand under the sentence"; exit 1; }
-# Buy's Network row is read off the pick, never the sentence's late report
-# (prd §1869): it said "Choose" under "on Ethereum".
+# Buy's network is read off the pick, never the sentence's late report
+# (prd §1869): it said "Choose" under "on Ethereum". Since §1910 it rides the
+# Token row, read off the seller the pick found.
 grep -q 'if verb == .deposit, b.names == .depositNetwork { continue }' "$MS" \
-  && grep -q 'value: picked ? network.name : pick, opens: .depositNetwork' "$MS" \
+  && grep -q 'row.value = depositSeller == nil ? pick : "\\(depositCoin.symbol) · \\(network.name)"' "$MS" \
   || { echo "✗ Buy's Network row reads the sentence's report again, which arrives before its one network is picked"; exit 1; }
 
 # §1872 — the Move walk's fixes (user, 2026-11-18).

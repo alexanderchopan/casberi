@@ -48462,6 +48462,34 @@
         }
       }
     },
+    "Across fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comisión de Across"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acrossの手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Across 费用"
+          }
+        }
+      }
+    },
     "Across keeps" : {
       "localizations" : {
         "es" : {
@@ -96735,6 +96763,34 @@
         }
       }
     },
+    "Flip the two tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Invertir los dos tokens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2つのトークンを入れ替え"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "두 토큰 바꾸기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "对调两个代币"
+          }
+        }
+      }
+    },
     "Folder" : {
       "localizations" : {
         "es" : {
@@ -103422,6 +103478,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目标"
+          }
+        }
+      }
+    },
+    "Goes through" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se completa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "成功します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "성공함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以完成"
           }
         }
       }
@@ -112878,34 +112962,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "存入于"
-          }
-        }
-      }
-    },
-    "Lands as written" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Llega tal como está escrito"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "記載どおりに実行されます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "작성한 대로 처리됩니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "将按所写执行"
           }
         }
       }
@@ -131437,34 +131493,6 @@
         }
       }
     },
-    "Not checked" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sin comprobar"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "未確認"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "확인 안 됨"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "未检查"
-          }
-        }
-      }
-    },
     "Not checked yet" : {
       "localizations" : {
         "es" : {
@@ -133029,6 +133057,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未撤销"
+          }
+        }
+      }
+    },
+    "Not run" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se ejecutó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未実行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실행 안 됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未运行"
           }
         }
       }
@@ -193707,6 +193763,34 @@
         }
       }
     },
+    "Test run" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prueba"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テスト実行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트 실행"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "试运行"
+          }
+        }
+      }
+    },
     "Test token" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -224420,34 +224504,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Wise 中操作前不会发送。开始于 %@。"
-          }
-        }
-      }
-    },
-    "With" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Con"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "トークン"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "토큰"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "代币"
           }
         }
       }

@@ -74570,3 +74570,24 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: the menu at the new size, a tap 85pt left of "Buy" opening Buy.
+
+
+## §1913 — Send and Swap open on their tokens, Send's step is Token, and Swap's sides flip (amends §1909's "With", §1534) (user, 2026-11-19, of `design/mockups` canvas "Move: switching steps": "B" (the flip), "i think we should default to open each menu that shows the tokens. so for send with in swap from", "Do you think 'With' is too obtuse and verbose? Would 'Token' be more clear?") — BUILT
+
+**Ruling.** Send lands on its Token step and Swap on its first token whenever the verb is picked, from the menu or its chips, not only on Move's first appearance (`openTokens`); what you hold is shown, never chosen (§1438c). Send's step is "Token", never "With". A swap's two sides flip from a pink `arrow.left.arrow.right` after the first side (`MoveDeckStep.flip`, `flipSides`): From and For change places on one network, dollars typed stand, a token's units go with it. The flip is drawn only when the token bought is yours to sell there (`flipHeld`); a swap that arrives on another network has none.
+
+**Declined** from the same canvas: faces on answered steps ("we have the sentence for that"), To ordering Token, and an Again row.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amends §1876's Cost door, §1892, §1913, §1904 item 1) (user, 2026-11-19: "how can we improve when there is a longer receipt in the sentence area. i don't like how 'costs' has the chevron to see more", of the canvas "Move: the receipt": "i like A a lot"; "when i said make token from and for i mean have the word twice"; "should we make the deck be this high on all the move screens?"; "keyboard looks tiny here"; "you can say fee after Across so it is like Network fee"; "i have no idea what 'lands as written' means") — BUILT
+
+**Ruling.** With every step answered and nothing open, Send, Swap and Sweep draw their receipt in the deck's body, under Add another: the ledger's facts, then Details' rows (the network fee once, where it swaps, the nonce, the test run, Raw transaction), scrolling under the foot. The sentence stands alone above it. While a step is open the facts stand under the sentence as before. No row is a door to the cost: the Cost row and its chevron are gone; Raw transaction keeps its door because it opens a page.
+
+- **Token ⇄ Token.** A swap's two sides are both named Token, the flip between them; the sentence says which is which. Steps fold by `deckKey` (what they open), not by their word.
+- **The deck is 45% of the screen** (was 37%), and the keypad grows with it, its figures at `heading34`.
+- **Words.** "Across fee 0.06%", as "Network fee" reads. The simulation is a "Test run" that "Goes through", "Returns at least …", "Would fail" or was "Not run"; "Checked / Lands as written" is retired.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: Swap opening on its first Token, Token ⇄ Token, the flip turning ETH→USDC into USDC→ETH, the taller keys, the receipt in the deck at ready.

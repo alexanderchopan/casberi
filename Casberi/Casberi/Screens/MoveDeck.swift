@@ -20,8 +20,13 @@ enum MoveDeck {
     /// no need to scroll"):** 37% of the screen, never under the 288pt a
     /// small phone keeps for its sentence and facts. One height for every
     /// verb and step, so the panel's edge never moves.
-    static var bodyHeight: CGFloat { max(288, (UIScreen.main.bounds.height * 0.37).rounded()) }
-    /// One key of the keypad: the keys share what the sums and the fade leave.
+    /// **TALLER WITH THE RECEIPT IN IT (prd §1914, user, 2026-11-19: "should
+    /// we make the deck be this high on all the move screens?"):** 45%, the
+    /// sentence standing alone above it.
+    static var bodyHeight: CGFloat { max(288, (UIScreen.main.bounds.height * 0.45).rounded()) }
+    /// One key of the keypad: the keys share what the sums and the fade leave,
+    /// so the taller deck's keys are taller too (user, 2026-11-19: "keyboard
+    /// looks tiny here").
     static var keyHeight: CGFloat { max(56, ((bodyHeight - presetHeight - DS.Space.s1 - fade) / 4).rounded(.down)) }
     /// How far a list fades into the foot (user, 2026-11-19: "the rows should
     /// fade into the bottom not have a hard clip").
@@ -57,6 +62,9 @@ struct MoveDeckStep: Identifiable {
     /// Its question has an answer (prd §1904 item 1): white, where one still
     /// to answer stays grey.
     var answered = false
+    /// **SWAP'S FLIP (prd §1913):** a disc after this step that turns From
+    /// and For round; nil draws none.
+    var flip: (() -> Void)? = nil
     let act: () -> Void
 }
 
@@ -91,6 +99,22 @@ struct MoveDeckSteps: View {
                     .buttonStyle(RowPress())
                     .disabled(disabled)
                     .accessibilityAddTraits(s.on ? [.isSelected] : [])
+                    if let flip = s.flip {
+                        Button {
+                            flip()
+                            DSHaptic.selection()
+                        } label: {
+                            Image(systemName: "arrow.left.arrow.right")
+                                .dsGlyph(.title, weight: .semibold)
+                                .foregroundStyle(disabled ? DS.textSecondary : DS.pickInk)
+                                .frame(width: DS.Hit.min, height: MoveDeck.stepsHeight)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressSpring())
+                        .disabled(disabled)
+                        .accessibilityLabel(Text("Flip the two tokens"))
+                        .transition(.opacity)
+                    }
                 }
             }
         }
@@ -107,6 +131,7 @@ struct MoveDeckSteps: View {
         }
         .animation(DS.Motion.standard, value: steps.map(\.on))
         .animation(DS.Motion.standard, value: steps.map(\.answered))
+        .animation(DS.Motion.standard, value: steps.map { $0.flip != nil })
     }
 
     private func ink(_ s: MoveDeckStep) -> Color {
@@ -288,9 +313,11 @@ struct MoveKeypad: View {
         } label: {
             Group {
                 if delete {
-                    Image(systemName: "delete.backward").dsGlyph(.title, weight: .regular)
+                    Image(systemName: "delete.backward").dsGlyph(.feature, weight: .regular)
                 } else {
-                    Text(verbatim: label).dsText(MoveDeck.footRung).fontWeight(.regular)
+                    // A key's figure is the menu's size (prd §1914): the
+                    // foot's rung read small over keys this tall.
+                    Text(verbatim: label).dsText(.heading34).fontWeight(.regular)
                 }
             }
             .foregroundStyle(DS.textPrimary)

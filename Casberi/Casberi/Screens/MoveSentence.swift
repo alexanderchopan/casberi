@@ -1881,10 +1881,7 @@ struct MoveSentence: View {
             // sentence and nothing said the words were the controls. With
             // money to spend and nothing picked, what you hold is shown —
             // shown, not chosen (§1438c), and with the keyboard down.
-            if open == nil, with == nil, verb == .swap || verb == .send,
-               heldBy.values.contains(where: { !$0.isEmpty }) {
-                withAnimation(DS.Motion.standard) { open = .with; search = "" }
-            }
+            openTokens()
             // No keyboard on its own: Move is a page, and a keyboard raised
             // on arrival covers the tab bar until it is swiped away (user,
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
@@ -3308,7 +3305,50 @@ struct MoveSentence: View {
             receipt = nil
             takeOnlyChoices()
         }
+        openTokens()
         DSHaptic.selection()
+    }
+
+    /// **THE TOKENS ARE OPEN ON ARRIVAL (prd §1913, user, 2026-11-19:
+    /// "default to open each menu that shows the tokens. so for send with
+    /// in swap from").** Send lands on With and Swap on From whenever the
+    /// verb is picked, from the menu or its chips, not only on Move's first
+    /// appearance (§1534): what you hold is shown, never chosen (§1438c).
+    private func openTokens() {
+        guard open == nil, focus == nil, with == nil, receipt == nil, stage == nil,
+              verb == .swap || verb == .send,
+              heldBy.values.contains(where: { !$0.isEmpty }) else { return }
+        withAnimation(DS.Motion.standard) { open = .with; search = "" }
+    }
+
+    /// What For holds that could leave instead: the For token in your
+    /// account on its network, so the swap can turn round (prd §1913).
+    private var flipHeld: Tokens.Held? {
+        guard verb == .swap, items.isEmpty, stage == nil, receipt == nil, crossTo == nil,
+              let with, let buy, buy.token != with.token else { return nil }
+        // One network only: a swap that arrives elsewhere is Across's, and
+        // turned round it would be another route.
+        let home = buyHome
+        return heldBy[home.chainId]?.first { $0.token == buy.token && $0.units != "0" }
+    }
+
+    /// **SWAP'S FLIP (prd §1913):** From and For change places, each on its
+    /// own network; dollars typed stand, a token's units go with it.
+    private func flipSides() {
+        guard let was = with, let held = flipHeld else { return }
+        let from = network
+        let home = buyHome
+        let back = (listedBy[from.chainId] ?? []).first { $0.token == was.token }
+            ?? Tokens.Listed(token: was.token, name: was.token.symbol, onList: true)
+        withAnimation(DS.Motion.standard) {
+            network = home
+            networkPicked = true
+            buyOn = home == from ? nil : from
+            choose(held)
+            buy = back
+            destinationPicked = true
+            quote = nil
+        }
     }
 
     private func title(_ v: Verb) -> String {
@@ -5087,10 +5127,24 @@ struct MoveSentence: View {
     /// The ledger drawn. With `door`, the fee's row is the Cost row (prd
     /// §1876): it opens the cost's list in the rows' place, and nothing
     /// unfolds under it.
-    @ViewBuilder private func ledger(door: Bool) -> some View {
+    @ViewBuilder private func ledger(door: Bool, inDeck: Bool = false) -> some View {
+        // **THE RECEIPT IS THE DECK AT READY (prd §1914, user, 2026-11-19:
+        // "i don't like how 'costs' has the chevron to see more", "i like A
+        // a lot"):** with every step answered the facts leave the sentence
+        // for the deck's empty body, the cost's parts under them, no door.
+        // While a step is open they stand under the sentence, still no door.
+        if inDeck || !deckReady {
+            ledgerBody(door: false, inDeck: inDeck)
+        }
+    }
+
+    @ViewBuilder private func ledgerBody(door: Bool, inDeck: Bool) -> some View {
         // **THE TOTAL IS SAID ONCE, ON THE BUTTON (prd §1796).** Its line
-        // is not drawn; Details opens from the last line that is.
-        let lines = ledgerRows.filter { $0.id != "total" }
+        // is not drawn; Details opens from the last line that is. In the
+        // deck the network fee is Details' own row, said once.
+        // So is where it swaps: Details' "Swaps" names the exchange and its
+        // fee, and "Through" said the exchange again.
+        let lines = ledgerRows.filter { $0.id != "total" && !(inDeck && offersDetails && ($0.id == "fee" || $0.id.hasPrefix("through"))) }
         // With no fee read yet the door is its own row, "Details": a fact's
         // row ("You get", "Through") is never borrowed for it (prd §1876).
         let rows = door && !lines.contains { $0.id == "fee" }
@@ -7098,11 +7152,32 @@ struct MoveSentence: View {
         } else if receivePlacesUp {
             receiveAddresses.padding(.vertical, DS.Space.s2)
                 .transition(.opacity)
+        } else if deckReady {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if canAddAnother { addAnotherRow }
+                    ledger(door: false, inDeck: true)
+                    if offersDetails { moveDetails }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, MoveDeck.listClearance)
+            }
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            .transition(.opacity)
         } else if canAddAnother {
             addAnotherRow.transition(.opacity)
         } else {
             Color.clear
         }
+    }
+
+    /// **EVERY STEP ANSWERED, NOTHING OPEN (prd §1914):** the deck's body
+    /// is the receipt. Send, Swap and Sweep, never a limit order (its line
+    /// stands under the sentence).
+    private var deckReady: Bool {
+        receipt == nil && stage == nil && deckOpen == nil && focus != .amount && !limiting
+            && (verb == .send || verb == .swap || verb == .sweep) && missingRow == nil
     }
 
     /// **THE WORD A ROW'S STEP TAKES (prd §1898 item 1, §1900 item 2).** A
@@ -7114,15 +7189,28 @@ struct MoveSentence: View {
         // can be With", "should we merge from and with so its always in
         // same list together … less taps"):** one list, every network's
         // tokens under its title (`lookIn`), one pick for both.
-        case (.send, .from), (.send, .network), (.send, .with): String(localized: "With")
-        case (.swap, .network), (.swap, .with): String(localized: "From")
-        // **FOR, NEVER TO (prd §1904 item 2):** To is always a person or a
-        // place; what a swap buys is "for", as the sentence says it.
-        case (.swap, .destination), (.swap, .buy): String(localized: "For")
+        // **TOKEN, NOT WITH (prd §1913, user, 2026-11-19: "Would 'Token' be
+        // more clear?"):** the step names what is picked.
+        case (.send, .from), (.send, .network), (.send, .with): String(localized: "Token")
+        // **TOKEN ⇄ TOKEN (prd §1914, user, 2026-11-19: "make token from and
+        // for", "have the word twice"):** a swap's two sides are both a
+        // token, the flip between them; the sentence says which is which
+        // ("of ETH for USDC"). The steps fold by `deckKey`, not the word.
+        case (.swap, .network), (.swap, .with), (.swap, .destination), (.swap, .buy): String(localized: "Token")
         case (.buy, .network), (.buy, .with): String(localized: "Pay with")
         case (.buy, .group), (.buy, .merchant): String(localized: "Merchant")
         case (.sweep, .under): String(localized: "Under")
         default: Self.rowName(which, verb: verb)
+        }
+    }
+
+    /// What folds rows into one step: the word, but a swap's two sides keep
+    /// their own step under one word (prd §1914).
+    private func deckKey(_ which: Blank) -> String {
+        switch (verb, which) {
+        case (.swap, .network), (.swap, .with): "from"
+        case (.swap, .destination), (.swap, .buy): "for"
+        default: deckWord(which)
         }
     }
 
@@ -7137,7 +7225,7 @@ struct MoveSentence: View {
         var members: [String: [LedgerRow]] = [:]
         for r in rows {
             guard let b = r.opens else { continue }
-            let w = deckWord(b)
+            let w = deckKey(b)
             if members[w] == nil { order.append(w) }
             members[w, default: []].append(r)
         }
@@ -7158,7 +7246,12 @@ struct MoveSentence: View {
             let target = group.first { $0.value == Self.unpicked }?.opens ?? group.last?.opens
             let on = group.contains { $0.opens != nil && $0.opens == current }
             let answered = !group.isEmpty && group.allSatisfy { $0.value != Self.unpicked }
-            steps.append(MoveDeckStep(id: "step\(w)", word: w, on: on, answered: answered) {
+            // Swap's flip stands after From (prd §1913), when what For
+            // names is yours to send.
+            let flips = verb == .swap && w == "from" && flipHeld != nil
+            let word = group.first?.opens.map(deckWord) ?? w
+            steps.append(MoveDeckStep(id: "step\(w)", word: word, on: on, answered: answered,
+                                      flip: flips ? { flipSides() } : nil) {
                 if on {
                     withAnimation(DS.Motion.standard) { open = nil }
                     focus = nil

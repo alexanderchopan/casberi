@@ -106,7 +106,8 @@ struct MoveDetails: View {
             let token = leg.swap?.buy ?? YourAccountAcross.token(leg.asset, on: dest)
             let least = leg.swap?.minimum ?? leg.outputAmount
             row(String(localized: "You get at least"), "\(MoveSentence.figure(least, decimals: token.decimals)) \(token.symbol)")
-            row(String(localized: "Across"), String(localized: "\(YourAccountSwap.percent(pips: leg.feePips)) fee"))
+            // The fee is the row's name, as Network fee's is (user, 2026-11-19).
+            row(String(localized: "Across fee"), YourAccountSwap.percent(pips: leg.feePips))
             if let time = YourAccountAcross.time(leg.seconds) {
                 row(String(localized: "Expected time"), time)
             }
@@ -143,24 +144,26 @@ struct MoveDetails: View {
 
     // MARK: - What the simulation found
 
-    /// Green only when this exact operation was simulated (§83); "Not
-    /// checked" when the node would not, never "Lands as written".
+    /// Green only when this exact operation was simulated (§83); "Not run"
+    /// when the node would not, never "Goes through". **A TEST RUN, IN
+    /// PLAIN WORDS (prd §1914, user, 2026-11-19: "i have no idea what 'lands
+    /// as written' means"):** it was tried first, and it goes through.
     private func checkedRow(_ p: YourAccountChain.Preview) -> some View {
         switch p.checked {
         case .lands:
-            return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
+            return row(String(localized: "Test run"), String(localized: "Goes through"), ink: DS.confirmInk)
         // A swap to another network (prd §1555): what a swap first pays on
         // this network is a step, not what you get; "You get at least" says that.
         case .returnsAtLeast where p.sold.contains { $0.across != nil }:
-            return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
+            return row(String(localized: "Test run"), String(localized: "Goes through"), ink: DS.confirmInk)
         case .returnsAtLeast(let units, let token):
-            return row(String(localized: "Checked"),
+            return row(String(localized: "Test run"),
                        String(localized: "Returns at least \(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)"),
                        ink: DS.confirmInk)
         case .fails:
-            return row(String(localized: "Checked"), String(localized: "Would fail"), ink: DS.destructiveInk)
+            return row(String(localized: "Test run"), String(localized: "Would fail"), ink: DS.destructiveInk)
         case .notChecked:
-            return row(String(localized: "Checked"), String(localized: "Not checked"))
+            return row(String(localized: "Test run"), String(localized: "Not run"))
         }
     }
 
