@@ -684,9 +684,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private enum Blank { case token, recipient, amount }
     @State private var open: Blank?
-    /// The amount is being typed on Move's own keypad (prd §1925), never the
-    /// system's decimal pad.
-    @State private var typing = false
     /// The cost's list stands in the rows' place (prd §1876).
     @State private var costOpen = false
     @State private var typed = ""
@@ -697,65 +694,51 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     var body: some View {
         ScrollView {
-            ScrollViewReader { scroller in
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
-                // (prd §1794, §1801):** as Move's own verbs.
-                // Its name stands over the page (`MovePinnedHead`, prd §1892).
-                // The world's rule, in view wherever Aztec is (prd §1779): a
-                // send from your private account reaches Aztec addresses.
-                // Taking money out to Ethereum is the one crossing, and its
-                // sentence says Ethereum itself.
-                // It reaches Aztec, or goes out to Ethereum (prd §1924).
-                if move.mode == .send, !move.toEthereum, !isDone {
-                    Text("To Aztec, or out to Ethereum.")
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.aztecInk)
-                        .padding(.top, DS.Space.s2)
-                }
-                // What goes in, said where the rule stands (prd §1872, user:
-                // "i'm really unclear what you can send to your aztec
-                // account"): Shield carries these two; the From and Network
-                // rows say where from.
-                if move.mode == .deposit, !isDone {
-                    Text("USDC or ETH only.")
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.aztecInk)
-                        .padding(.top, DS.Space.s2)
-                }
-                Group {
-                    // A row's choices are a menu on the row (prd §1784).
-                    VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        // The cost is a row under them (prd §1876).
-                        MoveCostRows(cost: move.stage == .ready && move.amountOK ? move.cost : nil,
-                                     open: $costOpen, ink: DS.aztecInk) {
-                            MoveChoiceRows(rows: choiceRows, nextInk: DS.aztecInk, open: menuRow) { _ in menu }
-                        }
-                        if !costOpen { line }
+            VStack(alignment: .leading, spacing: 0) {
+                // **THE SENTENCE STANDS STILL ON TOP, THE DECK UNDER IT (prd
+                // §1927, user: "we need to be consistent!"):** as Send's,
+                // Swap's and Earn's (§1897, §1901, §1916).
+                MoveFlow { sentence }
+                    .moveHoldFill()
+                    // No control (prd §1781): its choices are the deck's.
+                    .allowsHitTesting(false)
+                    .animation(DS.Motion.standard, value: move.stage)
+                    .animation(DS.Motion.standard, value: move.amount)
+                    .animation(DS.Motion.standard, value: move.recipient)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if let run = stepsRun {
+                        // Face ID came before a send's clock; a move-in signs inside it.
+                        PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
+                            .transition(.opacity)
+                    } else if move.stage == .reading, move.mode == .send, let since = move.readingSince {
+                        PrivateWarmingRow(since: since).transition(.opacity)
                     }
+                    // Blocked, the facts stand here; ready, they are the
+                    // deck's receipt (prd §1927, as Send's Ready).
+                    if !live, stepsRun == nil, !facts.isEmpty { receipt }
+                    line
                 }
-                .padding(.top, DS.Space.s6)
+                .padding(.top, DS.Space.s4)
             }
-            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, MoveSentence.headFade)
-            // Scrolled to the end, the last row clears the foot's fade.
-            .padding(.bottom, MoveSentence.footFade)
+            .padding(.horizontal, MoveSentence.sideInset(inTray))
+            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
+            .padding(.bottom, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            // The keys come up from the foot: the Amount row is brought to
-            // their edge, so its figure is seen while typed (prd §1925).
-            .onChange(of: typing) { _, now in
-                guard now else { return }
-                withAnimation(DS.Motion.standard) { scroller.scrollTo("amount", anchor: .bottom) }
-            }
-            }
         }
         .scrollContentBackground(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
-        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
-        // Send opens whole: its rows and sentence clip in the short sheet.
+        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
+        // Send opens whole: its facts and deck clip in the short sheet.
         .onAppear { chrome.moveTall = true }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
+        // The deck opens on the keys once read: never an empty panel under a
+        // sentence that asks how much (prd §1782, as Earn's).
+        .onChange(of: live, initial: true) { _, on in
+            if on, open == nil, move.amount.isEmpty, move.mode == .deposit || move.recipient != nil {
+                withAnimation(DS.Motion.standard) { open = .amount }
+            }
+        }
         // A send kept behind its sheet is shown as it stands, running or
         // failed, never read over (prd §1777).
         .task(id: move.mode) { if AztecMove.kept !== move { await move.read() } }
@@ -787,6 +770,49 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                              })
                 .presentationDragIndicator(.visible)
         }
+    }
+
+    private var live: Bool { move.stage == .ready }
+
+    /// The facts, the cost a row of them (prd §1876).
+    private var receipt: some View {
+        MoveCostRows(cost: live && move.amountOK ? move.cost : nil, open: $costOpen, ink: DS.aztecInk, indented: false) {
+            ForEach(facts, id: \.name) { f in
+                MoveFactRow(name: f.name, value: f.value, valueInk: f.ink, indented: false)
+            }
+        }
+    }
+
+    /// **THE FACTS UNDER THE SENTENCE (prd §1927):** what the rows said that
+    /// is not a choice. Where it goes and comes from, its network, who signs,
+    /// what Shield takes, and who carries it.
+    private var facts: [(name: String, value: String, ink: Color)] {
+        let yours = String(localized: "Your private account")
+        switch move.stage {
+        case .ready, .shieldNo(_, _, false), .needsGas: break
+        default: return []
+        }
+        var out: [(name: String, value: String, ink: Color)] = []
+        if move.mode == .deposit {
+            out.append((String(localized: "From"), String(localized: "Your public account"), DS.textPrimary))
+            out.append((String(localized: "Network"), String(localized: "Ethereum to Aztec"), DS.textPrimary))
+            // What goes in (prd §1872): Shield carries these two.
+            out.append((String(localized: "Takes"), String(localized: "USDC or ETH"), DS.aztecInk))
+            if live, move.viaKey != nil {
+                out.append((String(localized: "Signs"), String(localized: "This iPhone"), DS.textPrimary))
+            } else if live, let asks = move.coSignerAsks {
+                out.append((String(localized: "Co-signer"),
+                            asks == 1 ? String(localized: "Signs once") : String(localized: "Signs \(asks) times"), DS.textPrimary))
+            }
+        } else {
+            out.append((String(localized: "From"), yours, DS.aztecInk))
+            // It reaches Aztec, or goes out to Ethereum (prd §1924).
+            out.append((String(localized: "Reaches"), String(localized: "Aztec, or out to Ethereum"), DS.aztecInk))
+        }
+        if live {
+            out.append((String(localized: "Through"), move.mode == .send && !move.toEthereum ? "Aztec" : "Shield", DS.textPrimary))
+        }
+        return out
     }
 
     private var isDone: Bool { if case .done = move.stage { true } else { false } }
@@ -886,34 +912,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         .accessibilityLabel(Text(move.recipient.map { "To \($0)" } ?? String(localized: "Pick an address")))
     }
 
-    /// The amount, typed (prd §1700q): the decimal pad, the token's places
-    /// at most, and the figure in the sentence's own rung.
-    private var amountField: some View {
-        // **MOVE'S OWN KEYPAD (prd §1925, user: "how is it we have our own
-        // keyboard elsewhere but not on send!").** The row shows the figure
-        // and a caret; the keys stand in the foot, as Send's and Earn's.
-        Button {
-            withAnimation(DS.Motion.standard) { open = nil; typing = true }
-        } label: {
-            HStack(spacing: 2) {
-                Text(verbatim: move.amount.isEmpty ? "0" : move.amount)
-                    .dsText(MoveChoiceRowLabel.figureRung)
-                    .monospacedDigit()
-                    .foregroundStyle(move.amount.isEmpty ? DS.textTertiary : DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                if typing {
-                    Capsule().fill(DS.aztecInk).frame(width: 3, height: 44)
-                        .accessibilityHidden(true)
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text("Amount"))
-        .accessibilityValue(Text(verbatim: move.amount.isEmpty ? "0" : move.amount))
-    }
-
     // MARK: - The line
 
     @ViewBuilder private var line: some View {
@@ -935,8 +933,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         case .needsFunds:
-            Text(verbatim: fundsLine).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text(verbatim: fundsLine).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                checkAgain
+            }
         case .shieldNo(let score, let threshold, let sanctioned):
             // **THE WAY IN, AS STEPS (prd §1820).** Not "Shield needs 20 ·
             // Yours 0": what to do, in order, the act always the next one.
@@ -1014,102 +1015,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     // MARK: - Choices
 
-    /// **A LIST IS A MENU ON ITS ROW (prd §1784).** The row whose menu is
-    /// up; a tap outside it closes the list with no pick.
-    private var menuRow: Binding<String?> {
-        Binding(get: { open.map { $0 == .token ? "token" : $0 == .amount ? "amount" : "to" } }, set: { if $0 == nil { open = nil } })
-    }
-
-    @ViewBuilder private var menu: some View { if let open { choices(open) } }
-
     private func toggle(_ blank: Blank) {
+        guard live else { return }
         withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
         DSHaptic.selection()
-    }
-
-    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** Where it leaves
-    /// from, who it goes to, how much and of what: what the sentence's
-    /// words opened. The private account's own name wears Aztec's ink.
-    private var choiceRows: [MoveChoiceRow] {
-        let yours = String(localized: "Your private account")
-        // Blocked (prd §1803): the rows that are already known stay, fixed.
-        switch move.stage {
-        case .shieldNo(_, _, false), .needsGas:
-            return [MoveChoiceRow(id: move.mode == .deposit ? "to" : "from",
-                                  name: move.mode == .deposit ? String(localized: "To") : String(localized: "From"),
-                                  value: yours, fixed: true) {},
-                    MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Aztec"), fixed: true) {}]
-        default: break
-        }
-        guard move.stage == .ready else { return [] }
-        var rows: [MoveChoiceRow] = []
-        if move.mode == .deposit {
-            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours, ink: DS.aztecInk) { leave(.pickRecipient) })
-            // Where it comes from, fixed (prd §1872): money goes in only from
-            // your public account, across from Ethereum.
-            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"),
-                                      value: String(localized: "Your public account"), fixed: true) {})
-        } else {
-            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
-                                      value: move.recipient.map { AddressTail.short($0) } ?? "", empty: move.recipient == nil) { toggle(.recipient) })
-            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours, ink: DS.aztecInk) { leave(.switchOff) })
-        }
-        // Its one network, said as a row and fixed (prd §1802); a deposit
-        // crosses from Ethereum (prd §1872).
-        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
-                                  value: move.mode == .deposit ? String(localized: "Ethereum to Aztec") : String(localized: "Aztec"),
-                                  fixed: true) {})
-        // Through your Shield key: no co-signer, and Shield's daily limit (prd §1920).
-        if move.mode == .deposit, move.viaKey != nil {
-            rows.append(MoveChoiceRow(id: "signs", name: String(localized: "Signs"),
-                                      value: String(localized: "This iPhone"), fixed: true) {})
-        }
-        // How often your co-signer's wallet asks, counted before the hold
-        // (prd §1918); Face ID is every move's, so it goes unsaid.
-        if let asks = move.coSignerAsks {
-            rows.append(MoveChoiceRow(id: "cosigner", name: String(localized: "Co-signer"),
-                                      value: asks == 1 ? String(localized: "Signs once")
-                                                       : String(localized: "Signs \(asks) times"),
-                                      fixed: true) {})
-        }
-        // The token before its amount (prd §1789).
-        rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
-        // Its sums are a menu, and any other is typed in the row (prd §1802).
-        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
-                                  field: AnyView(amountField), typing: typing, figure: true) {
-            // Straight to the keys, Half and All their top row (prd §1925).
-            withAnimation(DS.Motion.standard) { open = nil; typing = true }
-        })
-        return rows
-    }
-
-    /// The amount's menu: what you have, Half, All, and the keys.
-    private var amountMenu: some View {
-        let picks = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
-        return MoveAmountMenu(have: move.haveLine,
-                              picks: picks.map { item in
-                                  MoveAmountPick(id: item.pick == .half ? "half" : "all",
-                                                 title: item.pick == .half ? String(localized: "Half") : String(localized: "All"),
-                                                 trailing: item.value + " " + move.symbol, picked: move.amount == item.value) {
-                                      withAnimation(DS.Motion.standard) { move.amount = item.value; open = nil }
-                                  }
-                              },
-                              ink: DS.aztecInk) {
-            withAnimation(DS.Motion.standard) { open = nil }
-            typing = true
-        }
-    }
-
-    @ViewBuilder private func choices(_ blank: Blank) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            switch blank {
-            case .token: tokens
-            case .recipient: recipients
-            case .amount: amountMenu
-            }
-        }
-        .padding(.vertical, DS.Space.s2)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The tokens there are to move, each with how much (prd §1700q).
@@ -1220,127 +1129,152 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         }
     }
 
-    private var foot: some View {
-        VStack(spacing: 0) {
-            MoveFlow { sentence }.moveHoldFill()
-                // The keys bring the typed row to the foot's edge: air
-                // between that row and the sentence (prd §1802).
-                .padding(.top, typing ? DS.Space.s6 : 0)
-                // The sentence says the move and is no control (prd
-                // §1781): its choices are the rows under it, and the
-                // amount's field is focused from its row.
-                .allowsHitTesting(false)
-                .animation(DS.Motion.standard, value: move.stage)
-                .animation(DS.Motion.standard, value: move.amount)
-                .animation(DS.Motion.standard, value: move.recipient)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s3)
-                .moveSentenceAway(menuRow.wrappedValue != nil || typing)
-            // ONE THING AT A TIME over the act (prd §1700y, agreed with the
-            // Railgun session): the steps while it works and after, the
-            // warming row while the balance is read, the cost while ready.
-            if let run = stepsRun {
-                // Face ID came before a send's clock; a move-in signs inside it.
-                PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
-                    .padding(.bottom, DS.Space.s3)
-                    .transition(.opacity)
-            } else if move.stage == .reading, move.mode == .send, let since = move.readingSince {
-                PrivateWarmingRow(since: since)
-                    .padding(.bottom, DS.Space.s1)
-                    .transition(.opacity)
-            } else if move.stage == .ready, move.amountOK {
-                PrivateCostNote(cost: move.cost, tail: move.costTail, fallback: readyLine)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, DS.Space.s1)
-                    .transition(.opacity)
+    @Environment(\.moveBack) private var back
+
+    /// **AZTEC'S DECK (prd §1927, as Earn's §1901):** the steps on Home's
+    /// panel, the list or Move's keys under them, the foot's word held to act.
+    private var deck: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if live {
+                MoveDeckSteps(steps: steps, disabled: move.acting)
+                    .padding(.bottom, MoveDeck.stepsGap)
             }
-            HStack(alignment: .center, spacing: DS.Space.s2) {
-                // It closes the cost's list while that is open (prd §1876).
-                MoveBackCard(act: costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil)
-                switch move.stage {
-                case .needsFunds(let address):
-                    checkAgain
-                    Spacer(minLength: DS.Space.s3)
-                    footButton(copied ? String(localized: "Copied") : String(localized: "Copy address"), on: true) { copy(address) }
-                case .shieldNo(let score, let threshold, let sanctioned):
-                    Spacer(minLength: 0)
-                    // The act is the next step (prd §1820): a Safe can hold no
-                    // score, so with no co-signer Human Passport is no door.
-                    if !sanctioned {
-                        switch AztecWayIn.next(coSigner: move.coSigner, score: score, threshold: threshold) {
-                        case .coSigner:
-                            footButton(String(localized: "Add a co-signer"), on: true) {
-                                DSHaptic.selection()
-                                chrome.moveTray = false
-                                chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
-                            }
-                        case .score, .send:
-                            footButton(String(localized: "Raise your score"), on: true) { passport = true }
+            // The body runs under the foot and fades there (prd §1904 item 9).
+            ZStack(alignment: .bottom) {
+                Group {
+                    if open == .amount, live {
+                        // Move's keys, Half and All their sums (prd §1925).
+                        VStack(spacing: 0) {
+                            Spacer(minLength: DS.Space.s2)
+                            MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
+                                       presets: AztecMove.Pick.allCases.compactMap { p in
+                                           move.amount(for: p).map { value in
+                                               MoveKeypadPreset(id: p == .half ? "half" : "all",
+                                                                title: p == .half ? String(localized: "Half") : String(localized: "All"),
+                                                                picked: move.amount == value) { move.amount = value }
+                                           }
+                                       },
+                                       places: min(move.decimals, 6))
                         }
-                    }
-                case .needsGas:
-                    footButton(String(localized: "Add gas"), on: !DemoMode.isActive) {
-                        Task {
-                            move.stage = .working(String(localized: "Confirm with Face ID"))
-                            do { _ = try await AztecGas.topUp { _ in }; move.stage = .done("") }
-                            catch { move.stage = .failed(AztecEngine.words(error)) }
-                        }
-                    }
-                case .done:
-                    footButton(String(localized: "Done"), on: true) {
-                        if inTray { chrome.moveTray = false } else { leave(.switchOff) }
-                    }
-                case .failed:
-                    footButton(String(localized: "Try again"), on: true) { Task { await move.read() } }
-                case .reading, .nothingPrivate:
-                    Spacer(minLength: 0)
-                default:
-                    if typing, !ready {
-                        // Done, while a figure is typed and not yet a move
-                        // (prd §1791 item 4); a whole one is the act (prd §1896).
-                        Button { typing = false } label: {
-                            MoveSentence.actCard(String(localized: "Done"), on: true, fill: DS.fillStrong)
-                        }
-                        .buttonStyle(PressSpring())
+                        .padding(.bottom, MoveDeck.fade)
+                        .transition(.opacity)
+                    } else if open == .token, live {
+                        ScrollView { tokens.padding(.vertical, DS.Space.s2) }
+                            .scrollIndicators(.hidden)
+                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+                            .transition(.opacity)
+                    } else if open == .recipient, live {
+                        ScrollView { VStack(alignment: .leading, spacing: 0) { recipients }.padding(.vertical, DS.Space.s2) }
+                            .scrollIndicators(.hidden)
+                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+                            .transition(.opacity)
+                    } else if live {
+                        // **THE RECEIPT IS THE DECK'S (prd §1927):** nothing
+                        // open, what it is and costs, as Send's Ready.
+                        ScrollView { receipt.padding(.vertical, DS.Space.s2) }
+                            .scrollIndicators(.hidden)
+                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+                            .transition(.opacity)
                     } else {
-                        footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
-                            open = nil
-                            typing = false
-                            move.onAway = inTray ? { chrome.moveTray = false } : nil
-                            Task { await move.run() }
-                        }
-                        .disabled(!ready)
+                        Color.clear
                     }
                 }
+                .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
+                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
+                       + MoveFootClearance.gained(inTray: inTray)
+                       - MoveDeck.stepsGap, alignment: .top)
+                .deckUnderFoot()
+                MoveDeckFoot(backDisabled: move.acting, back: {
+                    withAnimation(DS.Motion.standard) {
+                        // Back is the menu, never the step before (prd §1911).
+                        if costOpen { costOpen = false } else { open = nil; back?() }
+                    }
+                }) { footWord }
             }
-            if typing, move.stage == .ready {
-                MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
-                           presets: AztecMove.Pick.allCases.compactMap { p in
-                               move.amount(for: p).map { value in
-                                   MoveKeypadPreset(id: p == .half ? "half" : "all",
-                                                    title: p == .half ? String(localized: "Half") : String(localized: "All"),
-                                                    picked: move.amount == value) { move.amount = value }
-                               }
-                           },
-                           places: min(move.decimals, 6))
-                    .padding(.top, DS.Space.s2)
-                    .transition(.opacity)
-            } else if move.stage != .reading, !isDone { credit }
         }
-        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, DS.Space.s2)
-        .moveFootGround(inTray: inTray)
+        .padding(.horizontal, MoveSentence.sideInset(inTray))
+        .padding(.top, HomePanelMetrics.cap)
+        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
+        .background(alignment: .top) {
+            ZStack(alignment: .top) {
+                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                HomePanelSurface()
+            }
+            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .animation(DS.Motion.standard, value: open)
     }
 
-    /// Half · All (prd §1700y): each types its amount, exact; one Shield
-    /// would refuse, or nothing to halve, is not drawn (§83).
-    /// **ONE CONTROL, AS ROUND-UPS' (user, 2026-11-10: "the design needs to
-    /// match how we do roundups").** Its halves share the row's width, 4 pt
-    /// apart, each a `Chip` that fills, the pick crossfading
-    /// (`MoveSecurity.RoundUpStepPick`'s anatomy), never small pills on the left.
-    /// Fits beside the act, never cut (prd §1700f item 13).
-    /// A fact under the rows: its name, then what is so, in its ink.
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    /// To (where it goes: back to Send's recipients for a move-in), Token,
+    /// Amount; a send from Aztec asks To in its own list.
+    private var steps: [MoveDeckStep] {
+        var out: [MoveDeckStep] = []
+        if move.mode == .deposit {
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true) { leave(.pickRecipient) })
+        } else {
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), on: open == .recipient,
+                                    answered: move.recipient != nil) { toggle(.recipient) })
+        }
+        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), on: open == .token, answered: true) { toggle(.token) })
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
+                                answered: !move.amount.isEmpty) { toggle(.amount) })
+        return out
+    }
+
+    /// **THE FOOT'S ONE WORD (prd §1897 item 7):** Hold to send in Aztec's
+    /// ink; the stage while it works; what unblocks it; Done or Try again.
+    @ViewBuilder private var footWord: some View {
+        switch move.stage {
+        case .needsFunds(let address):
+            MoveFootWord(word: copied ? String(localized: "Copied") : String(localized: "Copy address"), ink: DS.aztecInk) { copy(address) }
+        case .shieldNo(let score, let threshold, let sanctioned):
+            // The act is the next step (prd §1820).
+            if !sanctioned {
+                switch AztecWayIn.next(coSigner: move.coSigner, score: score, threshold: threshold) {
+                case .coSigner:
+                    MoveFootWord(word: String(localized: "Add a co-signer"), ink: DS.aztecInk) {
+                        DSHaptic.selection()
+                        chrome.moveTray = false
+                        chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
+                    }
+                case .score, .send:
+                    MoveFootWord(word: String(localized: "Raise your score"), ink: DS.aztecInk) { passport = true }
+                }
+            }
+        case .needsGas:
+            MoveFootWord(word: String(localized: "Add gas"), ink: DS.aztecInk) {
+                guard !DemoMode.isActive else { return }
+                Task {
+                    move.stage = .working(String(localized: "Confirm with Face ID"))
+                    do { _ = try await AztecGas.topUp { _ in }; move.stage = .done("") }
+                    catch { move.stage = .failed(AztecEngine.words(error)) }
+                }
+            }
+        case .done:
+            MoveFootWord(word: String(localized: "Done"), ink: DS.aztecInk) {
+                if inTray { chrome.moveTray = false } else { leave(.switchOff) }
+            }
+        case .failed:
+            MoveFootWord(word: String(localized: "Try again"), ink: DS.aztecInk) { Task { await move.read() } }
+        case .working:
+            MoveFootWord(word: footVerb, ink: DS.textSecondary)
+        case .reading, .nothingPrivate:
+            EmptyView()
+        default:
+            MoveHoldWord(word: DemoMode.isActive ? String(localized: "Not in the demo") : String(localized: "Hold to send"),
+                         ink: DS.aztecInk, enabled: ready) {
+                open = nil
+                move.onAway = inTray ? { chrome.moveTray = false } : nil
+                Task { await move.run() }
+            }
+        }
+    }
+
     private func fact(_ name: String, _ value: String, ink: Color) -> some View {
         HStack(spacing: DS.Space.s2) {
             Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1370,22 +1304,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     private var footVerb: String {
         if case .working(let words) = move.stage { return words }
         return String(localized: "Send")
-    }
-
-    private var credit: some View {
-        HStack(spacing: DS.Space.s1) {
-            // Shield carries money in and out; a send that stays on Aztec is Aztec's alone.
-            Text(move.mode == .send && !move.toEthereum ? "Powered by Aztec" : "Powered by Shield")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-            ProtocolInlineMark(mark: "aztec").accessibilityHidden(true)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s1)
-    }
-
-    private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        // Move's one act, held (prd §1897 item 7), in this place's ink.
-        MoveSentence.footAct(word, on: on, ink: DS.aztecInk, act: act)
     }
 
     private func copy(_ address: String) {
