@@ -938,14 +938,30 @@ extension FeedScreen {
             // **YOU CAN PUT THEM AWAY, AND IT SAYS SO (prd §1849, user: "i
             // want a user to be able to know they can dismiss the risks").**
             // Holding a row was the only way; one row marks every finding
-            // as seen while any is not.
-            let unseenThreats = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }
-            if !unseenThreats.isEmpty {
-                DSDoorRow(icon: "eye", title: Text("Mark all as seen")) {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) { ThreatsSeen.shared.markAll(unseenThreats.map(\.id)) }
+            // as seen while any is not. **A seen finding leaves (prd §1919):**
+            // each is stamped, then gone; with none left the page says All
+            // seen, and the Seen row under the findings holds the rest.
+            let flaggedThreats = walletLive.flagged.live
+            let unseenThreats = flaggedThreats.filter { !ThreatsSeen.shared.contains($0.id) }
+            let seenThreats = flaggedThreats.filter {
+                ThreatsSeen.shared.contains($0.id) && walletThreatsLeaving[$0.id] == nil
+            }
+            // The findings' own head (`DSRisksStateRow`): how many are new,
+            // the stamped ones counted until they leave, over the verb.
+            let stamping = walletThreatsLeaving.count
+            if !unseenThreats.isEmpty || stamping > 0 {
+                DSRisksStateRow(new: unseenThreats.count + stamping)
+                    .animation(DS.Motion.standard, value: unseenThreats.count + stamping)
+                    .walletListRow()
+                if !unseenThreats.isEmpty {
+                    DSDoorRow(icon: "eye", title: Text("Mark all as seen")) {
+                        walletMarkAllThreatsSeen(unseenThreats)
+                    }
+                    .walletListRow()
                 }
-                .walletListRow()
+            } else if !walletAllSeenHeld, !seenThreats.isEmpty {
+                DSRisksStateRow(new: 0)
+                    .walletListRow()
             }
             walletFlaggedSection(.poisoning, anchor: .poisoning,
                                  word: String(localized: "Address poisoning"))
@@ -953,6 +969,7 @@ extension FeedScreen {
                                  word: String(localized: "Fake tokens"))
             walletFlaggedSection(.fakeTransfer, anchor: .fakeTransfers,
                                  word: String(localized: "Fake transfers"))
+            walletSeenThreatsSection(seenThreats)
         case .holdingAccounts:
             let following = walletHolderGroups.following
             if following.isEmpty { walletSkeletonRowsSection }

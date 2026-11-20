@@ -156,38 +156,159 @@ extension FeedScreen {
     @ViewBuilder
     func walletFlaggedSection(_ kind: WalletWarning.Kind, anchor: SecurityAnchor,
                               word: String) -> some View {
+        // **A SEEN FINDING LEAVES (prd §1919, user: "seen risks need to leave
+        // the page").** A section lists what you have not seen, and a row
+        // just put away while it takes its stamp (`walletThreatsLeaving`).
+        let leaving = walletThreatsLeaving
         let things = walletLive.flagged.live.filter { thing in
-            kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false
+            (kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false)
+                && (!ThreatsSeen.shared.contains(thing.id) || leaving[thing.id] != nil)
         }
         if !things.isEmpty {
             let open = walletSecurityOpen(anchor)
-            let shown = open ? things : Array(things.prefix(Self.walletHomeCap))
+            let shown = open ? things : Array(things.prefix(Self.walletRisksCap))
             walletCard(word, glyph: kind.glyph, anchor: anchor.id) {
                 // One list row each, at the Wallet's pitch (prd §1482).
                 ForEach(shown.keyed) { row in
                     if let thing = row.live {
                         let words = Self.flaggedRowWords(thing, kind: kind)
-                        let seen = ThreatsSeen.shared.contains(thing.id)
+                        let stamp = leaving[thing.id]
                         // Every threat's glyph is red (prd §1463), fake transfers
-                        // too, until it is seen: then grey, and out of Home's
-                        // count (prd §1587).
-                        needsYouRow(glyph: kind.glyph, critical: !seen,
-                                    title: words.title, line: seen ? [words.line, String(localized: "Seen")].joined(separator: " · ") : words.line) {
-                            ThreatsSeen.shared.mark(thing.id)
-                            feedSheet = .thing(thing, walk: .none)
+                        // too, until it is seen: then grey under its stamp.
+                        needsYouRow(glyph: kind.glyph, critical: stamp == nil,
+                                    title: words.title, line: words.line,
+                                    leadTint: stamp == nil ? nil : DS.textTertiary) {
+                            walletSeeThreat(thing, opens: true)
+                        }
+                        .overlay(alignment: .trailing) {
+                            if let stamp { DSSeenStamp(order: stamp) }
                         }
                         .contextMenu {
-                            if !seen {
-                                Button {
-                                    withAnimation(DS.Motion.standard) { ThreatsSeen.shared.mark(thing.id) }
-                                    DSHaptic.selection()
-                                } label: { Label("Mark as seen", systemImage: "eye") }
+                            if stamp == nil {
+                                Button { walletSeeThreat(thing, opens: false) } label: {
+                                    Label("Mark as seen", systemImage: "eye")
+                                }
                             }
                         }
                         .walletListRow()
                     }
                 }
-                walletSecurityDoor(anchor, total: things.count)
+                walletSecurityDoor(anchor, total: things.count, cap: Self.walletRisksCap)
+            }
+        }
+    }
+
+    /// **THREE FINDINGS A KIND, THEN ONE DOOR (prd §1919, user: "perhaps they
+    /// only show 3 per category"; §1408's five stays on Permissions).**
+    static let walletRisksCap = 3
+    static let walletSeenThreatsKey = "security.seen"
+
+    /// The three kinds Risks lists, in the page's order.
+    static let walletThreatKinds: [(kind: WalletWarning.Kind, anchor: SecurityAnchor)] = [
+        (.poisoning, .poisoning), (.spoofedSymbol, .fakeTokens), (.fakeTransfer, .fakeTransfers),
+    ]
+
+    static func walletThreatKind(_ thing: Thing) -> WalletWarning.Kind {
+        walletThreatKinds.first { pair in
+            pair.kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false
+        }?.kind ?? .fakeTransfer
+    }
+
+    /// One finding put away: stamped at once, gone when you are back from its
+    /// sheet, or a beat after a hold's Mark as seen.
+    func walletSeeThreat(_ thing: Thing, opens: Bool) {
+        if !ThreatsSeen.shared.contains(thing.id) {
+            walletThreatsLeaving[thing.id] = 0
+            ThreatsSeen.shared.mark(thing.id)
+        }
+        if opens {
+            feedSheet = .thing(thing, walk: .none)
+        } else {
+            walletReleaseStampedThreats(after: 0.6)
+        }
+    }
+
+    /// The stamped rows leave together.
+    func walletReleaseStampedThreats(after seconds: Double = 0.45, then: (() -> Void)? = nil) {
+        guard !walletThreatsLeaving.isEmpty else { return }
+        let ids = Array(walletThreatsLeaving.keys)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(seconds))
+            withAnimation(DS.Motion.standard) {
+                for id in ids { walletThreatsLeaving[id] = nil }
+            }
+            then?()
+        }
+    }
+
+    /// **MARK ALL AS SEEN, FELT (prd §1919).** The rows on screen take their
+    /// stamps top to bottom, a tick each; then every finding leaves, the page
+    /// says All seen, and the flash carries the one success beat and Undo.
+    func walletMarkAllThreatsSeen(_ unseen: [Thing]) {
+        let ids = unseen.map(\.id)
+        guard !ids.isEmpty else { return }
+        var order: [UUID: Int] = [:]
+        var drawn = 0
+        for pair in Self.walletThreatKinds {
+            let rows = unseen.filter { thing in pair.kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false }
+            let shown = walletSecurityOpen(pair.anchor) ? rows : Array(rows.prefix(Self.walletRisksCap))
+            for thing in shown where order[thing.id] == nil {
+                order[thing.id] = drawn
+                drawn += 1
+            }
+        }
+        // The ones behind a door are not drawn; they leave with the rest.
+        for id in ids where order[id] == nil { order[id] = drawn }
+        walletThreatsLeaving.merge(order) { _, new in new }
+        ThreatsSeen.shared.markAll(ids)
+        let run = Double(min(drawn, DSSeenStamp.longestRun)) * DSSeenStamp.beat + 0.48
+        let chrome = chrome
+        // The flash stands over the foot of the page, where All seen lands:
+        // the row waits until the flash has gone, then takes its bounce.
+        let flashSeconds = 4.0   // as every flash that offers Undo
+        walletAllSeenHeld = true
+        walletReleaseStampedThreats(after: run) {
+            chrome.flash(String(localized: "\(ids.count) marked as seen"), tone: .success,
+                         action: .init(label: String(localized: "Undo")) {
+                             withAnimation(DS.Motion.standard) { ThreatsSeen.shared.unmark(ids) }
+                         },
+                         seconds: flashSeconds)
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(flashSeconds + 0.3))
+                withAnimation(DS.Motion.standard) { walletAllSeenHeld = false }
+            }
+        }
+    }
+
+    /// **WHERE THE SEEN ONES WENT (prd §1919).** One row at the foot of the
+    /// findings, "Seen N"; it opens them in place, grey, and each still opens
+    /// its sheet.
+    @ViewBuilder
+    func walletSeenThreatsSection(_ seen: [Thing]) -> some View {
+        if !seen.isEmpty {
+            let open = walletOpenSections.contains(Self.walletSeenThreatsKey)
+            DSMoreRow(title: open ? Text("Hide seen")
+                                  : Text(verbatim: String(localized: "Seen \(seen.count)")),
+                      opens: !open) {
+                withAnimation(DS.Motion.standard) {
+                    if open { walletOpenSections.remove(Self.walletSeenThreatsKey) }
+                    else { walletOpenSections.insert(Self.walletSeenThreatsKey) }
+                }
+            }
+            .walletListRow()
+            if open {
+                ForEach(seen.keyed) { row in
+                    if let thing = row.live {
+                        let kind = Self.walletThreatKind(thing)
+                        let words = Self.flaggedRowWords(thing, kind: kind)
+                        needsYouRow(glyph: kind.glyph, critical: false,
+                                    title: words.title, line: words.line,
+                                    leadTint: DS.textTertiary) {
+                            feedSheet = .thing(thing, walk: .none)
+                        }
+                        .walletListRow()
+                    }
+                }
             }
         }
     }
@@ -210,8 +331,8 @@ extension FeedScreen {
     /// "See all N" under a capped section, "Show fewer" once it is open; no
     /// door when five is everything (`DSMoreRow`, §1386).
     @ViewBuilder
-    func walletSecurityDoor(_ anchor: SecurityAnchor, total: Int) -> some View {
-        if total > Self.walletHomeCap {
+    func walletSecurityDoor(_ anchor: SecurityAnchor, total: Int, cap: Int = FeedScreen.walletHomeCap) -> some View {
+        if total > cap {
             let open = walletSecurityOpen(anchor)
             DSMoreRow(title: open ? Text("Show fewer")
                                   : Text(verbatim: String(localized: "See all \(total)")),

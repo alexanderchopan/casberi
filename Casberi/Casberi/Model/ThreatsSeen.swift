@@ -4,7 +4,8 @@ import Observation
 /// **A THREAT YOU HAVE SEEN STOPS COUNTING (prd §1587).** The Threats door's
 /// red figure was every flagged transfer ever, so it only grew. Opening one,
 /// or holding it for Mark as seen, keeps its id here; the door counts what
-/// is left, and the page keeps the seen ones in grey. On this device only.
+/// is left, and a seen one leaves the page for the Seen row at its foot
+/// (prd §1919, over §1587's grey row). On this device only.
 @MainActor @Observable
 final class ThreatsSeen {
     static let shared = ThreatsSeen()
@@ -25,6 +26,14 @@ final class ThreatsSeen {
         let fresh = all.map(\.uuidString).filter { !ids.contains($0) }
         guard !fresh.isEmpty else { return }
         ids.formUnion(fresh)
+        if let data = try? JSONEncoder().encode(ids) { DefaultsWrite.set(data, forKey: Self.defaultsKey) }
+    }
+
+    /// Undo of a Mark all as seen (prd §1919): the findings come back as new.
+    func unmark(_ all: [UUID]) {
+        let back = all.map(\.uuidString).filter { ids.contains($0) }
+        guard !back.isEmpty else { return }
+        ids.subtract(back)
         if let data = try? JSONEncoder().encode(ids) { DefaultsWrite.set(data, forKey: Self.defaultsKey) }
     }
 

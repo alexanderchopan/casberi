@@ -481,11 +481,12 @@ extension FeedScreen {
     /// wrapping to two lines (prd §1377), a bare glyph lead (prd §1272) —
     /// red for a threat (prd §1463).
     func needsYouRow(glyph: String, critical: Bool, title: String, line: String?,
+                     leadTint: Color? = nil,
                      action: @escaping () -> Void) -> some View {
         DSPushRow(title: Text(verbatim: title),
                   subtitle: line.map { Text(verbatim: $0) },
                   action: action) {
-            walletDoorLead(glyph, tint: critical ? DS.destructive : DS.brandInk)
+            walletDoorLead(glyph, tint: leadTint ?? (critical ? DS.destructive : DS.brandInk))
         }
     }
 

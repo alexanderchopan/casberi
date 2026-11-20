@@ -568,8 +568,11 @@ grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/
 # A count on Home's doors is white (prd §1737, amending §1463 and §1496 for the doors): no pink, amber or red figure, grey when nothing waits (prd §1618).
 grep -q 'figureTone: needs > 0 ? DS.textPrimary : DS.textSecondary' "$FIG" || { echo "✗ Needs you's count is no longer white, grey at none (prd §1737, §1618)"; exit 1; }
 ! grep -qE 'figureTone: (DS\.destructiveInk|DS\.pickInk|DS\.attentionInk|counts\.unlimited)' "$FIG" || { echo "✗ a count on Home's doors wears a state's colour again (prd §1737)"; exit 1; }
-# Red until seen (prd §1587 amends §1463): a seen threat greys and leaves Home's count.
-grep -q 'needsYouRow(glyph: kind.glyph, critical: !seen,' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift || { echo "✗ a fake transfer's row is no longer red with the other threats until seen (prd §1463, §1587)"; exit 1; }
+# Red until seen (prd §1587 amends §1463): a seen threat leaves Home's count,
+# greys under its stamp and leaves the page (prd §1919).
+grep -q 'needsYouRow(glyph: kind.glyph, critical: stamp == nil,' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift || { echo "✗ a fake transfer's row is no longer red with the other threats until seen (prd §1463, §1587)"; exit 1; }
+grep -q '!ThreatsSeen.shared.contains(thing.id) || leaving\[thing.id\] != nil' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift || { echo "✗ a seen finding stays in its Risks section (prd §1919)"; exit 1; }
+grep -q 'if let stamp { DSSeenStamp(order: stamp) }' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift || { echo "✗ a finding put away takes no Seen stamp (prd §1919)"; exit 1; }
 awk '/case .threat: return DS.destructive/{a=1}/case .wants: return DS.attention$/{b=1}/case .on: return DS.confirm$/{c=1}END{exit !(a&&b&&c)}' Casberi/Casberi/Design/DSCountTile.swift || { echo "✗ DSCountTile's tones no longer map threat→destructive, wants→attention, on→confirm (prd §1463)"; exit 1; }
 # The demo's account (prd §1475): it holds the demo's table and reaches no node,
 # and nothing it shows can sign, copy or share — its address holds no key, so

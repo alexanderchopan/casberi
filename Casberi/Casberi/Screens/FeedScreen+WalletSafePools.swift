@@ -69,8 +69,23 @@ struct WalletUnsignedSection: View {
                     .listRowInsets(EdgeInsets())
             }
         case .unsigned:
-            if !roster.isEmpty { section }
+            // **ONLY WHAT CAN MOVE ONE (prd §1919, user: "'without a
+            // signature' 'none' is weird too. its like a double negative").**
+            // An account nothing can move draws no row, and with none the
+            // section is not drawn: nothing for a zero (§1463).
+            if !movable.isEmpty { section }
+            else {
+                Color.clear.frame(height: 0).task(id: queueKey) { await read() }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+            }
         }
+    }
+
+    /// The Safes something can move with nobody signing.
+    private var movable: [SafeRoster.Safe] {
+        roster.safes.filter { SafeRoster.unsigned($0).tone == .danger }
     }
 
     private func read() async {
@@ -136,7 +151,7 @@ struct WalletUnsignedSection: View {
 
     @ViewBuilder
     private var rows: some View {
-            ForEach(roster.safes) { safe in
+            ForEach(movable) { safe in
                 let unsigned = SafeRoster.unsigned(safe)
                 Button {
                     DSHaptic.selection()

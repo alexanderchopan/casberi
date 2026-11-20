@@ -510,6 +510,12 @@ struct FeedScreen: View {
     @State var feedSheet: FeedSheetRoute?
     /// The Wallet Home sections opened past their five rows (`walletHomeDoor`).
     @State var walletOpenSections: Set<String> = []
+    /// Risks' findings marked seen and still on the page, each with its place
+    /// in the run of stamps (`DSSeenStamp`, prd §1919).
+    @State var walletThreatsLeaving: [UUID: Int] = [:]
+    /// Mark all as seen's flash stands where All seen lands, so the row
+    /// waits for the flash to go (prd §1919).
+    @State var walletAllSeenHeld = false
     /// The account the Accounts list's Rename is naming, and the draft.
     @State var walletNaming: String?
     @State var walletNameDraft = ""
@@ -2191,6 +2197,9 @@ struct FeedScreen: View {
         // every row as one of these, and the walk staying live underneath
         // would keep ↑/↓/Return off the sheet that's actually in front.
         .onChange(of: feedSheet != nil) { _, open in
+            // A finding opened from Risks leaves once you are back to see
+            // it go (prd §1919).
+            if !open { walletReleaseStampedThreats() }
             guard isActive else { return }
             chrome.walkSheetOpen = open
         }
