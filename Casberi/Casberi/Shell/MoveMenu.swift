@@ -44,6 +44,9 @@ enum MoveMenu {
         chrome.moveTray = true
     }
 
+    /// One target width for every verb: the widest word's, with air.
+    static let rowWidth: CGFloat = 200
+
     @MainActor static func close(_ chrome: ShellChrome) {
         withAnimation(DS.Motion.standard) { chrome.moveMenu = false }
     }
@@ -72,13 +75,19 @@ struct MoveMenuVerbs: View {
         VStack(alignment: .trailing, spacing: 0) {
             ForEach(MoveMenu.offered, id: \.self) { verb in
                 Button { MoveMenu.pick(verb, chrome) } label: {
-                    // Home's section rung (prd §1889, retiring heading44):
-                    // the menu reads as the app's own rows.
+                    // **AN ACT'S RUNG (prd §1912, user, 2026-11-19: "should
+                    // the Move menu words be larger? do you think they are
+                    // tappable enough?", "they are the same size as our
+                    // section titles but not as big as the words in the
+                    // sentence"; amends §1889's heading24):** `heading34`,
+                    // Add's and the foot's acts' size (§1616), a step under
+                    // the sentence. Every row is one width, so "Buy" is
+                    // as easy to hit as "Receive".
                     Text(verbatim: verb.label)
-                        .dsText(.heading24)
+                        .dsText(.heading34)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                        .frame(minHeight: 48, alignment: .trailing)
+                        .frame(minWidth: MoveMenu.rowWidth, minHeight: 56, alignment: .trailing)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())

@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2091 of 2165 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2092 of 2166 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2331,7 +2331,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1886 — Gas Aztec has carried is gas: a private top-up waiting for the next send no longer reads "On its way" (fixes §1700aa,…
 - §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap… (amended by §1891)
 - §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines
-- §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892)
+- §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892, §1912)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
 - §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902)
@@ -2354,6 +2354,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1909 — Send's network and token are one step, With: To · With · Amount (amended by §1910)
 - §1910 — Every token list in Move is one template, and a token and its network are one pick on every verb
 - §1911 — A verb's kinds are chips over its steps, back is the menu, and Move's lists run to the home indicator
+- §1912 — Move's menu words are an act's size and one width
 
 ## Dead rulings → what replaced them (generated)
 

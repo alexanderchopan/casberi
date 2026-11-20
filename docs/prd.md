@@ -74562,3 +74562,11 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** None of its own. **Seen** on an iPhone 17 Pro simulator over the demo: Swap's chips, Sweep picked from them, back from Buy to the menu, the last row of With clear of the foot, the lower foot. **Not seen:** Earn's chips (no lent position in the demo), a small phone, Dynamic Type.
+
+## §1912 — Move's menu words are an act's size and one width (amends §1889's heading24) (user, 2026-11-19: "should the Move menu words be larger? do you think they are tappable enough?", "they are the same size as our section titles but not as big as the words in the sentence", then "ok" to heading34 and one width) — BUILT
+
+**Ruling.** The verbs in Move's menu draw at `heading34`, Add's and the foot's acts' size (§1616), a step under the sentence's `heading52`: a verb picked reads as an act, not a section. Every row is one target, `MoveMenu.rowWidth` (200pt) wide and 56pt tall, its word at the right, so a short word is as easy to hit as a long one. Five words at the sentence's size would bury Home under the menu.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: the menu at the new size, a tap 85pt left of "Buy" opening Buy.
