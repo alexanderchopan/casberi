@@ -2599,18 +2599,34 @@ struct MoveSentence: View {
                     try? await Task.sleep(for: .milliseconds(350))
                     withAnimation(DS.Motion.standard) { open = .elsewhere }
                 }
-            } label: { MoveDeckRowLabel(name: String(localized: "From another network"), nameInk: DS.textSecondary, minHeight: 0) { Color.clear }
-                    .padding(.vertical, Self.placeGap / 2) }
+            } label: { receiveDoorLabel(String(localized: "From another network")) }
                 .buttonStyle(RowPress())
             // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
             // elsewhere sends it all here, each send approved there.
             Button {
                 ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
-            } label: { MoveDeckRowLabel(name: String(localized: "From another wallet"), nameInk: DS.textSecondary, minHeight: 0) { Color.clear }
-                    .padding(.vertical, Self.placeGap / 2) }
+            } label: { receiveDoorLabel(String(localized: "From another wallet")) }
                 .buttonStyle(RowPress())
         }
     }
+
+    /// A way in from outside: its name in the places' column, at the places'
+    /// gap. **NO LEAD BOX (user, 2026-11-20: "line spacing looks bad and
+    /// inconsistent"):** an empty 30pt lead stood 9pt taller than the one
+    /// line beside it, so the doors sat 36pt apart where the places sat 26pt.
+    /// The row is the line's height plus the gap; its touch keeps 44pt.
+    private func receiveDoorLabel(_ name: String) -> some View {
+        Text(verbatim: name).dsText(.heading17).foregroundStyle(DS.textSecondary).lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, MoveDeck.lead + MoveDeck.leadGap)
+            .padding(.vertical, Self.placeGap / 2)
+            .padding(.vertical, Self.doorReach)
+            .contentShape(Rectangle())
+            .padding(.vertical, -Self.doorReach)
+    }
+
+    /// What a door's touch reaches past its line, to keep `DS.Hit.min`.
+    private static let doorReach: CGFloat = 3
 
     /// One place money can land: its name and the marks of the networks it
     /// is good on (a tap opens its page), then its fact and Copy.
