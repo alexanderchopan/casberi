@@ -3142,19 +3142,6 @@ struct MoveSentence: View {
         }
     }
 
-    /// "That is 25.00 USDC" while a figure is typed (prd §1904 item 3): the
-    /// figure in the other unit, the one the keys are not typing.
-    @ViewBuilder private var thatIsLine: some View {
-        if focus == .amount, let with, let price = with.price, price > 0,
-           let typed = Double(amount), typed > 0, verb == .send || verb == .swap {
-            let other = amountInDollars
-                ? (typed / price).formatted(.number.precision(.significantDigits(1...6))) + " " + with.token.symbol
-                : Self.money(typed * price)
-            MoveFactRow(name: String(localized: "That is"), value: other, indented: false)
-                .transition(.opacity)
-        }
-    }
-
     /// A kept line: tap it to edit it in place, hold it to remove it.
     @ViewBuilder private func keptSellClause(_ id: UUID, glue: String?, trail: String?, leads: Bool = false) -> some View {
         let line: (amount: String, token: Op.Token)? = {
@@ -5132,8 +5119,11 @@ struct MoveSentence: View {
         // "i don't like how 'costs' has the chevron to see more", "i like A
         // a lot"):** with every step answered the facts leave the sentence
         // for the deck's empty body, the cost's parts under them, no door.
-        // While a step is open they stand under the sentence, still no door.
-        if inDeck || !deckReady {
+        // **NEVER UNDER THE SENTENCE ON THESE VERBS (user, 2026-11-19, of the
+        // amount's facts under the taller deck: "you should never have to
+        // scroll up here"):** while a step is open the deck holds the step,
+        // and the receipt waits for Done.
+        if inDeck || !deckHoldsReceipt {
             ledgerBody(door: false, inDeck: inDeck)
         }
     }
@@ -7175,6 +7165,12 @@ struct MoveSentence: View {
     /// **EVERY STEP ANSWERED, NOTHING OPEN (prd §1914):** the deck's body
     /// is the receipt. Send, Swap and Sweep, never a limit order (its line
     /// stands under the sentence).
+    /// The verbs whose receipt is the deck's (prd §1914): the ledger never
+    /// stands under their sentence, ready or not.
+    private var deckHoldsReceipt: Bool {
+        receipt == nil && !limiting && (verb == .send || verb == .swap || verb == .sweep)
+    }
+
     private var deckReady: Bool {
         receipt == nil && stage == nil && deckOpen == nil && focus != .amount && !limiting
             && (verb == .send || verb == .swap || verb == .sweep) && missingRow == nil
@@ -7376,7 +7372,7 @@ struct MoveSentence: View {
     private var deckFacts: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             unitLine
-            thatIsLine
+            // "That is" said the unit line's own figure again (user, 2026-11-19).
             keptFacts
             line
             credits

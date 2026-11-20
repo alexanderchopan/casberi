@@ -74586,6 +74586,7 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 
 - **Token ⇄ Token.** A swap's two sides are both named Token, the flip between them; the sentence says which is which. Steps fold by `deckKey` (what they open), not by their word.
 - **The deck is 45% of the screen** (was 37%), and the keypad grows with it, its figures at `heading34`.
+- **The sentence never scrolls** (user, of the amount's facts under the taller deck: "you should never have to scroll up here"). On Send, Swap and Sweep the ledger never stands under the sentence, ready or not: while a step is open the deck holds the step and the receipt waits for Done. "That is" is deleted: the unit line already says the figure in the other unit.
 - **Words.** "Across fee 0.06%", as "Network fee" reads. The simulation is a "Test run" that "Goes through", "Returns at least …", "Would fail" or was "Not run"; "Checked / Lands as written" is retired.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
