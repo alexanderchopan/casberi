@@ -74633,3 +74633,15 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: the demo's move-in, "Signs 3 times" on one line under Ethereum to Aztec, the two-person glyph.
+
+## §1918a — No co-signer, up to $100: Shield's sign-in and limit MEASURED for a fresh key (user, 2026-11-20: "Yes, sign in") — MEASURED, NOT BUILT
+
+**Measured** 2026-11-20 with a key made for the test and thrown away (no money, nothing sent on chain, the key never kept):
+1. `l1-eligibility`: `eligible: true`, `method: null`, score 0, `screeningUsd: 100`.
+2. Sign-in (`/api/auth/authenticate`, the same SIWE message `ShieldBridge.token` writes, signed by a plain key): **200, a token**.
+3. Limit for 10 USDC into Aztec (`/api/attestation/passport`): **200**, an `l1Signature`, `maxAmount` 10000000.
+4. Limit for 150 USDC: **403** `needs_passport`, "Above $100 a day, deposits need a Human Passport score of 20 or more. You can deposit up to $90 more today." A limit ASKED counts against the day before any deposit: $10 asked left $90.
+
+**What it means for §1918's item 3.** A key on this iPhone can sign in where the Safe cannot (§1890), and Shield's screening tier lets it move in up to $100 a day with no co-signer and no score. Still unmeasured: the portal taking the deposit from that key (one real deposit), and the key's own gas (it needs ETH on Ethereum for its approve and deposit, the same gap as item 2).
+
+**One key, kept, never a fresh one per move.** Shield's $100 is per address per day; a new key each time would walk around its limit. If built, the key is made once, kept device-only, and reused, so the person stays inside Shield's rule; over $100 a day the way in is the co-signer and its score, as today.
