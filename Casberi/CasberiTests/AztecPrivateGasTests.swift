@@ -112,7 +112,7 @@ struct AztecPrivateGasTests {
         let cost = try #require(m.cost)
         // Shield $0.125 + 750K gas × 0.4 gwei × $3,000 = $0.90 + the sale $0.387
         #expect(abs(cost.usd - (0.125 + 0.9 + 0.387)) < 0.01)
-        #expect(cost.parts.last?.words == "Aztec's gas, bought with your USDC")
+        #expect(cost.parts.last?.words == "Private gas, bought with your USDC", "prd §1905: gas the private fee contract pays is said Private gas")
         #expect(cost.parts.contains { $0.figure == "30 AZTEC" } == false)
     }
 
