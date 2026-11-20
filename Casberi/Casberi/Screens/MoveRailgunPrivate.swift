@@ -922,61 +922,65 @@ struct MoveRailgunSentence<Head: View>: View {
     var leave: (MovePrivateLeave) -> Void = { _ in }
     @ViewBuilder let head: () -> Head
 
-    /// The token list is open.
-    @State private var open = false
-    /// The amount's menu is up (prd §1802).
-    @State private var amountOpen = false
-    /// What a swap buys: its menu is up (prd §1875).
-    @State private var buyOpen = false
-    /// The cost's list stands in the rows' place (prd §1876).
+    /// The deck's open step (prd §1927): the token, what a swap buys, the
+    /// amount on Move's keys, or the note.
+    private enum Blank { case token, buy, amount, note }
+    @State private var open: Blank?
+    /// The cost's list stands in the receipt's place (prd §1876).
     @State private var costOpen = false
-    /// The amount is being typed on Move's own keypad (prd §1926).
-    @State private var typing = false
     /// The note to a private address is being written (prd §1877).
     @FocusState private var writing: Bool
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
         ScrollView {
-            ScrollViewReader { scroller in
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
-                // (prd §1794, §1801):** as Move's own verbs.
-                // Its name stands over the page (`MovePinnedHead`, prd §1892).
-                Group {
-                    // The tokens are a menu on their row (prd §1784).
-                    VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        // The cost is a row under them (prd §1876).
-                        MoveCostRows(cost: costRow, open: $costOpen) {
-                            MoveChoiceRows(rows: choiceRows,
-                                           open: Binding(get: { open && picking ? "token" : amountOpen ? "amount" : buyOpen ? "buy" : nil },
-                                                         set: { if $0 == nil { open = false; amountOpen = false; buyOpen = false } })) { id in
-                                if id == "amount" { amountMenu } else if id == "buy" { buyList } else { tokens }
-                            }
-                        }
-                        if !costOpen { line }
+            VStack(alignment: .leading, spacing: 0) {
+                // **THE SENTENCE STANDS STILL ON TOP, THE DECK UNDER IT (prd
+                // §1927, user: "we need to be consistent!"):** as Send's,
+                // Swap's and Earn's.
+                MoveFlow { sentence }
+                    .moveHoldFill()
+                    .allowsHitTesting(false)
+                    .animation(DS.Motion.standard, value: move.stage)
+                    .animation(DS.Motion.standard, value: move.holding)
+                    .animation(DS.Motion.standard, value: move.amount)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    if let run = stepsRun {
+                        PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
+                            .transition(.opacity)
+                    } else if move.stage == .quoting {
+                        costLine.frame(maxWidth: .infinity, alignment: .leading).transition(.opacity)
                     }
+                    line
                 }
+                .padding(.top, DS.Space.s4)
             }
-            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-            .padding(.top, MoveSentence.headFade)
-            // Scrolled to the end, the last row clears the foot's fade.
-            .padding(.bottom, MoveSentence.footFade)
+            .padding(.horizontal, MoveSentence.sideInset(inTray))
+            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
+            .padding(.bottom, DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            // The keys come up from the foot: the Amount row is brought to
-            // their edge, so its figure is seen while typed (prd §1925).
-            .onChange(of: typing) { _, now in
-                guard now else { return }
-                withAnimation(DS.Motion.standard) { scroller.scrollTo("amount", anchor: .bottom) }
-            }
-            }
         }
         .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
-        .safeAreaInset(edge: .top, spacing: 0) { MovePinnedHead(inTray: inTray) { head().allowsHitTesting(false) } }
-        // Send opens whole: its rows and sentence clip in the short sheet.
+        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
+        // Send opens whole: its deck clips in the short sheet.
         .onAppear { chrome.moveTall = true }
-        .onChange(of: open) { _, now in if now { chrome.moveTall = true } }
+        .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
+        // The deck opens on the keys once read (prd §1782, as Earn's).
+        .onChange(of: move.stage == .ready, initial: true) { _, on in
+            if on, open == nil, move.amount.isEmpty { withAnimation(DS.Motion.standard) { open = .amount } }
+        }
+        // The token's places at most, and every figure asks again (prd §1727).
+        .onChange(of: move.amount) { _, now in
+            let places = move.holding?.decimals ?? 18
+            if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
+               now.distance(from: dot, to: now.endIndex) - 1 > places {
+                move.amount = String(now[...now.index(dot, offsetBy: places)])
+                return
+            }
+            move.amountChanged()
+        }
         // A send kept behind its sheet is shown as it stands, running or
         // failed, never read over (prd §1806).
         .task(id: move.mode) { if RailgunMove.kept !== move { await move.read() } }
@@ -1232,64 +1236,46 @@ struct MoveRailgunSentence<Head: View>: View {
 
     // MARK: - Amount and token
 
-    private func toggle() {
-        typing = false
-        withAnimation(DS.Motion.standard) { open.toggle() }
+    private func toggle(_ blank: Blank = .token) {
+        guard picking else { return }
+        withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
         DSHaptic.selection()
     }
 
-    /// **THE SENTENCE'S CHOICES, AS ROWS (prd §1781).** Where it leaves
-    /// from, who it goes to, how much and of what: what the sentence's
-    /// words opened.
-    private var choiceRows: [MoveChoiceRow] {
-        guard picking else { return [] }
+    /// **THE FACTS (prd §1927):** what the rows said that is not a choice,
+    /// as the deck's receipt.
+    private var facts: [(name: String, value: String)] {
         let yours = String(localized: "Your private balance")
-        var rows: [MoveChoiceRow] = []
+        var out: [(name: String, value: String)] = []
         switch move.mode {
         case .deposit:
-            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"), value: yours) { leave(.pickRecipient) })
+            out.append((String(localized: "To"), yours))
         case .takeBack:
-            rows.append(MoveChoiceRow(id: "to", name: String(localized: "To"),
-                                      value: move.toPrivate ? String(localized: "Private · \(YourAccount.short(move.recipient ?? ""))")
-                                          : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")) {
-                leave(.pickRecipient)
-            })
-            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
+            out.append((String(localized: "From"), yours))
+            out.append((String(localized: "To"), move.toPrivate ? String(localized: "Private · \(YourAccount.short(move.recipient ?? ""))")
+                        : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")))
         case .swap:
-            rows.append(MoveChoiceRow(id: "from", name: String(localized: "From"), value: yours) { leave(.switchOff) })
+            out.append((String(localized: "In"), yours))
         }
-        // Its one network, said as a row and fixed (prd §1802).
-        rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"), value: String(localized: "Ethereum"),
-                                  mark: MoveSentence.networkMark(chainId: 1).map { MoveRowMark(network: $0) }, fixed: true) {})
-        // The token before its amount (prd §1789).
-        rows.append(MoveChoiceRow(id: "token", name: move.mode == .swap ? String(localized: "Swap") : String(localized: "Token"),
-                                  value: move.holding?.symbol ?? "") { toggle() })
-        if move.mode == .swap {
-            rows.append(MoveChoiceRow(id: "buy", name: String(localized: "For"), value: move.buy?.symbol ?? String(localized: "Choose"),
-                                      empty: move.buy == nil) { toggleBuy() })
-        }
-        // Its sums are a menu, and any other is typed in the row (prd §1802).
-        rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
-                                  field: AnyView(amountField), typing: typing, figure: true) {
-            // Straight to the keys, the sums their top row (prd §1926).
-            withAnimation(DS.Motion.standard) { open = false; buyOpen = false; amountOpen = false; typing = true }
-        })
-        // A note only they can read, to a private address (prd §1877).
-        if move.toPrivate {
-            // Optional, so never "Choose" in the pick's ink: grey until written.
-            rows.append(MoveChoiceRow(id: "note", name: String(localized: "Note"),
-                                      value: move.note.isEmpty ? String(localized: "Optional") : move.note,
-                                      ink: move.note.isEmpty ? DS.textSecondary : nil,
-                                      field: AnyView(noteField), typing: writing) {
-                withAnimation(DS.Motion.standard) { open = false; amountOpen = false }
-                writing = true
-            })
-        }
+        out.append((String(localized: "Network"), String(localized: "Ethereum")))
         // What comes back, after Railgun's two fees (prd §1875).
-        if move.mode == .swap, let gets = move.getsWords {
-            rows.append(MoveChoiceRow(id: "gets", name: String(localized: "You get"), value: gets, fixed: true) {})
+        if move.mode == .swap, let gets = move.getsWords { out.append((String(localized: "You get"), gets)) }
+        out.append((String(localized: "Through"), "Railgun"))
+        return out
+    }
+
+    /// The deck's receipt: the facts, the cost a row of them (prd §1876),
+    /// and where no price makes a dollar cost, Railgun's percentage.
+    private var receipt: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            MoveCostRows(cost: costRow, open: $costOpen, indented: false) {
+                ForEach(facts, id: \.name) { f in MoveFactRow(name: f.name, value: f.value, indented: false) }
+            }
+            if !costOpen, costRow == nil, move.stage == .ready, move.amountOK {
+                Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        return rows
     }
 
     /// The note, typed: at most 140 characters, which only the receiver
@@ -1297,6 +1283,7 @@ struct MoveRailgunSentence<Head: View>: View {
     private var noteField: some View {
         TextField(text: $move.note, prompt: Text("Optional").foregroundStyle(DS.textTertiary)) { Text("Note") }
             .focused($writing)
+            .onAppear { writing = true }
             .dsText(.body17)
             .multilineTextAlignment(.trailing)
             .foregroundStyle(DS.textPrimary)
@@ -1308,11 +1295,7 @@ struct MoveRailgunSentence<Head: View>: View {
             }
     }
 
-    private func toggleBuy() {
-        typing = false
-        withAnimation(DS.Motion.standard) { open = false; amountOpen = false; buyOpen.toggle() }
-        DSHaptic.selection()
-    }
+    private func toggleBuy() { toggle(.buy) }
 
     /// What a swap can buy: Railgun's listed tokens on Ethereum, as Move's
     /// one token list (prd §1910).
@@ -1320,63 +1303,11 @@ struct MoveRailgunSentence<Head: View>: View {
         MoveTokenGrid(places: [MoveTokenPlace(id: "railgun", choices: move.buyChoices.map { b in
             MoveTokenChoice(id: b.symbol, symbol: b.symbol, network: "Ethereum", badge: MoveSentence.networkMark(chainId: 1),
                             picked: b == move.buy) {
-                withAnimation(DS.Motion.standard) { move.buy = b; buyOpen = false }
+                withAnimation(DS.Motion.standard) { move.buy = b; open = .amount }
                 move.amountChanged()
             }
         })])
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// The amount's menu: what you have, the sums, and the keys.
-    private var amountMenu: some View {
-        let picks = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (pick: p, value: $0) } }
-        return MoveAmountMenu(have: move.haveLine,
-                              picks: picks.map { item in
-                                  MoveAmountPick(id: chipWord(item.pick), title: chipWord(item.pick),
-                                                 trailing: item.value + " " + (move.holding?.symbol ?? ""),
-                                                 picked: move.amount == item.value) {
-                                      withAnimation(DS.Motion.standard) { move.amount = item.value; amountOpen = false }
-                                  }
-                              }) {
-            withAnimation(DS.Motion.standard) { amountOpen = false }
-            typing = true
-        }
-    }
-
-    /// The amount, typed (prd §1727): the decimal pad, the token's places at
-    /// most, the figure in the sentence's own rung — as Aztec's (§1700q).
-    private var amountField: some View {
-        // **MOVE'S OWN KEYPAD (prd §1926, as Aztec's §1925).** The row shows
-        // the figure and a caret; the keys stand in the foot.
-        Button {
-            withAnimation(DS.Motion.standard) { open = false; amountOpen = false; buyOpen = false; typing = true }
-        } label: {
-            HStack(spacing: 2) {
-                Text(verbatim: move.amount.isEmpty ? "0" : move.amount)
-                    .dsText(MoveChoiceRowLabel.figureRung)
-                    .monospacedDigit()
-                    .foregroundStyle(move.amount.isEmpty ? DS.textTertiary : DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                if typing {
-                    Capsule().fill(DS.pickInk).frame(width: 3, height: 44).accessibilityHidden(true)
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text("Amount"))
-        .accessibilityValue(Text(verbatim: move.amount.isEmpty ? "0" : move.amount))
-        .onChange(of: move.amount) { _, now in
-            if open, typing { open = false }
-            let places = move.holding?.decimals ?? 18
-            if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
-               now.distance(from: dot, to: now.endIndex) - 1 > places {
-                move.amount = String(now[...now.index(dot, offsetBy: places)])
-                return
-            }
-            move.amountChanged()
-        }
     }
 
     /// $10 · Half · All (prd §1728 item 1): each types its amount, exact;
@@ -1401,7 +1332,7 @@ struct MoveRailgunSentence<Head: View>: View {
         MoveTokenGrid(places: [MoveTokenPlace(id: "railgun-held", choices: move.holdings.map { h in
             MoveTokenChoice(id: h.id, symbol: h.symbol, network: "Ethereum", badge: MoveSentence.networkMark(chainId: 1),
                             sub: RailgunHoldings.figure(h.units, decimals: h.decimals), picked: h == move.holding) {
-                withAnimation(DS.Motion.standard) { move.pick(h); open = false }
+                withAnimation(DS.Motion.standard) { move.pick(h); open = .amount }
             }
         })])
     }
@@ -1414,95 +1345,128 @@ struct MoveRailgunSentence<Head: View>: View {
             && (move.mode != .swap || (move.swapPlan != nil && (move.viaFresh || move.feeWords != nil)))
     }
 
-    /// The cost stands over the verb while there is something to cost.
-    private var showsCost: Bool {
-        move.stage == .quoting || (move.stage == .ready && move.amountOK)
-    }
+    @Environment(\.moveBack) private var back
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
-    /// The foot's back card closes the cost's list while it is open.
-    private var costBack: (() -> Void)? {
-        costOpen ? { withAnimation(DS.Motion.standard) { costOpen = false } } : nil
-    }
-
-    private var foot: some View {
-        VStack(spacing: 0) {
-            MoveFlow { sentence }.moveHoldFill()
-                // The keys bring the typed row to the foot's edge: air
-                // between that row and the sentence (prd §1802).
-                .padding(.top, typing ? DS.Space.s6 : 0)
-                // The sentence says the move and is no control (prd
-                // §1781): its choices are the rows under it.
-                .allowsHitTesting(false)
-                .animation(DS.Motion.standard, value: move.stage)
-                .animation(DS.Motion.standard, value: move.holding)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s3)
-                .moveSentenceAway((open && picking) || amountOpen || buyOpen || typing)
-            // One thing at a time over the act (§1700x): the steps while it
-            // works and after, else the cost (or what a quote waits on).
-            if let run = stepsRun {
-                PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
-                    .padding(.bottom, DS.Space.s3)
-                    .transition(.opacity)
-            } else if showsCost {
-                costLine
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, DS.Space.s1)
-                    .transition(.opacity)
+    /// **RAILGUN'S DECK (prd §1927, as Earn's §1901).**
+    private var deck: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if picking, !isDone {
+                MoveDeckSteps(steps: steps, disabled: !picking)
+                    .padding(.bottom, MoveDeck.stepsGap)
             }
-            HStack(alignment: .center, spacing: DS.Space.s2) {
-                MoveBackCard(act: costBack)
-                switch move.stage {
-                case .done:
-                    footButton(String(localized: "Done"), on: true) {
-                        if inTray { chrome.moveTray = false } else { leave(.switchOff) }
-                    }
-                case .failed:
-                    footButton(String(localized: "Try again"), on: true) { Task { await move.read() } }
-                case .reading, .nothing:
-                    Spacer(minLength: 0)
-                case .needsFees:
-                    footButton(DemoMode.isActive ? String(localized: "Not in the demo") : String(localized: "Add ETH for fees"),
-                               on: !DemoMode.isActive) {
-                        Task { await move.addFees() }
-                    }
-                    .disabled(DemoMode.isActive)
-                default:
-                    if typing, !ready {
-                        // Done, while a figure is typed and not yet a move
-                        // (prd §1791 item 4); a whole one is the act (prd §1896).
-                        Button { typing = false } label: {
-                            MoveSentence.actCard(String(localized: "Done"), on: true, fill: DS.fillStrong)
+            ZStack(alignment: .bottom) {
+                Group {
+                    if open == .amount, picking {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: DS.Space.s2)
+                            MoveKeypad(text: $move.amount,
+                                       presets: RailgunMove.Pick.allCases.compactMap { p in
+                                           move.amount(for: p).map { value in
+                                               MoveKeypadPreset(id: "\(p)", title: chipWord(p),
+                                                                picked: move.amount == value) { move.amount = value }
+                                           }
+                                       },
+                                       places: min(move.holding?.decimals ?? 6, 6))
                         }
-                        .buttonStyle(PressSpring())
+                        .padding(.bottom, MoveDeck.fade)
+                        .transition(.opacity)
+                    } else if open == .token, picking {
+                        listBody { tokens }
+                    } else if open == .buy, picking {
+                        listBody { buyList }
+                    } else if open == .note, picking {
+                        listBody { noteField.frame(minHeight: 48) }
+                    } else if picking, !isDone {
+                        listBody { receipt }
                     } else {
-                        footButton(DemoMode.isActive ? String(localized: "Not in the demo") : footVerb, on: ready) {
-                            typing = false
-                            move.onAway = inTray ? { chrome.moveTray = false } : nil
-                            Task { await move.run() }
-                        }
-                        .disabled(!ready)
+                        Color.clear
                     }
                 }
+                .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
+                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
+                       + MoveFootClearance.gained(inTray: inTray)
+                       - MoveDeck.stepsGap, alignment: .top)
+                .deckUnderFoot()
+                MoveDeckFoot(backDisabled: move.acting, back: {
+                    withAnimation(DS.Motion.standard) {
+                        // Back is the menu, never the step before (prd §1911).
+                        if costOpen { costOpen = false } else { open = nil; back?() }
+                    }
+                }) { footWord }
             }
-            if typing, move.stage == .ready {
-                MoveKeypad(text: $move.amount,
-                           presets: RailgunMove.Pick.allCases.compactMap { p in
-                               move.amount(for: p).map { value in
-                                   MoveKeypadPreset(id: "\(p)",
-                                                    title: chipWord(p),
-                                                    picked: move.amount == value) { move.amount = value }
-                               }
-                           },
-                           places: min(move.holding?.decimals ?? 6, 6))
-                    .padding(.top, DS.Space.s2)
-                    .transition(.opacity)
-            } else if move.stage != .reading, move.stage != .nothing, !isDone { credit }
         }
-        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-        .padding(.bottom, DS.Space.s2)
-        .moveFootGround(inTray: inTray)
+        .padding(.horizontal, MoveSentence.sideInset(inTray))
+        .padding(.top, HomePanelMetrics.cap)
+        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
+        .background(alignment: .top) {
+            ZStack(alignment: .top) {
+                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                HomePanelSurface()
+            }
+            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .animation(DS.Motion.standard, value: open)
+    }
+
+    private func listBody<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        ScrollView { content().padding(.vertical, DS.Space.s2) }
+            .scrollIndicators(.hidden)
+            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+            .transition(.opacity)
+    }
+
+    /// Where it goes (back to Send's recipients), the token, what a swap
+    /// buys, the amount, and the note to a private address.
+    private var steps: [MoveDeckStep] {
+        var out: [MoveDeckStep] = []
+        if move.mode != .swap {
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true) { leave(.pickRecipient) })
+        }
+        out.append(MoveDeckStep(id: "token", word: move.mode == .swap ? String(localized: "Swap") : String(localized: "Token"),
+                                on: open == .token, answered: move.holding != nil) { toggle(.token) })
+        if move.mode == .swap {
+            out.append(MoveDeckStep(id: "buy", word: String(localized: "For"), on: open == .buy, answered: move.buy != nil) { toggle(.buy) })
+        }
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
+                                answered: !move.amount.isEmpty) { toggle(.amount) })
+        if move.toPrivate {
+            out.append(MoveDeckStep(id: "note", word: String(localized: "Note"), on: open == .note,
+                                    answered: !move.note.isEmpty) { toggle(.note) })
+        }
+        return out
+    }
+
+    /// **THE FOOT'S ONE WORD (prd §1897 item 7).**
+    @ViewBuilder private var footWord: some View {
+        switch move.stage {
+        case .done:
+            MoveFootWord(word: String(localized: "Done")) {
+                if inTray { chrome.moveTray = false } else { leave(.switchOff) }
+            }
+        case .failed:
+            MoveFootWord(word: String(localized: "Try again")) { Task { await move.read() } }
+        case .reading, .nothing:
+            EmptyView()
+        case .needsFees:
+            MoveFootWord(word: DemoMode.isActive ? String(localized: "Not in the demo") : String(localized: "Add ETH for fees")) {
+                guard !DemoMode.isActive else { return }
+                Task { await move.addFees() }
+            }
+        case .working:
+            MoveFootWord(word: footVerb, ink: DS.textSecondary)
+        default:
+            MoveHoldWord(word: DemoMode.isActive ? String(localized: "Not in the demo")
+                            : move.mode == .swap ? String(localized: "Hold to swap") : String(localized: "Hold to send"),
+                         enabled: ready) {
+                open = nil
+                move.onAway = inTray ? { chrome.moveTray = false } : nil
+                Task { await move.run() }
+            }
+        }
     }
 
     private var footVerb: String {
@@ -1510,17 +1474,5 @@ struct MoveRailgunSentence<Head: View>: View {
         return move.mode == .swap ? String(localized: "Swap") : String(localized: "Send")
     }
 
-    private var credit: some View {
-        HStack(spacing: DS.Space.s1) {
-            Text("Powered by Railgun").dsText(.label12).foregroundStyle(DS.textTertiary)
-            ProtocolInlineMark(mark: "railgun").accessibilityHidden(true)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s1)
-    }
 
-    private func footButton(_ word: String, on: Bool, act: @escaping () -> Void) -> some View {
-        // Move's one act, held (prd §1897 item 7), in this place's ink.
-        MoveSentence.footAct(word, on: on, ink: DS.pickInk, act: act)
-    }
 }
