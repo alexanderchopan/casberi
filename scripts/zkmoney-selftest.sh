@@ -711,7 +711,7 @@ awk '/to: ZkMoneyWire.ensRegistry/{e=NR} /resolver = named/{n=NR} /to: resolver,
 # claims a zk.money link — Casberi cannot tell a link that pays to Ethereum
 # from one that only signs you up.
 awk '/private var receiveFromRows: some View \{/,/^    }/' "$SEND" > "$TMP/from.txt"
-grep -q 'MoveDeckRowLabel(name: String(localized: "From another network")' "$TMP/from.txt" \
+grep -q 'receiveDoorLabel(String(localized: "From another network"))' "$TMP/from.txt" \
   && ! grep -q 'zk.money' "$TMP/from.txt" \
   || { echo "✗ Receive's ways in changed, or a zk.money claim came back without reading the link's voucher"; exit 1; }
 awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND" \
