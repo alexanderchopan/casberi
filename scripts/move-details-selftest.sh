@@ -148,9 +148,9 @@ grep -q 'try? await Task.sleep(for: .seconds(40))' "$SENTENCE" \
 # A refusal dims the verb; "Not checked" is never green.
 grep -q 'stage == nil && !all.isEmpty && failNote == nil' "$SENTENCE" \
   || { echo "✗ a send the simulation refuses no longer dims its verb (canvas figure 9)"; exit 1; }
-awk '/case .notChecked:/{getline; print}' "$DETAILS" | grep -q 'Goes through\|confirmInk' \
+awk '/case .notChecked:/{getline; print}' "$DETAILS" | grep -q 'Succeeds\|confirmInk' \
   && { echo "✗ 'Not checked' is drawn as checked (§83)"; exit 1; }
-grep -q 'case .lands:' "$DETAILS" && grep -q '"Goes through"' "$DETAILS" \
+grep -q 'case .lands:' "$DETAILS" && grep -q '"Succeeds"' "$DETAILS" \
   || { echo "✗ a simulated send no longer says its test run goes through"; exit 1; }
 
 # The demo reaches nothing (§1475): its preview is its table's.

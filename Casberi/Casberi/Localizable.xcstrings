@@ -96763,34 +96763,6 @@
         }
       }
     },
-    "Flip the two tokens" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Invertir los dos tokens"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "2つのトークンを入れ替え"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "두 토큰 바꾸기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "对调两个代币"
-          }
-        }
-      }
-    },
     "Folder" : {
       "localizations" : {
         "es" : {
@@ -124347,6 +124319,34 @@
         }
       }
     },
+    "New address each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dirección nueva cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "毎回新しいアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "매번 새 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次新地址"
+          }
+        }
+      }
+    },
     "New alert" : {
       "localizations" : {
         "es" : {
@@ -130789,6 +130789,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Nonce"
+          }
+        }
+      }
+    },
+    "Nonce %llu" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nonce %llu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ナンス %llu"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "논스 %llu"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nonce %llu"
           }
         }
       }
@@ -185707,6 +185735,34 @@
         }
       }
     },
+    "Simulated" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Simulado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "模拟"
+          }
+        }
+      }
+    },
     "Simulated as the Safe's call, before signatures and gas." : {
       "localizations" : {
         "es" : {
@@ -191356,6 +191412,34 @@
         }
       }
     },
+    "Succeeds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se completa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "成功"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "성공"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "成功"
+          }
+        }
+      }
+    },
     "Suggested" : {
       "localizations" : {
         "es" : {
@@ -193759,34 +193843,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "测试网络 · 其代币没有价值"
-          }
-        }
-      }
-    },
-    "Test run" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Prueba"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "テスト実行"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "테스트 실행"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "试运行"
           }
         }
       }
@@ -212410,6 +212466,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "使用 Casberi 的列表"
+          }
+        }
+      }
+    },
+    "Use all" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar todo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전부 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部使用"
           }
         }
       }
@@ -238980,6 +239064,34 @@
         }
       }
     },
+    "a network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一个网络"
+          }
+        }
+      }
+    },
     "a network." : {
       "localizations" : {
         "es" : {
@@ -240808,6 +240920,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一笔金额"
+          }
+        }
+      }
+    },
+    "an amount of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una cantidad de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の金額"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 금액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一定数量的%@"
           }
         }
       }
@@ -244698,6 +244838,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每次发送和兑换。"
+          }
+        }
+      }
+    },
+    "everything" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "todo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모두"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部"
           }
         }
       }
@@ -250010,34 +250178,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "网络升级"
-          }
-        }
-      }
-    },
-    "network." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "red."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ネットワーク。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "네트워크."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网络。"
           }
         }
       }

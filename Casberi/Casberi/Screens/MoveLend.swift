@@ -52,8 +52,12 @@ struct MoveLendSentence<Head: View>: View {
                         // What there is leads the facts, as Send's You have
                         // does (prd §1898 item 6).
                         if live, stepsRun == nil, hasAny, let have = move.haveFigure {
+                            // **USE ALL ON THE LINE THAT SAYS WHAT YOU HAVE (prd
+                            // §1916):** while the keys are up, as Send's is.
                             MoveFactRow(name: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
-                                        value: have, indented: false)
+                                        value: have, indented: false,
+                                        act: open == .amount && canUseAll
+                                            ? (String(localized: "Use all"), { move.pick(nil, all: true) }) : nil)
                         }
                         if live, stepsRun == nil, hasAny, let fact = rateFact {
                             MoveFactRow(name: fact.name, value: fact.value, indented: false)
@@ -121,8 +125,12 @@ struct MoveLendSentence<Head: View>: View {
             // which opens the verbs; done, the past tense stands in its place.
             if !done { head() }
             MoveClause(glue: done ? glue : nil) {
+                // **NEVER "0 USDC" BEFORE A FIGURE (prd §1916):** the amount
+                // still to type is a grey "an amount of USDC", as Send's is.
+                let unset = move.units == nil && !move.all && !done
                 Button { toggle(.amount) } label: {
-                    MoveWord(move.figure, ink: MoveSentence.settledInk)
+                    MoveWord(unset ? String(localized: "an amount of \(move.market?.symbol ?? "")") : move.figure,
+                             ink: unset ? DS.textTertiary : MoveSentence.settledInk)
                 }
                 .buttonStyle(RowPress())
                 .accessibilityLabel(Text("Amount, \(move.figure)"))
@@ -245,6 +253,7 @@ struct MoveLendSentence<Head: View>: View {
                     ], disabled: move.acting)
                 }
                 MoveDeckSteps(steps: steps)
+                    .padding(.bottom, MoveDeck.stepsGap)
             }
             // The body runs under the foot and fades there (prd §1904 item 9).
             ZStack(alignment: .bottom) {
@@ -253,10 +262,12 @@ struct MoveLendSentence<Head: View>: View {
                         // **EARN TYPES ITS AMOUNT (prd §1897 item 4, user
                         // 2026-11-19: "earn looks weird"):** Send's keypad, Half
                         // and All as its sums, never a ladder of rows.
-                        MoveKeypad(text: typed, presets: keypadPresets,
-                                   places: min(move.market?.decimals ?? 6, 6), disabled: !live)
-                            .padding(.top, DS.Space.s1)
-                            .transition(.opacity)
+                        VStack(spacing: 0) {
+                            Spacer(minLength: DS.Space.s2)
+                            MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live)
+                        }
+                        .padding(.bottom, MoveDeck.fade)
+                        .transition(.opacity)
                     } else if open == .network {
                         ScrollView { fromRows.padding(.vertical, DS.Space.s2) }
                             .scrollIndicators(.hidden)
@@ -274,7 +285,7 @@ struct MoveLendSentence<Head: View>: View {
                        + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
                        + MoveFootClearance.gained(inTray: inTray)
                        // The chips take their row out of the body (§1911).
-                       - (kindsShown ? MoveDeck.kindsHeight : 0), alignment: .top)
+                       - (kindsShown ? MoveDeck.kindsHeight : 0) - MoveDeck.stepsGap, alignment: .top)
                 .deckUnderFoot()
                 MoveDeckFoot(backDisabled: move.acting, back: {
                     withAnimation(DS.Motion.standard) {
@@ -309,18 +320,9 @@ struct MoveLendSentence<Head: View>: View {
         })
     }
 
-    /// Half and All of what there is, dimmed when there is nothing.
-    private var keypadPresets: [MoveKeypadPreset] {
-        let have = move.market.flatMap { move.available($0) }.flatMap { Decimal(string: $0) } ?? 0
-        return [
-            MoveKeypadPreset(id: "half", title: String(localized: "Half"), enabled: move.half != nil,
-                             picked: !move.all && move.half != nil && move.amount == move.half) {
-                if let half = move.half { move.pick(half, all: false) }
-            },
-            MoveKeypadPreset(id: "all", title: String(localized: "All"), enabled: have > 0, picked: move.all) {
-                move.pick(nil, all: true)
-            },
-        ]
+    /// There is something to use all of.
+    private var canUseAll: Bool {
+        (move.market.flatMap { move.available($0) }.flatMap { Decimal(string: $0) } ?? 0) > 0
     }
 
     /// **FROM IS A TOKEN ON A NETWORK (prd §1898 item 1):** every market Aave

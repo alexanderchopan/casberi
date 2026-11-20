@@ -10,10 +10,8 @@ enum MoveDeck {
     static let stepsHeight: CGFloat = 52
     /// The kinds' chips over the steps (`MoveDeckKinds`): one Chip's target.
     static let kindsHeight: CGFloat = DS.Hit.min
-    /// Between two step words.
-    static let stepGap: CGFloat = 22
-    /// Between two group words.
-    static let groupGap: CGFloat = 20
+    /// Under the steps' track, before what the step asks (prd §1916's 16).
+    static let stepsGap: CGFloat = DS.Space.s4
     /// The deck's height under its steps: room for the keys and a top row.
     /// **IT SCALES WITH THE PHONE (user, 2026-11-19: "the bottom tray could
     /// probably be taller … receive for example it should all be visible so
@@ -27,7 +25,9 @@ enum MoveDeck {
     /// One key of the keypad: the keys share what the sums and the fade leave,
     /// so the taller deck's keys are taller too (user, 2026-11-19: "keyboard
     /// looks tiny here").
-    static var keyHeight: CGFloat { max(56, ((bodyHeight - presetHeight - DS.Space.s1 - fade) / 4).rounded(.down)) }
+    /// **64 AT MOST, AT THE BOTTOM (prd §1916, user, 2026-11-19: "number pad
+    /// too high"):** the keys stand over the foot, the room above them air.
+    static var keyHeight: CGFloat { min(64, max(56, ((bodyHeight - presetHeight - DS.Space.s1 - fade) / 4).rounded(.down))) }
     /// How far a list fades into the foot (user, 2026-11-19: "the rows should
     /// fade into the bottom not have a hard clip").
     static let fade: CGFloat = 32
@@ -51,7 +51,9 @@ enum MoveDeck {
     static let hold: Double = 0.5
     /// The foot's one word: the act, Done, a stage (prd §1897 item 7). Not
     /// the sentence's size, which only the flow names (prd §1501).
-    static let footRung: DSTextStyle = .heading28
+    /// **20 SINCE THE THREE SIZES (prd §1916):** 30 for the sentence and the
+    /// keys, 20 for the steps' act, 17 for everything else.
+    static let footRung: DSTextStyle = .heading20
 }
 
 /// A step of the deck: its word, whether it is the one open, and its tap.
@@ -62,82 +64,62 @@ struct MoveDeckStep: Identifiable {
     /// Its question has an answer (prd §1904 item 1): white, where one still
     /// to answer stays grey.
     var answered = false
-    /// **SWAP'S FLIP (prd §1913):** a disc after this step that turns From
-    /// and For round; nil draws none.
-    var flip: (() -> Void)? = nil
     let act: () -> Void
 }
 
-/// **THE STEPS AS WORDS (prd §1897 item 2).** One row at the left edge, the
-/// step on white and the rest grey: every part of the act stays in view, and
-/// any word opens its step.
+/// **THE STEPS ARE SEGMENTS ON A TRACK (prd §1916, user, 2026-11-19, of
+/// five mocked step titles: "i like C", then of C against a pill per step:
+/// segments, since the verb's kinds are pills right above).** One dark track
+/// the deck's width, a segment per step at equal widths, the open one on a
+/// lighter fill that glides; an answered step white, one still to answer
+/// grey. Every step is a wide target, and the row reads as one control,
+/// apart from the kind chips over it.
 struct MoveDeckSteps: View {
     let steps: [MoveDeckStep]
     var disabled = false
+    @Namespace private var fill
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: MoveDeck.stepGap) {
-                ForEach(steps) { s in
-                    Button {
-                        s.act()
-                        DSHaptic.selection()
-                    } label: {
-                        // **WHAT IS ANSWERED SHOWS (prd §1904 item 1):** the
-                        // open step pink over a dot, an answered one white,
-                        // one still to answer grey; at Home's section rung.
-                        VStack(spacing: 3) {
-                            Text(verbatim: s.word)
-                                .dsText(.heading24)
-                                .foregroundStyle(ink(s))
-                            Circle().fill(DS.pickInk).frame(width: 5, height: 5)
-                                .opacity(s.on && !disabled ? 1 : 0)
+        HStack(spacing: Self.inset) {
+            ForEach(steps) { s in
+                Button {
+                    s.act()
+                    DSHaptic.selection()
+                } label: {
+                    Text(verbatim: s.word)
+                        .dsText(.heading17)
+                        .foregroundStyle(ink(s))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background {
+                            if s.on && !disabled {
+                                RoundedRectangle(cornerRadius: Self.segmentRadius, style: .continuous)
+                                    .fill(DS.fillStrong)
+                                    .matchedGeometryEffect(id: "on", in: fill)
+                            }
                         }
-                        .frame(minHeight: MoveDeck.stepsHeight)
                         .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .disabled(disabled)
-                    .accessibilityAddTraits(s.on ? [.isSelected] : [])
-                    if let flip = s.flip {
-                        Button {
-                            flip()
-                            DSHaptic.selection()
-                        } label: {
-                            Image(systemName: "arrow.left.arrow.right")
-                                .dsGlyph(.title, weight: .semibold)
-                                .foregroundStyle(disabled ? DS.textSecondary : DS.pickInk)
-                                .frame(width: DS.Hit.min, height: MoveDeck.stepsHeight)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PressSpring())
-                        .disabled(disabled)
-                        .accessibilityLabel(Text("Flip the two tokens"))
-                        .transition(.opacity)
-                    }
                 }
+                .buttonStyle(RowPress())
+                .disabled(disabled)
+                .accessibilityAddTraits(s.on ? [.isSelected] : [])
             }
         }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .padding(Self.inset)
         .frame(height: MoveDeck.stepsHeight)
-        // A row wider than the phone goes out under a soft edge (§1904 item 1).
-        .mask {
-            HStack(spacing: 0) {
-                Color.black
-                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
-                    .frame(width: MoveDeck.fade)
-            }
-        }
-        .animation(DS.Motion.standard, value: steps.map(\.on))
+        .background(DS.fillQuiet, in: RoundedRectangle(cornerRadius: Self.segmentRadius + Self.inset, style: .continuous))
+        .animation(DS.Motion.glide, value: steps.map(\.on))
         .animation(DS.Motion.standard, value: steps.map(\.answered))
-        .animation(DS.Motion.standard, value: steps.map { $0.flip != nil })
     }
+
+    /// Between the track's edge and a segment, and between two segments.
+    static let inset: CGFloat = 4
+    static let segmentRadius: CGFloat = 10
 
     private func ink(_ s: MoveDeckStep) -> Color {
         if disabled { return DS.textSecondary }
-        if s.on { return DS.pickInk }
-        return s.answered ? DS.textPrimary : DS.textSecondary
+        return s.on || s.answered ? DS.textPrimary : DS.textSecondary
     }
 }
 
@@ -178,38 +160,6 @@ struct MoveDeckKinds: View {
     }
 }
 
-/// **GROUP WORDS (prd §1897 item 6, §1898 item 2).** A smaller row under the
-/// steps that picks which group of a list shows: Merchant's categories,
-/// To's Recent · Private · Addresses.
-struct MoveDeckGroups: View {
-    let words: [String]
-    let picked: String?
-    let pick: (String) -> Void
-
-    var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: MoveDeck.groupGap) {
-                ForEach(words, id: \.self) { w in
-                    Button {
-                        pick(w)
-                        DSHaptic.selection()
-                    } label: {
-                        Text(verbatim: w)
-                            .dsText(.fact15)
-                            .foregroundStyle(w == picked ? DS.textPrimary : DS.textSecondary)
-                            .frame(minHeight: MoveDeck.stepsHeight)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityAddTraits(w == picked ? [.isSelected] : [])
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-        .frame(height: MoveDeck.stepsHeight)
-    }
-}
-
 /// **ONE ROW FOR EVERY LIST (prd §1899 item 1).** A lead in its column, the
 /// name over a grey line, the figure trailing. A row that cannot be picked is
 /// dimmed and takes no tap.
@@ -233,7 +183,7 @@ struct MoveDeckRowLabel<Lead: View>: View {
                 Text(verbatim: name).dsText(.heading17).foregroundStyle(picked ? DS.pickInk : nameInk)
                     .lineLimit(1)
                 if let sub {
-                    Text(verbatim: sub).dsText(.fact15).foregroundStyle(subInk)
+                    Text(verbatim: sub).dsText(.body17).foregroundStyle(subInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -283,7 +233,7 @@ struct MoveKeypad: View {
                     DSHaptic.selection()
                 } label: {
                     Text(verbatim: p.title)
-                        .dsText(.heading20)
+                        .dsText(.heading17)
                         .foregroundStyle(p.picked ? DS.pickInk : DS.textSecondary)
                         .frame(maxWidth: .infinity, minHeight: MoveDeck.presetHeight)
                         .contentShape(Rectangle())
@@ -315,9 +265,8 @@ struct MoveKeypad: View {
                 if delete {
                     Image(systemName: "delete.backward").dsGlyph(.feature, weight: .regular)
                 } else {
-                    // A key's figure is the menu's size (prd §1914): the
-                    // foot's rung read small over keys this tall.
-                    Text(verbatim: label).dsText(.heading34).fontWeight(.regular)
+                    // A key's figure is the sentence's (prd §1916).
+                    Text(verbatim: label).dsText(MoveSentence.rung).fontWeight(.regular)
                 }
             }
             .foregroundStyle(DS.textPrimary)
@@ -533,21 +482,23 @@ struct MoveDeckTile<Face: View>: View {
                     // ring (user, 2026-11-19: "redline should go under badge").
                     .background(Circle().strokeBorder(DS.pickInk, lineWidth: 2).opacity(picked ? 1 : 0))
                     .accessibilityHidden(true)
+                // **ONE CAPTION SIZE UNDER EVERY FACE (prd §1916):** 15, the
+                // size at which "Coinbase" fits its column, so no name is
+                // shrunk to fit while its neighbour is not.
                 Text(verbatim: title)
-                    .dsText(.label12)
+                    .dsText(.fact15)
                     .foregroundStyle(picked ? DS.pickInk : titleInk)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.8)
                     // Wraps inside its own column, never into a neighbour's.
                     .frame(width: DSHomeCircleMetrics.column)
                     .fixedSize(horizontal: false, vertical: true)
                 if let sub {
                     Text(verbatim: sub)
-                        .dsText(.label12)
+                        .dsText(.fact15)
                         .foregroundStyle(subInk)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .minimumScaleFactor(0.9)
                 }
             }
             .frame(width: DSHomeCircleMetrics.column + DS.Space.s3)
@@ -604,41 +555,33 @@ struct MoveTokenGrid: View {
 
     var body: some View {
         let shown = places.filter { !$0.choices.isEmpty }
-        let networks = Set(shown.flatMap { $0.choices.map(\.network) })
-        // One place on one network needs no titles: the sentence says both.
-        let titled = shown.count > 1 || networks.count > 1
+        // **NO NETWORK TITLES (prd §1916):** a face's badge says its network,
+        // so a place is one grid in the order its caller gives (by worth).
+        // A place's title only where there are two places.
+        let titled = shown.count > 1
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(shown) { place in
+            ForEach(Array(shown.enumerated()), id: \.element.id) { n, place in
                 if titled, let title = place.title {
                     Text(verbatim: title)
                         .dsText(.heading17)
                         .foregroundStyle(place.ink)
-                        .frame(minHeight: 36, alignment: .bottomLeading)
+                        .padding(.top, n == 0 ? 0 : DS.Space.s4)
+                        .frame(minHeight: DS.Hit.min, alignment: .bottomLeading)
                         .accessibilityAddTraits(.isHeader)
                 }
-                if let rule = place.rule { networkTitle(rule, ink: place.ink) }
-                let nets = place.choices.reduce(into: [String]()) { if !$0.contains($1.network) { $0.append($1.network) } }
-                ForEach(nets, id: \.self) { net in
-                    // A place's rule already names its one network.
-                    if titled, place.rule == nil || nets.count > 1 { networkTitle(net, ink: DS.textSecondary) }
-                    MoveDeckGrid {
-                        ForEach(place.choices.filter { $0.network == net }) { c in
-                            MoveDeckTile(title: c.symbol, sub: c.sub, subInk: c.subInk, picked: c.picked, dim: c.dim, act: c.act) {
-                                MoveRowMark(token: c.symbol, network: c.badge, size: DSHomeCircleMetrics.face)
-                            }
-                            .accessibilityLabel(Text("\(c.symbol) on \(c.network)"))
+                if let rule = place.rule {
+                    Text(verbatim: rule).dsText(.body17).foregroundStyle(place.ink.opacity(0.75))
+                }
+                MoveDeckGrid {
+                    ForEach(place.choices) { c in
+                        MoveDeckTile(title: c.symbol, sub: c.sub, subInk: c.subInk, picked: c.picked, dim: c.dim, act: c.act) {
+                            MoveRowMark(token: c.symbol, network: c.badge, size: DSHomeCircleMetrics.face)
                         }
+                        .accessibilityLabel(Text("\(c.symbol) on \(c.network)"))
                     }
                 }
             }
         }
-    }
-
-    private func networkTitle(_ text: String, ink: Color) -> some View {
-        Text(verbatim: text)
-            .dsText(.label12)
-            .foregroundStyle(ink)
-            .frame(minHeight: 32, alignment: .bottomLeading)
     }
 }
 
@@ -648,10 +591,10 @@ struct MoveDeckGrid<Content: View>: View {
 
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0, alignment: .top), count: 5),
-                  alignment: .leading, spacing: DS.Space.s3) {
+                  alignment: .leading, spacing: DS.Space.s4) {
             content()
         }
-        .padding(.vertical, DS.Space.s2)
+        .padding(.vertical, DS.Space.s3)
     }
 }
 

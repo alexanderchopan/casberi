@@ -74592,3 +74592,29 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: Swap opening on its first Token, Token ⇄ Token, the flip turning ETH→USDC into USDC→ETH, the taller keys, the receipt in the deck at ready.
+
+## §1915 — Swap's flip is a pick, never a button (amends §1913's flip disc) (user, 2026-11-19, of the ⇄ between Token and Token: "the swap icon looks weird in between token and token. perhaps we don't need it or it shouldn't be pink but white", then "drop it") — BUILT
+
+**Ruling.** No control stands between a swap's two Token steps. While the swap can turn round (`flipHeld`: the token bought is yours to sell on the same network), the second Token list keeps the token you sell, and picking it turns the swap round (`flipSides`); otherwise that token stays hidden there, as before. A button in the steps' row read as a second "you are here" and broke the row.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: ETH for USDC, the second Token list showing ETH, a tap turning it to USDC for ETH.
+
+## §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receipt in words (amends §1897 item 2, §1898 items 2 and 6, §1904 item 1, §1910, §1914, §1892) (user, 2026-11-19, after walking every Move screen: "line spacing, font sizes, we can make it more friendly it all still feels like its vibecoded and difficult and sometimes too much space sometimes not enough", "how on gods name do we need six sizes", of the step titles "i like C" and, against a pill per step, segments; "do you think we need to say which networks … if we already have badges?", "the 20 half all on swap looks weird", "'test run' … if simulated we need to say that", "don't know what 'people' means … they aren't all 'people'", "number pad too high", "inconsistent spacing", then "Build the redesign") — BUILT
+
+**Ruling.** Move's deck is drawn from three sizes: the sentence and the keys at the sentence's rung, the act at `heading20`, everything else at 17 (tile captions at 15, the one size at which every name fits its column), and one rhythm: 16 under the steps (`MoveDeck.stepsGap`), every row 48 (`MoveSentence.factHeight`), Receive's rows 64.
+
+1. **Steps are segments on a track** (`MoveDeckSteps`): equal widths, the open one on `fillStrong` gliding, answered white, still to answer grey. A pill per step was declined: the kind chips over it are pills.
+2. **One token grid per place, by worth** (`MoveTokenGrid`): no network titles, the face's badge says the network.
+3. **The amount's line stands over its keys, in the deck** (`unitLine`): the other unit with its flip, then "You have $X" with **Use all**. Send's and Swap's sums row is deleted; Earn's Half · All too, its "You have" row carrying Use all (`MoveFactRow.act`). Buy keeps its card sums. The keys are 64pt at most and stand at the deck's foot.
+4. **The receipt reads in words** (`MoveDetails`): To is the name and its tail; From, the nonce and the whole address are Raw transaction's (`MoveRawPage(to:from:)`); the simulation is "Simulated · Succeeds", "Would fail" or "Not simulated", never "Returns at least" under "You get at least".
+5. **To is one scroll** (`toList`): Recent, Contacts, Yours, each titled at 17; the group words are deleted (`MoveDeckGroups`). Your private balance wears a grey lock, never a red crossed eye, here and on Receive.
+6. **Receive's rows are one height**, each glyph on a quiet disc; the private balance's line is "New address each time"; the two ways in are white.
+7. **Fixes from the walk:** the foot asks what the open step asks (`footAsk`); Buy's tokens open their missing step; Buy's and Sweep's facts (Sold by, Arrives in, what is swept) are the deck's receipt, never under the sentence; "everything" and "a network" in lower case; Earn says "an amount of USDC" before a figure.
+
+**Kept:** "from your public account" stays in Send's sentence (§1904 item 8); the mock had dropped it.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: Send (Token, To, Amount, ready), Swap's flip by pick, Sweep's network step, Buy's tokens on Amount, Receive.

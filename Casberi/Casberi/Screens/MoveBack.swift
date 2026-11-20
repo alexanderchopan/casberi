@@ -201,13 +201,29 @@ struct MoveFactRow: View {
     /// In the rows' column under a sentence still drawn with them; the
     /// Deck's facts stand at the page's edge (prd §1897 item 1).
     var indented = true
+    /// A word that acts on the fact, in the figure's place ("Use all",
+    /// prd §1916).
+    var act: (word: String, run: () -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(verbatim: name).dsText(.body17).foregroundStyle(nameInk)
                 .fixedSize(horizontal: false, vertical: true)
+            if let value, act != nil {
+                Text(verbatim: value).dsText(.body17).foregroundStyle(nameInk).monospacedDigit().lineLimit(1)
+            }
             Spacer(minLength: DS.Space.s2)
-            if let value {
+            if let act {
+                Button {
+                    act.run()
+                    DSHaptic.snap()
+                } label: {
+                    Text(verbatim: act.word).dsText(.heading17).foregroundStyle(DS.pickInk)
+                        .frame(minHeight: DS.Hit.min)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+            } else if let value {
                 Text(verbatim: value).dsText(.body17).foregroundStyle(valueInk)
                     .monospacedDigit()
                     .lineLimit(1)

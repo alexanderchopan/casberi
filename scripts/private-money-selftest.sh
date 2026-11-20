@@ -1317,14 +1317,14 @@ for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
     ! grep -q 'MoveListBack' "Casberi/Casberi/Screens/$f.swift" || { echo "✗ $f opens a list in the page again (prd §1784)"; exit 1; }
 done
 use "$SENT" 'guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }' "the list that opens by itself is not the first still to be filled (prd §1782)"
-use "$SENT" 'tapBlank(next == .amount && with == nil ? .with : next)' "Amount is asked before its token (prd §1782)"
+use "$SENT" 'tapBlank(next == .amount && with == nil && verb != .deposit ? .with : next)' "Amount is asked before its token (prd §1782; Buy's tokens pick their coin apart, §1916)"
 ! grep -q 'recentAmounts\|rememberAmounts' "$SENT" || { echo "✗ Pay again is back in To (prd §1782: declined)"; exit 1; }
 use "$SENT" 'tapBlank(which == .destination && !networkPicked ? .network : which)' "a choice row no longer opens the list its word opens (prd §1779)"
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
 use "$SENT" 'receivePlace(String(localized: "Your private balance")' "Receive's private door is hidden again (prd §1779, §1803)"
 use "$SENT" 'receivePlace(String(localized: "Your private account"), ink: DS.aztecInk, mark: "brand-aztec",' "Receive's Aztec door is hidden again (prd §1779)"
-use "$SENT" 'fact: String(localized: "Base, Ethereum, or Robinhood only, new address each time"), place: "fresh",' "Receive's private balance no longer says its address is new each time (prd §1892)"
+use "$SENT" 'fact: String(localized: "New address each time"), place: "fresh",' "Receive's private balance no longer says its address is new each time (prd §1892, one line since §1916)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let entry, let payGas, waitsForGas(entry), !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779), or Pay the gas stands where no account can pay (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'case .failed: entry.symbol != nil && shortOfGas' "a failed token move short of gas has no way on (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let pinned = chrome.moveFreshEntry, let held = book.entries.first(where: { $0.id == pinned }) { return held }' "Receive no longer opens on the address the money is at (prd §1823)"

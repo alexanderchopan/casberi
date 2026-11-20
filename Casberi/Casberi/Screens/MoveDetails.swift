@@ -31,7 +31,8 @@ struct MoveDetails: View {
         VStack(alignment: .leading, spacing: 0) {
             if let preview {
                 if swap { swapRows(preview) } else { sendRows(preview) }
-                row(String(localized: "Nonce"), preview.nonce.map { String($0) } ?? String(localized: "Not read"))
+                // The nonce, the whole address and who sends are Raw
+                // transaction's (prd §1916): the receipt reads in words.
                 checkedRow(preview)
                 foundRows
                 if preview.hash != nil {
@@ -45,27 +46,21 @@ struct MoveDetails: View {
                 .walletRowPitch()
             }
         }
-        .padding(.top, DS.Space.s2)
+        // No air of its own: in the deck it continues the receipt's rows at
+        // their one pitch (prd §1916).
         .transition(.opacity)
     }
 
     // MARK: - A send
 
     @ViewBuilder private func sendRows(_ p: YourAccountChain.Preview) -> some View {
+        // **TO IS A NAME AND A TAIL (prd §1916, user, 2026-11-19, of the
+        // receipt's 42 characters):** the whole address, checksummed, is Raw
+        // transaction's, where it is copied.
         ForEach(to, id: \.self) { address in
-            // The whole address, checksummed: the sentence shows the name.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text("To").dsText(.body17).foregroundStyle(DS.textSecondary)
-                Text(verbatim: EIP55.checksum(address))
-                    .dsText(.mono17)
-                    .foregroundStyle(DS.textPrimary)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .walletRowPitch()
+            let name = AddressBook.shared.entry(for: address)?.name
+            row(String(localized: "To"), [name, AddressTail.short(address)].compactMap { $0 }.joined(separator: " "))
         }
-        row(String(localized: "From"), String(localized: "Your account \(YourAccount.short(account))"))
         // A round-up bought on the exchanges with the send (prd §1545): where,
         // its pool fee, and the exact approval it makes, as a swap's are.
         ForEach(Array(exchanges(p).enumerated()), id: \.offset) { _, words in
@@ -151,19 +146,15 @@ struct MoveDetails: View {
     private func checkedRow(_ p: YourAccountChain.Preview) -> some View {
         switch p.checked {
         case .lands:
-            return row(String(localized: "Test run"), String(localized: "Goes through"), ink: DS.confirmInk)
-        // A swap to another network (prd §1555): what a swap first pays on
-        // this network is a step, not what you get; "You get at least" says that.
-        case .returnsAtLeast where p.sold.contains { $0.across != nil }:
-            return row(String(localized: "Test run"), String(localized: "Goes through"), ink: DS.confirmInk)
-        case .returnsAtLeast(let units, let token):
-            return row(String(localized: "Test run"),
-                       String(localized: "Returns at least \(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)"),
-                       ink: DS.confirmInk)
+            return row(String(localized: "Simulated"), String(localized: "Succeeds"), ink: DS.confirmInk)
+        // **SAID ONCE (prd §1916):** what it returns at least is the row
+        // above, "You get at least"; the simulation says it succeeds.
+        case .returnsAtLeast:
+            return row(String(localized: "Simulated"), String(localized: "Succeeds"), ink: DS.confirmInk)
         case .fails:
-            return row(String(localized: "Test run"), String(localized: "Would fail"), ink: DS.destructiveInk)
+            return row(String(localized: "Simulated"), String(localized: "Would fail"), ink: DS.destructiveInk)
         case .notChecked:
-            return row(String(localized: "Test run"), String(localized: "Not run"))
+            return row(String(localized: "Simulated"), String(localized: "Not simulated"))
         }
     }
 
@@ -190,14 +181,14 @@ struct MoveDetails: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Checked with").dsText(.body17).foregroundStyle(DS.textSecondary)
                         ForEach(checkedWith, id: \.self) { line in
-                            Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            Text(verbatim: line).dsText(.body17).foregroundStyle(DS.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .walletRowPitch()
+            .padding(.vertical, DS.Space.s3)
         }
     }
 
@@ -216,7 +207,8 @@ struct MoveDetails: View {
                 .multilineTextAlignment(.trailing)
             .fixedSize(horizontal: false, vertical: true)
         }
-        .walletRowPitch()
+        // **EVERY ROW 48 (prd §1916):** the deck's one row height.
+        .frame(minHeight: MoveSentence.factHeight)
         .accessibilityElement(children: .combine)
     }
 }
@@ -231,6 +223,8 @@ struct MoveDetails: View {
 /// a Safe transaction the co-signer is asked for (prd §1514).
 struct RawTransaction: Equatable {
     let words: [YourAccountPreview.Step]
+    /// The account's nonce, which the receipt no longer shows (prd §1916).
+    var nonce: UInt64? = nil
     let hash: [UInt8]
     let hashKind: YourAccountPreview.HashKind
     let callData: [UInt8]
@@ -238,7 +232,7 @@ struct RawTransaction: Equatable {
 
 extension YourAccountChain.Preview {
     var raw: RawTransaction? {
-        hash.map { RawTransaction(words: words, hash: $0, hashKind: hashKind, callData: callData) }
+        hash.map { RawTransaction(words: words, nonce: nonce, hash: $0, hashKind: hashKind, callData: callData) }
     }
 }
 
@@ -248,6 +242,10 @@ struct MoveRawPage: View {
     /// Move's page draws its title, the way back; the Safe's sign block
     /// opens it in place and has none.
     var onBack: (() -> Void)? = nil
+    /// Who it goes to, whole and checksummed, and who sends it: the
+    /// receipt says a name and a tail (prd §1916).
+    var to: [String] = []
+    var from: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -259,6 +257,26 @@ struct MoveRawPage: View {
             }
             if let p = raw {
                 let hash = p.hash
+                ForEach(to, id: \.self) { address in
+                    section(String(localized: "To")) {
+                        Text(verbatim: EIP55.checksum(address))
+                            .dsText(.mono17)
+                            .foregroundStyle(DS.textPrimary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                        DSCopyRow(value: EIP55.checksum(address), label: "Copy address", sensitive: false)
+                    }
+                }
+                if from != nil || p.nonce != nil {
+                    section(String(localized: "From")) {
+                        if let from {
+                            Text("Your account \(YourAccount.short(from))").dsText(.body17).foregroundStyle(DS.textPrimary)
+                        }
+                        if let nonce = p.nonce {
+                            Text("Nonce \(nonce)").dsText(.body17).foregroundStyle(DS.textSecondary)
+                        }
+                    }
+                }
                 section(String(localized: "What it does")) {
                     ForEach(Array(p.words.enumerated()), id: \.offset) { n, step in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
