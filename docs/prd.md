@@ -74619,14 +74619,14 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 
 **Seen** on an iPhone 17 Pro simulator: Send (Token, To, Amount, ready), Swap's flip by pick, Sweep's network step, Buy's tokens on Amount, Receive.
 
-## §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on §1917 (user, 2026-11-20: "how can we make our aztec experience 'easier' i always feel confused how i put money into it", of the canvas "Aztec: add money": "i like all yours do it") — BUILT IN PART
+## §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round (user, 2026-11-20: "how can we make our aztec experience 'easier' i always feel confused how i put money into it", of the canvas "Aztec: add money": "i like all yours do it") — BUILT IN PART
 
 **Ruling.** A move-in to your private account on Aztec says, before the hold, how many times your co-signer's wallet will ask: one fixed row, **Co-signer · Signs N times**, after Network (`AztecMove.coSignerAsks`). N counts Shield's sign-in (none while one stands, `ShieldBridge.signedIn`), the portal's approval (none when the co-signer already lets the portal take this much, read once per sentence), the deposit, and the hand-over when your account sends with both keys (`knownThreshold ≥ 2`). Face ID is every move's and goes unsaid. Before this, the asks came one by one after the hold, and nothing said there would be three.
 
-**Coordinated with §1917** (the Move round in another session): its After track takes each verb's own stages (`MoveStageTrack(segments:)`), its token rows are Home's (`TokenRowLabel`). The canvas's "under way" board is dropped for that track; its "steps said first" board is this row.
+**Coordinated with the Move round** (another session, its ruling not yet in the ledger): its After track takes each verb's own stages (`MoveStageTrack(segments:)`), its token rows are Home's (`TokenRowLabel`). The canvas's "under way" board is dropped for that track; its "steps said first" board is this row.
 
 **Not yet, and why:**
-1. **Add money on Receive's own list** (one level above the Aztec page, which already has "Add money from Ethereum", §1779): it lives in `MoveSentence`, which §1917 is still changing. Next, once §1917 lands.
+1. **Add money on Receive's own list** (one level above the Aztec page, which already has "Add money from Ethereum", §1779): it lives in `MoveSentence`, which the Move round is still changing. Next, once it lands.
 2. **From another network** (USDC on Base, moved to Ethereum by Across, then Shield, one flow): the co-signer's two sends need ETH on Ethereum, which your account hands over (`coSignerGas`). Money only on Base has none there, so the flow needs ETH carried too, or a second crossing. Unbuilt until that is settled.
 3. **No co-signer, up to $100** (a key on this iPhone passes the deposit through Shield's screening tier). Measured 2026-11-20, read-only: Shield's `l1-eligibility` calls two freshly made addresses `eligible: true`, `method: null`, score 0, tiers `screeningUsd: 100`. Not measured: whether Shield's sign-in and limit are granted to such an address, and whether its portal then takes the deposit. That needs a sign-in with a throwaway key, which waits on the user's yes.
 

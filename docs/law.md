@@ -2359,7 +2359,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amended by §1916)
 - §1915 — Swap's flip is a pick, never a button
 - §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip…
-- §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on §1917
+- §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round
 
 ## Dead rulings → what replaced them (generated)
 
