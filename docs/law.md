@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2106 of 2180 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2107 of 2181 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2165,7 +2165,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1724 — Receive into Railgun: a fresh address paid any listed token but ETH and USDC moves it into your Railgun private balan…
 - §1725 — Railgun's broadcaster relays are reached through Tor on the phone, one circuit, Tor up before Waku dials, never direc…
 - §1726 — When no broadcaster can carry a Railgun send, a fresh sender does: a new address of yours, its gas a relayed withdraw… (amended by §1877, §1894)
-- §1727 — Your private balance on Ethereum takes any amount of a Railgun token, typed, from $10 worth; the line says the minimu…
+- §1727 — Your private balance on Ethereum takes any amount of a Railgun token, typed, from $10 worth; the line says the minimu… (amended by §1926)
 - §1728 — Railgun's Move says dollars: the amount in dollars with the floor beside it and $10 · Half · All, under the floor you… (amended by §1885)
 - §1729 — Needs you, Permissions and Threats stand on Wallet Home while empty: Needs you at 0, Permissions "None", Threats "Uns…
 - §1730 — Railgun's sends show their steps in Move's foot with Aztec's rows: a move-in Checking · Signing · Sent on Ethereum, a…
@@ -2368,7 +2368,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1922 — Into Aztec, this iPhone first: the co-signer only past $100 a day
 - §1923 — Send's To is rows, the token's row, with Yours first
 - §1924 — "Aztec to Aztec only" is the address's rule, not the account's
-- §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs
+- §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
+- §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 
 ## Dead rulings → what replaced them (generated)
 

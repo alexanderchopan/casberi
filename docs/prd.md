@@ -74761,3 +74761,12 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator (`-aztecWayInSample key`): Amount → the keys, "2 | USDC" over Half · All.
+
+## §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys (amends §1727's decimal pad, §1925 item 1's figure over the keys) (user, 2026-11-20: "how is it we have our own keyboard elsewhere but not on send!") — BUILT
+
+1. **Railgun** (`MoveRailgunPrivate`): Amount goes straight to `MoveKeypad`, $10 · Half · All its top row (`chipWord`), the token's places at most (six); the iPhone's decimal pad is gone (`railgun-selftest.sh` fails it back).
+2. **One figure, in its row.** The rows scroll the Amount row to the keys' edge while it is typed (`ScrollViewReader`, `scrollTo("amount", anchor: .bottom)`), Aztec's and Railgun's alike; §1925's figure over the keys is deleted (Railgun's fewer rows showed the figure twice).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: Aztec's move-in ("20" with Aztec's caret over Half · All) and Railgun's ("25" over $10 · Half · All).

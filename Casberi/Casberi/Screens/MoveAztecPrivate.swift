@@ -697,6 +697,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     var body: some View {
         ScrollView {
+            ScrollViewReader { scroller in
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
                 // (prd §1794, §1801):** as Move's own verbs.
@@ -740,6 +741,13 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             // Scrolled to the end, the last row clears the foot's fade.
             .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            // The keys come up from the foot: the Amount row is brought to
+            // their edge, so its figure is seen while typed (prd §1925).
+            .onChange(of: typing) { _, now in
+                guard now else { return }
+                withAnimation(DS.Motion.standard) { scroller.scrollTo("amount", anchor: .bottom) }
+            }
+            }
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -1241,23 +1249,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 PrivateWarmingRow(since: since)
                     .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
-            } else if typing, move.stage == .ready {
-                // The figure being typed stands over its keys (prd §1925),
-                // as Send's does: the rows above sit under the keypad.
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(verbatim: move.amount.isEmpty ? "0" : move.amount)
-                        .dsText(MoveChoiceRowLabel.figureRung)
-                        .monospacedDigit()
-                        .foregroundStyle(move.amount.isEmpty ? DS.textTertiary : DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                    Capsule().fill(DS.aztecInk).frame(width: 3, height: 40).accessibilityHidden(true)
-                    Text(verbatim: move.symbol).dsText(.heading24).foregroundStyle(DS.textSecondary)
-                    Spacer(minLength: 0)
-                }
-                .padding(.bottom, DS.Space.s1)
-                .accessibilityElement(children: .combine)
-                .transition(.opacity)
             } else if move.stage == .ready, move.amountOK {
                 PrivateCostNote(cost: move.cost, tail: move.costTail, fallback: readyLine)
                     .frame(maxWidth: .infinity, alignment: .leading)

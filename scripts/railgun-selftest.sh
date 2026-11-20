@@ -108,7 +108,9 @@ use "$SENT" 'move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." 
 use "$SENT" 'case .takeBack where toSomeoneElse:' "a send to someone else is the broadcaster's path, before taking back"
 # §1727: the amount is typed, the $10 floor holds on what is typed, and
 # nothing moves on an amount the line objects to.
-use "$SENT" '.keyboardType(.decimalPad)' "the amount is typed on the decimal pad"
+# §1926: typed on Move's own keypad, never the iPhone's decimal pad.
+use "$SENT" 'MoveKeypad(text: $move.amount,' "the amount is not typed on Move's own keypad (prd §1926)"
+! grep -q '.keyboardType(.decimalPad)' "$SENT" || { echo "  ✗ the iPhone's decimal pad is back on Railgun's sentence (prd §1926)"; exit 1; }
 use "$SENT" 'if mode == .deposit, !RailgunRouting.meetsFloor(units: units, decimals: h.decimals, price: h.price, floorUSD: Self.floorUSD) {' "a typed amount under \$10 worth does not move in"
 use "$SENT" 'guard let picked, amountOK, !DemoMode.isActive else { return }' "nothing runs on an amount the line objects to"
 use "$SENT" 'move.stage == .ready && move.amountOK && !DemoMode.isActive' "Send waits on a clear amount"

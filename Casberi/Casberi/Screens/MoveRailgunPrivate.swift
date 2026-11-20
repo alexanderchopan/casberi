@@ -930,13 +930,15 @@ struct MoveRailgunSentence<Head: View>: View {
     @State private var buyOpen = false
     /// The cost's list stands in the rows' place (prd §1876).
     @State private var costOpen = false
-    @FocusState private var typing: Bool
+    /// The amount is being typed on Move's own keypad (prd §1926).
+    @State private var typing = false
     /// The note to a private address is being written (prd §1877).
     @FocusState private var writing: Bool
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
         ScrollView {
+            ScrollViewReader { scroller in
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // **THE VERB IS THE TITLE, THE SENTENCE IS OVER THE BUTTON
                 // (prd §1794, §1801):** as Move's own verbs.
@@ -961,6 +963,13 @@ struct MoveRailgunSentence<Head: View>: View {
             // Scrolled to the end, the last row clears the foot's fade.
             .padding(.bottom, MoveSentence.footFade)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            // The keys come up from the foot: the Amount row is brought to
+            // their edge, so its figure is seen while typed (prd §1925).
+            .onChange(of: typing) { _, now in
+                guard now else { return }
+                withAnimation(DS.Motion.standard) { scroller.scrollTo("amount", anchor: .bottom) }
+            }
+            }
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { foot }
@@ -1262,7 +1271,8 @@ struct MoveRailgunSentence<Head: View>: View {
         // Its sums are a menu, and any other is typed in the row (prd §1802).
         rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
                                   field: AnyView(amountField), typing: typing, figure: true) {
-            withAnimation(DS.Motion.standard) { open = false; buyOpen = false; amountOpen.toggle() }
+            // Straight to the keys, the sums their top row (prd §1926).
+            withAnimation(DS.Motion.standard) { open = false; buyOpen = false; amountOpen = false; typing = true }
         })
         // A note only they can read, to a private address (prd §1877).
         if move.toPrivate {
@@ -1336,18 +1346,27 @@ struct MoveRailgunSentence<Head: View>: View {
     /// The amount, typed (prd §1727): the decimal pad, the token's places at
     /// most, the figure in the sentence's own rung — as Aztec's (§1700q).
     private var amountField: some View {
-        TextField(text: $move.amount,
-                  prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
-            .keyboardType(.decimalPad)
-            .focused($typing)
-            // The figure is the row while it is typed (prd §1892).
-            .dsText(MoveChoiceRowLabel.figureRung)
-            .monospacedDigit()
-            .multilineTextAlignment(.leading)
-            .foregroundStyle(DS.textPrimary)
-            .tint(DS.pickInk)
-            .fixedSize()
+        // **MOVE'S OWN KEYPAD (prd §1926, as Aztec's §1925).** The row shows
+        // the figure and a caret; the keys stand in the foot.
+        Button {
+            withAnimation(DS.Motion.standard) { open = false; amountOpen = false; buyOpen = false; typing = true }
+        } label: {
+            HStack(spacing: 2) {
+                Text(verbatim: move.amount.isEmpty ? "0" : move.amount)
+                    .dsText(MoveChoiceRowLabel.figureRung)
+                    .monospacedDigit()
+                    .foregroundStyle(move.amount.isEmpty ? DS.textTertiary : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                if typing {
+                    Capsule().fill(DS.pickInk).frame(width: 3, height: 44).accessibilityHidden(true)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
         .accessibilityLabel(Text("Amount"))
+        .accessibilityValue(Text(verbatim: move.amount.isEmpty ? "0" : move.amount))
         .onChange(of: move.amount) { _, now in
             if open, typing { open = false }
             let places = move.holding?.decimals ?? 18
@@ -1467,7 +1486,19 @@ struct MoveRailgunSentence<Head: View>: View {
                     }
                 }
             }
-            if move.stage != .reading, move.stage != .nothing, !isDone { credit }
+            if typing, move.stage == .ready {
+                MoveKeypad(text: $move.amount,
+                           presets: RailgunMove.Pick.allCases.compactMap { p in
+                               move.amount(for: p).map { value in
+                                   MoveKeypadPreset(id: "\(p)",
+                                                    title: chipWord(p),
+                                                    picked: move.amount == value) { move.amount = value }
+                               }
+                           },
+                           places: min(move.holding?.decimals ?? 6, 6))
+                    .padding(.top, DS.Space.s2)
+                    .transition(.opacity)
+            } else if move.stage != .reading, move.stage != .nothing, !isDone { credit }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)
