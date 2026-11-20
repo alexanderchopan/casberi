@@ -21,6 +21,12 @@ extension ShieldBridge {
 
     @MainActor private static var session: (account: String, token: String, until: Date)?
 
+    /// Whether a sign-in for `account` still stands, so none is asked (prd §1918).
+    @MainActor static func signedIn(_ account: String) -> Bool {
+        guard let s = session else { return false }
+        return s.account.lowercased() == account.lowercased() && s.until > .now
+    }
+
     /// A session token for `account`, signing in (Face ID) when there is none.
     /// `coSigner`: `account` is your co-signer, whose own wallet signs the
     /// sign-in through the Signer sheet (prd §1720) — the wallet Shield
@@ -202,7 +208,7 @@ extension ShieldBridge {
     }
 
     /// `owner`'s ERC-20 allowance to `spender`, base units, or "0".
-    private static func allowance(of token: String, owner: String, spender: String) async -> String {
+    static func allowance(of token: String, owner: String, spender: String) async -> String {
         guard let o = word(hex: owner), let s = word(hex: spender),
               let answer = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_call",
                                                            [["to": token, "data": "0xdd62ed3e" + o + s], "latest"]) as? String

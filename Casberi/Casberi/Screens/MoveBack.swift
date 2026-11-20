@@ -179,6 +179,7 @@ struct MoveChoiceRowLabel: View {
         case String(localized: "Amount"): "dollarsign"
         case String(localized: "Token"): "circle.circle"
         case String(localized: "When"): "clock"
+        case String(localized: "Co-signer"): "person.2"
         default: "circle.dotted"
         }
     }

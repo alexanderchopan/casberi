@@ -185399,6 +185399,34 @@
         }
       }
     },
+    "Signs %lld times" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma %lld veces"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld回署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld번 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名 %lld 次"
+          }
+        }
+      }
+    },
     "Signs behind Face ID. It can never execute." : {
       "localizations" : {
         "es" : {
@@ -185619,6 +185647,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 %1$@ 上签名 · %2$@ 上由你的另一台设备签名"
+          }
+        }
+      }
+    },
+    "Signs once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma una vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1回署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한 번 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名一次"
           }
         }
       }

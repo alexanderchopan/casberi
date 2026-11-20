@@ -99,6 +99,25 @@ final class AztecMove {
     /// in names them as steps when Shield says no (prd §1820).
     private(set) var coSigner: String?
     private(set) var coSignerScore: Int?
+    /// What the co-signer already lets Shield's portal take, by symbol, and
+    /// whether your account sends with both keys: the asks it will make,
+    /// counted before the hold (prd §1918).
+    private(set) var coSignerAllowance: [String: Decimal] = [:]
+    private(set) var bothKeys = false
+
+    /// **THE STEPS, SAID BEFORE THE HOLD (prd §1918, user: "i always feel
+    /// confused how i put money into it").** How many times your co-signer's
+    /// wallet will ask: Shield's sign-in (unless one stands), the portal's
+    /// approval (unless it already may take this much), the deposit, and the
+    /// hand-over when your account sends with both keys. Nil until read.
+    var coSignerAsks: Int? {
+        guard mode == .deposit, let via = viaCoSigner, let units, let wanted = Decimal(string: units) else { return nil }
+        var asks = 1
+        if !ShieldBridge.signedIn(via) { asks += 1 }
+        if (coSignerAllowance[symbol] ?? 0) < wanted { asks += 1 }
+        if bothKeys { asks += 1 }
+        return asks
+    }
 
     // MARK: - In dollars (prd §1700y, as Railgun's §1728)
 
@@ -382,6 +401,8 @@ final class AztecMove {
             prices = ["USDC": 1, "WETH": 3000, "AZTEC": 0.0124]
             feePerL2Gas = 2_186_613_113_685
             gasPriceWei = 400_000_000
+            // The steps' row counts a co-signer's asks (prd §1918); made up.
+            if mode == .deposit { viaCoSigner = "0x0000000000000000000000000000000000002725" }
             stage = .ready
             return
         }
@@ -409,6 +430,8 @@ final class AztecMove {
             viaCoSigner = nil
             coSigner = nil
             coSignerScore = nil
+            coSignerAllowance = [:]
+            bothKeys = false
             if !standing.sanctioned,
                let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, safe).first {
                 // Remembered short of the score too: the way in names it (prd §1820).
@@ -418,6 +441,11 @@ final class AztecMove {
                     if theirs.eligible, !theirs.sanctioned {
                         viaCoSigner = found
                         standing = theirs
+                        for asset in ShieldBridge.assets {
+                            coSignerAllowance[asset.symbol] = Decimal(string: await ShieldBridge.allowance(
+                                of: asset.ethToken, owner: found, spender: asset.portal)) ?? 0
+                        }
+                        bothKeys = ((try? await YourAccountChain.knownThreshold(YourAccountOp.ethereum, safe)) ?? 1) >= 2
                         for asset in ShieldBridge.assets {
                             let more = Decimal(string: await Self.balance(of: asset.ethToken, at: found)) ?? 0
                             held[asset.symbol] = NSDecimalNumber(decimal: (Decimal(string: held[asset.symbol] ?? "0") ?? 0) + more).stringValue
@@ -947,6 +975,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         rows.append(MoveChoiceRow(id: "network", name: String(localized: "Network"),
                                   value: move.mode == .deposit ? String(localized: "Ethereum to Aztec") : String(localized: "Aztec"),
                                   fixed: true) {})
+        // How often your co-signer's wallet asks, counted before the hold
+        // (prd §1918); Face ID is every move's, so it goes unsaid.
+        if let asks = move.coSignerAsks {
+            rows.append(MoveChoiceRow(id: "cosigner", name: String(localized: "Co-signer"),
+                                      value: asks == 1 ? String(localized: "Signs once")
+                                                       : String(localized: "Signs \(asks) times"),
+                                      fixed: true) {})
+        }
         // The token before its amount (prd §1789).
         rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
         // Its sums are a menu, and any other is typed in the row (prd §1802).
