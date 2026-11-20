@@ -39,7 +39,7 @@ MARK_HOME = "MoveBack.swift"
 
 ALLOWED = {
     "MoveSentence.swift": {
-        "tile": (2, "personTile and merchantTile draw a NAME's lettered mark when a person or a shop has no face; neither is a token"),
+        "tile": (1, "merchantTile draws a NAME's lettered mark when a shop has no face; it is not a token"),
     },
     "MovePrivate.swift": {
         "row": (1, "`amounts` lists SUMS of a token (0.01 ETH, 10 USDC): an amount row, not a token pick"),

@@ -5662,6 +5662,7 @@ struct MoveSentence: View {
                          mark: String? = nil, on net: Op.Network? = nil, image: String? = nil, brand: String? = nil,
                          remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
                          picked: Bool = false, bareSymbol: Bool = false, rung: DSTextStyle = MoveSentence.choiceRung,
+                         home: Bool = false, titleInk: Color = DS.textPrimary,
                          act: @escaping () -> Void) -> some View {
         // A choice is a word a step under the sentence (prd §1681): the
         // mark, the word and its line under it, the figure trailing. The current
@@ -5674,7 +5675,9 @@ struct MoveSentence: View {
             // an open list's words start where the row's answer does.
             // **ONE ROW FOR EVERY LIST (prd §1899 item 1):** a 30pt lead in
             // its column, the name over a grey line, the figure trailing.
-            HStack(spacing: MoveDeck.leadGap) {
+            // `home`: the token row's pitch, gap and rungs (`TokenRowLabel`),
+            // so To's rows are the Token step's (prd §1923).
+            HStack(spacing: home ? DSRoomChassis.headGap : MoveDeck.leadGap) {
                 if hasLead { Group {
                 if let face {
                     // A person: the face the Wallet draws for that address
@@ -5720,15 +5723,16 @@ struct MoveSentence: View {
                     MoveRowMark(token: mark, network: net.flatMap { Self.networkMark($0) }, size: Self.listMark)
                 }
                 }.frame(width: MoveDeck.lead) }
-                VStack(alignment: .leading, spacing: 0) {
-                    // A long name wraps at its size (prd §1805); the pick
-                    // wears the pick's ink (prd §1897 item 3).
-                    Text(verbatim: title).dsText(rung)
-                        .foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
-                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: home ? 2 : 0) {
+                    // A long name wraps at its size (prd §1805), on one line
+                    // in a token's row (prd §1923); the pick wears the pick's
+                    // ink (prd §1897 item 3).
+                    Text(verbatim: title).dsText(home ? .body17 : rung)
+                        .foregroundStyle(picked ? DS.pickInk : titleInk)
+                        .lineLimit(home ? 1 : 2).fixedSize(horizontal: false, vertical: true)
                     if let sub {
                         // A private place's rule stays whole (prd §1898 item 4).
-                        Text(verbatim: sub).dsText(.fact15)
+                        Text(verbatim: sub).dsText(home ? .subhead12 : .fact15)
                             .foregroundStyle(sub == Self.aztecRule ? DS.aztecInk : DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -5743,23 +5747,24 @@ struct MoveSentence: View {
                 }
             }
             .accessibilityAddTraits(picked ? [.isSelected] : [])
-            .frame(minHeight: Self.listRowHeight)
+            .frame(minHeight: home ? DSFeed.headHeight : Self.listRowHeight)
             .contentShape(Rectangle())
             .opacity(dim ? 0.4 : 1)
         }
         .buttonStyle(RowPress())
     }
 
-    /// A person, a company or a tag at Home's app-icon size (prd §1904 item
-    /// 11): their face, else their mark, the name under it.
-    private func personTile(_ name: String, address: String?, mark: String?, act: @escaping () -> Void) -> some View {
-        MoveDeckTile(title: name, act: act) {
-            if let address {
-                WalletFace(address: address, size: DS.Face.seat, circular: true)
-            } else {
-                MoveRowMark(token: mark ?? name, size: DSHomeCircleMetrics.face)
-            }
-        }
+    /// **TO IS ROWS, THE TOKEN'S ROW (prd §1923, amending §1904 item 11's
+    /// tiles for people; user, 2026-11-20: "names are long so it wraps
+    /// weirdly", "faces should all be in horizontal rows and should be same
+    /// size as tokens are in rest of move").** A face, a mark or a glyph at
+    /// the token's 30pt, the whole name on one line, its tail or network
+    /// under it: a name is never cut to a tile's column where money goes.
+    private func toRow(_ title: String, sub: String? = nil, mark: String? = nil, image: String? = nil,
+                       symbol: String? = nil, face: String? = nil, bareSymbol: Bool = false,
+                       titleInk: Color = DS.textPrimary, act: @escaping () -> Void) -> some View {
+        listRow(title, sub: sub, mark: mark, image: image, symbol: symbol, face: face, bareSymbol: bareSymbol,
+                home: true, titleInk: titleInk, act: act)
     }
 
     private var withList: some View {
@@ -6024,17 +6029,17 @@ struct MoveSentence: View {
                 && (q.isEmpty || balanceWord.lowercased().contains(q) || "aztec".contains(q))
             // **ONE SCROLL, EVERY SECTION TITLED (prd §1916, user, 2026-11-19:
             // "don't know what 'people' means, are these 'recent'? also they
-            // aren't all 'people'"):** Recent, Contacts, then Yours; no group
-            // words to pick between.
-            let grouped: String? = nil
-            let shows: (String) -> Bool = { _ in true }
+            // aren't all 'people'"), YOURS FIRST (prd §1923, user, 2026-11-20:
+            // "your private balance and private account should be at top
+            // instead of at bottom"):** Yours, Recent, then Contacts; no
+            // group words to pick between.
             // Again, the last send whole, leads (prd §1904 item 5).
             if q.isEmpty, items.isEmpty, verb == .send, let a = again,
                Op.networks.contains(where: { $0.chainId == a.chainId }) {
                 let net = Op.networks.first { $0.chainId == a.chainId }?.name ?? ""
                 let who = a.to == a.address ? AddressTail.short(a.address) : a.to
-                listRow(String(localized: "Again: \(a.amount) \(a.symbol) to \(who)"),
-                        sub: String(localized: "On \(net) · \(a.day)"), symbol: "arrow.clockwise", bareSymbol: true) {
+                toRow(String(localized: "Again: \(a.amount) \(a.symbol) to \(who)"),
+                      sub: String(localized: "On \(net) · \(a.day)"), symbol: "arrow.clockwise", bareSymbol: true) {
                     takeAgain(a)
                 }
             }
@@ -6042,119 +6047,27 @@ struct MoveSentence: View {
             // To is someone's private balance: the send stays inside Railgun,
             // and nothing public names either side or the amount.
             if RailgunPocket.available, RailgunSwap.isPrivateAddress(q) {
-                listRow(String(localized: "Their private balance"), sub: YourAccount.short(q), symbol: "eye.slash") {
+                toRow(String(localized: "Their private balance"), sub: YourAccount.short(q), symbol: "eye.slash") {
                     goRailgun(.takeBack, contract: nil, recipient: q)
-                }
-            }
-            // **RECENT (prd §1752):** the last people Send sent to from here,
-            // at the top of the list, above Private and your book; typing searches
-            // the book, so the three stand only while the field is blank.
-            if !recent.isEmpty, shows(String(localized: "Recent")) {
-                if grouped == nil { listHeader(String(localized: "Recent")) }
-                // People at Home's app-icon size (prd §1904 item 11).
-                MoveDeckGrid {
-                    ForEach(recent, id: \.self) { entry in
-                        if ZkMoneyWire.tag(entry) != nil {
-                            // A tag is resolved as a typed one is: To looks it up.
-                            // One you saved wears the name you gave it (prd §1767).
-                            let saved = ContactBook.shared.name(for: Identity.key(.zkMoney, entry))
-                            personTile(saved ?? entry, address: nil, mark: entry) {
-                                to = entry
-                                pick {}
-                            }
-                        } else {
-                            let name = AddressBook.shared.name(for: entry)
-                            personTile(name ?? YourAccount.short(entry), address: entry, mark: name) {
-                                to = name ?? entry
-                                resolved = Recipient(address: EIP55.checksum(entry), name: name, imitates: nil)
-                                pick {}
-                            }
-                        }
-                    }
                 }
             }
             // An Aztec address typed: a private send from Aztec (prd §1700f item 14).
             if AztecAddressText.isAztec(to), AztecProver.isAvailable {
-                listRow(AddressTail.short(to.trimmingCharacters(in: .whitespaces)), sub: String(localized: "Aztec · Private"), symbol: "eye.slash") {
+                toRow(AddressTail.short(to.trimmingCharacters(in: .whitespaces)), sub: String(localized: "Aztec · Private"), symbol: "eye.slash") {
                     goAztec(.send, recipient: to.trimmingCharacters(in: .whitespaces).lowercased())
                 }
             }
-            // Your book under its own word once Recent stands over it, so no
-            // row of the book reads as someone you just paid.
-            // **THE TAGS YOU SAVED (prd §1767).** A zk.money tag in Contacts
-            // is someone to pay, so it stands in the book beside the
-            // addresses, found by its name, its tag or `@name`.
-            let tags = ZkMoneyWire.savedTags(ContactBook.shared.all.map { ($0.id, $0.name) }, query: q)
-                .filter { saved in !recent.contains { $0.caseInsensitiveCompare(saved.tag) == .orderedSame } }
-            // Under any heading above it (Recent or Private, prd §1896): with
-            // no word of their own the book's rows read as the last
-            // heading's, "Private".
-            if grouped == nil, !(book.isEmpty && tags.isEmpty && found.isEmpty) {
-                listHeader(String(localized: "Contacts"))
-            }
-            if shows(String(localized: "Addresses")) {
-            ForEach(Array(tags.prefix(8)), id: \.tag) { saved in
-                listRow(saved.name, sub: saved.name.lowercased() == saved.tag ? "zk.money" : saved.tag, mark: saved.tag) {
-                    to = saved.tag
-                    pick {}
-                }
-            }
-            if let above, q.isEmpty {
-                listRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
-                        face: above.to) {
-                    to = above.toName ?? above.to
-                    resolved = Recipient(address: above.to, name: above.toName, imitates: nil)
-                    pick {}
-                }
-            }
-            if let r = resolved, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
-                listRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address),
-                        face: r.address) {
-                    pick {}
-                }
-            }
-            // The book at Home's app-icon size too (prd §1904 item 11).
-            MoveDeckGrid {
-                ForEach(Array(book.filter { e in
-                    (above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true)
-                        && !recent.contains { WalletWatch.sameAddress($0, e.address) }
-                }.prefix(20)), id: \.address) { e in
-                    // A company in the book (Uniswap, Coinbase) wears its logo; a
-                    // person, their face (prd §1534).
-                    personTile(e.name, address: AssetMark.hasAsset(e.name) ? nil : e.address, mark: e.name) {
-                        to = e.name
-                        resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
-                        pick {}
-                    }
-                }
-            }
-            ForEach(Array(found.prefix(8))) { p in
-                // The line is the name the book has for the address, when it
-                // is another word than the person's; else its tail.
-                let bookName = AddressBook.shared.name(for: p.address)
-                listRow(p.name, sub: bookName.flatMap { $0.caseInsensitiveCompare(p.name) == .orderedSame ? nil : $0 }
-                            ?? YourAccount.short(p.address), face: p.address) {
-                    to = p.name
-                    resolved = Recipient(address: EIP55.checksum(p.address), name: p.name, imitates: nil)
-                    pick {}
-                }
-            }
-            pasteRow { to = $0; pastedTo = true }
-            }
-            // **YOUR PRIVATE BALANCE, ONE NOUN, TOLD APART BY NETWORK (prd
-            // §1719, amending §1718 item 6 and §1700g item 2).** Two rows
-            // under one "Private" header, both "Your private balance", the
-            // line its network — as two USDC rows are told apart. No
-            // protocol is ever picked: on Ethereum the token decides
-            // (ETH and USDC to Privacy Pools, any other token to Railgun),
-            // named only in the sentence's foot. One tap, never typed.
-            if grouped == nil, poolsHere || aztecHere { listHeader(String(localized: "Yours")) }
-            if shows(String(localized: "Yours")), poolsHere || aztecHere {
-            MoveDeckGrid {
+            // **YOUR PRIVATE BALANCE AND YOUR PRIVATE ACCOUNT, TWO NOUNS (prd
+            // §1779), EACH A ROW AT THE TOP (prd §1923).** Your private
+            // balance is Ethereum's, its network under it (user, 2026-11-19:
+            // "it should how else does user know"); your private account is
+            // Aztec, in Aztec's ink with its rule under it. No protocol is
+            // ever picked: on Ethereum the token decides (ETH and USDC to
+            // Privacy Pools, any other token to Railgun). One tap, never typed.
+            if poolsHere || aztecHere { listHeader(String(localized: "Yours")) }
             if poolsHere {
-                // Its network under it (user, 2026-11-19: "it should how
-                // else does user know"): where the money sits.
-                MoveDeckTile(title: balanceWord, sub: privateNet) {
+                // A grey lock (prd §1916): the red crossed eye read as an error.
+                toRow(balanceWord, sub: privateNet, symbol: "lock.fill") {
                     // The token decides (prd §1713 item 1): ETH and USDC to
                     // Privacy Pools, any other token on Ethereum to Railgun.
                     if RailgunPocket.available, let held = with, network == Op.ethereum,
@@ -6163,25 +6076,96 @@ struct MoveSentence: View {
                     } else {
                         goPrivate(.deposit)
                     }
-                } face: {
-                    // A grey lock (prd §1916): the red crossed eye read as an error.
-                    Circle().fill(DS.fillFaint)
-                        .overlay(Image(systemName: "lock.fill").dsGlyph(.title, weight: .semibold).foregroundStyle(DS.textPrimary))
                 }
             }
             if aztecHere {
-                // Two nouns (prd §1779, reversing §1719's one): your private
-                // balance is Ethereum's, your private account is Aztec, each
-                // said in full (prd §1904 item 11: "we want users to think in
-                // terms of what they are trying to do not brand names").
-                MoveDeckTile(title: String(localized: "Your private account"), sub: "Aztec", subInk: DS.aztecInk, titleInk: DS.aztecInk) {
+                toRow(String(localized: "Your private account"), sub: Self.aztecRule, image: "brand-aztec", titleInk: DS.aztecInk) {
                     goAztec(.deposit)
-                } face: {
-                    Image("brand-aztec").resizable().scaledToFill().clipShape(Circle())
                 }
             }
+            // **RECENT (prd §1752):** the last people Send sent to from here,
+            // above your book; typing searches the book, so they stand only
+            // while the field is blank.
+            if !recent.isEmpty {
+                listHeader(String(localized: "Recent"))
+                ForEach(recent, id: \.self) { entry in
+                    if ZkMoneyWire.tag(entry) != nil {
+                        // A tag is resolved as a typed one is: To looks it up.
+                        // One you saved wears the name you gave it (prd §1767).
+                        let saved = ContactBook.shared.name(for: Identity.key(.zkMoney, entry))
+                        toRow(saved ?? entry, sub: saved == nil ? "zk.money" : entry, mark: entry) {
+                            to = entry
+                            pick {}
+                        }
+                    } else {
+                        let name = AddressBook.shared.name(for: entry)
+                        // A company in the book wears its logo; a person,
+                        // their face (prd §1534).
+                        let logo = name.map { AssetMark.hasAsset($0) } ?? false
+                        toRow(name ?? YourAccount.short(entry), sub: name == nil ? nil : YourAccount.short(entry),
+                              mark: logo ? name : nil, face: logo ? nil : entry) {
+                            to = name ?? entry
+                            resolved = Recipient(address: EIP55.checksum(entry), name: name, imitates: nil)
+                            pick {}
+                        }
+                    }
+                }
             }
+            // Your book under its own word, so no row of the book reads as
+            // someone you just paid, or as yours.
+            // **THE TAGS YOU SAVED (prd §1767).** A zk.money tag in Contacts
+            // is someone to pay, so it stands in the book beside the
+            // addresses, found by its name, its tag or `@name`.
+            let tags = ZkMoneyWire.savedTags(ContactBook.shared.all.map { ($0.id, $0.name) }, query: q)
+                .filter { saved in !recent.contains { $0.caseInsensitiveCompare(saved.tag) == .orderedSame } }
+            if !(book.isEmpty && tags.isEmpty && found.isEmpty) {
+                listHeader(String(localized: "Contacts"))
             }
+            ForEach(Array(tags.prefix(8)), id: \.tag) { saved in
+                toRow(saved.name, sub: saved.name.lowercased() == saved.tag ? "zk.money" : saved.tag, mark: saved.tag) {
+                    to = saved.tag
+                    pick {}
+                }
+            }
+            if let above, q.isEmpty {
+                toRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
+                      face: above.to) {
+                    to = above.toName ?? above.to
+                    resolved = Recipient(address: above.to, name: above.toName, imitates: nil)
+                    pick {}
+                }
+            }
+            if let r = resolved, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
+                toRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address),
+                      face: r.address) {
+                    pick {}
+                }
+            }
+            ForEach(Array(book.filter { e in
+                (above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true)
+                    && !recent.contains { WalletWatch.sameAddress($0, e.address) }
+            }.prefix(20)), id: \.address) { e in
+                // A company in the book (Uniswap, Coinbase) wears its logo; a
+                // person, their face (prd §1534). Its tail under the name.
+                let logo = AssetMark.hasAsset(e.name)
+                toRow(e.name, sub: YourAccount.short(e.address), mark: logo ? e.name : nil, face: logo ? nil : e.address) {
+                    to = e.name
+                    resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
+                    pick {}
+                }
+            }
+            ForEach(Array(found.prefix(8))) { p in
+                // The line is the name the book has for the address, when it
+                // is another word than the person's; else its tail.
+                let bookName = AddressBook.shared.name(for: p.address)
+                toRow(p.name, sub: bookName.flatMap { $0.caseInsensitiveCompare(p.name) == .orderedSame ? nil : $0 }
+                          ?? YourAccount.short(p.address), face: p.address) {
+                    to = p.name
+                    resolved = Recipient(address: EIP55.checksum(p.address), name: p.name, imitates: nil)
+                    pick {}
+                }
+            }
+            pasteRow { to = $0; pastedTo = true }
         }
     }
 

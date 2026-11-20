@@ -74718,3 +74718,23 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: Account › Keys, the line under Co-signer in two lines.
+
+## §1923 — Send's To is rows, the token's row, with Yours first (amends §1904, §1916) (user, 2026-11-20: "it seems like we can improve the 'To' lists in move. we have avatars for faces but names are long so it wraps weirdly and perhaps we need to move to full length horizontal rows"; of four boards on the canvas "Move — To list rows" (today's tiles, A rows, B big faces, C recent faces over rows): "yes, but i think your private balance and private account should be at top instead of at bottom", "faces should all be in horizontal rows and should be same size as tokens are in rest of move") — BUILT
+
+**What was wrong.** §1904's eleventh item drew people as tiles at Home's app-icon size, five across, the name in a 60 pt column under the face. A name longer than a word wrapped to two lines or was cut ("Your private…", "ana.margarit…"), and tags, found contacts and typed addresses were already rows, so one list held two shapes.
+
+**Ruling.**
+
+1. **Every recipient is a row, the token's row** (`MoveSentence.toRow`, `listRow(home: true)`): the face, mark or glyph at the token's 30 pt in the rows' column, the whole name on one line (`body17`), its tail, tag or network under it (`subhead12`), at Home's 44 pt pitch. To and Token are now one shape. No tile is left in To; `personTile` is deleted, and merchants keep `MoveDeckTile`.
+2. **Yours leads.** The order is Yours, Recent, Contacts (§1916's order was Recent, Contacts, Yours), each under its word. "Again" still leads the list, and a typed private or Aztec address still stands above the sections.
+3. **Yours is two rows.** Your private balance, a grey lock, its network under it. Your private account, Aztec's mark, the name in Aztec's ink, "Aztec to Aztec only" under it (§1779).
+4. **A Recent address with a name shows its tail under the name**, as the book's rows do; a recent tag shows "zk.money", or the tag under the name you saved.
+5. The foot's word is unchanged: "Choose an address" (§1916). "Choose who" was the mock's mistake.
+
+**Not taken.** Faces kept at 46 pt in 58 pt rows (B: three recents filled the deck). Recent as one strip of faces over the book's rows (C: a strip still cuts names, and a cut name is the wrong thing to show where money goes).
+
+**Checks.** `move-token-grid-audit.py`'s tile allowance drops to one (merchants). `private-money-selftest.sh` reads both Yours rows.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator, the demo: Send › To with Yours over Contacts, every row at the token's size; scrolled to "Paste an address", which clears the foot. Recent was not seen (the demo has sent to no one).
