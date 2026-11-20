@@ -74704,3 +74704,17 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Ruling.** Under "Your private account · Aztec to Aztec only" on Receive stands one door, **Add money** (a plus on the quiet disc, the Receive row's height), as the public account's "From another network" and "From another wallet" stand under it (§1824: a way in stands under the place it lands). It opens Send's sentence to your private account, as the Aztec page's "Add money from Ethereum" row does (§1779); that row stays. Holdings keeps its own Add money row under Private (§1776).
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1922 — Into Aztec, this iPhone first: the co-signer only past $100 a day (amends §1920's "only when no co-signer is scored", §1918's row) (user, 2026-11-20: "honestly this is weird. why should you need a cosigner to put money INTO aztec", "yes"; of the Keys line: "aztec requires cosigner with score of", "we should use the aztec color", of the canvas "Keys: the co-signer line": "A is good") — BUILT
+
+**Ruling.** The co-signer was never a need of Aztec's: Shield takes a sign-in only from one plain key and wants a Human Passport score past $100 a day, and the co-signer happened to be a plain key with a score. So **your Shield key is the way in for everyone**, and the co-signer only carries what is over the key's day.
+
+1. **The route** (`AztecMove.viaKey`): through your Shield key whenever what moves fits what the key has left today (Shield's screening tier less what this phone counted the key moving, `ShieldKey.movedToday`, UTC days, never by asking Shield for a limit, §1918a); past that, through your co-signer when Shield scores it. With no co-signer, Add money says "Up to $N more today without a co-signer." over a larger amount.
+2. **The rows.** Through the key: **Signs · This iPhone**, no co-signer row. Through the co-signer: §1918's **Co-signer · Signs N times**.
+3. **No switch.** A switch on Account was mocked (canvas "Aztec: add money", 4A–4D) and dropped: there is nothing to choose.
+4. **Account › Keys says what the co-signer is for**, under its row, in Aztec's ink, two even lines (`subhead12`, held to 290 pt): "More than $100 a day into Aztec needs a co-signer with a Human Passport score of 20 or more." Shown wherever Aztec runs.
+5. The demo's move-in draws the key's way (Signs · This iPhone).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: Account › Keys, the line under Co-signer in two lines.

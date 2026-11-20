@@ -104,9 +104,31 @@ final class AztecMove {
     /// counted before the hold (prd §1918).
     private(set) var coSignerAllowance: [String: Decimal] = [:]
     private(set) var bothKeys = false
-    /// Your Shield key, when there is no co-signer Shield scores: the
-    /// deposit is then the key's, up to $100 a day (prd §1920).
-    private(set) var viaKey: String?
+    /// Your Shield key and what it may still move today, in dollars (prd
+    /// §1920, §1922): the way in for everyone.
+    private(set) var keyOption: String?
+    private(set) var keyLeft: Double?
+    /// The co-signer's own limit, when it carries a score: the fallback past
+    /// the key's day (prd §1922).
+    private(set) var coSignerMax: Double?
+
+    /// **THIS IPHONE FIRST (prd §1922, user: "why should you need a cosigner
+    /// to put money INTO aztec").** The move-in goes through your Shield key
+    /// whenever what it moves fits what the key has left today; past that,
+    /// through your co-signer when Shield scores it.
+    var viaKey: String? {
+        guard mode == .deposit, let key = keyOption, let left = keyLeft else { return nil }
+        guard viaCoSigner != nil else { return key }
+        return (amountUSD ?? 0) <= left ? key : nil
+    }
+
+    /// What the sentence moves, in dollars; nil while unpriced.
+    var amountUSD: Double? {
+        guard let units, let n = Decimal(string: units) else { return nil }
+        let whole = NSDecimalNumber(decimal: n / pow(10, decimals)).doubleValue
+        if symbol == "USDC" { return whole }
+        return prices[symbol].map { whole * $0 }
+    }
 
     /// **THE STEPS, SAID BEFORE THE HOLD (prd §1918, user: "i always feel
     /// confused how i put money into it").** How many times your co-signer's
@@ -114,7 +136,7 @@ final class AztecMove {
     /// approval (unless it already may take this much), the deposit, and the
     /// hand-over when your account sends with both keys. Nil until read.
     var coSignerAsks: Int? {
-        guard mode == .deposit, let via = viaCoSigner, let units, let wanted = Decimal(string: units) else { return nil }
+        guard mode == .deposit, viaKey == nil, let via = viaCoSigner, let units, let wanted = Decimal(string: units) else { return nil }
         var asks = 1
         if !ShieldBridge.signedIn(via) { asks += 1 }
         if (coSignerAllowance[symbol] ?? 0) < wanted { asks += 1 }
@@ -354,7 +376,7 @@ final class AztecMove {
         // Shield's cap is in dollars: USDC is read as dollars; WETH's is
         // Shield's to refuse, as there is no price here to read it by.
         if mode == .deposit, symbol == "USDC", let maxUSD, want > Decimal(maxUSD) * 1_000_000 {
-            return viaKey != nil ? .overDailyCap(Int(maxUSD)) : .overShieldCap(Int(maxUSD))
+            return viaCoSigner == nil ? .overDailyCap(Int(maxUSD)) : .overShieldCap(Int(maxUSD))
         }
         return nil
     }
@@ -393,7 +415,8 @@ final class AztecMove {
             if amount.isEmpty { amount = "20" }
             // `key`: no co-signer, the move-in goes through your Shield key (prd §1920).
             if sample == "key" {
-                viaKey = "0x0000000000000000000000000000000000005e1d"
+                keyOption = "0x0000000000000000000000000000000000005e1d"
+                keyLeft = 100
                 maxUSD = 100
                 prices = ["USDC": 1, "WETH": 3000, "AZTEC": 0.0124]
                 stage = .ready
@@ -416,7 +439,7 @@ final class AztecMove {
             feePerL2Gas = 2_186_613_113_685
             gasPriceWei = 400_000_000
             // The steps' row counts a co-signer's asks (prd §1918); made up.
-            if mode == .deposit { viaCoSigner = "0x0000000000000000000000000000000000002725" }
+            if mode == .deposit { keyOption = "0x0000000000000000000000000000000000005e1d"; keyLeft = 100; maxUSD = 100 }
             stage = .ready
             return
         }
@@ -430,7 +453,7 @@ final class AztecMove {
             held["AZTEC"] = await Self.balance(of: AztecGas.token, at: safe)
             ownHeld = held
             bringsGas = AztecProver.isAvailable && AztecGas.ridesAlong
-            guard var standing = await safeStanding else { stage = .failed(String(localized: "Shield did not answer")); return }
+            guard let standing = await safeStanding else { stage = .failed(String(localized: "Shield did not answer")); return }
             // **YOUR CO-SIGNER, WHEN SHIELD SCORES IT (prd §1720).** A Safe
             // cannot link accounts on Human Passport's page; your co-signer
             // can. When your account is not eligible and your co-signer is,
@@ -446,7 +469,10 @@ final class AztecMove {
             coSignerScore = nil
             coSignerAllowance = [:]
             bothKeys = false
-            viaKey = nil
+            keyOption = nil
+            keyLeft = nil
+            coSignerMax = nil
+            let account = standing
             if !standing.sanctioned,
                let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, safe).first {
                 // Remembered short of the score too: the way in names it (prd §1820).
@@ -455,7 +481,7 @@ final class AztecMove {
                     coSignerScore = Int(theirs.score)
                     if theirs.eligible, !theirs.sanctioned {
                         viaCoSigner = found
-                        standing = theirs
+                        coSignerMax = theirs.maxUSD
                         for asset in ShieldBridge.assets {
                             coSignerAllowance[asset.symbol] = Decimal(string: await ShieldBridge.allowance(
                                 of: asset.ethToken, owner: found, spender: asset.portal)) ?? 0
@@ -468,13 +494,17 @@ final class AztecMove {
                     }
                 }
             }
-            // **NO CO-SIGNER SHIELD SCORES: YOUR SHIELD KEY (prd §1920).** Up to
-            // Shield's screening tier a day, what the key holds counting too
-            // (a move that stopped half way is finished by the next).
-            if viaCoSigner == nil, !standing.sanctioned, let key = ShieldKey.address,
+            // **YOUR SHIELD KEY, FOR EVERYONE (prd §1920, §1922).** Up to
+            // Shield's screening tier a day, less what it moved today; what
+            // the key holds counts too (a move that stopped half way is
+            // finished by the next).
+            if !account.sanctioned, let key = ShieldKey.address,
                let mine = await ShieldBridge.eligibility(key), mine.eligible, !mine.sanctioned {
-                viaKey = key
-                standing = mine
+                let left = max(0, mine.screeningUSD - ShieldKey.movedToday())
+                if left > 0 || viaCoSigner == nil {
+                    keyOption = key
+                    keyLeft = left
+                }
                 for asset in ShieldBridge.assets {
                     let more = Decimal(string: await Self.balance(of: asset.ethToken, at: key)) ?? 0
                     held[asset.symbol] = NSDecimalNumber(decimal: (Decimal(string: held[asset.symbol] ?? "0") ?? 0) + more).stringValue
@@ -482,8 +512,8 @@ final class AztecMove {
             }
             safeHeld = held
             holdings = depositHoldings(held)
-            maxUSD = viaKey != nil ? standing.screeningUSD : standing.maxUSD
-            if standing.sanctioned || (viaCoSigner == nil && viaKey == nil) {
+            maxUSD = viaCoSigner != nil ? coSignerMax : keyLeft
+            if account.sanctioned || (viaCoSigner == nil && keyOption == nil) {
                 stage = .shieldNo(score: AztecWayIn.shownScore(coSignerScore: coSignerScore, accountScore: Int(standing.score)),
                                   threshold: Int(standing.threshold), sanctioned: standing.sanctioned)
                 return
@@ -560,9 +590,12 @@ final class AztecMove {
                 steps.begin(.move, plan: .signed(.ethereum))
                 let gas = try await gasPlan(asset)
                 if viaKey != nil {
+                    let moved = amountUSD
                     let sent = try await ShieldBridge.depositFromKey(asset, units: units, gas: gas) { words in
                         self.stage = .working(words)
                     }
+                    // Counted against the key's day (prd §1922).
+                    if let moved { ShieldKey.noteMoved(moved) }
                     steps.finish()
                     stage = .done(sent.transaction)
                     break
@@ -938,7 +971,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .moreThanHeld(let have): String(localized: "You have \(have).")
         case .leavesNoGas(let most): String(localized: "Up to \(most): a little buys gas for Aztec.")
         case .overShieldCap(let cap): String(localized: "Shield moves up to $\(cap) at a time for your score.")
-        case .overDailyCap(let cap): String(localized: "Up to $\(cap) a day without a co-signer.")
+        case .overDailyCap(let cap): String(localized: "Up to $\(cap) more today without a co-signer.")
         }
     }
 
@@ -1012,9 +1045,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                                   value: move.mode == .deposit ? String(localized: "Ethereum to Aztec") : String(localized: "Aztec"),
                                   fixed: true) {})
         // Through your Shield key: no co-signer, and Shield's daily limit (prd §1920).
-        if move.mode == .deposit, move.viaKey != nil, let cap = move.maxUSD {
-            rows.append(MoveChoiceRow(id: "limit", name: String(localized: "Limit"),
-                                      value: String(localized: "Up to $\(Int(cap)) a day"), fixed: true) {})
+        if move.mode == .deposit, move.viaKey != nil {
+            rows.append(MoveChoiceRow(id: "signs", name: String(localized: "Signs"),
+                                      value: String(localized: "This iPhone"), fixed: true) {})
         }
         // How often your co-signer's wallet asks, counted before the hold
         // (prd §1918); Face ID is every move's, so it goes unsaid.

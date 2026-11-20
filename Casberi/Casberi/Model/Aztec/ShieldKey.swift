@@ -89,6 +89,30 @@ enum ShieldKey {
         return hash
     }
 
+    // MARK: - Its day (prd §1922)
+
+    private static let dayKey = "aztec.shieldKey.day"
+
+    /// Dollars the key moved into Aztec today (UTC), as this phone counted
+    /// them: what is left of Shield's $100 is read from this, never by asking
+    /// Shield for a limit (a limit asked counts against the day, §1918a).
+    static func movedToday(now: Date = .now) -> Double {
+        guard let kept = UserDefaults.standard.dictionary(forKey: dayKey),
+              kept["day"] as? String == day(now) else { return 0 }
+        return kept["usd"] as? Double ?? 0
+    }
+
+    static func noteMoved(_ usd: Double, now: Date = .now) {
+        UserDefaults.standard.set(["day": day(now), "usd": movedToday(now: now) + usd], forKey: dayKey)
+    }
+
+    private static func day(_ date: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
     /// The gas its two sends are held to: an approval (measured at ~55K for a
     /// fresh address's, `FreshTx.approveGas`) and Shield's deposit (170K to
     /// 175K, §1700 measurements), each with room.

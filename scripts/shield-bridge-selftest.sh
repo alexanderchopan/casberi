@@ -412,13 +412,16 @@ grep -q 'personalSignDigest(message), signer: account' "$APP" \
   || { echo "✗ the co-signer's sign-in is not checked against the message Casberi wrote (prd §1720)"; exit 1; }
 MOVEAZ="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
 awk '/if !standing.sanctioned,$/{a=NR} /if theirs.eligible, !theirs.sanctioned \{/{b=NR} /viaCoSigner = found/{c=NR} END{exit !(a && b && c && a<b && b<c)}' "$MOVEAZ" \
-  && grep -q 'if standing.sanctioned || (viaCoSigner == nil && viaKey == nil) {' "$MOVEAZ" \
+  && grep -q 'if account.sanctioned || (viaCoSigner == nil && keyOption == nil) {' "$MOVEAZ" \
   || { echo "✗ Move deposits into Aztec other than from your co-signer or your Shield key: a Safe's sign-in is refused by Shield (prd §1720, §1890, §1920)"; exit 1; }
-# **THE SHIELD KEY (prd §1920).** The co-signer first; the key only when
-# there is none Shield scores; it signs in on the phone; its sends pass
-# FreshTx's allowlist, whose pinned pairs are ShieldWire's own.
-awk '/viaCoSigner = found/{a=NR} /if viaCoSigner == nil, !standing.sanctioned, let key = ShieldKey.address,/{b=NR} END{exit !(a && b && a<b)}' "$MOVEAZ" \
-  || { echo "✗ the Shield key is tried before your co-signer, or not at all (prd §1920)"; exit 1; }
+# **THE SHIELD KEY FOR EVERYONE (prd §1920, §1922).** The key is the way in;
+# the co-signer only past the key's day; it signs in on the phone; its sends
+# pass FreshTx's allowlist, whose pinned pairs are ShieldWire's own.
+grep -q 'guard viaCoSigner != nil else { return key }' "$MOVEAZ" \
+  && grep -q 'return (amountUSD ?? 0) <= left ? key : nil' "$MOVEAZ" \
+  && grep -q 'let left = max(0, mine.screeningUSD - ShieldKey.movedToday())' "$MOVEAZ" \
+  && grep -q 'if let moved { ShieldKey.noteMoved(moved) }' "$MOVEAZ" \
+  || { echo "✗ the Shield key is not the way in up to its day, or its day is not counted (prd §1922)"; exit 1; }
 grep -q 'if let key = ShieldKey.address, key.lowercased() == account.lowercased() {' "$APP" \
   && grep -q 'signature = try ShieldKey.signIn(message)' "$APP" \
   || { echo "✗ the Shield key does not sign in on this phone (prd §1920)"; exit 1; }

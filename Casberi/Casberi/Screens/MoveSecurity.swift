@@ -114,6 +114,20 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             }
+            // **WHAT THE CO-SIGNER IS FOR, AT AZTEC'S DOOR (prd §1922, user:
+            // "a line under cosigner that aztec deposits of more than 100$
+            // require cosigner", "aztec requires cosigner with score of").**
+            // This iPhone adds up to $100 a day itself.
+            if AztecProver.isAvailable {
+                // Aztec's own ink, two even lines (user: "make sure it wraps
+                // nicely"; of the canvas "Keys: the co-signer line": "A is good").
+                Text("More than $100 a day into Aztec needs a co-signer with a Human Passport score of 20 or more.")
+                    .dsText(.subhead12).foregroundStyle(DS.aztecInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 290, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, DS.Space.s3)
+            }
             if addingOutside { outsideField }
             // Named for what it is: the way out to another wallet (prd §1803).
             row(title: Self.exportTitle, value: exportValue,

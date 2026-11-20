@@ -120430,6 +120430,34 @@
         }
       }
     },
+    "More than $100 a day into Aztec needs a co-signer with a Human Passport score of 20 or more." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Más de $100 al día en Aztec requiere un cofirmante con una puntuación de Human Passport de 20 o más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日$100を超えてAztecへ入れるには、Human Passportスコア20以上の共同署名者が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 $100 넘게 Aztec에 넣으려면 Human Passport 점수 20 이상의 공동 서명자가 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天转入 Aztec 超过 $100 需要 Human Passport 分数 20 或以上的共同签名人。"
+          }
+        }
+      }
+    },
     "More than Across carries at once" : {
       "localizations" : {
         "es" : {
@@ -185595,6 +185623,34 @@
         }
       }
     },
+    "Signs" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名"
+          }
+        }
+      }
+    },
     "Signs %lld times" : {
       "localizations" : {
         "es" : {
@@ -212438,6 +212494,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有共同签名人时每天最多 $%lld。"
+          }
+        }
+      }
+    },
+    "Up to $%lld more today without a co-signer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta $%lld más hoy sin cofirmante."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者なしでは今日あと$%lldまで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 없이 오늘 최대 $%lld 더."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有共同签名人时今天最多再 $%lld。"
           }
         }
       }
