@@ -74738,3 +74738,26 @@ A Send left half-filled is kept five minutes (§1779). Picked from the menu (§1
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator, the demo: Send › To with Yours over Contacts, every row at the token's size; scrolled to "Paste an address", which clears the foot. Recent was not seen (the demo has sent to no one).
+
+## §1924 — "Aztec to Aztec only" is the address's rule, not the account's (amends §1779's line where it stood on lists, §1908's header) (user, 2026-11-20: "our wallet says aztec to aztec only but can't you send from aztec to your safe", "fix it!") — BUILT
+
+**Ruling.** Only Aztec pays an Aztec address, so "Aztec to Aztec only" stays where the address is received at: Receive's place and "on" list, the Aztec Receive page, and beside the address under Account. Everywhere the account is offered for moving, the line says what it may do:
+
+1. **Send's From lists** (the token list's place, the recipient list's row) and the Aztec send sentence's head: **"To Aztec, or out to Ethereum"** (`MoveSentence.aztecSendRule`): a send from your private account reaches Aztec, or goes out through Shield to any Ethereum address, your Safe included.
+2. **Send's To list** (your private account as where money goes): **"From Ethereum, USDC or ETH"** (`aztecInRule`).
+3. **Account's Private account row and the keys walk:** **"On Aztec, out to Ethereum"**.
+
+All in Aztec's ink (`aztecRules`).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amends §1700q's decimal pad) (user, 2026-11-20, of the iPhone's number pad over the Aztec sentence: "how is it we have our own keyboard elsewhere but not on send!", "this is ridiculous", "also i sent usdc to aztec and it didn't say signs this iphone or cosigner") — BUILT
+
+1. **Move's keypad** (`MoveKeypad`, as Send's and Earn's): a tap on Amount goes straight to the keys, Half and All their top row (the amount menu is not raised), the token's places at most (six); the figure being typed stands over the keys at the row's rung with Aztec's caret and its token, since the keypad covers the rows. The iPhone's decimal pad is gone from it.
+2. **The steps after the hold name the signer** (`PrivateSendSteps.Plan.signed(_:onThisPhone:)`): "Signing on this iPhone" / "Signed on this iPhone" through your Shield key, "Your co-signer signs" / "Your co-signer signed" through your co-signer.
+
+Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountField`): next.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator (`-aztecWayInSample key`): Amount → the keys, "2 | USDC" over Half · All.

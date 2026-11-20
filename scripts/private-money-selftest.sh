@@ -119,8 +119,8 @@ HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
 # Your private balance is a recipient, one noun told apart by network (prd §1719).
 use "$SENT" 'toRow(balanceWord, sub: privateNet, symbol: "lock.fill") {' "your private balance on Ethereum is no longer a recipient (a row at the top of To since prd §1923)"
-use "$SENT" 'toRow(String(localized: "Your private account"), sub: Self.aztecRule, image: "brand-aztec", titleInk: DS.aztecInk) {' "your private account on Aztec is no longer a recipient in To, in Aztec's ink with its rule (prd §1779, §1923)"
-use "$SENT" 'listRow(String(localized: "Your private account"), sub: Self.aztecRule, symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
+use "$SENT" 'toRow(String(localized: "Your private account"), sub: Self.aztecInRule, image: "brand-aztec", titleInk: DS.aztecInk) {' "your private account on Aztec is no longer a recipient in To, in Aztec's ink with its rule (prd §1779, §1923)"
+use "$SENT" 'listRow(String(localized: "Your private account"), sub: Self.aztecSendRule, symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
 # No Private switch in Send (prd §1700f item 11), and no private "network"
 # either (prd §1719): private money is rows in Send's token list.
 use "$SENT" 'MoveTokenPlace(id: "balance", title: String(localized: "Your private balance"),' "private money is no longer tiles in Send's token list, under its network (prd §1719, §1904, §1910)"

@@ -587,7 +587,7 @@ final class AztecMove {
                 stage = .working(String(localized: "Checking…"))
                 // A move-in is signed on Ethereum, not proved (prd §1700x), as
                 // Railgun's is: Checking · Signing · Sent on Ethereum.
-                steps.begin(.move, plan: .signed(.ethereum))
+                steps.begin(.move, plan: .signed(.ethereum, onThisPhone: viaKey != nil))
                 let gas = try await gasPlan(asset)
                 if viaKey != nil {
                     let moved = amountUSD
@@ -684,7 +684,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private enum Blank { case token, recipient, amount }
     @State private var open: Blank?
-    @FocusState private var typing: Bool
+    /// The amount is being typed on Move's own keypad (prd §1925), never the
+    /// system's decimal pad.
+    @State private var typing = false
     /// The cost's list stands in the rows' place (prd §1876).
     @State private var costOpen = false
     @State private var typed = ""
@@ -703,8 +705,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 // send from your private account reaches Aztec addresses.
                 // Taking money out to Ethereum is the one crossing, and its
                 // sentence says Ethereum itself.
+                // It reaches Aztec, or goes out to Ethereum (prd §1924).
                 if move.mode == .send, !move.toEthereum, !isDone {
-                    Text("Aztec to Aztec only.")
+                    Text("To Aztec, or out to Ethereum.")
                         .dsText(.heading17)
                         .foregroundStyle(DS.aztecInk)
                         .padding(.top, DS.Space.s2)
@@ -878,25 +881,29 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// The amount, typed (prd §1700q): the decimal pad, the token's places
     /// at most, and the figure in the sentence's own rung.
     private var amountField: some View {
-        TextField(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
-                  prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
-            .keyboardType(.decimalPad)
-            .focused($typing)
-            // The figure is the row while it is typed (prd §1892).
-            .dsText(MoveChoiceRowLabel.figureRung)
-            .monospacedDigit()
-            .multilineTextAlignment(.leading)
-            .foregroundStyle(DS.textPrimary)
-            .tint(DS.aztecInk)
-            .fixedSize()
-            .accessibilityLabel(Text("Amount"))
-            .onChange(of: move.amount) { _, now in
-                if open != nil, typing { open = nil }
-                if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
-                   now.distance(from: dot, to: now.endIndex) - 1 > move.decimals {
-                    move.amount = String(now[...now.index(dot, offsetBy: move.decimals)])
+        // **MOVE'S OWN KEYPAD (prd §1925, user: "how is it we have our own
+        // keyboard elsewhere but not on send!").** The row shows the figure
+        // and a caret; the keys stand in the foot, as Send's and Earn's.
+        Button {
+            withAnimation(DS.Motion.standard) { open = nil; typing = true }
+        } label: {
+            HStack(spacing: 2) {
+                Text(verbatim: move.amount.isEmpty ? "0" : move.amount)
+                    .dsText(MoveChoiceRowLabel.figureRung)
+                    .monospacedDigit()
+                    .foregroundStyle(move.amount.isEmpty ? DS.textTertiary : DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                if typing {
+                    Capsule().fill(DS.aztecInk).frame(width: 3, height: 44)
+                        .accessibilityHidden(true)
                 }
             }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text("Amount"))
+        .accessibilityValue(Text(verbatim: move.amount.isEmpty ? "0" : move.amount))
     }
 
     // MARK: - The line
@@ -1061,7 +1068,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         rows.append(MoveChoiceRow(id: "token", name: String(localized: "Token"), value: move.symbol) { toggle(.token) })
         // Its sums are a menu, and any other is typed in the row (prd §1802).
         rows.append(MoveChoiceRow(id: "amount", name: String(localized: "Amount"), value: move.amount, empty: move.amount.isEmpty,
-                                  field: AnyView(amountField), typing: typing, figure: true) { toggle(.amount) })
+                                  field: AnyView(amountField), typing: typing, figure: true) {
+            // Straight to the keys, Half and All their top row (prd §1925).
+            withAnimation(DS.Motion.standard) { open = nil; typing = true }
+        })
         return rows
     }
 
@@ -1231,6 +1241,23 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 PrivateWarmingRow(since: since)
                     .padding(.bottom, DS.Space.s1)
                     .transition(.opacity)
+            } else if typing, move.stage == .ready {
+                // The figure being typed stands over its keys (prd §1925),
+                // as Send's does: the rows above sit under the keypad.
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(verbatim: move.amount.isEmpty ? "0" : move.amount)
+                        .dsText(MoveChoiceRowLabel.figureRung)
+                        .monospacedDigit()
+                        .foregroundStyle(move.amount.isEmpty ? DS.textTertiary : DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                    Capsule().fill(DS.aztecInk).frame(width: 3, height: 40).accessibilityHidden(true)
+                    Text(verbatim: move.symbol).dsText(.heading24).foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: 0)
+                }
+                .padding(.bottom, DS.Space.s1)
+                .accessibilityElement(children: .combine)
+                .transition(.opacity)
             } else if move.stage == .ready, move.amountOK {
                 PrivateCostNote(cost: move.cost, tail: move.costTail, fallback: readyLine)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1296,7 +1323,19 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     }
                 }
             }
-            if move.stage != .reading, !isDone { credit }
+            if typing, move.stage == .ready {
+                MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
+                           presets: AztecMove.Pick.allCases.compactMap { p in
+                               move.amount(for: p).map { value in
+                                   MoveKeypadPreset(id: p == .half ? "half" : "all",
+                                                    title: p == .half ? String(localized: "Half") : String(localized: "All"),
+                                                    picked: move.amount == value) { move.amount = value }
+                               }
+                           },
+                           places: min(move.decimals, 6))
+                    .padding(.top, DS.Space.s2)
+                    .transition(.opacity)
+            } else if move.stage != .reading, !isDone { credit }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, DS.Space.s2)

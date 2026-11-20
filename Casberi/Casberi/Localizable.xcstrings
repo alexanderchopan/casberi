@@ -100695,6 +100695,34 @@
         }
       }
     },
+    "From Ethereum, USDC or ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desde Ethereum, USDC o ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "EthereumからUSDCまたはETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 USDC 또는 ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Ethereum，USDC 或 ETH"
+          }
+        }
+      }
+    },
     "From a zk.money link" : {
       "localizations" : {
         "es" : {
@@ -141147,6 +141175,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "位于 Aztec，一个基于 Ethereum 的隐私网络。用于使用私密应用。"
+          }
+        }
+      }
+    },
+    "On Aztec, out to Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En Aztec, fuera a Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec上、Ethereumへ出金"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서, Ethereum으로 출금"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec，可转出到 Ethereum"
           }
         }
       }
@@ -185091,6 +185147,34 @@
         }
       }
     },
+    "Signed on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmado en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneで署名済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에서 서명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在此 iPhone 上签名"
+          }
+        }
+      }
+    },
     "Signed — sent back to %@" : {
       "localizations" : {
         "es" : {
@@ -185563,6 +185647,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在登录 Shield…"
+          }
+        }
+      }
+    },
+    "Signing on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmando en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneで署名中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에서 서명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在此 iPhone 上签名"
           }
         }
       }
@@ -207497,6 +207609,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "发给 %lld 人"
+          }
+        }
+      }
+    },
+    "To Aztec, or out to Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Aztec, o fuera a Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecへ、またはEthereumへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로, 또는 Ethereum으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转到 Aztec，或转出到 Ethereum"
+          }
+        }
+      }
+    },
+    "To Aztec, or out to Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Aztec, o fuera a Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecへ、またはEthereumへ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로, 또는 Ethereum으로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转到 Aztec，或转出到 Ethereum。"
           }
         }
       }
@@ -233762,6 +233930,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人发送"
+          }
+        }
+      }
+    },
+    "Your co-signer signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante firmó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者が署名済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 서명함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人已签名"
           }
         }
       }

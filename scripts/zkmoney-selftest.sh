@@ -751,7 +751,7 @@ grep -q 'if sendsFromAztec, aztecCanPay {' "$SEND" \
 # Aztec's ink, and offered only where Aztec can pay the To (prd §1908).
 # Drawn through Move's one token list since prd §1910.
 grep -q 'let aztec = aztecCanPay ? privateRows.filter { $0.key.hasPrefix("aztec|") } : \[\]' "$SEND" \
-  && grep -q 'MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecRule,' "$SEND" \
+  && grep -q 'MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecSendRule,' "$SEND" \
   && grep -q 'let balance = privateRows.filter { !$0.key.hasPrefix("aztec|") }' "$SEND" \
   || { echo "✗ Send lists Aztec's tokens under Your private balance, or offers them to a To Aztec cannot pay (prd §1908)"; exit 1; }
 

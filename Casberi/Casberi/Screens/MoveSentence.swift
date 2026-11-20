@@ -4290,7 +4290,7 @@ struct MoveSentence: View {
             // Aztec account cannot pay zk.money: a tag takes a deposit on
             // Ethereum, or 0xDAI from a zk.money account.
             if sendsFromAztec, aztecCanPay {
-                listRow(String(localized: "Your private account"), sub: Self.aztecRule, symbol: "diamond") {
+                listRow(String(localized: "Your private account"), sub: Self.aztecSendRule, symbol: "diamond") {
                     let typed = to.trimmingCharacters(in: .whitespaces)
                     goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)
                 }
@@ -5657,6 +5657,15 @@ struct MoveSentence: View {
     /// The private account's line wherever a list offers it (prd §1779: the
     /// rule in view whenever Aztec is).
     static var aztecRule: String { String(localized: "Aztec to Aztec only") }
+    /// **WHAT EACH LIST MAY DO WITH IT (prd §1924, user: "our wallet says
+    /// aztec to aztec only but can't you send from aztec to your safe").**
+    /// "Aztec to Aztec only" is the ADDRESS's rule (only Aztec pays it), so
+    /// it stands where the address is received at; sending from the account
+    /// reaches Aztec or goes out to Ethereum, and money comes in from
+    /// Ethereum through Shield.
+    static var aztecSendRule: String { String(localized: "To Aztec, or out to Ethereum") }
+    static var aztecInRule: String { String(localized: "From Ethereum, USDC or ETH") }
+    static var aztecRules: Set<String> { [aztecRule, aztecSendRule, aztecInRule] }
 
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
                          mark: String? = nil, on net: Op.Network? = nil, image: String? = nil, brand: String? = nil,
@@ -5733,7 +5742,7 @@ struct MoveSentence: View {
                     if let sub {
                         // A private place's rule stays whole (prd §1898 item 4).
                         Text(verbatim: sub).dsText(home ? .subhead12 : .fact15)
-                            .foregroundStyle(sub == Self.aztecRule ? DS.aztecInk : DS.textSecondary)
+                            .foregroundStyle(Self.aztecRules.contains(sub) ? DS.aztecInk : DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -5813,7 +5822,7 @@ struct MoveSentence: View {
             publicPlace,
             MoveTokenPlace(id: "balance", title: String(localized: "Your private balance"),
                            choices: privateChoices(balance) { name in Op.networks.first { $0.name == name }.flatMap { Self.networkMark($0) } }),
-            MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecRule,
+            MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecSendRule,
                            choices: privateChoices(aztec) { _ in "brand-aztec" }),
         ]
         return VStack(alignment: .leading, spacing: 0) {
@@ -6079,7 +6088,7 @@ struct MoveSentence: View {
                 }
             }
             if aztecHere {
-                toRow(String(localized: "Your private account"), sub: Self.aztecRule, image: "brand-aztec", titleInk: DS.aztecInk) {
+                toRow(String(localized: "Your private account"), sub: Self.aztecInRule, image: "brand-aztec", titleInk: DS.aztecInk) {
                     goAztec(.deposit)
                 }
             }

@@ -135,7 +135,7 @@ struct MoveKeysWalk: View {
                       String(localized: "A new address each time"),
                       marks: [MoveSentence.networkMark(chainId: 1)].compactMap { $0 })
                 place(["Aztec"], String(localized: "Private account"),
-                      String(localized: "Aztec to Aztec only"), ink: DS.aztecInk)
+                      String(localized: "On Aztec, out to Ethereum"), ink: DS.aztecInk)
             }
             .padding(.top, DS.Space.s6)
         case .recovery:

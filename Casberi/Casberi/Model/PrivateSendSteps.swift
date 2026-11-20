@@ -60,6 +60,13 @@ final class PrivateSendSteps {
         @MainActor static var proving: Step { Step(key: .proving, running: DeviceWord.proving, done: DeviceWord.proved) }
         static var signing: Step { Step(key: .signing, running: String(localized: "Signing"), done: String(localized: "Signed")) }
         static func sent(_ place: Place) -> Step { Step(key: .sent, running: place.sending, done: place.sent) }
+        /// Signing, named for who signs (prd §1925, user: "it didn't say
+        /// signs this iphone or cosigner").
+        static func signing(onThisPhone: Bool) -> Step {
+            onThisPhone
+                ? Step(key: .signing, running: String(localized: "Signing on this iPhone"), done: String(localized: "Signed on this iPhone"))
+                : Step(key: .signing, running: String(localized: "Your co-signer signs"), done: String(localized: "Your co-signer signed"))
+        }
     }
 
     /// A send's steps, in order. The first is under way from `begin`.
@@ -73,6 +80,10 @@ final class PrivateSendSteps {
         @MainActor static func send(_ place: Place) -> Plan { Plan(steps: [.checking, .proving, .sent(place)]) }
         /// A move that is signed, not proved: Checking · Signing · Sent.
         static func signed(_ place: Place) -> Plan { Plan(steps: [.checking, .signing, .sent(place)]) }
+        /// A move into Aztec: its signing step names who signs (prd §1925).
+        static func signed(_ place: Place, onThisPhone: Bool) -> Plan {
+            Plan(steps: [.checking, .signing(onThisPhone: onThisPhone), .sent(place)])
+        }
     }
 
     struct Run: Equatable {

@@ -362,7 +362,8 @@ extension FeedScreen {
         // from the first frame, and never waits on the address it does not show.
         if store.isShown {
             accountListRow(glyph: "diamond", title: String(localized: "Private account"),
-                           line: String(localized: "Aztec to Aztec only"),
+                           // Where it moves, never only who pays it (prd §1924).
+                           line: String(localized: "On Aztec, out to Ethereum"),
                            lineInk: DS.aztecInk, glyphInk: DS.aztecInk) { chrome.yourAccountShowsAztec = true }
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
