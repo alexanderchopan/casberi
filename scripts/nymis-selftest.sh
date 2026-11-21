@@ -127,6 +127,13 @@ if grep -nE 'NSLog\(.*[Tt]oken' "$SCANS" "$SHAPE"; then
 fi
 grep -qF '@ObservationIgnored private var tokens' "$SCANS" \
   || { echo "✗ the scan tokens are not private memory"; exit 1; }
+# A 429's code is logged in every build, for Nymis (2026-11-11): never
+# behind DEBUG, and from the scan and the summary poll alike.
+[[ $(grep -cF 'Self.noteRefusal(reply, phase:' "$SCANS") == 2 ]] \
+  || { echo "✗ a 429 from Nymis is not logged where a scan or a summary is asked"; exit 1; }
+if awk '/private static func noteRefusal/,/^    }/' "$SCANS" | grep -qF '#if DEBUG'; then
+  echo "✗ a 429's code is logged in DEBUG only: a shipped build could not hand it to Nymis"; exit 1
+fi
 # The readings stay on this phone.
 grep -qF 'DefaultsWrite.set(data, forKey: Self.readingsKey)' "$SCANS" \
   || { echo "✗ readings are not persisted through DefaultsWrite"; exit 1; }
@@ -339,6 +346,21 @@ let old = try? JSONDecoder().decode(NymisScan.Reading.self, from: Data(stored.ut
 check(old?.summary == "Old words." && old?.facts?.count == 1 && old?.overview == nil,
       "a stored page reading still decodes and draws as it did")
 check(old.flatMap(NymisScan.rowLine) == "Related addresses", "its row keeps the page's line")
+
+// A 429 as Nymis said it, for Nymis (2026-11-11): code, message, the wait,
+// the limit headers and the request's id; nothing else, and no address.
+let refused = NymisScan.refusalLine(phase: "create", retryAfter: "3600",
+    headers: ["X-RateLimit-Limit": "3", "x-ratelimit-remaining": 0, "CF-Ray": "abc-LHR",
+              "Set-Cookie": "s=1", "x-scan-token": "tok-secret"],
+    body: Data(#"{"error":{"code":"daily_ip_limit","message":"3 scans a day\nfor \#(alice)"},"scanToken":"tok-secret","address":"\#(aliceKey)"}"#.utf8))
+check(refused == "nymis| 429 | create | code=daily_ip_limit | message=3 scans a day for 0x… | retry-after=3600 | cf-ray=abc-LHR | x-ratelimit-limit=3 | x-ratelimit-remaining=0",
+      "a 429 reads its code, message, wait and limit headers: \(refused)")
+check(!refused.contains("tok-secret") && !refused.lowercased().contains(aliceKey) && !refused.contains("s=1"),
+      "a 429's line carries no token, address or cookie")
+check(NymisScan.refusalLine(phase: "poll", retryAfter: nil, headers: [:], body: Data(#"{"code":"global_limit","message":"Try tomorrow"}"#.utf8))
+      == "nymis| 429 | poll | code=global_limit | message=Try tomorrow", "a flat code and message")
+check(NymisScan.refusalLine(phase: "poll", retryAfter: nil, headers: [:], body: Data("Too Many Requests".utf8))
+      == "nymis| 429 | poll | body=Too Many Requests", "a plain-text 429 keeps its words")
 exit(failures == 0 ? 0 : 1)
 SWIFT
 xcrun swiftc -O "$SHAPE" "$WORK/main.swift" -o "$WORK/nymis" 2>&1 | grep -v "^$" || true
