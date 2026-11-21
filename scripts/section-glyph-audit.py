@@ -38,6 +38,8 @@ ALLOW = {
     "Casberi/Casberi/Design/DSTraySearchField.swift": "a field's own glyph beside its words",
     "Casberi/Casberi/Screens/MoveBack.swift": "a back row: the chevron is the control; and `MoveRowGlyph`, "
                                               "a Move row's lead on its disc, never a section name (prd §1892)",
+    "Casberi/Casberi/Design/DSSeenStamp.swift": "Risks' state line (\"N new\", \"All seen\"): its shield is the "
+                                                "stamp the user picked, a fact over the findings, not a section name (prd §1919)",
 }
 
 
