@@ -198,11 +198,19 @@ struct MoveLendSentence<Head: View>: View {
     /// chips over From · Amount on Home's panel, the foot's word held to act.
     private var deck: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: title)
-                .dsText(.heading34)
-                .foregroundStyle(DS.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if kindsShown, doneHash == nil {
+                // The title is the Type (prd §1934): Deposit · Withdraw.
+                MoveKindTitle(kinds: [
+                    MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: move.mode == .lend) { flip(.lend) },
+                    MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: move.mode == .takeBack) { flip(.takeBack) },
+                ], disabled: move.acting)
+            } else {
+                Text(verbatim: title)
+                    .dsText(.heading34)
+                    .foregroundStyle(DS.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             if move.stage == .reading {
                 MoveReceiptLine(label: "") {
                     Text("Reading Aave…").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -276,16 +284,6 @@ struct MoveLendSentence<Head: View>: View {
     /// its quick shares on Amount.
     private var receiptLines: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-            if kindsShown, doneHash == nil {
-                MoveReceiptLine(label: String(localized: "Type")) {
-                    MoveChip(text: String(localized: "Deposit"), tone: move.mode == .lend ? .open : .empty, disabled: move.acting) {
-                        if move.mode != .lend { flip(.lend) }
-                    }
-                    MoveChip(text: String(localized: "Withdraw"), tone: move.mode == .takeBack ? .open : .empty, disabled: move.acting) {
-                        if move.mode != .takeBack { flip(.takeBack) }
-                    }
-                }
-            }
             MoveReceiptLine(label: String(localized: "From")) {
                 if let m = market {
                     MoveChip(text: "\(m.symbol) · \(move.network?.name ?? m.network)",

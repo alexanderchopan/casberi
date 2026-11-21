@@ -7152,13 +7152,20 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             // The verb's name, then its receipt (prd §1931).
             // Done, the past tense alone: "Sent", how it went is the Status line (prd §1932).
-            Text(verbatim: receipt.map { $0.past.trimmingCharacters(in: CharacterSet(charactersIn: ",")) } ?? pageTitle(verb))
-                .dsText(.heading34)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .accessibilityAddTraits(.isHeader)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if kindsShown {
+                // The title is the Type (prd §1934): both kinds, A–Z.
+                MoveKindTitle(kinds: verbKinds.sorted { kindWord($0).localizedStandardCompare(kindWord($1)) == .orderedAscending }.map { v in
+                    MoveKindTitle.Kind(id: kindWord(v), word: kindWord(v), on: v == verb) { pickVerb(v) }
+                }, disabled: stage != nil)
+            } else {
+                Text(verbatim: receipt.map { $0.past.trimmingCharacters(in: CharacterSet(charactersIn: ",")) } ?? pageTitle(verb))
+                    .dsText(.heading34)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             receiptLines
                 .padding(.top, MoveReceipt.gap)
             // What the open line asks, down to the foot; a list runs under
@@ -7241,13 +7248,6 @@ struct MoveSentence: View {
     @ViewBuilder private var receiptLines: some View {
         let rows = receipt != nil ? doneLines : choiceRowListAt(stageOK: true)
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-            if kindsShown, receipt == nil {
-                MoveReceiptLine(label: String(localized: "Type")) {
-                    ForEach(verbKinds.sorted { kindWord($0).localizedStandardCompare(kindWord($1)) == .orderedAscending }, id: \.self) { v in
-                        MoveChip(text: kindWord(v), tone: v == verb ? .open : .empty, disabled: stage != nil) { pickVerb(v) }
-                    }
-                }
-            }
             // The hold reads them in order (prd §1933); done, their fills
             // drain one after another, top to bottom.
             ForEach(Array(rows.enumerated()), id: \.element.id) { n, r in

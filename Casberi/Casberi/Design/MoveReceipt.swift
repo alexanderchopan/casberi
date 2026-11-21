@@ -55,6 +55,44 @@ enum MoveFlight {
     static func key(symbol: String, network: String) -> String { "flight|\(symbol)|\(network)" }
 }
 
+/// **THE TITLE IS THE TYPE (prd §1934, user: "agree on 2").** A verb with
+/// two kinds names both at the title's size, the one you are in white and
+/// the other grey; a tap on the grey one switches. No Type line under it.
+struct MoveKindTitle: View {
+    struct Kind: Identifiable {
+        let id: String
+        let word: String
+        let on: Bool
+        let pick: () -> Void
+    }
+    let kinds: [Kind]
+    var disabled = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
+            ForEach(kinds) { k in
+                Button {
+                    guard !k.on else { return }
+                    k.pick()
+                    DSHaptic.selection()
+                } label: {
+                    Text(verbatim: k.word)
+                        .dsText(.heading34)
+                        .foregroundStyle(k.on ? DS.textPrimary : DS.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityAddTraits(k.on ? [.isSelected, .isHeader] : [])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .disabled(disabled)
+        .animation(DS.Motion.standard, value: kinds.map(\.on))
+    }
+}
+
 /// One line of the receipt: its word in the label column, then what answers it.
 struct MoveReceiptLine<Content: View>: View {
     let label: String

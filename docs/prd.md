@@ -74883,3 +74883,13 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: the face on To's chip; a pick landing in its chip; an amount over the balance (amber chip and caret, All not lit). **Not seen:** the flight in motion (frames 0.3s apart), a lookalike row, the hold reading the lines and the Status words (the hold was not taken in this session), the drain.
+
+## §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other grey and a tap away; no Type line (amends §1931 item 6) (user, 2026-11-21, of the next polish round: "agree on 2"; of the rest: "users sometimes want to choose token first not 'to'", "ready needs to show those details. we tried folding them before and it got cumbersome") — BUILT
+
+**Ruling.** Swap · Sweep, Gift cards · Tokens and Earn's Deposit · Withdraw stand in the title (`MoveKindTitle`, heading34, A–Z), the kind you are in white, the other in the secondary ink; a tap on it switches, with the selection tap. The Type line under the title is deleted. A verb with one kind, a move under way and a done receipt keep the plain title.
+
+**Declined in the same round (user):** asking one line at a time (people pick the token before the address), and folding Ready's facts into Details (tried before; cumbersome). Every line stays answerable in any order, and Ready keeps its facts.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Swap's title, and a tap on Sweep switching to Sweep's receipt. **Not seen:** Buy's and Earn's titles.
