@@ -74783,3 +74783,18 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: Aztec's move-in (receipt, then Amount on the keys), Railgun's move-in (receipt with Cost), Privacy Pools' send (To open, Choose an address) and move-in (receipt, Hold to send).
+
+## §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amends §1803's three addresses, §1824's doors, §1892's private rows, §1916's one line, §1921's Add money door in Receive; §1470's and §1910's Receive › another network token grid; §1884's quiet line on Receive's plates; §1506's From another wallet tray) (user, 2026-11-20: "WE NEED TO FIX ALL THESE RECEIVE SCREENS TO BE ACCURATE", "lets go through ever single receive screen", "can't a user just pick network address why do they need to pick the token", "our existing behavior is the plain fact is in the header right? above the plate?", "these two screens can be designed better they look busy" — 3A picked, "Move into the plate") — BUILT
+
+**Ruling.** Receive opens on its places in two groups, each row saying who can pay it; a place's page puts **the facts in the sentence on top** and **the one thing you act on in the plate**: the address, in groups of four (`AddressGroups`, `mono24`), with its one rule. Share is a disc beside Copy address in the foot (`MoveShareDisc`), never a row.
+
+1. **The list.** *Public*: Your public account (its networks; Copy), From another network ("Arbitrum, Optimism and more"), From another wallet ("MetaMask and others"). *Private*: Your private balance, then From any wallet ("New address each time"; Copy) and From Railgun ("Your 0zk address"; Copy) under it, both copied in place; Your private account in Aztec's ink ("Paid from Aztec accounts"; Copy). Add money left Receive: moving your own money in is Send's.
+2. **From another network is networks only** (`otherNetworkList`): every network Relay takes deposits on that your public account is not already on, A–Z, under "Receive from another network." A pick asks Relay for USDC's deposit address (the network's own coin where it has no USDC) **on the same screen**: the sentence becomes "Receive USDC on Arbitrum as USDC on Base."; the plate holds USDC · ETH chips (USDC and the network's own coin, `routeChoices`), the address, amber "Send only USDC on Arbitrum here", and "Relay's fee about $0.03 · not through Tor" (the Through row folds into it). No Network or Arrives as steps; back goes to the networks.
+3. **Your public account**: "Receive at …8e01 on Base, Ethereum, or Robinhood."; the plate: the address and "Takes any token".
+4. **Your private account on Aztec** (`MoveAztecReceive`) stands on the deck: "Receive to your private account on Aztec."; the address and "Aztec to Aztec only" in Aztec's ink; Copy address in its ink. Its "Add money from Ethereum" row is deleted.
+5. **Your private balance** (`MoveFreshSentence`, reached from a waiting row in Holdings): "Receive to your private balance."; From any wallet with where each token goes (ETH, USDC · Privacy Pools; DAI, USDT +5 · Railgun), New address; From Railgun with its 0zk address.
+6. **From another wallet** (`ReceiveFromWalletSheet`) takes Move's layout: the sentence ("Receive $1,820 from …ffee.") on top, the rows on the plate, back and "Receive $1,820" in the foot; no tray title, no slab.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator: the list; From another network's networks, its Arbitrum route in USDC and in ETH, back to the networks; the public page; the Aztec page; From another wallet on the demo's sample.

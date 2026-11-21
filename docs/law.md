@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2108 of 2182 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2109 of 2183 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2245,7 +2245,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1800 — Lend takes Move's layout: the verb as title, the sentence over the button, the network first (amends §1674, §1700z)
 - §1801 — The private sends take Move's layout (amends §1781, §1755) (amended by §1927)
 - §1802 — Move's details: the amount is a menu and is typed in its row on Lend and the private sends; their one network is a ro… (amended by §1889, §1896)
-- §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824, §1892, §1901)
+- §1803 — The screens outside Move: Receive lists all three addresses, Account says what it holds, and the walk fits its tray (… (amended by §1824, §1892, §1901, §1928)
 - §1804 — Move's menus are glass at menu type; the pick is checked; a finished move ends on a checked card (amends §1784, §1616… (amended by §1889)
 - §1805 — Move is the sentence: the gap is shown, the button names it, a row stands only where there is a choice, the menu is w… (amended by §1892, §1909)
 - §1806 — A send behind its sheet lands as a toast, and a Railgun send to someone goes behind its sheet too (amends §1777)
@@ -2266,7 +2266,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1821 — Aztec's directory is deleted: Library's Wallet folder keeps only the Aztec apps you have connected (retires §1700i, §…
 - §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac… (amended by §1824)
 - §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
-- §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo… (amended by §1853, §1872)
+- §1824 — Receive says where each place works, the three ways in from outside stand under the public account, and "From a zk.mo… (amended by §1853, §1872, §1928)
 - §1825 — The Wallet's Ethereum holdings are checked against Ethereum itself through Kohaku: ETH and up to eight of each wallet…
 - §1826 — Export shows the key once it lands on one network, and says which network and step it is on while it adds the rest
 - §1827 — A Wallet page goes back to where you opened it: Needs you, Money, Account and an app's page opened from Activity swip…
@@ -2334,7 +2334,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892, §1912)
 - §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
-- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902, §1914, §1916)
+- §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902, §1914, §1916, §1928)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
@@ -2358,19 +2358,20 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1913 — Send and Swap open on their tokens, Send's step is Token, and Swap's sides flip (amended by §1914, §1915)
 - §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amended by §1916)
 - §1915 — Swap's flip is a pick, never a button
-- §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip… (amended by §1923)
+- §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip… (amended by §1923, §1928)
 - §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track
 - §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round (amended by §1922)
 - §1918a — No co-signer, up to $100: Shield's sign-in and limit MEASURED for a fresh key
 - §1919 — Risks: a seen finding is stamped and leaves, three a kind, the findings' own head ("N new", "All seen"), and Without…
 - §1920 — Into Aztec without a co-signer: your Shield key, up to $100 a day (amended by §1922)
-- §1921 — Receive's private account carries its Add money door
+- §1921 — Receive's private account carries its Add money door (amended by §1928)
 - §1922 — Into Aztec, this iPhone first: the co-signer only past $100 a day
 - §1923 — Send's To is rows, the token's row, with Yours first
 - §1924 — "Aztec to Aztec only" is the address's rule, not the account's
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck
+- §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence
 
 ## Dead rulings → what replaced them (generated)
 

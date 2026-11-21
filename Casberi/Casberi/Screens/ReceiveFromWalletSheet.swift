@@ -17,22 +17,66 @@ struct ReceiveFromWalletSheet: View {
         _model = State(initialValue: Model(account: account, sample: sample))
     }
 
+    @Environment(\.dismiss) private var dismiss
+
+    /// **MOVE'S LAYOUT (prd §1928, as every Receive page):** the sentence on
+    /// top says whose money and how much; the plate holds the rows; the
+    /// foot holds back and the one act.
     var body: some View {
-        DSTray(title: String(localized: "From another wallet"), height: 640, detents: [.large]) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                switch model.stage {
-                case .connecting(let url): connecting(url)
-                case .reading: waiting(String(localized: "Reading \(model.short) on every network"))
-                case .choosing: choosing
-                case .sending(let index): sending(index)
-                case .done: done
-                case .failed(let words): failed(words)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: model.headline)
+                .dsText(MoveSentence.rung).foregroundStyle(DS.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s6)
+                .padding(.bottom, DS.Space.s6)
+                .contentTransition(.opacity)
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.s3) {
+                        switch model.stage {
+                        case .connecting(let url): connecting(url)
+                        case .reading: waiting(String(localized: "Reading \(model.short) on every network"))
+                        case .choosing: choosing
+                        case .sending(let index): sending(index)
+                        case .done: done
+                        case .failed(let words): failed(words)
+                        }
+                    }
+                    .padding(.top, HomePanelMetrics.cap)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.bottom, MoveDeck.footHeight + DS.Space.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .scrollIndicators(.hidden)
+                .background(alignment: .top) { HomePanelSurface() }
+                .deckUnderFoot()
+                MoveDeckFoot(back: { dismiss() }) { footWord }
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.bottom, DS.Space.s4)
             }
             .animation(DS.Motion.standard, value: model.stage)
         }
+        .background(DS.surfaceSheet.ignoresSafeArea())
         .task { await model.start() }
         .onDisappear { model.close() }
+    }
+
+    /// The one act, where the old slab was (prd §1897 item 7).
+    @ViewBuilder private var footWord: some View {
+        switch model.stage {
+        case .choosing where !model.plan.legs.isEmpty:
+            MoveFootWord(word: model.verb, ink: model.picked.isEmpty ? DS.textSecondary : DS.pickInk) {
+                if !model.picked.isEmpty { model.send() }
+            }
+        case .done:
+            MoveFootWord(word: String(localized: "Done")) { dismiss() }
+        case .failed:
+            MoveFootWord(word: String(localized: "Try again")) { Task { await model.start() } }
+        default:
+            EmptyView()
+        }
     }
 
     // MARK: - Connect
@@ -73,13 +117,7 @@ struct ReceiveFromWalletSheet: View {
 
     @ViewBuilder private var choosing: some View {
         let plan = model.plan
-        if plan.legs.isEmpty {
-            Text("Nothing in \(model.short) can move to you.")
-                .dsText(.heading24).foregroundStyle(DS.textPrimary)
-        } else {
-            Text(model.sentence)
-                .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+        if !plan.legs.isEmpty {
             ForEach(plan.legs) { leg in
                 let on = model.picked.contains(leg.id)
                 Button {
@@ -104,8 +142,6 @@ struct ReceiveFromWalletSheet: View {
             }
         }
         if !plan.legs.isEmpty {
-            DSSlabButton(title: model.verb, enabled: !model.picked.isEmpty) { model.send() }
-                .padding(.top, DS.Space.s3)
             // Approving is the wallet's, one send at a time; a network's
             // own coin goes last, less what the sends cost.
             DSFootnote(prose: String(localized: "You approve each send. Fees are kept back."),
@@ -143,7 +179,7 @@ struct ReceiveFromWalletSheet: View {
     @ViewBuilder private func sending(_ index: Int) -> some View {
         let legs = model.sendingLegs
         Text("Approve \(index + 1) of \(legs.count) in \(model.walletName)")
-            .dsText(.heading24).foregroundStyle(DS.textPrimary)
+            .dsText(.body17).foregroundStyle(DS.textSecondary)
         ForEach(Array(legs.enumerated()), id: \.element.id) { i, leg in
             HStack(spacing: DS.Space.s3) {
                 Text(verbatim: Self.words(leg.holding.symbol, raw: leg.amount, decimals: leg.holding.decimals))
@@ -162,8 +198,6 @@ struct ReceiveFromWalletSheet: View {
     }
 
     @ViewBuilder private var done: some View {
-        Text(model.receipt).dsText(.heading24).foregroundStyle(DS.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
         if model.sent.values.contains(where: { _ in true }), model.sendingLegs.contains(where: { if case .relay = $0.way { true } else { false } }) {
             Text("What comes through Relay lands on Base in a few minutes.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -179,7 +213,6 @@ struct ReceiveFromWalletSheet: View {
     @ViewBuilder private func failed(_ words: String) -> some View {
         Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
             .fixedSize(horizontal: false, vertical: true)
-        DSSlabButton(title: String(localized: "Try again")) { Task { await model.start() } }
     }
 
     private func waiting(_ words: String) -> some View { waitingLine(words) }
@@ -271,6 +304,17 @@ extension ReceiveFromWalletSheet {
         /// "Receive $1,240 from 0xab…cd." — the picked money, whose it is.
         var sentence: String {
             String(localized: "Receive \(WalletValue.exactMoney(pickedLegs.reduce(0) { $0 + $1.usd })) from \(short).")
+        }
+
+        /// The sentence over the plate, by stage (prd §1928).
+        var headline: String {
+            switch stage {
+            case .connecting, .failed: String(localized: "Receive from another wallet.")
+            case .reading: String(localized: "Receive from \(short).")
+            case .choosing: plan.legs.isEmpty ? String(localized: "Nothing in \(short) can move to you.") : sentence
+            case .sending: String(localized: "Receiving from \(short).")
+            case .done: receipt
+            }
         }
 
         var verb: String {

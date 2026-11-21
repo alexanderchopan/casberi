@@ -309,6 +309,8 @@ struct MoveSentence: View {
     /// network's dollar, or ETH for ETH.
     @State private var elsewhereArrives: Op.Token?
     @State private var elsewhereFinding: String?
+    /// The network Relay is being asked about, while it answers (prd §1928).
+    @State private var elsewhereAsking: YourAccountElsewhere.Network?
     /// What the sentence says back for a moment — what is missing, what
     /// failed — in its own line, because a toast draws under the tray
     /// (§1442c). Cleared after a few seconds, or by the next one.
@@ -1515,11 +1517,6 @@ struct MoveSentence: View {
             if aztecReceive, privateMode == nil, open != .verb {
                 MoveAztecReceive(inTray: inTray, leave: {
                     withAnimation(DS.Motion.standard) { aztecReceive = false; open = nil }
-                }, addMoney: {
-                    // Money on Ethereum comes in through Send's sentence to
-                    // your private balance on Aztec (prd §1779).
-                    withAnimation(DS.Motion.standard) { aztecReceive = false; verb = .send }
-                    goAztec(.deposit)
                 }) { verbWord(title(.receive)) }
                 .transition(.opacity)
             }
@@ -2506,13 +2503,20 @@ struct MoveSentence: View {
             // is the same on other EVM chains … we should have them pick the
             // chain no matter what").** Until it is, the address is a word,
             // not a copy: a tap asks for the network first.
-            MoveClause(glue: String(localized: "at")) {
-                // A word (prd §1781): the foot's Copy copies it, and the
-                // Network row picks where.
-                word(YourAccount.short(account), ink: networkPicked ? MoveSentence.settledInk : DS.textPrimary)
-                    .accessibilityLabel(Text("Your address, \(account)"))
+            if !receiveOther {
+                MoveClause(glue: String(localized: "at")) {
+                    // A word (prd §1781): the foot's Copy copies it, and the
+                    // Network row picks where.
+                    word(YourAccount.short(account), ink: networkPicked ? MoveSentence.settledInk : DS.textPrimary)
+                        .accessibilityLabel(Text("Your address, \(account)"))
+                }
             }
-            if receivePublic {
+            if receiveOther {
+                // Nothing to copy until a network is picked (prd §1928).
+                MoveClause(glue: String(localized: "from")) {
+                    word(String(localized: "another network."), ink: DS.textTertiary)
+                }
+            } else if receivePublic {
                 // Its page names every network the address is good on.
                 MovePhrase(receiveNetworks.map(\.name).formatted(.list(type: .or)) + ".", glue: String(localized: "on"),
                            ink: DS.textPrimary)
@@ -2525,15 +2529,12 @@ struct MoveSentence: View {
     // MARK: - Receive's three addresses (prd §1803)
 
     @ViewBuilder private var receiveAddresses: some View {
-        // **ONE EVEN GAP (prd §1901 item 4, the user: "make sure the spacing is
-        // equal"):** every place and door at the same distance.
+        // **PUBLIC AND PRIVATE, EACH ROW SAYING WHO CAN PAY IT (prd §1928,
+        // user: "lets go through every single receive screen", "i want to be
+        // clear what each do"):** the ways others pay you, in two groups.
+        // Moving your own money in is Send's (Add money left Receive).
         VStack(alignment: .leading, spacing: 0) {
-            // **EACH PLACE SAYS WHERE IT WORKS, AND EVERY WAY IN FROM OUTSIDE
-            // STANDS UNDER THE PLACE IT LANDS (prd §1824).** The public line
-            // names its networks, as Aztec's says "Aztec to Aztec only"
-            // (user: "we need to make that clear"); the two "From" rows
-            // land in the public account, so they stand under it, where under
-            // the Aztec account they read as private.
+            receiveGroup(String(localized: "Public"))
             VStack(alignment: .leading, spacing: 0) {
                 if receiveNetworks.isEmpty {
                     // Never an address the account cannot follow (§1442k).
@@ -2542,33 +2543,62 @@ struct MoveSentence: View {
                                  factInk: DS.attentionInk, place: "public", open: nil, copy: nil)
                 } else {
                     receivePlace(String(localized: "Your public account"), glyph: "wallet.bifold",
-                                 fact: Self.onlyOn(receiveNetworks.map(\.name)), place: "public",
+                                 fact: receiveNetworks.map(\.name).joined(separator: ", "), place: "public",
                                  open: { receivePublic = true },
                                  copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })
                 }
                 receiveFromRows
             }
-            if PrivateMove.freshAvailable {
-                // Its copy opens its page too: only there is the address
-                // watched, and only there is its rule said (prd §1779).
-                // "New address each time" (user, 2026-11-18, of the board:
-                // "this should say new address each time").
-                receivePlace(String(localized: "Your private balance"), glyph: "lock.fill",
-                             // One line, as every place's (prd §1916): its networks
-                             // are the public account's, said in the row above.
-                             fact: String(localized: "New address each time"), place: "fresh",
-                             open: { goFresh() },
-                             copy: {
-                                 if !DemoMode.isActive {
-                                     FreshReceive.shared.ensureCurrent()
-                                     if let entry = FreshReceive.shared.current { DSPasteboard.copy(entry.address); DSHaptic.tap() }
-                                 }
-                                 goFresh()
-                             })
+            let aztec = AztecProver.isAvailable ? AztecAccountStore.shared.shown.address : nil
+            if PrivateMove.freshAvailable || RailgunPocket.available || aztec != nil {
+                receiveGroup(String(localized: "Private"))
             }
-            if AztecProver.isAvailable, let aztec = AztecAccountStore.shared.shown.address {
+            if PrivateMove.freshAvailable || RailgunPocket.available {
+                // **YOUR PRIVATE BALANCE, TWO WAYS IN ON THIS PAGE (prd §1928,
+                // user: "theya re both private balance", "i think it should be
+                // same page"):** its name, then a row per payer, each copied
+                // in place. Privacy Pools and Railgun are both your private balance.
+                MoveDeckRowLabel(name: String(localized: "Your private balance"), minHeight: Self.receiveRow) {
+                    Self.receiveDisc("lock.fill")
+                }
+                .accessibilityAddTraits(.isHeader)
+                if PrivateMove.freshAvailable {
+                    // Anyone pays a one-time address; what arrives moves in by
+                    // itself (ETH and USDC to Privacy Pools, Railgun's tokens to Railgun).
+                    receivePlace(String(localized: "From any wallet"),
+                                 fact: String(localized: "New address each time"), place: "fresh",
+                                 open: nil,
+                                 copy: {
+                                     guard !DemoMode.isActive else { say(YourAccountDemo.actsLater); return }
+                                     FreshReceive.shared.ensureCurrent()
+                                     if let entry = FreshReceive.shared.current {
+                                         DSPasteboard.copy(entry.address)
+                                         DSHaptic.tap()
+                                         markCopied("fresh")
+                                     }
+                                 })
+                }
+                if RailgunPocket.available {
+                    // Your 0zk address, the same every time; only a Railgun
+                    // private balance pays it (prd §1877).
+                    receivePlace(String(localized: "From Railgun"),
+                                 fact: String(localized: "Your 0zk address"), place: "railgun",
+                                 open: nil,
+                                 copy: {
+                                     Task { @MainActor in
+                                         let address = DemoMode.isActive ? MoveFreshSentence<EmptyView>.demoPrivateAddress
+                                             : try? await RailgunPocket.privateAddress()
+                                         guard let address else { say(String(localized: "Railgun did not answer")); return }
+                                         DSPasteboard.copy(address)
+                                         DSHaptic.tap()
+                                         markCopied("railgun")
+                                     }
+                                 })
+                }
+            }
+            if let aztec {
                 receivePlace(String(localized: "Your private account"), ink: DS.aztecInk, mark: "brand-aztec",
-                             fact: String(localized: "Aztec to Aztec only"), factInk: DS.aztecInk, copyInk: DS.aztecInk, place: "aztec",
+                             fact: String(localized: "Paid from Aztec accounts"), factInk: DS.aztecInk, copyInk: DS.aztecInk, place: "aztec",
                              open: { open = nil; aztecReceive = true },
                              copy: {
                                  if DemoMode.isActive { say(YourAccountDemo.actsLater); return }
@@ -2576,18 +2606,18 @@ struct MoveSentence: View {
                                  DSHaptic.tap()
                                  markCopied("aztec")
                              })
-                // **ADD MONEY, UNDER THE PLACE IT LANDS (prd §1921, as §1824's
-                // ways in under the public account; user: "i always feel
-                // confused how i put money into it").** Send's sentence to your
-                // private account, as the Aztec page's own row opens it (§1779).
-                Button {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) { open = nil; verb = .send }
-                    goAztec(.deposit)
-                } label: { receiveDoor(String(localized: "Add money"), glyph: "plus") }
-                    .buttonStyle(RowPress())
             }
         }
+    }
+
+    /// A group's name over its places (prd §1928): the section rung, at the edge.
+    private func receiveGroup(_ name: String) -> some View {
+        Text(verbatim: name)
+            .dsText(.heading24)
+            .foregroundStyle(DS.textPrimary)
+            .padding(.top, DS.Space.s3)
+            .frame(minHeight: DS.Hit.min, alignment: .bottomLeading)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// "Base, Ethereum, Robinhood only": where the public address is good,
@@ -2610,13 +2640,13 @@ struct MoveSentence: View {
                     try? await Task.sleep(for: .milliseconds(350))
                     withAnimation(DS.Motion.standard) { open = .elsewhere }
                 }
-            } label: { receiveDoor(String(localized: "From another network"), glyph: "arrow.right") }
+            } label: { receiveDoor(String(localized: "From another network"), sub: String(localized: "Arbitrum, Optimism and more"), glyph: "arrow.right") }
                 .buttonStyle(RowPress())
             // **FROM ANOTHER WALLET (prd §1506):** a wallet of your own
             // elsewhere sends it all here, each send approved there.
             Button {
                 ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
-            } label: { receiveDoor(String(localized: "From another wallet"), glyph: "wallet.bifold") }
+            } label: { receiveDoor(String(localized: "From another wallet"), sub: String(localized: "MetaMask and others"), glyph: "wallet.bifold") }
                 .buttonStyle(RowPress())
         }
     }
@@ -2632,8 +2662,8 @@ struct MoveSentence: View {
 
     /// A way in from outside: white, on its disc, so it never reads as
     /// switched off (prd §1916); no chevron, as no door has one (§1272).
-    private func receiveDoor(_ name: String, glyph: String) -> some View {
-        MoveDeckRowLabel(name: name, minHeight: Self.receiveRow) { Self.receiveDisc(glyph) }
+    private func receiveDoor(_ name: String, sub: String? = nil, glyph: String) -> some View {
+        MoveDeckRowLabel(name: name, sub: sub, minHeight: Self.receiveRow) { Self.receiveDisc(glyph) }
     }
 
     /// Every Receive row's height (prd §1916).
@@ -2710,28 +2740,14 @@ struct MoveSentence: View {
     /// The public account's page: the whole address under its name, each
     /// network by mark and name, and Share; the foot copies.
     @ViewBuilder private var receivePublicPage: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Public address").dsText(.body17).foregroundStyle(DS.textSecondary)
-                addressBlock(account)
-                HStack(spacing: DS.Space.s3) {
-                    ForEach(receiveNetworks, id: \.chainId) { net in
-                        HStack(spacing: DS.Space.s1) {
-                            if let mark = Self.networkMark(net) { MoveRowMark(network: mark, size: 22) }
-                            Text(verbatim: net.name).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        }
-                    }
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .padding(.top, DS.Space.s1)
-            }
-            if !YourAccountDemo.isDemo(account) {
-                ShareLink(item: account) {
-                    MoveVerbRowLabel(title: String(localized: "Share"), glyph: "square.and.arrow.up")
-                }
+        // **THE PLATE HOLDS THE ADDRESS (prd §1928):** the sentence names its
+        // networks, so the plate does not again. Share is the foot's.
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Button { copy() } label: { AddressGroups(address: account) }
                 .buttonStyle(RowPress())
-            }
+                .accessibilityLabel(Text(verbatim: account))
+                .accessibilityHint(Text("Copies the address"))
+            Text("Takes any token").dsText(.body17).foregroundStyle(DS.textSecondary)
         }
     }
 
@@ -3098,7 +3114,7 @@ struct MoveSentence: View {
         case .buy: return buyBare
         // The three addresses say it all, and "on network." is not said
         // before one is picked (prd §1803: no half-finished sentence).
-        case .receive: return receiveList || (elsewhere == nil && !networkPicked && !receivePublic && !fresh)
+        case .receive: return receiveList || (elsewhere == nil && !networkPicked && !receivePublic && !receiveOther && !fresh)
         default: return false
         }
     }
@@ -4832,7 +4848,8 @@ struct MoveSentence: View {
             // Receive's places are the deck's (prd §1901 item 4).
             EmptyView()
         } else if verb == .receive, receivePublic {
-            receivePublicPage
+            // The public account's plate is the deck's (prd §1928).
+            EmptyView()
         } else if verb == .receive {
             // **RECEIVE (§1442i, user: "when we show 'at' show …xxxx or complete
             // address. and somewhere on the page complete address should be
@@ -4843,16 +4860,9 @@ struct MoveSentence: View {
             // stands in `space`'s ZStack, so two siblings here would draw
             // over each other.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                if let route = elsewhere {
-                    VStack(alignment: .leading, spacing: DS.Space.s3) {
-                        addressBlock(route.address)
-                        // A wrong token sent here can be lost, so the line names
-                        // the one it takes; a swap on the way is said (§83), since
-                        // what lands is set by the price when it lands.
-                        Text(Self.elsewhereLine(route))
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                if elsewhere != nil || receiveOther {
+                    // A route and its networks are the deck's (prd §1928).
+                    EmptyView()
                 } else if !fresh, !networkPicked {
                     // No address under the sentence until its network is picked
                     // (prd §1486); a route Relay refused still says why.
@@ -6185,7 +6195,94 @@ struct MoveSentence: View {
     /// this network.
     private var elsewhereList: some View {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
+        return Group {
+            if receiveOther { otherNetworkList(q) } else { elsewhereAll(q) }
+        }
+        // Relay's networks are asked for outside the demo only (§1475).
+        .task { if elsewhereNetworks.isEmpty, !YourAccountDemo.isOn { elsewhereNetworks = await YourAccountElsewhere.networks() } }
+    }
+
+    /// **FROM ANOTHER NETWORK IS NETWORKS ONLY (prd §1928, user: "can't a
+    /// user just pick network address why do they need to pick the token").**
+    /// Every network Relay takes deposits on that your public account is not
+    /// already on, A–Z; a pick asks Relay for USDC's address, and the plate
+    /// switches the token.
+    private func otherNetworkList(_ q: String) -> some View {
+        let own = Set(receiveNetworks.map(\.chainId))
+        let rows = elsewhereNetworks
+            .filter { !own.contains($0.id) && (q.isEmpty || $0.name.lowercased().contains(q)) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         return VStack(alignment: .leading, spacing: 0) {
+            ForEach(rows) { n in
+                listRow(n.name, image: Self.networkMark(chainId: n.id), remote: Self.networkMark(chainId: n.id) == nil ? n.icon : nil,
+                        picked: elsewhere?.from.id == n.id) {
+                    pick { elsewhere = nil }
+                    takeRoute(from: n, token: n.coin(like: nil))
+                }
+            }
+            if elsewhereNetworks.isEmpty, !YourAccountDemo.isOn {
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner()
+                    Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                .frame(minHeight: DSFeed.headHeight)
+            }
+        }
+    }
+
+    /// **THE ROUTE'S PLATE (prd §1928, user: "these two screens can be
+    /// designed better they look busy").** The sentence says what is sent and
+    /// what lands, so the plate holds only what you act on: what they send,
+    /// the address in groups of four, the one warning, the fee. Share is the
+    /// foot's, beside Copy address.
+    private func routePlate(_ route: YourAccountElsewhere.Route) -> some View {
+        let choices = Self.routeChoices(route.from)
+        return VStack(alignment: .leading, spacing: DS.Space.s6) {
+            if choices.count > 1 {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(choices) { c in
+                        Button {
+                            guard c != route.token else { return }
+                            DSHaptic.selection()
+                            takeRoute(from: route.from, token: c)
+                        } label: { Chip(text: c.symbol, selected: c == route.token) }
+                        .buttonStyle(PressSpring())
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Button { copy() } label: { AddressGroups(address: route.address) }
+                .buttonStyle(RowPress())
+                .accessibilityLabel(Text(verbatim: route.address))
+                .accessibilityHint(Text("Copies the address"))
+                // A wrong token sent here can be lost (§83).
+                Text("Send only \(route.token.symbol) on \(route.from.name) here")
+                    .dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                // Who carries it, and that it is not through Tor (prd §1495),
+                // on the fee's line: one fact, not a row over the plate.
+                Group {
+                    if let fee = route.feeUSD {
+                        Text(TorRoute.available ? "Relay's fee about \(Self.money(max(fee, 0.01))) · not through Tor"
+                                                : "Relay's fee about \(Self.money(max(fee, 0.01)))")
+                    } else if TorRoute.available {
+                        Text("Through Relay · not through Tor")
+                    }
+                }
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// What a sender may send from a network (prd §1928): USDC and the
+    /// network's own coin, where Relay takes them.
+    static func routeChoices(_ n: YourAccountElsewhere.Network) -> [YourAccountElsewhere.Coin] {
+        [n.coins.first { $0.symbol == "USDC" }, n.coins.first { $0.isNative }].compactMap { $0 }
+    }
+
+    private func elsewhereAll(_ q: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth.filter { q.isEmpty || $0.name.lowercased().contains(q) }) { n in
                 listRow(n.name, sub: n.isTest ? String(localized: "Test network · its tokens have no value") : String(localized: "your own address"),
                         image: Self.networkMark(n), picked: elsewhere == nil && networkPicked && n == network) {
@@ -6242,8 +6339,6 @@ struct MoveSentence: View {
                 .frame(minHeight: DSFeed.headHeight)
             }
         }
-        // Relay's networks are asked for outside the demo only (§1475).
-        .task { if elsewhereNetworks.isEmpty, !YourAccountDemo.isOn { elsewhereNetworks = await YourAccountElsewhere.networks() } }
     }
 
     /// Relay's address for the route, kept per route; on the network Receive
@@ -6254,7 +6349,9 @@ struct MoveSentence: View {
         let who = account
         let arrives = elsewhereArrives
         elsewhereFinding = nil
+        elsewhereAsking = from
         Task {
+            defer { if elsewhereAsking == from { elsewhereAsking = nil } }
             do {
                 let route = try await YourAccountElsewhere.route(from: from, token: token, to: to, arrives: arrives, account: who)
                 #if DEBUG
@@ -7225,6 +7322,31 @@ struct MoveSentence: View {
         } else if receivePlacesUp {
             receiveAddresses.padding(.vertical, DS.Space.s2)
                 .transition(.opacity)
+        } else if verb == .receive, receivePublic {
+            receivePublicPage
+                .padding(.top, DS.Space.s2)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .transition(.opacity)
+        } else if verb == .receive, elsewhere != nil || receiveOther {
+            // **THE ROUTE IS THE PLATE (prd §1928):** the address under the
+            // sentence that names it, on the screen the network was picked on.
+            Group {
+                if let route = elsewhere {
+                    routePlate(route)
+                } else if let asking = elsewhereAsking {
+                    HStack(spacing: DS.Space.s2) {
+                        DSSpinner()
+                        Text("Asking Relay for \(asking.name)").dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
+                    .frame(minHeight: DSFeed.headHeight)
+                } else if let elsewhereFinding {
+                    Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.top, DS.Space.s2)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .transition(.opacity)
         } else if deckReady {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -7355,6 +7477,8 @@ struct MoveSentence: View {
     /// to be picked, else its last. The verb's kinds lead where it has two.
     private var deckSteps: [MoveDeckStep] {
         guard receipt == nil else { return [] }
+        // A route names everything in its sentence (prd §1928).
+        if verb == .receive, receiveOther || receivePublic || elsewhere != nil { return [] }
         let rows = choiceRowList
         let current: Blank? = focus == .amount ? .amount : deckOpen
         var order: [String] = []
@@ -7638,7 +7762,8 @@ struct MoveSentence: View {
     /// Bitrefill" became "Sold by · Bitrefill").
     @ViewBuilder private var credits: some View {
         if receipt == nil, !nothingToMove {
-            if relayCarries {
+            // A route says it on its plate, with Relay's fee (prd §1928).
+            if relayCarries, !(verb == .receive && elsewhere != nil) {
                 MoveFactRow(name: String(localized: "Through"),
                             value: TorRoute.available ? String(localized: "Relay, not through Tor") : "Relay", indented: false)
             }
@@ -7668,6 +7793,14 @@ struct MoveSentence: View {
         if costShown { details = false; return }
         // Receive's own page (public, another network) steps back to its
         // places, a page inside the verb.
+        // A route steps back to its networks (prd §1928).
+        if verb == .receive, receiveOther, elsewhere != nil || elsewhereAsking != nil {
+            elsewhere = nil
+            elsewhereAsking = nil
+            elsewhereFinding = nil
+            open = .elsewhere
+            return
+        }
         if verb == .receive, elsewhere == nil, receivePublic || receiveOther {
             receivePublic = false
             receiveOther = false
@@ -7707,7 +7840,13 @@ struct MoveSentence: View {
         } else if verb == .receive {
             if !receiveList {
                 let ready = elsewhere != nil || (!fresh && networkPicked) || receivePublic
-                if ready {
+                if let shared = elsewhere?.address ?? (receivePublic ? account : nil), !YourAccountDemo.isDemo(account) {
+                    // Share beside the copy (prd §1928), never a row on the plate.
+                    HStack(spacing: DS.Space.s3) {
+                        MoveShareDisc(item: shared)
+                        MoveFootWord(word: footVerb) { copy() }
+                    }
+                } else if ready {
                     MoveFootWord(word: footVerb) { copy() }
                 } else {
                     MoveFootWord(word: String(localized: "Choose a network"), ink: DS.textSecondary) {
@@ -7764,6 +7903,13 @@ struct MoveSentence: View {
                     return
                 }
                 // A page of Receive goes back to its three addresses.
+                if verb == .receive, receiveOther, elsewhere != nil || elsewhereAsking != nil {
+                    elsewhere = nil
+                    elsewhereAsking = nil
+                    elsewhereFinding = nil
+                    open = .elsewhere
+                    return
+                }
                 if verb == .receive, elsewhere == nil, receivePublic || receiveOther {
                     receivePublic = false
                     receiveOther = false
@@ -9915,12 +10061,20 @@ struct MoveSentence: View {
 
     /// `-moveReceiveFrom "<Network>[|<COIN>[|<ARRIVES>]]"`: Receive from
     /// another network with the route taken (prd §1470) — "Arbitrum|USDT",
-    /// "Polygon|USDT|ETH" — because no headless run can make the taps. Logs
+    /// "Polygon|USDT|ETH", or "list" for the networks alone — because no headless run can make the taps. Logs
     /// `moveReceiveFrom:` with the route or the refusal.
     private func receiveDraft(_ draft: String) {
         let parts = draft.split(separator: "|").map(String.init)
         Task {
             let nets = await YourAccountElsewhere.networks()
+            // Through the From another network door, as a tap would (prd §1928);
+            // "list" stops at its networks.
+            receiveOther = true
+            if parts[0] == "list" {
+                elsewhereNetworks = nets
+                withAnimation(DS.Motion.standard) { open = .elsewhere }
+                return
+            }
             guard let net = nets.first(where: { $0.name.caseInsensitiveCompare(parts[0]) == .orderedSame }) else {
                 NSLog("moveReceiveFrom: no network named %@ among %d", parts[0], nets.count); return
             }
@@ -10342,6 +10496,43 @@ struct MovePhrase: View {
 /// busy (user, 2026-11-18). An EVM address shrinks to stay on one line; a
 /// longer one (Aztec's 64 digits) takes two. Every Receive and Your
 /// account's box draw it.
+/// **AN ADDRESS IN GROUPS OF FOUR (prd §1928):** the plate's one subject,
+/// read against the sender's screen. "0x5267 d1e4 9e85 …"
+struct AddressGroups: View {
+    let address: String
+    var ink: Color = DS.textPrimary
+
+    static func words(_ address: String) -> String {
+        let hex = address.hasPrefix("0x")
+        let body = hex ? address.dropFirst(2) : Substring(address)
+        var groups: [String] = hex ? ["0x" + body.prefix(4)] : []
+        var rest = hex ? body.dropFirst(4) : body
+        while !rest.isEmpty { groups.append(String(rest.prefix(4))); rest = rest.dropFirst(4) }
+        return groups.joined(separator: " ")
+    }
+
+    var body: some View {
+        Text(verbatim: Self.words(address)).dsText(.mono24).foregroundStyle(ink)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Share, as a disc beside the foot's Copy address (prd §1928).
+struct MoveShareDisc: View {
+    let item: String
+
+    var body: some View {
+        ShareLink(item: item) {
+            Circle().fill(DS.fillFaint)
+                .overlay(Image(systemName: "square.and.arrow.up").dsGlyph(.body, weight: .semibold).foregroundStyle(DS.textPrimary))
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text("Share"))
+    }
+}
+
 struct AddressLine: View {
     let address: String
 

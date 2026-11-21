@@ -329,6 +329,9 @@ extension DSTextStyle {
     static let price17 = DSTextStyle(size: 17, weight: .bold, tracking: 0, lineHeight: 22, relative: .body)
     /// Monospaced body — command cards, diagnostic log lines.
     static let mono17 = DSTextStyle(size: 17, weight: .regular, tracking: 0, lineHeight: 24, relative: .body, monospaced: true)
+    /// A deposit address read against another wallet's, in groups of four
+    /// (prd §1928): the plate's one subject.
+    static let mono24 = DSTextStyle(size: 24, weight: .regular, tracking: 0, lineHeight: 34, relative: .title2, monospaced: true)
 
     // =========================================================== 12 · CAPTION
     /// Running metadata — a sentence that is not the subject of its surface.

@@ -117,6 +117,12 @@ INTERPOLATION = re.compile(r'\\\(.*?\)')
 # phrase on that card is still a finding.
 KNOWN_ACRONYMS: set[str] = {
     "ETH",
+    # The same class as ETH: dollar and Railgun tokens' own tickers, written in
+    # the source where Receive says which ones go where (prd §1928: "ETH, USDC"
+    # to Privacy Pools, "DAI, USDT +5" to Railgun). "Usdc" is no one's spelling.
+    "USDC",
+    "USDT",
+    "DAI",
     # Graphics Interchange Format — the word X and Instagram both use for an
     # animated picture, and what a live DM transcript names one (prd §1244).
     "GIF",
