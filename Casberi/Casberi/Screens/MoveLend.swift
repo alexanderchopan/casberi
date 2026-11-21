@@ -236,6 +236,22 @@ struct MoveLendSentence<Head: View>: View {
                         // 2026-11-19: "earn looks weird"):** Send's keypad, Half
                         // and All as its sums, never a ladder of rows.
                         VStack(spacing: 0) {
+                            // **THE FIGURE IS THE HERO, AS SEND'S IS (prd §1917,
+                            // §1929):** what you type at Home's balance size,
+                            // centred over its keys, grey until there is one.
+                            HStack(alignment: .center, spacing: DS.Space.s1) {
+                                Text(verbatim: move.figure)
+                                    .dsText(.price52)
+                                    .monospacedDigit()
+                                    .foregroundStyle(move.units == nil ? DS.textTertiary : DS.textPrimary)
+                                    .contentTransition(.numericText())
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                MoveCaret()
+                            }
+                            .frame(maxWidth: .infinity)
+                            .animation(DS.Motion.standard, value: move.figure)
                             // **WHAT YOU HAVE IS HOME'S ROW, OVER THE KEYS (prd
                             // §1917, §1929):** as Send's, Use all under the figure.
                             if live, stepsRun == nil, hasAny, let have = move.haveFigure {

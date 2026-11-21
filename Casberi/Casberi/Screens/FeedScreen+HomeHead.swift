@@ -137,7 +137,9 @@ extension FeedScreen {
                 let stamp = WalletIngest.subline(totalUSD: shown.totalUSD, tokenCount: 0, stale: shown.asOf)
                 Button { homeOpen(.holdings) } label: {
                     HStack(spacing: DS.Space.s2) {
-                        Text(verbatim: mask ?? WalletValue.money(shown.totalUSD))
+                        // Whole dollars, as the rows under it (prd §1930):
+                        // "$3,151", never "$3K", so the sides add up to it.
+                        Text(verbatim: mask ?? WalletValue.exactMoney(shown.totalUSD))
                             .dsText(.price52)
                             .monospacedDigit()
                             .foregroundStyle(DS.textPrimary)
@@ -267,6 +269,8 @@ extension FeedScreen {
     /// the break is above the circles, which are the feed's. Needs you under
     /// the circles takes `s6` (`ActivityWord`'s tight top).
     static let homeLinesGap: CGFloat = DS.Space.s2
+    /// A place's row on Home (prd §1930): tight, so the deck stands high.
+    static let homePlacePitch: CGFloat = 26
     static let homeChipsGap: CGFloat = DS.Space.s8
     /// The air under the doors, over the panel's curved edge (prd §1868).
     static let homeDoorsFoot: CGFloat = DS.Space.s2
@@ -337,7 +341,9 @@ extension FeedScreen {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         // Holdings' Public, never the balance less Private (prd §1862).
         let open = walletPublicUSD
-        let networks = open < 0.01 ? [] : homePublicPlaces(open)
+        let networks = open < 0.01 ? [] : homePublicPlaces()
+        // Public is its networks' sum, as Private is its places' (prd §1930).
+        let publicUSD = networks.reduce(0) { $0 + ($1.usd ?? 0) }
         let places = walletShowsPrivatePlaces ? homePrivatePlaces : []
         // **THE ROWS ADD UP (prd §1929):** every figure here is whole dollars
         // ("$1,250", never "$1K"), so the sums can be checked by eye. Private
@@ -346,7 +352,7 @@ extension FeedScreen {
         // capped at the balance.
         let hidden = places.reduce(0) { $0 + ($1.usd ?? 0) }
         if !networks.isEmpty {
-            homeSideHead(String(localized: "Public"), mask ?? WalletValue.exactMoney(open))
+            homeSideHead(String(localized: "Public"), mask ?? WalletValue.exactMoney(publicUSD))
                 // What Aave holds for you is Public's too (prd §1929): read
                 // here, as Holdings does, so Home's networks count it.
                 .task { if AaveLend.on, let account = YourAccountDemo.shownAddress { await LendMove.holdings.read(account: account) } }
@@ -355,7 +361,7 @@ extension FeedScreen {
             }
         }
         if !places.isEmpty {
-            homeSideHead(String(localized: "Private"), mask ?? WalletValue.exactMoney(hidden))
+            homeSideHead(String(localized: "Private"), mask ?? WalletValue.exactMoney(hidden), after: !networks.isEmpty)
                 // Home reads the private places' prices itself, as Holdings
                 // does: a place whose price never came drew $0 (prd §1929).
                 .task {
@@ -379,16 +385,22 @@ extension FeedScreen {
         var ink: Color = DS.textPrimary
     }
 
-    /// Each network your public tokens sit on, biggest first; what no
-    /// network names (a venue, a last-known sample) is "Other", so the rows
-    /// add up to Public.
-    func homePublicPlaces(_ open: Double) -> [HomePlace] {
+    /// Each network your public tokens sit on, biggest first. No "Other"
+    /// (prd §1930): Public's figure is these rows' sum.
+    func homePublicPlaces() -> [HomePlace] {
         let positions = (portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []).filter { $0.usd > 0 }
         var usd: [String: Double] = [:]
         for position in positions {
+            // **EVERY DOLLAR ON ITS NETWORK (user, 2026-11-20: "you added
+            // 'other' when there were only supposed to be base robinhood and
+            // ethereum").** A token's parts may not reach its worth (a part
+            // priced apart, a holder read whole): the token's worth is shared
+            // over its own networks by their parts, never left as "Other".
+            let partsUSD = position.parts.reduce(0) { $0 + $1.usd }
             for part in position.parts {
                 let network = String(part.key.split(separator: ":", maxSplits: 1).first ?? Substring(part.key))
-                usd[network, default: 0] += part.usd
+                usd[network, default: 0] += partsUSD > 0 ? position.usd * part.usd / partsUSD
+                                                         : position.usd / Double(position.parts.count)
             }
             // An app's position (Aave, Round-ups) is read by no contract: its
             // route names its network, so it counts there, not as "Other".
@@ -418,8 +430,6 @@ extension FeedScreen {
             out.append(HomePlace(id: id, name: name, usd: value))
         }
         out.sort { ($0.usd ?? 0) != ($1.usd ?? 0) ? ($0.usd ?? 0) > ($1.usd ?? 0) : $0.name < $1.name }
-        let rest = open - out.reduce(0) { $0 + ($1.usd ?? 0) }
-        if rest >= 0.5 { out.append(HomePlace(id: "other", name: String(localized: "Other"), usd: rest)) }
         return out
     }
 
@@ -465,13 +475,18 @@ extension FeedScreen {
             // **NO MARK (prd §1929, user: "i don't think we can show these
             // icons … b/c they are also tokens"):** Ethereum's, Railgun's and
             // Aztec's marks are their tokens' too, so a place is its name.
+            // **A ROW IS SMALLER THAN ITS SECTION (prd §1930, user: "you
+            // can't tell what are sections from the rows"):** the name in
+            // grey at 15, under a 20 bold head, 26pt apart, so the deck
+            // stands higher.
             HStack(alignment: .center, spacing: DS.Space.s2) {
-                Text(verbatim: place.name).dsText(.body17).foregroundStyle(place.ink).lineLimit(1)
+                Text(verbatim: place.name).dsText(.fact15)
+                    .foregroundStyle(place.ink == DS.textPrimary ? DS.textSecondary : place.ink).lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
-                Text(verbatim: figure).dsText(.price17).monospacedDigit()
+                Text(verbatim: figure).dsText(.fact15).monospacedDigit()
                     .foregroundStyle(empty ? DS.textSecondary : DS.textPrimary)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: Self.homePlacePitch)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -482,15 +497,16 @@ extension FeedScreen {
     }
 
     /// A side's name and its total: a label, never a door.
-    private func homeSideHead(_ name: String, _ figure: String) -> some View {
+    private func homeSideHead(_ name: String, _ figure: String, after: Bool = false) -> some View {
         HStack(spacing: DS.Space.s2) {
-            Text(verbatim: name).dsText(.heading17).fontWeight(.bold).foregroundStyle(DS.textPrimary)
+            Text(verbatim: name).dsText(.heading20).fontWeight(.heavy).foregroundStyle(DS.textPrimary)
             Spacer(minLength: DS.Space.s2)
-            Text(verbatim: figure).dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+            Text(verbatim: figure).dsText(.heading20).fontWeight(.heavy).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
         .lineLimit(1)
-        .frame(minHeight: 34)
-        .padding(.top, DS.Space.s1)
+        .frame(minHeight: 30)
+        // The second section stands clear of the first's rows (prd §1930).
+        .padding(.top, after ? DS.Space.s3 : DS.Space.s1)
         .accessibilityElement(children: .combine)
         .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()

@@ -2531,11 +2531,11 @@ struct MoveSentence: View {
             receiveGroup(String(localized: "Public"))
             if receiveNetworks.isEmpty {
                 // Never an address the account cannot follow (§1442k).
-                receiveRow(String(localized: "To public account"),
+                receiveRow(String(localized: "To your public account"),
                            lines: [String(localized: "Not on any network from this \(ThisDevice.name) yet")],
                            lineInk: DS.attentionInk, place: "public", copy: nil)
             } else {
-                receiveRow(String(localized: "To public account"),
+                receiveRow(String(localized: "To your public account"),
                            lines: [String(localized: "Any token"), receiveNetworks.map(\.name).joined(separator: ", ")],
                            place: "public",
                            copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })

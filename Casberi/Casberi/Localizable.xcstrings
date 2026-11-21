@@ -209937,6 +209937,34 @@
         }
       }
     },
+    "To your public account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A tu cuenta pública"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの公開アカウントへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 공개 계정으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到你的公开账户"
+          }
+        }
+      }
+    },
     "Today" : {
       "localizations" : {
         "es" : {

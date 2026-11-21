@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2110 of 2184 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2111 of 2185 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -2372,7 +2372,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck (amended by §1929)
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929)
-- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac…
+- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930)
+- §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher
 
 ## Dead rulings → what replaced them (generated)
 
