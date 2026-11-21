@@ -35907,6 +35907,34 @@
         }
       }
     },
+    "+ Add another" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+ Añadir otro"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+ もう1件追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+ 하나 더 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "+ 再添加一个"
+          }
+        }
+      }
+    },
     "+%@" : {
       "localizations" : {
         "es" : {
@@ -84868,6 +84896,34 @@
         }
       }
     },
+    "Deposit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Depositar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "預け入れ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "예치"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存入"
+          }
+        }
+      }
+    },
     "Deposit #%@" : {
       "localizations" : {
         "es" : {
@@ -106402,6 +106458,34 @@
         }
       }
     },
+    "Hold to deposit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantén para depositar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長押しで預け入れ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "길게 눌러 예치"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按住存入"
+          }
+        }
+      }
+    },
     "Hold to earn" : {
       "localizations" : {
         "es" : {
@@ -106566,6 +106650,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按住以取回"
+          }
+        }
+      }
+    },
+    "Hold to withdraw" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantén para retirar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長押しで引き出し"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "길게 눌러 인출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按住取出"
           }
         }
       }
@@ -212662,6 +212774,34 @@
         }
       }
     },
+    "Type" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tipo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "種類"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "유형"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "类型"
+          }
+        }
+      }
+    },
     "Type a few letters to find someone, or the exact username — casts are public on the open protocol, so there's no password to give." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -227528,6 +227668,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "与你"
+          }
+        }
+      }
+    },
+    "Withdraw" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "引き出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取出"
           }
         }
       }
