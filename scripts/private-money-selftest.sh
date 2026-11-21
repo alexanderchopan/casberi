@@ -1299,7 +1299,8 @@ awk '/    private func blank\(_ text: String, ink: Color/,/^    }$/' "$SENT" > "
 use "$TMP/blank" 'MoveSentenceBlanksKey.self' "a word of the sentence no longer reports its row (prd §1781)"
 use "$SENT" '.onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }' "the rows no longer read the sentence on screen (prd §1781)"
 use "$SENT" 'for b in sentenceBlanks {' "the rows are listed by hand again: a sentence can hold a choice with no row (prd §1781)"
-for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend MoveFreshReceive MoveAztecReceive; do
+# Earn draws no sentence since §1931: its receipt lines are the page.
+for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveFreshReceive MoveAztecReceive; do
     use "Casberi/Casberi/Screens/$f.swift" '.allowsHitTesting(false)' "$f's sentence takes a touch again (prd §1781)"
 done
 # The two Receive pages go back to Receive's three addresses (prd §1803).
@@ -1309,16 +1310,19 @@ done
 # Earn and the three private sentences stand on the Deck (prd §1901, §1927):
 # the foot's chevron is the way back, closing an open step first, then the
 # environment's back to the menu.
+# §1931: the private pages' foot comes with the receipt deck.
+use "Casberi/Casberi/Screens/MoveLend.swift" 'MoveDeckFoot(' "MoveLend has no way back to Move's menu (prd §1781, §1901)"
+use "Casberi/Casberi/Screens/MoveDeck.swift" 'MoveDeckFoot(' "the receipt deck has no foot (prd §1931)"
 for f in MoveLend MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
-    use "Casberi/Casberi/Screens/$f.swift" 'MoveDeckFoot(' "$f has no way back to Move's menu (prd §1781, §1901)"
+    [[ $f == MoveLend ]] || use "Casberi/Casberi/Screens/$f.swift" 'MoveReceiptDeck(' "$f has no way back to Move's menu (prd §1781, §1931)"
     use "Casberi/Casberi/Screens/$f.swift" 'back?()' "$f's chevron no longer goes back to Move's menu (prd §1781, §1901)"
 done
-# Their choices are the deck's steps (prd §1927).
+# Their choices are the receipt's lines (prd §1927, §1931).
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
-    use "Casberi/Casberi/Screens/$f.swift" 'MoveDeckSteps(steps: steps' "$f's choices are not the deck's steps (prd §1927)"
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveReceiptSteps(steps: steps' "$f's choices are not the receipt's lines (prd §1931)"
 done
-# Earn's choices are the deck's steps (prd §1901 item 1).
-use "Casberi/Casberi/Screens/MoveLend.swift" 'MoveDeckSteps(steps: steps)' "MoveLend's choices are not the deck's steps (prd §1901)"
+# Earn's choices are the receipt's lines (prd §1931).
+use "Casberi/Casberi/Screens/MoveLend.swift" 'private var receiptLines: some View {' "MoveLend's choices are not the receipt's lines (prd §1931)"
 use "$SENT" 'backCard' "Move's own sentence has no way back to the menu (prd §1781)"
 # prd §1782: bigger rows, the next list by itself; no pay again, no token chosen.
 use "$SENT" 'MoveChoiceRowLabel(name: r.name, value: r.value, ink: r.valueInk ?? DS.textPrimary, mark: r.mark, note: r.note,' "Move's rows no longer draw their answer and its mark (prd §1782, §1794)"
@@ -1328,8 +1332,9 @@ use "Casberi/Casberi/Screens/MoveBack.swift" 'Image(systemName: "chevron.down").
 use "$SENT" '.moveSentenceAway(sentenceAway)' "the sentence no longer steps away for an open list or a typed figure (prd §1892)"
 # prd §1897 (retiring §1892's pinned title): the sentence stands on top and
 # the deck is the page's foot, on Home's panel.
-use "$SENT" '.safeAreaInset(edge: .bottom, spacing: 0) { if open != .verb, !rawOpen { deck.transition(.opacity) } }' "Move's deck is no longer the page's foot (prd §1897)"
-use "$SENT" 'HomePanelSurface()' "Move's deck no longer stands on Home's panel (prd §1900)"
+# §1931: the deck is the whole page, on no panel.
+use "$SENT" '.overlay { if open != .verb, !rawOpen { deck.transition(.opacity) } }' "Move's receipt is no longer the page (prd §1931)"
+! grep -q 'HomePanelSurface()' "$SENT" || { echo "✗ Move stands on Home's panel again (prd §1931)"; exit 1; }
 use "$SENT" 'if !saidInItsRow(warning) {' "a first send is said twice again, in its row and under the rows (prd §1892)"
 use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens by itself after one closed by hand, or never (prd §1782)"
 # prd §1784: a row's list is a menu on the row, in every sentence; the next
@@ -1337,7 +1342,7 @@ use "$SENT" 'guard now == nil, advances, !menuUp else { return }' "a list opens 
 use "$SENT" 'if menuShown(r.opens).wrappedValue, let which = r.opens {' "Move's rows no longer open their lists in place under them (prd §1889)"
 use "$SENT" 'guard let open, open != .verb, choiceRowList.contains(where: { $0.opens == open }) else { return nil }' "the verbs' menu is a popover, or a list with no row has nowhere to open (prd §1784)"
 use "$SENT" '.onDisappear { menuGone() }' "the next menu no longer waits for the last to leave (prd §1784)"
-use "$SENT" 'searches: Self.searches(o), which: o, named: false) { list(for: o) }' "a step's list no longer stands in the deck (prd §1897 item 3)"
+use "$SENT" 'searches: Self.searches(o) && !Self.searchesInChip(o), which: o, named: false) { list(for: o) }' "a step's list no longer stands in the deck, or its chip is not its search (prd §1897 item 3, §1931)"
 use "Casberi/Casberi/Screens/MoveBack.swift" 'MoveMenuBox { menu(r.id) }' "the private sentences' rows no longer open their lists in place (prd §1889)"
 for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveLend; do
     ! grep -q 'MoveListBack' "Casberi/Casberi/Screens/$f.swift" || { echo "✗ $f opens a list in the page again (prd §1784)"; exit 1; }
