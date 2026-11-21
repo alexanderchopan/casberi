@@ -64,7 +64,94 @@ struct MoveDeckStep: Identifiable {
     /// Its question has an answer (prd §1904 item 1): white, where one still
     /// to answer stays grey.
     var answered = false
+    /// What answers it, on the receipt's chip (prd §1931); nil asks "Choose".
+    var value: String? = nil
+    var mark: MoveRowMark? = nil
+    /// Aztec's own ink (prd §1779).
+    var aztec = false
+    /// A glyph in the chip where there is no mark (Aztec's diamond).
+    var glyph: String? = nil
+    /// A line of its own under this one, with no word: Aztec's rule (§1924).
+    var note: String? = nil
     let act: () -> Void
+}
+
+/// **THE STEPS AS THE RECEIPT'S LINES (prd §1931).** A private send's steps,
+/// each its word and its answer as a chip, the open one lit.
+struct MoveReceiptSteps: View {
+    let steps: [MoveDeckStep]
+    var disabled = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            ForEach(steps) { s in
+                MoveReceiptLine(label: s.word) {
+                    MoveChip(text: s.value ?? String(localized: "Choose"), mark: s.mark,
+                             tone: tone(s), caret: s.on && s.id == "amount", glyph: s.glyph,
+                             disabled: disabled, action: s.act)
+                }
+                if let note = s.note {
+                    MoveReceiptLine(label: "") {
+                        Text(verbatim: note).dsText(.body17)
+                            .foregroundStyle(s.aztec ? DS.aztecInk : DS.textSecondary)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                }
+            }
+        }
+        .animation(DS.Motion.standard, value: steps.map(\.on))
+    }
+
+    private func tone(_ s: MoveDeckStep) -> MoveChipTone {
+        if s.aztec { return s.on ? .aztecOpen : .aztec }
+        if s.on { return .open }
+        return s.value == nil ? .empty : .answered
+    }
+}
+
+/// **THE RECEIPT'S PAGE (prd §1931).** The verb's name, its lines, what the
+/// open line asks down to the foot, and the foot. No panel.
+struct MoveReceiptDeck<Lines: View, Content: View, Word: View>: View {
+    let title: String
+    var titleInk: Color = DS.textPrimary
+    var inTray = false
+    var backDisabled = false
+    let back: () -> Void
+    @ViewBuilder let lines: () -> Lines
+    @ViewBuilder let content: () -> Content
+    @ViewBuilder let word: () -> Word
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: title)
+                .dsText(.heading34)
+                .foregroundStyle(titleInk)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            lines()
+                .padding(.top, MoveReceipt.gap)
+            ZStack(alignment: .bottom) {
+                content()
+                    .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.top, MoveReceipt.gap)
+                    .deckUnderFoot()
+                MoveDeckFoot(backDisabled: backDisabled, back: back) { word() }
+            }
+            .frame(maxHeight: .infinity)
+        }
+        .padding(.horizontal, MoveSentence.sideInset(inTray))
+        .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
+        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(alignment: .top) {
+            Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+                .ignoresSafeArea(edges: .bottom)
+        }
+    }
 }
 
 /// **THE STEPS ARE SEGMENTS ON A TRACK (prd §1916, user, 2026-11-19, of
@@ -267,6 +354,8 @@ struct MoveKeypad: View {
     /// A key's height: the deck's, or less where the hero figure and its
     /// token row stand over the keys (prd §1917).
     var keyHeight: CGFloat = MoveDeck.keyHeight
+    /// **BIG DIGITS (prd §1931, user: "definitely 1. big digits").**
+    var big = false
 
     private static let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
@@ -309,7 +398,10 @@ struct MoveKeypad: View {
         } label: {
             Group {
                 if delete {
-                    Image(systemName: "delete.backward").dsGlyph(.feature, weight: .regular)
+                    Image(systemName: "delete.backward").dsGlyph(.feature, weight: big ? .medium : .regular)
+                        .scaleEffect(big ? 1.2 : 1)
+                } else if big {
+                    Text(verbatim: label).dsText(.heading40).fontWeight(.semibold)
                 } else {
                     // A key's figure is the sentence's (prd §1916).
                     Text(verbatim: label).dsText(MoveSentence.rung).fontWeight(.regular)
@@ -453,6 +545,8 @@ struct MoveFootWord: View {
 struct MoveDeckFoot<Word: View>: View {
     var backDisabled = false
     let back: (() -> Void)?
+    /// A second word beside back: Add another (prd §1931).
+    var lead: AnyView? = nil
     @ViewBuilder let word: () -> Word
 
     var body: some View {
@@ -471,6 +565,7 @@ struct MoveDeckFoot<Word: View>: View {
                 .disabled(backDisabled)
                 .accessibilityLabel(Text("Back to the list"))
             }
+            if let lead { lead }
             Spacer(minLength: DS.Space.s2)
             word()
         }

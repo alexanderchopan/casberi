@@ -30,26 +30,10 @@ struct MoveLendSentence<Head: View>: View {
     enum Blank { case amount, network }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // **THE SENTENCE STANDS STILL ON TOP (prd §1897 item 1, Earn
-                // since §1901):** "Earn with 0.001 ETH on Base."
-                MoveFlow { sentence }
-                    .moveHoldFill()
-                    // No control (prd §1781): its choices are the deck's.
-                    .allowsHitTesting(false)
-                    .animation(DS.Motion.standard, value: move.figure)
-                    .animation(DS.Motion.standard, value: move.chainId)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal, MoveSentence.sideInset(inTray))
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
+        // **EARN IS A RECEIPT (prd §1931):** its name, Type · From · Amount,
+        // what the open line asks, the foot. No sentence, no panel.
+        deck
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         // The deck opens on the keys once Aave is read: never an empty panel
@@ -214,63 +198,30 @@ struct MoveLendSentence<Head: View>: View {
     /// chips over From · Amount on Home's panel, the foot's word held to act.
     private var deck: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if live, doneHash == nil {
-                if kindsShown {
-                    MoveDeckKinds(kinds: [
-                        MoveDeckKind(id: "lend", word: String(localized: "Earn"), glyph: "chart.line.uptrend.xyaxis", picked: move.mode == .lend) {
-                            if move.mode != .lend { flip(.lend) }
-                        },
-                        MoveDeckKind(id: "takeBack", word: String(localized: "Take back"), glyph: "arrow.uturn.backward", picked: move.mode == .takeBack) {
-                            if move.mode != .takeBack { flip(.takeBack) }
-                        },
-                    ], disabled: move.acting)
+            Text(verbatim: title)
+                .dsText(.heading34)
+                .foregroundStyle(DS.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if move.stage == .reading {
+                MoveReceiptLine(label: "") {
+                    Text("Reading Aave…").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                MoveDeckSteps(steps: steps)
-                    .padding(.bottom, MoveDeck.stepsGap)
+                .padding(.top, MoveReceipt.gap)
+            } else {
+                receiptLines
+                    .padding(.top, MoveReceipt.gap)
             }
             // The body runs under the foot and fades there (prd §1904 item 9).
             ZStack(alignment: .bottom) {
                 Group {
                     if open == .amount {
-                        // **EARN TYPES ITS AMOUNT (prd §1897 item 4, user
-                        // 2026-11-19: "earn looks weird"):** Send's keypad, Half
-                        // and All as its sums, never a ladder of rows.
+                        // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931).**
                         VStack(spacing: 0) {
-                            // **THE FIGURE IS THE HERO, AS SEND'S IS (prd §1917,
-                            // §1929):** what you type at Home's balance size,
-                            // centred over its keys, grey until there is one.
-                            HStack(alignment: .center, spacing: DS.Space.s1) {
-                                Text(verbatim: move.figure)
-                                    .dsText(.price52)
-                                    .monospacedDigit()
-                                    .foregroundStyle(move.units == nil ? DS.textTertiary : DS.textPrimary)
-                                    .contentTransition(.numericText())
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.5)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                MoveCaret()
-                            }
-                            .frame(maxWidth: .infinity)
-                            .animation(DS.Motion.standard, value: move.figure)
-                            // **WHAT YOU HAVE IS HOME'S ROW, OVER THE KEYS (prd
-                            // §1917, §1929):** as Send's, Use all under the figure.
-                            if live, stepsRun == nil, hasAny, let have = move.haveFigure {
-                                Button {
-                                    guard canUseAll else { return }
-                                    DSHaptic.selection()
-                                    move.pick(nil, all: true)
-                                } label: {
-                                    TokenRowLabel(symbol: move.market?.symbol ?? "", line: move.network?.name,
-                                                  figure: have, under: canUseAll ? String(localized: "Use all") : nil,
-                                                  underInk: DS.pickInk)
-                                }
-                                .buttonStyle(RowPress())
-                                .accessibilityLabel(Text("Use all, \(have)"))
-                            }
-                            Spacer(minLength: DS.Space.s2)
-                            MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live)
+                            Spacer(minLength: 0)
+                            MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live,
+                                       keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
-                        .padding(.bottom, MoveDeck.fade)
                         .transition(.opacity)
                     } else if open == .network {
                         ScrollView { fromRows.padding(.vertical, DS.Space.s2) }
@@ -289,13 +240,8 @@ struct MoveLendSentence<Head: View>: View {
                     }
                 }
                 .safeAreaPadding(.bottom, MoveDeck.footHeight)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                // The bar's band is the list's (`MoveFootClearance.intoBody`).
-                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
-                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
-                       + MoveFootClearance.gained(inTray: inTray)
-                       // The chips take their row out of the body (§1911).
-                       - (kindsShown ? MoveDeck.kindsHeight : 0) - MoveDeck.stepsGap, alignment: .top)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, MoveReceipt.gap)
                 .deckUnderFoot()
                 MoveDeckFoot(backDisabled: move.acting, back: {
                     withAnimation(DS.Motion.standard) {
@@ -304,20 +250,69 @@ struct MoveLendSentence<Head: View>: View {
                     }
                 }) { footWord }
             }
+            .frame(maxHeight: .infinity)
         }
         .padding(.horizontal, MoveSentence.sideInset(inTray))
-        .padding(.top, HomePanelMetrics.cap)
+        .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
         .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
         .background(alignment: .top) {
-            ZStack(alignment: .top) {
-                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
-                HomePanelSurface()
-            }
-            // The panel runs edge to edge, past the tray's own inset.
-            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
-            .ignoresSafeArea(edges: .bottom)
+            Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+                .ignoresSafeArea(edges: .bottom)
         }
         .animation(DS.Motion.standard, value: open)
+    }
+
+    /// **TYPE · FROM · AMOUNT (prd §1931).** Deposit and Withdraw on the Type
+    /// line (user: "instead of an earn pill it could be deposit and instead of
+    /// take back it could be withdraw"), the market on From, the figure and
+    /// its quick shares on Amount.
+    private var receiptLines: some View {
+        VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            if kindsShown, doneHash == nil {
+                MoveReceiptLine(label: String(localized: "Type")) {
+                    MoveChip(text: String(localized: "Deposit"), tone: move.mode == .lend ? .open : .empty, disabled: move.acting) {
+                        if move.mode != .lend { flip(.lend) }
+                    }
+                    MoveChip(text: String(localized: "Withdraw"), tone: move.mode == .takeBack ? .open : .empty, disabled: move.acting) {
+                        if move.mode != .takeBack { flip(.takeBack) }
+                    }
+                }
+            }
+            MoveReceiptLine(label: String(localized: "From")) {
+                if let m = market {
+                    MoveChip(text: "\(m.symbol) · \(move.network?.name ?? m.network)",
+                             mark: MoveRowMark(token: m.symbol, network: MoveSentence.networkMark(chainId: m.chainId)),
+                             tone: open == .network ? .open : .answered, disabled: !live) { toggle(.network) }
+                } else {
+                    MoveChip(text: String(localized: "Choose"), tone: .empty, disabled: !live) { toggle(.network) }
+                }
+            }
+            MoveReceiptLine(label: String(localized: "Amount")) {
+                MoveChip(text: move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
+                         caret: open == .amount, disabled: !live) { toggle(.amount) }
+                if open == .amount, canUseAll {
+                    Spacer(minLength: 0)
+                    ForEach([25, 50, 100], id: \.self) { p in
+                        MoveChip(text: p == 100 ? String(localized: "All") : "\(p)%",
+                                 tone: (p == 100 && move.all) ? .open : .answered, compact: true) { pickShare(p) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// A share of what there is: All is every unit, as Use all was.
+    private func pickShare(_ p: Int) {
+        guard let m = market, let have = move.available(m).flatMap({ Decimal(string: $0) }) else { return }
+        if p == 100 {
+            move.pick(nil, all: true)
+            return
+        }
+        var raw = have * Decimal(p) / 100 / pow(10, m.decimals)
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &raw, min(m.decimals, 6), .down)
+        move.pick(NSDecimalNumber(decimal: rounded).stringValue, all: false)
     }
 
     /// What the move does, how much it earns, who carries it and the cost.
@@ -419,7 +414,7 @@ struct MoveLendSentence<Head: View>: View {
             MoveFootWord(word: footVerb, ink: DS.textSecondary,
                          glyph: signing ? "faceid" : nil)
         default:
-            MoveHoldWord(word: move.mode == .lend ? String(localized: "Hold to earn") : String(localized: "Hold to take back"),
+            MoveHoldWord(word: move.mode == .lend ? String(localized: "Hold to deposit") : String(localized: "Hold to withdraw"),
                          enabled: live && move.units != nil) {
                 open = nil
                 Task { await move.run(account: account) }
@@ -436,7 +431,7 @@ struct MoveLendSentence<Head: View>: View {
         case .working(.signing): String(localized: "Confirm with Face ID")
         case .working(.cosigning): String(localized: "Waiting for your Signer…")
         case .working: String(localized: "Sending…")
-        default: move.mode == .lend ? String(localized: "Earn") : String(localized: "Take back")
+        default: move.mode == .lend ? String(localized: "Deposit") : String(localized: "Withdraw")
         }
     }
 

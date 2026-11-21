@@ -1607,11 +1607,17 @@ struct MoveSentence: View {
                         // 1).** It begins with the verb, so the page has no
                         // title; the facts stand under it on the page, and the
                         // deck (`deck`) on the panel under them.
+                        // **NO SENTENCE WHILE CHOOSING (prd §1931).** It is
+                        // still laid out, unseen, because the receipt's lines
+                        // are read off its words (`sentenceBlanks`).
                         sentence
                             .onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
+                            .opacity(0)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
                         // The facts are the deck's now (prd §1929).
                     }
                 }
@@ -1664,7 +1670,9 @@ struct MoveSentence: View {
         .scrollDismissesKeyboard(.interactively)
         // **THE DECK, ON HOME'S PANEL (prd §1900 item 1).** Where the move is
         // changed: its steps, what the step on asks, and the foot.
-        .safeAreaInset(edge: .bottom, spacing: 0) { if open != .verb, !rawOpen { deck.transition(.opacity) } }
+        // **THE RECEIPT IS THE PAGE (prd §1931).** It covers the unseen
+        // sentence, edge to edge, from the top.
+        .overlay { if open != .verb, !rawOpen { deck.transition(.opacity) } }
         // A network picked is read again; the first pass is `readHoldings`'
         // (prd §1586: Base was read twice on every open).
         .task(id: network.chainId) { if !heldBy.isEmpty { await readNetwork() } }
@@ -3916,8 +3924,12 @@ struct MoveSentence: View {
     /// chevron because a list opens. A row not filled in says "Choose", and
     /// the first of those is in the pick's pink: where to go next. The rows
     /// are read off the sentence on screen, so none is listed by hand.
-    private var choiceRowList: [LedgerRow] {
-        guard receipt == nil, stage == nil, !receiveList else { return [] }
+    private var choiceRowList: [LedgerRow] { choiceRowListAt(stageOK: false) }
+
+    /// The rows, also while the move is under way: the receipt keeps its
+    /// lines on screen as its Status line fills (prd §1931).
+    private func choiceRowListAt(stageOK: Bool) -> [LedgerRow] {
+        guard receipt == nil, stageOK || stage == nil, !receiveList else { return [] }
         let pick = Self.unpicked
         var rows: [(rank: Int, row: LedgerRow)] = []
         // Where the money leaves from (prd §1779): the one visible place to
@@ -7113,76 +7125,44 @@ struct MoveSentence: View {
     /// as words, what the step on asks, and the foot, at one height whichever
     /// step is on, so nothing above it moves.
     private var deck: some View {
-        let steps = deckSteps
-        // **THE KINDS LEAVE ONCE THEY HAVE DONE THEIR JOB (prd §1917):** the
-        // chips stand while the first step is open or nothing is answered;
-        // back on the first step they return.
-        let kindsUp = kindsShown && (steps.first?.on ?? true || !steps.contains { $0.answered })
-        return VStack(alignment: .leading, spacing: 0) {
-            if kindsUp {
-                MoveDeckKinds(kinds: verbKinds.map { v in
-                    MoveDeckKind(id: "\(v)", word: kindWord(v), glyph: Self.kindGlyph(v), picked: v == verb) { pickVerb(v) }
-                }, disabled: stage != nil)
+        VStack(alignment: .leading, spacing: 0) {
+            // The verb's name, then its receipt (prd §1931).
+            Text(verbatim: receipt == nil ? pageTitle(verb) : receipt?.past ?? pageTitle(verb))
+                .dsText(.heading34)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            receiptLines
+                .padding(.top, MoveReceipt.gap)
                 .opacity(holdDim)
-            }
-            if let track = stageTrack {
-                MoveStageTrack(segments: track)
-                    .padding(.bottom, MoveDeck.stepsGap)
-            } else if !steps.isEmpty {
-                MoveDeckSteps(steps: steps, disabled: stage != nil || receipt != nil)
-                    .padding(.bottom, MoveDeck.stepsGap)
-                    .opacity(holdDim)
-            }
-            // The chips take their row out of the body, so the panel's edge
-            // stands where it does on every verb.
-            let room = (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2)
-                + (steps.isEmpty ? MoveDeck.stepsHeight : 0)
-                - (kindsUp ? MoveDeck.kindsHeight : 0)
-                - (steps.isEmpty ? 0 : MoveDeck.stepsGap)
-                + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
-                + MoveFootClearance.gained(inTray: inTray)
-            if receivePlacesUp {
-                // **RECEIVE'S PLACES ARE NEVER CUT (user, 2026-11-19, of
-                // Private account clipped over the back chevron: "this looks
-                // off").** Three places and two doors outgrow the deck's
-                // height; the panel rises to hold them all, never lower than
-                // every verb's edge.
-                deckBody
-                    .frame(maxWidth: .infinity, minHeight: room, alignment: .topLeading)
-                MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } }) {
+            // What the open line asks, down to the foot; a list runs under
+            // the foot and fades there (§1904 item 9).
+            ZStack(alignment: .bottom) {
+                GeometryReader { geo in
+                    deckBody(room: geo.size.height)
+                        .opacity(holdDim)
+                        .safeAreaPadding(.bottom, MoveDeck.footHeight)
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                }
+                .padding(.top, MoveReceipt.gap)
+                .deckUnderFoot()
+                MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } },
+                             lead: canAddAnother && deckReady ? AnyView(addAnotherWord) : nil) {
                     footWord
                 }
-            } else {
-                // The body runs under the foot and fades there (§1904 item 9).
-                ZStack(alignment: .bottom) {
-                    deckBody
-                        .opacity(holdDim)
-                        // A list's scroll rises above the foot it runs under.
-                        .safeAreaPadding(.bottom, MoveDeck.footHeight)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        // The keyboard covers the deck while a name or a search is
-                        // typed: the deck keeps its field and first rows over it.
-                        // With no steps (Receive) the body takes their row too, so the
-                        // panel's edge stands where it does on every verb.
-                        .frame(height: room + MoveDeck.footHeight, alignment: .top)
-                        .deckUnderFoot()
-                    MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } }) {
-                        footWord
-                    }
-                }
             }
+            .frame(maxHeight: .infinity)
         }
         .padding(.horizontal, Self.sideInset(inTray))
-        .padding(.top, HomePanelMetrics.cap)
+        .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
         .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(alignment: .top) {
-            ZStack(alignment: .top) {
-                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
-                HomePanelSurface()
-            }
-            // The panel runs edge to edge, past the tray's own inset.
-            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
-            .ignoresSafeArea(edges: .bottom)
+            Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+                .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
+                .ignoresSafeArea(edges: .bottom)
         }
         .animation(DS.Motion.standard, value: deckOpen)
         .animation(DS.Motion.standard, value: keying)
@@ -7192,6 +7172,219 @@ struct MoveSentence: View {
             try? await Task.sleep(for: .milliseconds(450))
             if open == nil, focus == nil, missingRow != nil { advance() }
         }
+    }
+
+    // MARK: - The receipt (prd §1931)
+
+    /// The lines whose chip turns into the search when open; their lists
+    /// lead with no bar of their own.
+    static func searchesInChip(_ which: Blank) -> Bool {
+        which == .with || which == .buy || which == .to || which == .merchant
+    }
+
+    /// A key of the big keypad: four rows in a little under two fifths of
+    /// the screen, the same on every verb (prd §1931).
+    static var bigKeyHeight: CGFloat {
+        min(84, max(56, (UIScreen.main.bounds.height * 0.38 / 4).rounded(.down)))
+    }
+
+    /// **THE RECEIPT'S LINES (prd §1931, user, of the mock: "this is the
+    /// closest we have gotten").** The verb's two kinds on a Type line, then
+    /// one line per row the move asks (read off its words, as the rows were),
+    /// then, once it is held, the Status line.
+    @ViewBuilder private var receiptLines: some View {
+        let rows = choiceRowListAt(stageOK: true)
+        VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            if kindsShown {
+                MoveReceiptLine(label: String(localized: "Type")) {
+                    ForEach(verbKinds.sorted { kindWord($0).localizedStandardCompare(kindWord($1)) == .orderedAscending }, id: \.self) { v in
+                        MoveChip(text: kindWord(v), tone: v == verb ? .open : .empty, disabled: stage != nil) { pickVerb(v) }
+                    }
+                }
+            }
+            ForEach(rows) { r in receiptLine(r) }
+            if let track = stageTrack {
+                MoveReceiptLine(label: String(localized: "Status")) {
+                    ForEach(track) { s in
+                        MoveChipLabel(text: s.word,
+                                      tone: s.state == .now ? .open : s.state == .done ? .answered : .empty,
+                                      compact: true, glyph: s.state == .done ? "checkmark" : nil)
+                    }
+                }
+            }
+        }
+        .animation(DS.Motion.standard, value: deckOpen)
+        .animation(DS.Motion.standard, value: focus)
+    }
+
+    /// One line: its word, and the answer as a chip; the open line's chip is
+    /// lit, or is the search where its list searches.
+    @ViewBuilder private func receiptLine(_ r: LedgerRow) -> some View {
+        let which = r.opens
+        let on = which != nil && (which == deckOpen || (which == .amount && focus == .amount))
+        // From keeps its own word: the deck folded it into Token (prd §1909),
+        // but on the receipt it is where the money leaves.
+        MoveReceiptLine(label: which.map { $0 == .from ? Self.rowName(.from, verb: verb) : deckWord($0) } ?? r.name) {
+            if on, let which, Self.searchesInChip(which) {
+                MoveChipField { chipField(for: which) }
+            } else {
+                MoveChip(text: chipText(r, on: on), mark: r.mark, tone: chipTone(r, on: on),
+                         caret: on && which == .amount, disabled: stage != nil || receipt != nil) { lineTap(r) }
+                if which == .with, flips, let with, stage == nil {
+                    // **$ | TOKEN ON THE TOKEN'S LINE (prd §1931).**
+                    Spacer(minLength: 0)
+                    MoveUnitSwitch(symbol: with.token.symbol, dollars: inDollars) { setDollars($0, with) }
+                }
+                if which == .amount, on {
+                    Spacer(minLength: 0)
+                    quickChips
+                }
+            }
+        }
+    }
+
+    private func chipText(_ r: LedgerRow, on: Bool) -> String {
+        if r.opens == .amount, on { return amountChipText }
+        return r.value == Self.unpicked ? String(localized: "Choose") : r.value
+    }
+
+    private func chipTone(_ r: LedgerRow, on: Bool) -> MoveChipTone {
+        if r.opens == .amount, over { return .warn }
+        if on { return .open }
+        return r.value == Self.unpicked ? .empty : .answered
+    }
+
+    /// The figure typed, in the unit it is typed in; "$0" before a digit.
+    private var amountChipText: String {
+        if let with { return heroFigure(with) }
+        return amount.isEmpty ? "$0" : "$" + Self.grouped(amount)
+    }
+
+    /// A line's chip: opens its list or raises the keys; tapped again, closes.
+    private func lineTap(_ r: LedgerRow) {
+        guard var which = r.opens else { return }
+        if which == deckOpen || (which == .amount && focus == .amount) {
+            withAnimation(DS.Motion.standard) { open = nil }
+            focus = nil
+            return
+        }
+        if which == .destination, !networkPicked { which = .network }
+        tapBlank(which)
+    }
+
+    /// The open chip's field: a name, an ENS name or an address for To; a
+    /// token's name or a pasted contract for the others.
+    @ViewBuilder private func chipField(for which: Blank) -> some View {
+        if which == .to {
+            ZStack(alignment: .leading) {
+                if to.isEmpty {
+                    Text("Name, ENS or address").dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
+                TextField(String(localized: "Name, ENS or address"), text: $to, prompt: Text(verbatim: ""))
+                    .focused($textFocus, equals: .to)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .onSubmit { if resolved != nil { pick {} } }
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+            }
+        } else {
+            let prompt = which == .buy ? String(localized: "Search or paste an address") : String(localized: "Search")
+            ZStack(alignment: .leading) {
+                if search.isEmpty {
+                    Text(verbatim: prompt).dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
+                TextField(prompt, text: $search, prompt: Text(verbatim: ""))
+                    .focused($textFocus, equals: .search)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .task(id: search) { await lookUpPasted() }
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+            }
+        }
+    }
+
+    /// **QUICK AMOUNTS ON THE AMOUNT'S LINE (prd §1931, user: "perhaps even
+    /// the 25 50 all should be chips in the amount line").** A share of the
+    /// token for Send and Swap; Buy's round sums.
+    @ViewBuilder private var quickChips: some View {
+        if verb == .deposit {
+            ForEach(Self.amountSteps, id: \.self) { step in
+                MoveChip(text: "$\(step)", tone: amount == "\(step)" ? .open : .answered, compact: true) {
+                    withAnimation(DS.Motion.standard) { amount = "\(step)" }
+                }
+            }
+        } else if let with, verb == .send || verb == .swap {
+            let share = shareBinding(with)
+            ForEach([25, 50, 100], id: \.self) { p in
+                MoveChip(text: p == 100 ? String(localized: "All") : "\(p)%",
+                         tone: share.wrappedValue == p ? .open : .answered, compact: true) {
+                    if p == 100 {
+                        useAll(with)
+                    } else {
+                        withAnimation(DS.Motion.standard) { share.wrappedValue = p }
+                    }
+                }
+            }
+        }
+    }
+
+    /// **THE FACTS AT READY ARE LINES (prd §1931):** a grey word and its
+    /// figure, the receipt's own shape; a fact that is a sentence stands
+    /// whole.
+    @ViewBuilder private var readyLines: some View {
+        let lines = ledgerRows.filter { $0.id != "total" && !(offersDetails && ($0.id == "fee" || $0.id.hasPrefix("through"))) }
+        if !lines.isEmpty {
+            VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+                ForEach(lines) { r in
+                    if r.value.isEmpty {
+                        HStack(spacing: DS.Space.s2) {
+                            ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
+                            Text(verbatim: r.name).dsText(.body17).foregroundStyle(r.ink ?? DS.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(minHeight: MoveReceipt.lineHeight, alignment: .leading)
+                    } else {
+                        // The facts read as Details' rows do: the word, its
+                        // figure at the right edge, one block.
+                        HStack(spacing: DS.Space.s2) {
+                            Text(verbatim: r.name).dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                            Spacer(minLength: DS.Space.s2)
+                            ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
+                            Text(verbatim: r.value)
+                                .dsText(.body17)
+                                .foregroundStyle(r.valueInk ?? r.ink ?? DS.textPrimary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .monospacedDigit()
+                        }
+                        .frame(minHeight: MoveReceipt.lineHeight)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
+    }
+
+    /// **ADD ANOTHER IN THE FOOT, BESIDE BACK (prd §1931, user: "option 1").**
+    private var addAnotherWord: some View {
+        Button { add() } label: {
+            Text("+ Add another")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textSecondary)
+                .frame(minHeight: DS.Hit.min)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
     }
 
     /// **DONE STAYS ON THE PAGE (prd §1904 item 7).** The sentence is in the
@@ -7251,35 +7444,33 @@ struct MoveSentence: View {
 
     /// What the step on asks: its list, the keys, the verb's kinds, Receive's
     /// places, or at Ready, Add another.
-    @ViewBuilder private var deckBody: some View {
+    @ViewBuilder private func deckBody(room: CGFloat) -> some View {
         if let receipt {
             factsOver { receiptRows(receipt) }.transition(.opacity)
         } else if stage != nil {
-            // What is changing, while it changes (prd §1917).
-            factsOver { changeRows }
+            // The receipt's lines and its Status line say it (prd §1931).
+            factsOver { EmptyView() }
                 .transition(.opacity)
         } else if let o = deckOpen {
-            choices(room: (textFocus == nil ? MoveDeck.bodyHeight : MoveDeck.bodyHeight / 2) + MoveDeck.footHeight
-                        + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
-                        + MoveFootClearance.gained(inTray: inTray),
-                    inset: MoveDeck.listClearance, searches: Self.searches(o), which: o, named: false) { list(for: o) }
+            // **NO SEARCH BAR OVER THE LIST (prd §1931):** the open chip is
+            // the search; the list starts under the receipt.
+            choices(room: room + MoveDeck.footHeight, inset: MoveDeck.listClearance,
+                    searches: Self.searches(o) && !Self.searchesInChip(o), which: o, named: false) { list(for: o) }
                 .id(o)
                 .transition(.opacity)
                 .onAppear { menuUp = true }
                 .onDisappear { menuGone() }
         } else if focus == .amount {
+            // **BIG KEYS, ONE PLACE ON EVERY VERB (prd §1931, user: "it
+            // should feel the same"):** the keypad stands on the foot at
+            // one height whatever the receipt above it holds.
             VStack(spacing: 0) {
-                // **THE AMOUNT'S LINE STANDS OVER ITS KEYS (prd §1916):** in
-                // the deck's room, never under a sentence that can run to
-                // four lines and hide it.
-                unitLine
-                Spacer(minLength: DS.Space.s2)
-                MoveKeypad(text: $amount, presets: keypadPresets,
+                Spacer(minLength: 0)
+                MoveKeypad(text: $amount, presets: [],
                            places: amountInDollars ? 2 : min(with?.token.decimals ?? 18, 18),
                            disabled: stage != nil,
-                           keyHeight: heroShown ? 56 : MoveDeck.keyHeight)
+                           keyHeight: Self.bigKeyHeight, big: true)
             }
-            .padding(.bottom, MoveDeck.fade)
             .transition(.opacity)
         } else if receivePlacesUp {
             receiveAddresses.padding(.vertical, DS.Space.s2)
@@ -7305,15 +7496,17 @@ struct MoveSentence: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .transition(.opacity)
         } else if deckReady {
+            // **READY IS THE RECEIPT, LONGER (prd §1931):** its facts are
+            // lines of the receipt's own shape, under its choices.
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    deckFacts.padding(.bottom, DS.Space.s2)
-                    changeRows
-                    if canAddAnother { addAnotherRow }
+                VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+                    deckFacts
+                    readyLines
                     if verb == .sweep, let plan = sweepPlan {
-                        ForEach(plan.rows) { row in sweepRow(row) }
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(plan.rows) { row in sweepRow(row) }
+                        }
                     }
-                    ledger(door: false, inDeck: true)
                     if offersDetails { moveDetails }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -7323,7 +7516,7 @@ struct MoveSentence: View {
             .scrollBounceBehavior(.basedOnSize)
             .transition(.opacity)
         } else if canAddAnother {
-            factsOver { addAnotherRow }.transition(.opacity)
+            factsOver { EmptyView() }.transition(.opacity)
         } else {
             factsOver { EmptyView() }.transition(.opacity)
         }

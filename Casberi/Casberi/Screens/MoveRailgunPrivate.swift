@@ -933,39 +933,8 @@ struct MoveRailgunSentence<Head: View>: View {
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // **THE SENTENCE STANDS STILL ON TOP, THE DECK UNDER IT (prd
-                // §1927, user: "we need to be consistent!"):** as Send's,
-                // Swap's and Earn's.
-                MoveFlow { sentence }
-                    .moveHoldFill()
-                    .allowsHitTesting(false)
-                    .animation(DS.Motion.standard, value: move.stage)
-                    .animation(DS.Motion.standard, value: move.holding)
-                    .animation(DS.Motion.standard, value: move.amount)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if let run = stepsRun {
-                        PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
-                            .transition(.opacity)
-                    } else if move.stage == .quoting {
-                        costLine.frame(maxWidth: .infinity, alignment: .leading).transition(.opacity)
-                    }
-                    // Ready, the floor or the amount's problem is the deck's
-                    // (prd §1929), as Privacy Pools' and Aztec's lines are.
-                    if !lineInDeck { line }
-                }
-                .padding(.top, DS.Space.s4)
-            }
-            .padding(.horizontal, MoveSentence.sideInset(inTray))
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
+        // **A RECEIPT, AS EVERY VERB'S (prd §1931).**
+        deck
         // Send opens whole: its deck clips in the short sheet.
         .onAppear { chrome.moveTall = true }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
@@ -1266,12 +1235,7 @@ struct MoveRailgunSentence<Head: View>: View {
 
     private var receipt: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            // The token leads the receipt, as Send's does (prd §1929); a
-            // swap's two tokens are its sentence.
-            if move.mode != .swap, let symbol = move.holding?.symbol {
-                TokenRowLabel(symbol: symbol, line: String(localized: "Ethereum"),
-                              figure: move.amountUSD.map { "−" + RailgunMove.usd($0) } ?? figure)
-            }
+            // The token and its amount are the receipt's lines (prd §1931).
             if lineInDeck { line }
             MoveCostRows(cost: costRow, open: $costOpen, indented: false) {
                 ForEach(facts, id: \.name) { f in MoveFactRow(name: f.name, value: f.value, indented: false) }
@@ -1355,26 +1319,36 @@ struct MoveRailgunSentence<Head: View>: View {
 
     /// **RAILGUN'S DECK (prd §1927, as Earn's §1901).**
     private var deck: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if picking, !isDone {
-                MoveDeckSteps(steps: steps, disabled: !picking)
-                    .padding(.bottom, MoveDeck.stepsGap)
+        MoveReceiptDeck(title: move.mode == .swap ? String(localized: "Swap") : String(localized: "Send"),
+                        inTray: inTray, backDisabled: move.acting, back: {
+            withAnimation(DS.Motion.standard) {
+                // Back is the menu, never the step before (prd §1911).
+                if costOpen { costOpen = false } else { open = nil; back?() }
             }
-            ZStack(alignment: .bottom) {
+        }, lines: {
+            if picking, !isDone {
+                VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+                    MoveReceiptSteps(steps: steps, disabled: !picking)
+                    // **QUICK AMOUNTS ON THE AMOUNT'S LINE (prd §1931).**
+                    if open == .amount {
+                        MoveReceiptLine(label: "") {
+                            ForEach(RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }, id: \.1) { p, value in
+                                MoveChip(text: chipWord(p), tone: move.amount == value ? .open : .answered, compact: true) {
+                                    move.amount = value
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }, content: {
                 Group {
                     if open == .amount, picking {
                         VStack(spacing: 0) {
-                            Spacer(minLength: DS.Space.s2)
-                            MoveKeypad(text: $move.amount,
-                                       presets: RailgunMove.Pick.allCases.compactMap { p in
-                                           move.amount(for: p).map { value in
-                                               MoveKeypadPreset(id: "\(p)", title: chipWord(p),
-                                                                picked: move.amount == value) { move.amount = value }
-                                           }
-                                       },
-                                       places: min(move.holding?.decimals ?? 6, 6))
+                            Spacer(minLength: 0)
+                            MoveKeypad(text: $move.amount, places: min(move.holding?.decimals ?? 6, 6),
+                                       keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
-                        .padding(.bottom, MoveDeck.fade)
                         .transition(.opacity)
                     } else if open == .token, picking {
                         listBody { tokens }
@@ -1383,37 +1357,33 @@ struct MoveRailgunSentence<Head: View>: View {
                     } else if open == .note, picking {
                         listBody { noteField.frame(minHeight: 48) }
                     } else if picking, !isDone {
-                        listBody { receipt }
+                        listBody {
+                            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                                if move.stage == .quoting { costLine.frame(maxWidth: .infinity, alignment: .leading) }
+                                if !lineInDeck { line }
+                                receipt
+                            }
+                        }
                     } else {
-                        Color.clear
+                        // Reading, working, done: the sentence says where it
+                        // stands, the steps and the line the rest.
+                        listBody {
+                            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                                MoveFlow { sentence }
+                                    .moveHoldFill()
+                                    .allowsHitTesting(false)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if let run = stepsRun {
+                                    PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
+                                        .transition(.opacity)
+                                }
+                                if !lineInDeck { line }
+                            }
+                        }
                     }
                 }
-                .safeAreaPadding(.bottom, MoveDeck.footHeight)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
-                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
-                       + MoveFootClearance.gained(inTray: inTray)
-                       - MoveDeck.stepsGap, alignment: .top)
-                .deckUnderFoot()
-                MoveDeckFoot(backDisabled: move.acting, back: {
-                    withAnimation(DS.Motion.standard) {
-                        // Back is the menu, never the step before (prd §1911).
-                        if costOpen { costOpen = false } else { open = nil; back?() }
-                    }
-                }) { footWord }
-            }
-        }
-        .padding(.horizontal, MoveSentence.sideInset(inTray))
-        .padding(.top, HomePanelMetrics.cap)
-        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
-        .background(alignment: .top) {
-            ZStack(alignment: .top) {
-                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
-                HomePanelSurface()
-            }
-            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
-            .ignoresSafeArea(edges: .bottom)
-        }
+        }, word: { footWord })
         .animation(DS.Motion.standard, value: open)
     }
 
@@ -1428,19 +1398,33 @@ struct MoveRailgunSentence<Head: View>: View {
     /// buys, the amount, and the note to a private address.
     private var steps: [MoveDeckStep] {
         var out: [MoveDeckStep] = []
-        if move.mode != .swap {
-            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true) { leave(.pickRecipient) })
+        // **THE SENTENCE'S WORDS ARE THE LINES (prd §1931).**
+        switch move.mode {
+        case .deposit:
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: "Railgun", glyph: "lock.fill") { leave(.pickRecipient) })
+        case .takeBack:
+            out.append(MoveDeckStep(id: "from", word: String(localized: "From"), answered: true, value: "Railgun", glyph: "lock.fill") { leave(.switchOff) })
+            let to = move.toPrivate || move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: to) { leave(.pickRecipient) })
+        case .swap:
+            break
         }
-        out.append(MoveDeckStep(id: "token", word: move.mode == .swap ? String(localized: "Swap") : String(localized: "Token"),
-                                on: open == .token, answered: move.holding != nil) { toggle(.token) })
+        let held = move.holding.map { MoveRowMark(token: $0.symbol, network: MoveSentence.networkMark(chainId: 1)) }
+        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"),
+                                on: open == .token, answered: move.holding != nil,
+                                value: move.holding.map { "\($0.symbol) · Ethereum" }, mark: held) { toggle(.token) })
         if move.mode == .swap {
-            out.append(MoveDeckStep(id: "buy", word: String(localized: "For"), on: open == .buy, answered: move.buy != nil) { toggle(.buy) })
+            out.append(MoveDeckStep(id: "buy", word: String(localized: "Token"), on: open == .buy, answered: move.buy != nil,
+                                    value: move.buy.map { "\($0.symbol) · Railgun" },
+                                    mark: move.buy.map { MoveRowMark(token: $0.symbol) }) { toggle(.buy) })
         }
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
-                                answered: !move.amount.isEmpty) { toggle(.amount) })
+                                answered: !move.amount.isEmpty,
+                                value: move.amount.isEmpty ? (open == .amount ? "0" : nil)
+                                    : "\(move.amount) \(move.holding?.symbol ?? "")") { toggle(.amount) })
         if move.toPrivate {
             out.append(MoveDeckStep(id: "note", word: String(localized: "Note"), on: open == .note,
-                                    answered: !move.note.isEmpty) { toggle(.note) })
+                                    answered: !move.note.isEmpty, value: move.note.isEmpty ? nil : move.note) { toggle(.note) })
         }
         return out
     }

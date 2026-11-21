@@ -74831,3 +74831,24 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator: Home's two sections and their rows, Earn's figure, Receive's list.
+
+## §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one labelled line per thing it asks with the answer as a chip, what the open line asks under them, and the foot (amends §1897 items 1–2 and 7, §1900 item 1, §1904 item 1, §1911, §1916 items 1 and 3, §1917 items 1, 3 and 8, §1923's 30pt rows on the receipt, §1927, §1929 item 1; §1754 and §1776's "no sliders" kept) (user, 2026-11-20–21, over the canvases "Move without the plate", "Amount, three ways" and "Send, from scratch": "move just doesn't work. mock up for me how it could be designed w/o the plate", "Bare looks simplest", "i wonder if even the sentence is a bad idea", "we need to be able to be even simpler. like to token and amount need to already be on the screen nice and tidy perhaps like the receipt. and maybe they are pills or chips", "this is the closest we have gotten", "Segments", "definitely 1. big digits", "The $ | ETH switch", "why not use the exact same spacing", "perhaps even the 25 50 all should be chips in the amount line", "for earn instead of an earn pill it could be deposit and instead of take back it could be withdraw", "i don't think any of those four need glyphs", "swap has a type too", "option 1" (Add another in the foot), "Build Send", "i think you can build all of move now", "can you do all of them without me, then ship to testflight and app store release") — BUILT
+
+**Ruling.** Every Move verb (Send, Swap, Sweep, Buy, Earn, Receive, and the three private sends) draws one page, `MoveReceipt` (`Design/MoveReceipt.swift`):
+
+1. **The name, then the receipt.** The verb's name at `heading34`; under it one line per thing the move asks, a grey word in a 78pt column (To, From, Token, Amount, When, Type, Status) and the answer as a chip (`MoveChip`): a mark and its words, "Choose" in grey before it is answered, the open one lit (`fillStrong`, the pick's ink), an amount over what you have in amber, Aztec's in its ink with its rule as an unlabelled line under it (§1924). The lines are read off the sentence's words as the rows were (`choiceRowListAt`); the sentence is still laid out, unseen, for that.
+2. **One rhythm.** Every line, bar and list row is 44pt with 12pt between (`MoveReceipt.lineHeight`, `.gap`).
+3. **The open chip is the search** for To, Token, a swap's tokens and Merchant (`MoveChipField`, `searchesInChip`): no search bar over the list, which starts under the receipt.
+4. **Amount types on big keys** (`MoveKeypad(big:)`, `heading40`), standing on the foot at one height on every verb (`bigKeyHeight`, two fifths of the screen); the figure is typed into the Amount chip with a small caret; its quick amounts are chips on the same line: 25% · 50% · All (Send, Swap, Earn), $20 · $50 · $100 (Buy's tokens), Railgun's and Aztec's picks on an unlabelled line under it. No hero figure, no "You have" row, no unit line.
+5. **$ | token on the Token line** (`MoveUnitSwitch`) where the token has a price.
+6. **The kinds are a Type line**: Swap · Sweep, Gift cards · Tokens, and Earn's Deposit · Withdraw (renamed from Earn · Take back; its act is Hold to deposit / Hold to withdraw). No glyphs.
+7. **Ready is the receipt, longer:** the facts (You get, Fee, Round-ups, Through) as word-and-figure rows at the right edge, Details' rows under them. No token row repeating what the lines say (Send's change rows, the private receipts' token rows).
+8. **Add another is in the foot, beside back**, at Ready.
+9. **After the hold, a Status line** of chips, Signed ✓ · Sent · Arrived (Swapped, Swept), the now one lit; the receipt's chips stop taking taps.
+10. **No panel** (`HomePanelSurface` is Home's alone again) and **no steps track** (`MoveDeckSteps` unused); the page is the sheet's own ground.
+
+**Kept:** the foot's words (Hold to send, Next, Choose an address, "$X more than you have"), the private sends' own logic and their sentence while they read, fund, work or finish, Receive's places, the menu.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Send at To (the chip as search), Ready (receipt, facts, Add another in the foot) and Amount (big keys, 25% · 50% · All, $ | USDC); Swap at Ready (Type line, two Token lines, When); Buy's tokens at Amount ($20 · $50 · $100); Earn at Amount (Deposit · Withdraw); Receive; Privacy Pools, Railgun and Aztec move-ins at Ready. Not seen: the Status line during a real send, a gift card, Railgun's swap, a send from Aztec, iPad, Dynamic Type.

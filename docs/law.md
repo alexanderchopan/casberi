@@ -261,15 +261,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2111 of 2185 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2112 of 2186 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
-- §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
+- §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
 - §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
 - §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a, §1916)
-- §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904)
-- §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568)
+- §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904, §1931)
+- §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568, §1931)
 - §9 — Problems (amended by §1556, §1567, §1568)
 - §10 — Solutions (amended by §1208)
 - §11 — Bob vs Alice, per feature (amended by §1556)
@@ -2339,41 +2339,42 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
 - §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898, §1900, §1901)
-- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904, §1910, §1911, §1916, §1929)
+- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904, §1910, §1911, §1916, §1929, §1931)
 - §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904, §1909, §1910, §1916)
 - §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900, §1910)
-- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904, §1909)
+- §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904, §1909, §1931)
 - §1901 — Earn and Receive take the Deck: Earn's steps are Kind · From · Amount on the keypad, and Receive is its three places… (amended by §1902, §1903, §1904)
 - §1902 — The Deck is built: every Move verb on one page of sentence, facts and deck, the amount on Move's keys, the act held;… (amended by §1903)
 - §1903 — The Deck after its first walk: the deck takes 37% of the phone, its lists fade into the foot, Amount always raises th… (amended by §1904, §1911)
-- §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show… (amended by §1911, §1914, §1916, §1923)
+- §1904 — The Deck's next pass: steps show what is answered at Home's size, the figure is typed in the sentence, the facts show… (amended by §1911, §1914, §1916, §1923, §1931)
 - §1905 — Private gas is said so, and Base's mark is its own tile
 - §1906 — A fake transfer is one somebody else sent
 - §1907 — With a zk.money tag in To, From offers no Aztec account (amended by §1908)
 - §1908 — Send's tokens: your private account on Aztec is its own heading, apart from your private balance, and only where Azte… (amended by §1924)
 - §1909 — Send's network and token are one step, With: To · With · Amount (amended by §1910, §1913)
 - §1910 — Every token list in Move is one template, and a token and its network are one pick on every verb (amended by §1916)
-- §1911 — A verb's kinds are chips over its steps, back is the menu, and Move's lists run to the home indicator
+- §1911 — A verb's kinds are chips over its steps, back is the menu, and Move's lists run to the home indicator (amended by §1931)
 - §1912 — Move's menu words are an act's size and one width
 - §1913 — Send and Swap open on their tokens, Send's step is Token, and Swap's sides flip (amended by §1914, §1915)
 - §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amended by §1916)
 - §1915 — Swap's flip is a pick, never a button
-- §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip… (amended by §1923, §1928)
-- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track
+- §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip… (amended by §1923, §1928, §1931)
+- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track (amended by §1931)
 - §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round (amended by §1922)
 - §1918a — No co-signer, up to $100: Shield's sign-in and limit MEASURED for a fresh key
 - §1919 — Risks: a seen finding is stamped and leaves, three a kind, the findings' own head ("N new", "All seen"), and Without…
 - §1920 — Into Aztec without a co-signer: your Shield key, up to $100 a day (amended by §1922)
 - §1921 — Receive's private account carries its Add money door (amended by §1928)
 - §1922 — Into Aztec, this iPhone first: the co-signer only past $100 a day
-- §1923 — Send's To is rows, the token's row, with Yours first
+- §1923 — Send's To is rows, the token's row, with Yours first (amended by §1931)
 - §1924 — "Aztec to Aztec only" is the address's rule, not the account's
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
-- §1927 — The three private sentences stand on Move's deck (amended by §1929)
+- §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929)
-- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930)
+- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher
+- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one…
 
 ## Dead rulings → what replaced them (generated)
 

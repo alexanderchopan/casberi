@@ -59,37 +59,8 @@ struct MovePrivateSentence<Head: View>: View {
     private var store: PrivateMoneyStore { .shared }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // **THE SENTENCE STANDS STILL ON TOP, THE DECK UNDER IT (prd
-                // §1927, user: "we need to be consistent!"):** as Send's,
-                // Swap's and Earn's.
-                MoveFlow { sentence }
-                    .moveHoldFill()
-                    .allowsHitTesting(false)
-                    .animation(DS.Motion.standard, value: move.stage)
-                    .animation(DS.Motion.standard, value: move.amount)
-                    .animation(DS.Motion.standard, value: move.recipient)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                // Ready, the facts are the deck's receipt; else the line here.
-                if move.stage != .ready {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        #if DEBUG
-                        if hiddenPreview, let hidden { hiddenLine(hidden) }
-                        #endif
-                        line
-                    }
-                    .padding(.top, DS.Space.s4)
-                }
-            }
-            .padding(.horizontal, MoveSentence.sideInset(inTray))
-            .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-            .padding(.bottom, DS.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .bottom, spacing: 0) { deck }
+        // **A RECEIPT, AS EVERY VERB'S (prd §1931).**
+        deck
         // The deck opens on what is missing once read (prd §1782, as Earn's).
         .onChange(of: move.stage == .ready, initial: true) { _, on in
             guard on, open == nil else { return }
@@ -426,18 +397,27 @@ struct MovePrivateSentence<Head: View>: View {
     /// Send's recipients.
     private var steps: [MoveDeckStep] {
         var out: [MoveDeckStep] = []
+        let token = MoveRowMark(token: move.symbol, network: MoveSentence.networkMark(chainId: move.network.chainId))
         if move.mode == .send {
+            // **THE SENTENCE'S WORDS ARE THE LINES (prd §1931):** from, to,
+            // the network it arrives on, the token, how much.
+            out.append(MoveDeckStep(id: "from", word: String(localized: "From"), answered: true,
+                                    value: "Privacy Pools", glyph: "lock.fill") { leave(.switchOff) })
+            let to: String? = move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short)
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), on: open == .recipient,
-                                    answered: move.recipient != nil || move.tag != nil) { toggle(.recipient) })
+                                    answered: to != nil, value: to) { toggle(.recipient) })
             if move.canGoAway {
                 out.append(MoveDeckStep(id: "network", word: String(localized: "Network"), on: open == .network,
-                                        answered: true) { toggle(.network) })
+                                        answered: true, value: Self.networkName(move.destination)) { toggle(.network) })
             }
         } else {
-            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true) { leave(.pickRecipient) })
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true,
+                                    value: "Privacy Pools", glyph: "lock.fill") { leave(.pickRecipient) })
         }
+        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
+                                value: "\(move.symbol) · \(move.network.name)", mark: token) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
-                                answered: !move.amount.isEmpty) { toggle(.amount) })
+                                answered: !move.amount.isEmpty, value: move.amount.isEmpty ? nil : figure) { toggle(.amount) })
         return out
     }
 
@@ -446,7 +426,7 @@ struct MovePrivateSentence<Head: View>: View {
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // The token leads the receipt, as Send's does (prd §1929).
-            TokenRowLabel(symbol: move.symbol, line: move.network.name, figure: "−" + figure)
+            // The token and its amount are the receipt's lines (prd §1931).
             // **NOTHING THE SENTENCE SAYS (prd §1929):** from, to and the
             // network are its words; the receipt holds the rest.
             if move.mode == .send {
@@ -610,12 +590,14 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// **PRIVACY POOLS' DECK (prd §1927, as Earn's §1901).**
     private var deck: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if live, !isDone {
-                MoveDeckSteps(steps: steps)
-                    .padding(.bottom, MoveDeck.stepsGap)
+        MoveReceiptDeck(title: String(localized: "Send"), inTray: inTray, back: {
+            withAnimation(DS.Motion.standard) {
+                // Back is the menu, never the step before (prd §1911).
+                open = nil; back?()
             }
-            ZStack(alignment: .bottom) {
+        }, lines: {
+            if !isDone, move.stage == .ready || failed { MoveReceiptSteps(steps: steps, disabled: !live) }
+        }, content: {
                 Group {
                     if let open, live {
                         ScrollView {
@@ -637,35 +619,26 @@ struct MovePrivateSentence<Head: View>: View {
                             .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
                             .transition(.opacity)
                     } else {
-                        Color.clear
+                        // Reading, funding, working, done: the sentence says
+                        // where it stands, and the line under it the rest.
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                                MoveFlow { sentence }
+                                    .moveHoldFill()
+                                    .allowsHitTesting(false)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                #if DEBUG
+                                if hiddenPreview, let hidden { hiddenLine(hidden) }
+                                #endif
+                                line
+                            }
+                        }
+                        .scrollIndicators(.hidden)
+                        .transition(.opacity)
                     }
                 }
-                .safeAreaPadding(.bottom, MoveDeck.footHeight)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .frame(height: MoveDeck.bodyHeight + MoveDeck.footHeight
-                       + MoveFootClearance.bar(inTray: inTray, sizeClass: sizeClass, chrome: chrome)
-                       + MoveFootClearance.gained(inTray: inTray)
-                       - MoveDeck.stepsGap, alignment: .top)
-                .deckUnderFoot()
-                MoveDeckFoot(back: {
-                    withAnimation(DS.Motion.standard) {
-                        // Back is the menu, never the step before (prd §1911).
-                        open = nil; back?()
-                    }
-                }) { footWord }
-            }
-        }
-        .padding(.horizontal, MoveSentence.sideInset(inTray))
-        .padding(.top, HomePanelMetrics.cap)
-        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
-        .background(alignment: .top) {
-            ZStack(alignment: .top) {
-                Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
-                HomePanelSurface()
-            }
-            .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
-            .ignoresSafeArea(edges: .bottom)
-        }
+        }, word: { footWord })
         .animation(DS.Motion.standard, value: open)
     }
 
