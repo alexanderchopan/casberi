@@ -745,7 +745,8 @@ struct MoveTokenGrid: View {
         return TokenRowLabel(symbol: c.symbol, line: line,
                              lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
                              figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,
-                             picked: c.picked, grid: true)
+                             picked: c.picked, grid: true,
+                             flightKey: MoveFlight.key(symbol: c.symbol, network: c.network))
     }
 }
 

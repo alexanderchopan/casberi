@@ -357,6 +357,10 @@ struct MoveSentence: View {
     @State private var details = false
     /// Details folded under its chip at Ready (prd §1932).
     @State private var receiptDetails = false
+    /// The pick's flight from its row into its chip (prd §1933).
+    @Namespace private var flight
+    /// Bumped as the amount goes over what there is: the chip shakes once.
+    @State private var overShakes = 0
     /// The receipt's lines as they stood when the move was signed, so the
     /// page keeps them, flat, once it is done (prd §1932); and when.
     @State private var doneLines: [LedgerRow] = []
@@ -5658,7 +5662,7 @@ struct MoveSentence: View {
                          mark: String? = nil, on net: Op.Network? = nil, image: String? = nil, brand: String? = nil,
                          remote: String? = nil, symbol: String? = nil, face: String? = nil, dim: Bool = false,
                          picked: Bool = false, bareSymbol: Bool = false, rung: DSTextStyle = MoveSentence.choiceRung,
-                         home: Bool = false, titleInk: Color = DS.textPrimary,
+                         home: Bool = false, titleInk: Color = DS.textPrimary, subInk: Color? = nil,
                          act: @escaping () -> Void) -> some View {
         // A choice is a word a step under the sentence (prd §1681): the
         // mark, the word and its line under it, the figure trailing. The current
@@ -5725,7 +5729,7 @@ struct MoveSentence: View {
                 // a network); a long line, a private place's rule, under it.
                 let name = Text(verbatim: title).dsText(home ? .heading17 : rung)
                     .foregroundStyle(picked ? DS.pickInk : titleInk)
-                let subInk = sub.map { Self.aztecRules.contains($0) ? DS.aztecInk : DS.textSecondary } ?? DS.textSecondary
+                let subInk = subInk ?? sub.map { Self.aztecRules.contains($0) ? DS.aztecInk : DS.textSecondary } ?? DS.textSecondary
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                         name.lineLimit(1)
@@ -5764,9 +5768,9 @@ struct MoveSentence: View {
     /// under it: a name is never cut to a tile's column where money goes.
     private func toRow(_ title: String, sub: String? = nil, mark: String? = nil, image: String? = nil,
                        symbol: String? = nil, face: String? = nil, bareSymbol: Bool = false,
-                       titleInk: Color = DS.textPrimary, act: @escaping () -> Void) -> some View {
+                       titleInk: Color = DS.textPrimary, subInk: Color? = nil, act: @escaping () -> Void) -> some View {
         listRow(title, sub: sub, mark: mark, image: image, symbol: symbol, face: face, bareSymbol: bareSymbol,
-                home: true, titleInk: titleInk, act: act)
+                home: true, titleInk: titleInk, subInk: subInk, act: act)
     }
 
     private var withList: some View {
@@ -6147,8 +6151,11 @@ struct MoveSentence: View {
                 }
             }
             if let r = resolved, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
-                toRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address),
-                      face: r.address) {
+                // **A LOOKALIKE SAYS WHO IT IS NOT (prd §1933):** the same
+                // ending as a name you know, its own face, "Not Ana" in amber.
+                toRow(r.name ?? YourAccount.short(r.address),
+                      sub: r.imitates.map { String(localized: "Not \($0)") } ?? (r.name == nil ? nil : YourAccount.short(r.address)),
+                      face: r.address, subInk: r.imitates == nil ? nil : DS.attentionInk) {
                     pick {}
                 }
             }
@@ -7154,13 +7161,11 @@ struct MoveSentence: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             receiptLines
                 .padding(.top, MoveReceipt.gap)
-                .opacity(holdDim)
             // What the open line asks, down to the foot; a list runs under
             // the foot and fades there (§1904 item 9).
             ZStack(alignment: .bottom) {
                 GeometryReader { geo in
                     deckBody(room: geo.size.height)
-                        .opacity(holdDim)
                         .safeAreaPadding(.bottom, MoveDeck.footHeight)
                         .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                 }
@@ -7185,6 +7190,13 @@ struct MoveSentence: View {
         }
         .animation(DS.Motion.standard, value: deckOpen)
         .animation(DS.Motion.standard, value: keying)
+        .environment(\.moveFlight, flight)
+        .onChange(of: over) { was, now in
+            if now, !was, focus == .amount {
+                overShakes += 1
+                DSHaptic.failure()
+            }
+        }
         // The lines as signed are the ones the receipt keeps (prd §1932).
         .onChange(of: stage != nil) { _, going in
             if going, receipt == nil {
@@ -7236,21 +7248,21 @@ struct MoveSentence: View {
                     }
                 }
             }
-            ForEach(rows) { r in receiptLine(r) }
-            if let track = stageTrack {
-                MoveReceiptLine(label: String(localized: "Status")) {
-                    ForEach(track) { s in
-                        MoveChipLabel(text: s.word,
-                                      tone: s.state == .now ? .open : s.state == .done ? .answered : .empty,
-                                      compact: true, glyph: s.state == .done ? "checkmark" : nil)
-                    }
-                }
+            // The hold reads them in order (prd §1933); done, their fills
+            // drain one after another, top to bottom.
+            ForEach(Array(rows.enumerated()), id: \.element.id) { n, r in
+                receiptLine(r)
+                    .environment(\.moveHoldSlot, (n, holdLines))
+                    .animation(DS.Motion.standard.delay(Double(n) * 0.09), value: receipt?.id)
+            }
+            if let word = stageWord {
+                MoveStatusLine(word: word)
             }
             // **SENT KEEPS ITS LINES (prd §1932, user picked 6):** the
             // chips flat, then how it ended and when.
             if let receipt, !doneLines.isEmpty {
                 let status = doneStatus(receipt)
-                MoveReceiptFact(label: String(localized: "Status"), value: status.word, ink: status.ink)
+                MoveStatusLine(word: status.word, ink: status.ink)
                 if let doneAt {
                     MoveReceiptFact(label: String(localized: "When"), value: doneAt.formatted(date: .omitted, time: .shortened))
                 }
@@ -7287,8 +7299,14 @@ struct MoveSentence: View {
             if on, let which, Self.searchesInChip(which) {
                 MoveChipField { chipField(for: which) }
             } else {
-                MoveChip(text: chipText(r, on: on), mark: r.mark, tone: receipt != nil ? .done : chipTone(r, on: on),
+                MoveChip(text: chipText(r, on: on), mark: r.mark, face: chipFace(r),
+                         tone: receipt != nil ? .done : chipTone(r, on: on),
                          caret: on && which == .amount, disabled: stage != nil || receipt != nil) { lineTap(r) }
+                    // **TOO MUCH SAYS SO IN THE CHIP (prd §1933):** amber and
+                    // one shake as it goes over; the foot says by how much.
+                    .shake(on: which == .amount ? overShakes : 0)
+                    .moveFlight(flightKey(r), in: flight)
+
                 if which == .with, flips, let with, stage == nil, !Self.isDollar(with.token) {
                     // **$ | TOKEN ON THE TOKEN'S LINE (prd §1931), ONLY WHERE
                     // IT CHANGES SOMETHING (prd §1932):** a dollar token's
@@ -7298,6 +7316,21 @@ struct MoveSentence: View {
                 }
             }
         }
+    }
+
+    /// **EVERY ADDRESS WEARS ITS FACE (prd §1933):** To's chip carries the
+    /// face the Wallet draws for that address, so a lookalike looks like
+    /// someone else.
+    private func chipFace(_ r: LedgerRow) -> AnyView? {
+        guard r.opens == .to, r.mark == nil, let a = resolved?.address, ENS.isHexAddress(a),
+              !WalletWatch.sameAddress(a, account) else { return nil }
+        return AnyView(WalletFace(address: a, size: MoveReceipt.chipMark, circular: true).accessibilityHidden(true))
+    }
+
+    /// The token chip's flight key: its row in the list shares it.
+    private func flightKey(_ r: LedgerRow) -> String? {
+        guard r.opens == .with, let with else { return nil }
+        return MoveFlight.key(symbol: with.token.symbol, network: network.name)
     }
 
     private func chipText(_ r: LedgerRow, on: Bool) -> String {
@@ -7382,7 +7415,8 @@ struct MoveSentence: View {
         guard let with, verb == .send || verb == .swap else { return [] }
         let share = shareBinding(with)
         return [25, 50, 100].map { p in
-            MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%", on: share.wrappedValue == p) {
+            // Over what there is, no share is the pick (it only reads as All).
+            MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%", on: share.wrappedValue == p && !over) {
                 if p == 100 {
                     useAll(with)
                 } else {
@@ -7409,8 +7443,9 @@ struct MoveSentence: View {
             // continue the chips' lines, their word in the label column,
             // their value where a chip's words start; a sentence stands
             // where the values do.
+            let first = choiceRowListAt(stageOK: true).count
             VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-                ForEach(lines) { r in
+                ForEach(Array(lines.enumerated()), id: \.element.id) { n, r in
                     let marks: AnyView? = r.marks.isEmpty ? nil : AnyView(HStack(spacing: DS.Space.s1) {
                         ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
                     })
@@ -7419,6 +7454,7 @@ struct MoveSentence: View {
                     } else {
                         MoveReceiptFact(label: Self.receiptWord(r), value: r.value,
                                         ink: r.valueInk ?? r.ink ?? DS.textPrimary, marks: marks)
+                            .environment(\.moveHoldSlot, (first + n, holdLines))
                     }
                 }
             }
@@ -7580,7 +7616,10 @@ struct MoveSentence: View {
                             ForEach(plan.rows) { row in sweepRow(row) }
                         }
                     }
-                    if offersDetails { moveDetails(lines: true) }
+                    if offersDetails {
+                        moveDetails(lines: true)
+                            .environment(\.moveHoldSlot, (holdLines - 1, holdLines))
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, MoveDeck.listClearance)
@@ -7601,6 +7640,25 @@ struct MoveSentence: View {
 
     /// The move's stages on the steps' track once it is held (prd §1917):
     /// signed, sent, then its end in its own word. Nil before the hold.
+    /// **ONE WORD THAT TURNS INTO THE NEXT (prd §1933):** where the move is
+    /// once it is held; the receipt's Status says how it ended.
+    private var stageWord: String? {
+        guard let stage, receipt == nil, verb == .send || verb == .swap || verb == .sweep else { return nil }
+        return switch stage {
+        case .preparing: String(localized: "Preparing")
+        case .signing, .cosigning: String(localized: "Signing")
+        case .sending: String(localized: "Sending")
+        case .landing: String(localized: "On its way")
+        }
+    }
+
+    /// How many lines the hold reads (prd §1933): the choices, then the
+    /// facts at Ready, Details' rows as one.
+    private var holdLines: Int {
+        let facts = ledgerRows.filter { $0.id != "total" && !(offersDetails && ($0.id == "fee" || $0.id.hasPrefix("through"))) }.count
+        return max(1, choiceRowListAt(stageOK: true).count + facts + (offersDetails ? 1 : 0))
+    }
+
     private var stageTrack: [MoveStageTrack.Segment]? {
         guard let stage, receipt == nil, verb == .send || verb == .swap || verb == .sweep else { return nil }
         let at = switch stage {

@@ -22,6 +22,9 @@ struct TokenRowLabel: View {
     /// one line where the chips start, the figure trailing, at the
     /// receipt's one pitch.
     var grid = false
+    /// The key this row's mark shares with the chip it flies into (prd §1933).
+    var flightKey: String?
+    @Environment(\.moveFlight) private var flight
 
     var body: some View {
         if grid { gridBody } else { stackBody }
@@ -30,6 +33,7 @@ struct TokenRowLabel: View {
     private var gridBody: some View {
         HStack(alignment: .center, spacing: 0) {
             AssetMark(name: symbol, size: DS.Mark.row)
+                .moveFlight(flightKey, in: flight)
                 .frame(width: MoveReceipt.labelWidth, alignment: .leading)
                 .accessibilityHidden(true)
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {

@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2113 of 2187 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2114 of 2188 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2359,7 +2359,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amended by §1916)
 - §1915 — Swap's flip is a pick, never a button
 - §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip… (amended by §1923, §1928, §1931)
-- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track (amended by §1931)
+- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track (amended by §1931, §1933)
 - §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round (amended by §1922)
 - §1918a — No co-signer, up to $100: Shield's sign-in and limit MEASURED for a fresh key
 - §1919 — Risks: a seen finding is stamped and leaves, three a kind, the findings' own head ("N new", "All seen"), and Without…
@@ -2374,8 +2374,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929)
 - §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher
-- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932)
-- §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details…
+- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933)
+- §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933)
+- §1933 — Move's delight: every address wears its face and a lookalike says who it is not, the pick flies into its chip, too mu…
 
 ## Dead rulings → what replaced them (generated)
 

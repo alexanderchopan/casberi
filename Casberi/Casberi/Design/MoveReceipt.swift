@@ -18,17 +18,61 @@ enum MoveReceipt {
     static let chipMark: CGFloat = 28
 }
 
+// MARK: - The pick flies (prd §1933)
+
+private struct MoveFlightKey: EnvironmentKey { static let defaultValue: Namespace.ID? = nil }
+/// Where a line's pick lights: its place in the receipt, and how many lines
+/// the hold reads (prd §1933).
+private struct MoveHoldSlotKey: EnvironmentKey { static let defaultValue: (index: Int, count: Int)? = nil }
+
+extension EnvironmentValues {
+    /// **THE PICK FLIES INTO ITS CHIP (prd §1933):** Move's namespace, so a
+    /// token row's mark and the Token chip are one thing moving.
+    var moveFlight: Namespace.ID? {
+        get { self[MoveFlightKey.self] }
+        set { self[MoveFlightKey.self] = newValue }
+    }
+    var moveHoldSlot: (index: Int, count: Int)? {
+        get { self[MoveHoldSlotKey.self] }
+        set { self[MoveHoldSlotKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Matched by position only: the chip travels from the row's mark to its
+    /// line, never stretched through the mark's size.
+    @ViewBuilder func moveFlight(_ key: String?, in ns: Namespace.ID?) -> some View {
+        if let key, let ns {
+            matchedGeometryEffect(id: key, in: ns, properties: .position)
+        } else {
+            self
+        }
+    }
+}
+
+enum MoveFlight {
+    /// One token on one network: the key its row and its chip share.
+    static func key(symbol: String, network: String) -> String { "flight|\(symbol)|\(network)" }
+}
+
 /// One line of the receipt: its word in the label column, then what answers it.
 struct MoveReceiptLine<Content: View>: View {
     let label: String
     var labelInk: Color = DS.textSecondary
     @ViewBuilder let content: () -> Content
 
+    @Environment(\.moveHoldSlot) private var slot
+    @Environment(\.accessibilityReduceMotion) private var still
+    /// **THE HOLD READS THE RECEIPT (prd §1933):** while the act is held
+    /// each line's word turns white in turn, top to bottom, at the hold's
+    /// pace; let go and they go back.
+    @State private var lit = false
+
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
             Text(verbatim: label)
                 .dsText(.body17)
-                .foregroundStyle(labelInk)
+                .foregroundStyle(lit ? DS.textPrimary : labelInk)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .frame(width: MoveReceipt.labelWidth, alignment: .leading)
@@ -42,6 +86,36 @@ struct MoveReceiptLine<Content: View>: View {
         }
         .frame(height: MoveReceipt.lineHeight)
         .accessibilityElement(children: .contain)
+        .task(id: slot == nil ? false : MoveHoldState.shared.held) {
+            guard let slot else { return }
+            guard MoveHoldState.shared.held else {
+                withAnimation(DS.Motion.standard) { lit = false }
+                return
+            }
+            let at = MoveDeck.hold * Double(min(slot.index, slot.count - 1) + 1) / Double(slot.count + 1)
+            try? await Task.sleep(for: .seconds(still ? 0 : at))
+            guard !Task.isCancelled, MoveHoldState.shared.held else { return }
+            withAnimation(.easeOut(duration: 0.15)) { lit = true }
+        }
+    }
+}
+
+/// **THE STATUS SAYS WHERE IT IS, IN PLACE (prd §1933):** one word that
+/// turns into the next (Signing, Sending, On its way), never a row of chips.
+struct MoveStatusLine: View {
+    let word: String
+    var ink: Color = DS.textPrimary
+
+    var body: some View {
+        MoveReceiptLine(label: String(localized: "Status")) {
+            Text(verbatim: word)
+                .dsText(.body17)
+                .foregroundStyle(ink)
+                .contentTransition(.interpolate)
+                .padding(.leading, 16)
+                .animation(DS.Motion.standard, value: word)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -83,7 +157,7 @@ struct MoveChipLabel: View {
             if caret {
                 // A caret at the chip's own size: Move's blinks at the
                 // sentence's and pushed the figure out of its chip.
-                Capsule().fill(DS.pickInk).frame(width: 2, height: 18)
+                Capsule().fill(tone == .warn ? DS.attentionInk : DS.pickInk).frame(width: 2, height: 18)
                     .accessibilityHidden(true)
             }
             if let trail {

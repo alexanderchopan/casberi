@@ -74868,3 +74868,18 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: Send's token list on the grid with the act grey, Amount with the quick keys, Ready as one receipt with Details open and shut, Swap with $ | ETH. **Not seen:** Sent (the hold was not taken in this session), Earn's, Railgun's and Aztec's quick keys, iPad, Dynamic Type.
+
+## §1933 — Move's delight: every address wears its face and a lookalike says who it is not, the pick flies into its chip, too much shakes the chip, and the hold reads the receipt before it prints (amends §1931 item 9's Status chips, §1917's hold dim, §1932 item 5's drain) (user, 2026-11-21, of the canvas "Move delight": "do A, B, C, D. E i'm not sure about because i also like the sentence") — BUILT
+
+**Ruling.**
+
+1. **Every address wears its face (A).** To's chip carries the face the Wallet draws for the address (`WalletFace`, `chipFace`); a typed address that imitates one in your book is listed with its own face and "Not <name>" in amber where its tail would be. The face is the Wallet's: twelve grounds, so two addresses can share one; the amber words are the defence.
+2. **The pick flies into its chip (B).** A token row's mark and the Token chip share a key (`MoveFlight`, `\.moveFlight`); picking moves the chip from the row to its line, by position only.
+3. **Too much says so in the chip (C).** Going over what there is turns the Amount chip and its caret amber with one shake (`shake(on:)`, a failure tap); the foot keeps saying by how much (§1917). No quick key reads as picked while it is over. The canvas's "You have 248" beside the chip is not built: the foot already says it.
+4. **The hold reads the receipt, then it prints (D).** While the act is held each line's word turns white in turn, top to bottom, at the hold's pace, and goes back if let go (`\.moveHoldSlot`, retiring §1917's dim); once held, Status is one word that turns into the next (Preparing, Signing, Sending, On its way: `MoveStatusLine`), then how it ended; the chips' fills drain one line after another.
+
+**Not built (user):** E, the shareable card: Share keeps the receipt's sentence.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: the face on To's chip; a pick landing in its chip; an amount over the balance (amber chip and caret, All not lit). **Not seen:** the flight in motion (frames 0.3s apart), a lookalike row, the hold reading the lines and the Status words (the hold was not taken in this session), the drain.
