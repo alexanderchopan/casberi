@@ -74852,3 +74852,19 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: Send at To (the chip as search), Ready (receipt, facts, Add another in the foot) and Amount (big keys, 25% · 50% · All, $ | USDC); Swap at Ready (Type line, two Token lines, When); Buy's tokens at Amount ($20 · $50 · $100); Earn at Amount (Deposit · Withdraw); Receive; Privacy Pools, Railgun and Aztec move-ins at Ready. Not seen: the Status line during a real send, a gift card, Railgun's swap, a send from Aztec, iPad, Dynamic Type.
+
+## §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details folded, $ | token only where it changes something, and Sent keeps its lines flat (amends §1931 items 4, 5, 7 and 9; §1931's From chip kept, the user declined "Public") (user, 2026-11-21, of the canvas "Move polish": "do 1, 2b, 3 4,6. don't do 5") — BUILT
+
+**Ruling.**
+
+1. **Lists stand on the receipt's grid.** In every Move list the mark stands in the label column and the name in the chips' column, its network or tail on the same line where it fits (`listRow`, `TokenRowLabel(grid:)`), one row at the receipt's pitch (44 + 12). While a list is open the act is grey: the choice is the page's.
+2. **The quick amounts are the keypad's top row** (`MoveQuickKeys`): three equal chips over the keys on Send, Swap, Buy, Earn, Railgun and Aztec (Aztec's lit in its ink). The Amount line holds the figure alone, so a long figure no longer pushes the page sideways (seen on 1061: "20 USDC" with 25% · 50% · All slid the whole page left).
+3. **Ready is one receipt.** The facts continue the chips' lines (`MoveReceiptFact`): their word in the label column (Fee, Check, Gets, At least, Arrives, Card), the value where a chip's words start; a sentence with no word (a warning, a credit, "More than you have") stands there too (`MoveReceiptNote`). To is not said twice. The lists checked against and Raw transaction wait behind a Details chip (`MoveDetails(lines:)`).
+4. **$ | token only where it changes something:** a dollar token (USDC, USDT, USDG, DAI and their kin, `MoveSentence.isDollar`) has no switch.
+5. **Sent keeps its lines.** The lines as signed stay on the page once it is done, their chips flat (`MoveChipTone.done`), then Status (Arrived, Swapped, Swept; "Not seen yet" in amber; Across's "Moving to …") and When; the title is the past tense alone; Share stands in the foot beside Done.
+
+**Not done (user):** From's chip stays "Your public account".
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Send's token list on the grid with the act grey, Amount with the quick keys, Ready as one receipt with Details open and shut, Swap with $ | ETH. **Not seen:** Sent (the hold was not taken in this session), Earn's, Railgun's and Aztec's quick keys, iPad, Dynamic Type.

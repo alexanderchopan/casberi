@@ -25,9 +25,52 @@ struct MoveDetails: View {
     /// addresses were checked against.
     var warnings: [(text: String, red: Bool)] = []
     var checkedWith: [String] = []
+    /// **READY IS ONE RECEIPT (prd §1932):** the rows continue the receipt's
+    /// lines (Fee, Check, the warnings in their ink), and what only a careful
+    /// reader wants (the lists asked, Raw transaction) waits behind Details.
+    var lines = false
+    var open = false
+    var onOpen: (() -> Void)? = nil
     let onRaw: () -> Void
 
     var body: some View {
+        if lines { linesBody } else { rowsBody }
+    }
+
+    private var linesBody: some View {
+        VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            if let preview {
+                if swap { swapRows(preview) } else { sendRows(preview) }
+                checkedRow(preview)
+                ForEach(Array(warnings.enumerated()), id: \.offset) { _, w in
+                    MoveReceiptNote(text: w.text, ink: w.red ? DS.destructiveInk : DS.attentionInk)
+                }
+                MoveReceiptLine(label: "") {
+                    MoveChip(text: String(localized: "Details"), tone: open ? .answered : .empty,
+                             trail: open ? "chevron.up" : "chevron.down") { onOpen?() }
+                }
+                if open {
+                    // One source a line: a list's own name holds commas.
+                    ForEach(Array(checkedWith.enumerated()), id: \.offset) { n, source in
+                        MoveReceiptNote(text: n == 0 ? String(localized: "Checked with \(source)") : source)
+                    }
+                    if preview.hash != nil {
+                        MoveReceiptLine(label: "") {
+                            MoveChip(text: String(localized: "Raw transaction"), tone: .answered, trail: "chevron.right", action: onRaw)
+                        }
+                    }
+                }
+            } else {
+                MoveReceiptLine(label: "") {
+                    DSSpinner()
+                    Text("Checking").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+            }
+        }
+        .transition(.opacity)
+    }
+
+    private var rowsBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let preview {
                 if swap { swapRows(preview) } else { sendRows(preview) }
@@ -57,9 +100,12 @@ struct MoveDetails: View {
         // **TO IS A NAME AND A TAIL (prd §1916, user, 2026-11-19, of the
         // receipt's 42 characters):** the whole address, checksummed, is Raw
         // transaction's, where it is copied.
-        ForEach(to, id: \.self) { address in
-            let name = AddressBook.shared.entry(for: address)?.name
-            row(String(localized: "To"), [name, AddressTail.short(address)].compactMap { $0 }.joined(separator: " "))
+        // On the receipt, To is its own line already (prd §1932).
+        if !lines {
+            ForEach(to, id: \.self) { address in
+                let name = AddressBook.shared.entry(for: address)?.name
+                row(String(localized: "To"), [name, AddressTail.short(address)].compactMap { $0 }.joined(separator: " "))
+            }
         }
         // A round-up bought on the exchanges with the send (prd §1545): where,
         // its pool fee, and the exact approval it makes, as a swap's are.
@@ -198,8 +244,29 @@ struct MoveDetails: View {
     /// (§1482), the body rung.
     /// **ONE LINE A ROW (user, 2026-10-26, prd §1555):** no subtext under
     /// any row; a fact worth keeping folds into the value.
-    private func row(_ label: String, _ value: String,
-                     ink: Color = DS.textPrimary) -> some View {
+    @ViewBuilder private func row(_ label: String, _ value: String,
+                                  ink: Color = DS.textPrimary) -> some View {
+        if lines {
+            MoveReceiptFact(label: Self.short(label), value: value, ink: ink)
+        } else {
+            wideRow(label, value, ink: ink)
+        }
+    }
+
+    /// The receipt's label column holds a word or two (prd §1932).
+    static func short(_ label: String) -> String {
+        switch label {
+        case String(localized: "Network fee"): String(localized: "Fee")
+        case String(localized: "Simulated"): String(localized: "Check")
+        case String(localized: "You get at least"): String(localized: "At least")
+        case String(localized: "Across fee"): "Across"
+        case String(localized: "Expected time"): String(localized: "Time")
+        default: label
+        }
+    }
+
+    private func wideRow(_ label: String, _ value: String,
+                         ink: Color = DS.textPrimary) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
             Text(verbatim: label).dsText(.body17).foregroundStyle(DS.textSecondary)
             Spacer(minLength: DS.Space.s2)

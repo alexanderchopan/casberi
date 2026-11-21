@@ -17,8 +17,40 @@ struct TokenRowLabel: View {
     var underInk: Color = DS.textSecondary
     /// A pick in a Move list: its name in the pick's ink.
     var picked = false
+    /// **ON THE RECEIPT'S GRID (prd §1932):** in Move's lists the mark
+    /// stands in the receipt's label column, the symbol and its network on
+    /// one line where the chips start, the figure trailing, at the
+    /// receipt's one pitch.
+    var grid = false
 
     var body: some View {
+        if grid { gridBody } else { stackBody }
+    }
+
+    private var gridBody: some View {
+        HStack(alignment: .center, spacing: 0) {
+            AssetMark(name: symbol, size: DS.Mark.row)
+                .frame(width: MoveReceipt.labelWidth, alignment: .leading)
+                .accessibilityHidden(true)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(verbatim: symbol).dsText(.heading17).foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
+                if let line, !line.isEmpty {
+                    Text(verbatim: line).dsText(.body17).foregroundStyle(lineInk)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .layoutPriority(1)
+            Spacer(minLength: DS.Space.s2)
+            if let figure {
+                Text(verbatim: figure).dsText(.price17).monospacedDigit().foregroundStyle(figureInk).lineLimit(1)
+            }
+        }
+        .frame(minHeight: MoveReceipt.lineHeight + MoveReceipt.gap)
+        .contentShape(Rectangle())
+    }
+
+    private var stackBody: some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             AssetMark(name: symbol, size: DS.Mark.row)
                 .frame(width: DSRoomChassis.headGlyph)

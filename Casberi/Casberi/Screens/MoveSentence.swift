@@ -355,6 +355,12 @@ struct MoveSentence: View {
     @State private var previewFor = ""
     /// Details open under the grey line; Raw transaction, a page deeper.
     @State private var details = false
+    /// Details folded under its chip at Ready (prd §1932).
+    @State private var receiptDetails = false
+    /// The receipt's lines as they stood when the move was signed, so the
+    /// page keeps them, flat, once it is done (prd §1932); and when.
+    @State private var doneLines: [LedgerRow] = []
+    @State private var doneAt: Date?
     @State private var rawOpen = false
 
     // MARK: - Warnings (prd §1509 item 2, §1513)
@@ -5416,12 +5422,17 @@ struct MoveSentence: View {
         }
     }
 
-    private var moveDetails: some View {
+    private var moveDetails: some View { moveDetails(lines: false) }
+
+    /// `lines`: on the receipt at Ready (prd §1932), Details folded under its chip.
+    private func moveDetails(lines: Bool) -> some View {
         let sends = signing.compactMap { item -> String? in if case .send(let p) = item { p.to } else { nil } }
         let to = sends.reduce(into: [String]()) { list, a in if !list.contains(where: { WalletWatch.sameAddress($0, a) }) { list.append(a) } }
         return MoveDetails(preview: shownPreview, swap: verb != .send, to: to, account: account,
                            networkFeeUSD: networkFeeUSD,
-                           warnings: shownFindings.map { (warningLine($0), $0.red) }, checkedWith: checkedWith) {
+                           warnings: shownFindings.map { (warningLine($0), $0.red) }, checkedWith: checkedWith,
+                           lines: lines, open: receiptDetails,
+                           onOpen: { withAnimation(DS.Motion.standard) { receiptDetails.toggle() } }) {
             withAnimation(DS.Motion.standard) { rawOpen = true }
             DSHaptic.selection()
         }
@@ -5662,7 +5673,9 @@ struct MoveSentence: View {
             // its column, the name over a grey line, the figure trailing.
             // `home`: the token row's pitch, gap and rungs (`TokenRowLabel`),
             // so To's rows are the Token step's (prd §1923).
-            HStack(spacing: home ? DSRoomChassis.headGap : MoveDeck.leadGap) {
+            // **ON THE RECEIPT'S GRID (prd §1932):** the mark in the
+            // label column, the words where the chips start, one pitch.
+            HStack(spacing: 0) {
                 if hasLead { Group {
                 if let face {
                     // A person: the face the Wallet draws for that address
@@ -5707,19 +5720,23 @@ struct MoveSentence: View {
                 } else if let mark {
                     MoveRowMark(token: mark, network: net.flatMap { Self.networkMark($0) }, size: Self.listMark)
                 }
-                }.frame(width: MoveDeck.lead) }
-                VStack(alignment: .leading, spacing: home ? 2 : 0) {
-                    // A long name wraps at its size (prd §1805), on one line
-                    // in a token's row (prd §1923); the pick wears the pick's
-                    // ink (prd §1897 item 3).
-                    Text(verbatim: title).dsText(home ? .body17 : rung)
-                        .foregroundStyle(picked ? DS.pickInk : titleInk)
-                        .lineLimit(home ? 1 : 2).fixedSize(horizontal: false, vertical: true)
-                    if let sub {
-                        // A private place's rule stays whole (prd §1898 item 4).
-                        Text(verbatim: sub).dsText(home ? .subhead12 : .fact15)
-                            .foregroundStyle(Self.aztecRules.contains(sub) ? DS.aztecInk : DS.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                }.frame(width: MoveReceipt.labelWidth, alignment: .leading) }
+                // The name and its line on one line where they fit (a tail,
+                // a network); a long line, a private place's rule, under it.
+                let name = Text(verbatim: title).dsText(home ? .heading17 : rung)
+                    .foregroundStyle(picked ? DS.pickInk : titleInk)
+                let subInk = sub.map { Self.aztecRules.contains($0) ? DS.aztecInk : DS.textSecondary } ?? DS.textSecondary
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        name.lineLimit(1)
+                        if let sub { Text(verbatim: sub).dsText(.body17).foregroundStyle(subInk).lineLimit(1) }
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        name.lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        if let sub {
+                            Text(verbatim: sub).dsText(.fact15).foregroundStyle(subInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
                 .layoutPriority(1)
@@ -5732,7 +5749,7 @@ struct MoveSentence: View {
                 }
             }
             .accessibilityAddTraits(picked ? [.isSelected] : [])
-            .frame(minHeight: home ? DSFeed.headHeight : Self.listRowHeight)
+            .frame(minHeight: MoveReceipt.lineHeight + MoveReceipt.gap)
             .contentShape(Rectangle())
             .opacity(dim ? 0.4 : 1)
         }
@@ -7127,7 +7144,8 @@ struct MoveSentence: View {
     private var deck: some View {
         VStack(alignment: .leading, spacing: 0) {
             // The verb's name, then its receipt (prd §1931).
-            Text(verbatim: receipt == nil ? pageTitle(verb) : receipt?.past ?? pageTitle(verb))
+            // Done, the past tense alone: "Sent", how it went is the Status line (prd §1932).
+            Text(verbatim: receipt.map { $0.past.trimmingCharacters(in: CharacterSet(charactersIn: ",")) } ?? pageTitle(verb))
                 .dsText(.heading34)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(2)
@@ -7149,7 +7167,8 @@ struct MoveSentence: View {
                 .padding(.top, MoveReceipt.gap)
                 .deckUnderFoot()
                 MoveDeckFoot(backDisabled: stage != nil, back: { withAnimation(DS.Motion.standard) { deckBack() } },
-                             lead: canAddAnother && deckReady ? AnyView(addAnotherWord) : nil) {
+                             lead: receipt.map { AnyView(shareWord($0)) }
+                                ?? (canAddAnother && deckReady ? AnyView(addAnotherWord) : nil)) {
                     footWord
                 }
             }
@@ -7166,6 +7185,21 @@ struct MoveSentence: View {
         }
         .animation(DS.Motion.standard, value: deckOpen)
         .animation(DS.Motion.standard, value: keying)
+        // The lines as signed are the ones the receipt keeps (prd §1932).
+        .onChange(of: stage != nil) { _, going in
+            if going, receipt == nil {
+                doneLines = choiceRowListAt(stageOK: true)
+                doneAt = nil
+            }
+        }
+        .onChange(of: receipt?.id) { _, id in
+            if id == nil {
+                doneLines = []
+                doneAt = nil
+            } else if doneAt == nil {
+                doneAt = .now
+            }
+        }
         // **THE DECK OPENS ON THE FIRST STEP STILL TO ANSWER (prd §1782):**
         // never an empty panel under a sentence that asks.
         .task(id: verb) {
@@ -7193,9 +7227,9 @@ struct MoveSentence: View {
     /// one line per row the move asks (read off its words, as the rows were),
     /// then, once it is held, the Status line.
     @ViewBuilder private var receiptLines: some View {
-        let rows = choiceRowListAt(stageOK: true)
+        let rows = receipt != nil ? doneLines : choiceRowListAt(stageOK: true)
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-            if kindsShown {
+            if kindsShown, receipt == nil {
                 MoveReceiptLine(label: String(localized: "Type")) {
                     ForEach(verbKinds.sorted { kindWord($0).localizedStandardCompare(kindWord($1)) == .orderedAscending }, id: \.self) { v in
                         MoveChip(text: kindWord(v), tone: v == verb ? .open : .empty, disabled: stage != nil) { pickVerb(v) }
@@ -7212,9 +7246,34 @@ struct MoveSentence: View {
                     }
                 }
             }
+            // **SENT KEEPS ITS LINES (prd §1932, user picked 6):** the
+            // chips flat, then how it ended and when.
+            if let receipt, !doneLines.isEmpty {
+                let status = doneStatus(receipt)
+                MoveReceiptFact(label: String(localized: "Status"), value: status.word, ink: status.ink)
+                if let doneAt {
+                    MoveReceiptFact(label: String(localized: "When"), value: doneAt.formatted(date: .omitted, time: .shortened))
+                }
+            }
         }
         .animation(DS.Motion.standard, value: deckOpen)
         .animation(DS.Motion.standard, value: focus)
+        .animation(DS.Motion.standard, value: receipt?.id)
+    }
+
+    /// How a done move ended, in a word: arrived, on its way, not seen yet.
+    private func doneStatus(_ r: Receipt) -> (word: String, ink: Color) {
+        if r.past.hasSuffix(",") { return (String(localized: "Not seen yet"), DS.attentionInk) }
+        if let moving = r.detail.components(separatedBy: " · ").first(where: { $0.hasPrefix(String(localized: "Moving to")) }) {
+            return (moving, DS.textPrimary)
+        }
+        if r.link == nil { return (String(localized: "Not sent"), DS.textSecondary) }
+        let word = switch verb {
+        case .send: String(localized: "Arrived")
+        case .sweep: String(localized: "Swept")
+        default: String(localized: "Swapped")
+        }
+        return (word, DS.confirmInk)
     }
 
     /// One line: its word, and the answer as a chip; the open line's chip is
@@ -7228,16 +7287,14 @@ struct MoveSentence: View {
             if on, let which, Self.searchesInChip(which) {
                 MoveChipField { chipField(for: which) }
             } else {
-                MoveChip(text: chipText(r, on: on), mark: r.mark, tone: chipTone(r, on: on),
+                MoveChip(text: chipText(r, on: on), mark: r.mark, tone: receipt != nil ? .done : chipTone(r, on: on),
                          caret: on && which == .amount, disabled: stage != nil || receipt != nil) { lineTap(r) }
-                if which == .with, flips, let with, stage == nil {
-                    // **$ | TOKEN ON THE TOKEN'S LINE (prd §1931).**
+                if which == .with, flips, let with, stage == nil, !Self.isDollar(with.token) {
+                    // **$ | TOKEN ON THE TOKEN'S LINE (prd §1931), ONLY WHERE
+                    // IT CHANGES SOMETHING (prd §1932):** a dollar token's
+                    // figure is its dollars.
                     Spacer(minLength: 0)
                     MoveUnitSwitch(symbol: with.token.symbol, dollars: inDollars) { setDollars($0, with) }
-                }
-                if which == .amount, on {
-                    Spacer(minLength: 0)
-                    quickChips
                 }
             }
         }
@@ -7311,29 +7368,35 @@ struct MoveSentence: View {
         }
     }
 
-    /// **QUICK AMOUNTS ON THE AMOUNT'S LINE (prd §1931, user: "perhaps even
-    /// the 25 50 all should be chips in the amount line").** A share of the
-    /// token for Send and Swap; Buy's round sums.
-    @ViewBuilder private var quickChips: some View {
+    /// **QUICK AMOUNTS ON THE KEYS (prd §1932, retiring §1931's chips on the
+    /// Amount line, which pushed a long figure off the page).** A share of
+    /// the token for Send and Swap; Buy's round sums.
+    private var quickKeys: [MoveQuickKeys.Key] {
         if verb == .deposit {
-            ForEach(Self.amountSteps, id: \.self) { step in
-                MoveChip(text: "$\(step)", tone: amount == "\(step)" ? .open : .answered, compact: true) {
+            return Self.amountSteps.map { step in
+                MoveQuickKeys.Key(id: "\(step)", word: "$\(step)", on: amount == "\(step)") {
                     withAnimation(DS.Motion.standard) { amount = "\(step)" }
                 }
             }
-        } else if let with, verb == .send || verb == .swap {
-            let share = shareBinding(with)
-            ForEach([25, 50, 100], id: \.self) { p in
-                MoveChip(text: p == 100 ? String(localized: "All") : "\(p)%",
-                         tone: share.wrappedValue == p ? .open : .answered, compact: true) {
-                    if p == 100 {
-                        useAll(with)
-                    } else {
-                        withAnimation(DS.Motion.standard) { share.wrappedValue = p }
-                    }
+        }
+        guard let with, verb == .send || verb == .swap else { return [] }
+        let share = shareBinding(with)
+        return [25, 50, 100].map { p in
+            MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%", on: share.wrappedValue == p) {
+                if p == 100 {
+                    useAll(with)
+                } else {
+                    withAnimation(DS.Motion.standard) { share.wrappedValue = p }
                 }
             }
         }
+    }
+
+    /// A dollar token: its figure is its dollars, so $ | token changes
+    /// nothing (prd §1932).
+    static func isDollar(_ t: Op.Token) -> Bool {
+        ["USDC", "USDT", "USDG", "USDS", "DAI", "PYUSD", "USDE", "USDBC", "FRAX", "LUSD", "GHO", "RLUSD", "USD₮0", "USDT0"]
+            .contains(t.symbol.uppercased())
     }
 
     /// **THE FACTS AT READY ARE LINES (prd §1931):** a grey word and its
@@ -7342,35 +7405,33 @@ struct MoveSentence: View {
     @ViewBuilder private var readyLines: some View {
         let lines = ledgerRows.filter { $0.id != "total" && !(offersDetails && ($0.id == "fee" || $0.id.hasPrefix("through"))) }
         if !lines.isEmpty {
+            // **READY IS ONE RECEIPT (prd §1932, user picked 3):** the facts
+            // continue the chips' lines, their word in the label column,
+            // their value where a chip's words start; a sentence stands
+            // where the values do.
             VStack(alignment: .leading, spacing: MoveReceipt.gap) {
                 ForEach(lines) { r in
+                    let marks: AnyView? = r.marks.isEmpty ? nil : AnyView(HStack(spacing: DS.Space.s1) {
+                        ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
+                    })
                     if r.value.isEmpty {
-                        HStack(spacing: DS.Space.s2) {
-                            ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
-                            Text(verbatim: r.name).dsText(.body17).foregroundStyle(r.ink ?? DS.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .frame(minHeight: MoveReceipt.lineHeight, alignment: .leading)
+                        MoveReceiptNote(text: r.name, ink: r.ink ?? DS.textSecondary, marks: marks)
                     } else {
-                        // The facts read as Details' rows do: the word, its
-                        // figure at the right edge, one block.
-                        HStack(spacing: DS.Space.s2) {
-                            Text(verbatim: r.name).dsText(.body17).foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            Spacer(minLength: DS.Space.s2)
-                            ForEach(r.marks, id: \.self) { Self.mark(of: $0).accessibilityHidden(true) }
-                            Text(verbatim: r.value)
-                                .dsText(.body17)
-                                .foregroundStyle(r.valueInk ?? r.ink ?? DS.textPrimary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .monospacedDigit()
-                        }
-                        .frame(minHeight: MoveReceipt.lineHeight)
-                        .accessibilityElement(children: .combine)
+                        MoveReceiptFact(label: Self.receiptWord(r), value: r.value,
+                                        ink: r.valueInk ?? r.ink ?? DS.textPrimary, marks: marks)
                     }
                 }
             }
+        }
+    }
+
+    /// A ledger row's word in the receipt's label column, a word or two.
+    static func receiptWord(_ r: LedgerRow) -> String {
+        switch r.id {
+        case "get", "tagGets": String(localized: "Gets")
+        case "arrives": String(localized: "Arrives")
+        case "card": String(localized: "Card")
+        default: r.name
         }
     }
 
@@ -7416,12 +7477,20 @@ struct MoveSentence: View {
                 MoveDeckRowLabel(name: String(localized: "See in your activity")) { receiptGlyph("list.bullet") }
             }
             .buttonStyle(RowPress())
-            ShareLink(item: Self.receiptWords(r)) {
-                MoveDeckRowLabel(name: String(localized: "Share the receipt")) { receiptGlyph("square.and.arrow.up") }
-            }
-            .buttonStyle(RowPress())
         }
         .padding(.top, DS.Space.s2)
+    }
+
+    /// **SHARE IN THE FOOT, BESIDE DONE (prd §1932).**
+    private func shareWord(_ r: Receipt) -> some View {
+        ShareLink(item: Self.receiptWords(r)) {
+            Text("Share")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textSecondary)
+                .frame(minHeight: DS.Hit.min)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
     }
 
     private func receiptGlyph(_ name: String) -> some View {
@@ -7464,8 +7533,10 @@ struct MoveSentence: View {
             // **BIG KEYS, ONE PLACE ON EVERY VERB (prd §1931, user: "it
             // should feel the same"):** the keypad stands on the foot at
             // one height whatever the receipt above it holds.
-            VStack(spacing: 0) {
+            VStack(spacing: MoveReceipt.gap) {
                 Spacer(minLength: 0)
+                let quick = quickKeys
+                if !quick.isEmpty { MoveQuickKeys(keys: quick, disabled: stage != nil) }
                 MoveKeypad(text: $amount, presets: [],
                            places: amountInDollars ? 2 : min(with?.token.decimals ?? 18, 18),
                            disabled: stage != nil,
@@ -7499,15 +7570,17 @@ struct MoveSentence: View {
             // **READY IS THE RECEIPT, LONGER (prd §1931):** its facts are
             // lines of the receipt's own shape, under its choices.
             ScrollView {
+                // The facts stand at the receipt's one pitch: nothing above
+                // them takes a gap when it draws nothing (prd §1932).
+                deckFacts
                 VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-                    deckFacts
                     readyLines
                     if verb == .sweep, let plan = sweepPlan {
                         VStack(alignment: .leading, spacing: 0) {
                             ForEach(plan.rows) { row in sweepRow(row) }
                         }
                     }
-                    if offersDetails { moveDetails }
+                    if offersDetails { moveDetails(lines: true) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, MoveDeck.listClearance)
@@ -7851,8 +7924,13 @@ struct MoveSentence: View {
             // The unit line is the keys' own, in the deck (prd §1916); "That
             // is" said its figure again (user, 2026-11-19).
             keptFacts
-            line
-            credits
+            // A warning and a credit stand where the chips' words do, as
+            // the receipt's other notes (prd §1932).
+            Group {
+                line
+                credits
+            }
+            .padding(.leading, MoveReceipt.labelWidth + 16)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -8049,9 +8127,11 @@ struct MoveSentence: View {
             }
             .animation(DS.Motion.standard, value: ask)
         } else {
+            // The act waits while a list is open (prd §1932): the choice
+            // being made is the page's, and the act is the step after it.
             MoveHoldWord(word: holdWords,
                          ink: warned ? (leadWarning?.red == true ? DS.destructiveInk : DS.attentionInk) : DS.pickInk,
-                         enabled: footOn) {
+                         enabled: footOn && deckOpen == nil) {
                 focus = nil
                 sign()
             }

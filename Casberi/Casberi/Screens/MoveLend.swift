@@ -217,8 +217,15 @@ struct MoveLendSentence<Head: View>: View {
                 Group {
                     if open == .amount {
                         // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931).**
-                        VStack(spacing: 0) {
+                        VStack(spacing: MoveReceipt.gap) {
                             Spacer(minLength: 0)
+                            // The quick shares are the keys' top row (prd §1932).
+                            if canUseAll {
+                                MoveQuickKeys(keys: [25, 50, 100].map { p in
+                                    MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%",
+                                                      on: p == 100 && move.all) { pickShare(p) }
+                                }, disabled: !live)
+                            }
                             MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live,
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
@@ -291,13 +298,6 @@ struct MoveLendSentence<Head: View>: View {
             MoveReceiptLine(label: String(localized: "Amount")) {
                 MoveChip(text: move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
                          caret: open == .amount, disabled: !live) { toggle(.amount) }
-                if open == .amount, canUseAll {
-                    Spacer(minLength: 0)
-                    ForEach([25, 50, 100], id: \.self) { p in
-                        MoveChip(text: p == 100 ? String(localized: "All") : "\(p)%",
-                                 tone: (p == 100 && move.all) ? .open : .answered, compact: true) { pickShare(p) }
-                    }
-                }
             }
         }
     }

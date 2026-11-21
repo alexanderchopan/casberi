@@ -47,7 +47,7 @@ struct MoveReceiptLine<Content: View>: View {
 
 /// How a chip reads: answered, still to answer, the one open, or a warning.
 enum MoveChipTone: Equatable {
-    case answered, empty, open, warn, aztec, aztecOpen
+    case answered, empty, open, warn, aztec, aztecOpen, done
 }
 
 /// The chip's face: a mark, its words, a caret while a figure is typed.
@@ -61,6 +61,8 @@ struct MoveChipLabel: View {
     /// A quick amount on the Amount line: tighter at its sides.
     var compact = false
     var glyph: String?
+    /// A glyph after the words: Details' chevron.
+    var trail: String?
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
@@ -84,6 +86,9 @@ struct MoveChipLabel: View {
                 Capsule().fill(DS.pickInk).frame(width: 2, height: 18)
                     .accessibilityHidden(true)
             }
+            if let trail {
+                Image(systemName: trail).dsGlyph(.caption, weight: .semibold).accessibilityHidden(true)
+            }
         }
         .foregroundStyle(ink)
         .padding(.leading, (mark != nil || face != nil) ? 6 : (compact ? 10 : 16))
@@ -98,7 +103,7 @@ struct MoveChipLabel: View {
 
     private var ink: Color {
         switch tone {
-        case .answered: DS.textPrimary
+        case .answered, .done: DS.textPrimary
         case .empty: DS.textSecondary
         case .open: DS.pickInk
         case .warn: DS.attentionInk
@@ -109,8 +114,56 @@ struct MoveChipLabel: View {
     private var fill: Color {
         switch tone {
         case .open, .aztecOpen: DS.fillStrong
+        // **DONE, THE CHIPS GO FLAT (prd §1932):** the answers stay where
+        // they were, their fills drain, and the page reads as a receipt.
+        case .done: .clear
         default: DS.fillFaint
         }
+    }
+}
+
+/// A fact on the receipt: its word in the label column, its value where a
+/// chip's words start (prd §1932).
+struct MoveReceiptFact: View {
+    let label: String
+    let value: String
+    var ink: Color = DS.textPrimary
+    var marks: AnyView? = nil
+
+    var body: some View {
+        MoveReceiptLine(label: label) {
+            HStack(spacing: DS.Space.s2) {
+                if let marks { marks }
+                Text(verbatim: value)
+                    .dsText(.body17)
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .monospacedDigit()
+            }
+            .padding(.leading, 16)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A sentence on the receipt with no word of its own (a warning, a credit):
+/// where the chips' words start, wrapping, at least a line tall (prd §1932).
+struct MoveReceiptNote: View {
+    let text: String
+    var ink: Color = DS.textSecondary
+    var marks: AnyView? = nil
+
+    var body: some View {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            Color.clear.frame(width: MoveReceipt.labelWidth + 16 - DS.Space.s2, height: 1)
+            if let marks { marks }
+            Text(verbatim: text)
+                .dsText(.body17)
+                .foregroundStyle(ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(minHeight: MoveReceipt.lineHeight, alignment: .leading)
     }
 }
 
@@ -123,6 +176,7 @@ struct MoveChip: View {
     var caret = false
     var compact = false
     var glyph: String?
+    var trail: String?
     var disabled = false
     let action: () -> Void
 
@@ -131,7 +185,7 @@ struct MoveChip: View {
             action()
             DSHaptic.selection()
         } label: {
-            MoveChipLabel(text: text, mark: mark, face: face, tone: tone, caret: caret, compact: compact, glyph: glyph)
+            MoveChipLabel(text: text, mark: mark, face: face, tone: tone, caret: caret, compact: compact, glyph: glyph, trail: trail)
         }
         .buttonStyle(PressSpring())
         .disabled(disabled)
@@ -156,6 +210,47 @@ struct MoveChipField<Field: View>: View {
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, minHeight: MoveReceipt.chipHeight, maxHeight: MoveReceipt.chipHeight, alignment: .leading)
         .background(DS.fillStrong, in: Capsule())
+    }
+}
+
+/// **THE QUICK AMOUNTS ARE THE KEYPAD'S TOP ROW (prd §1932, user picked
+/// 2b):** three equal chips over the keys, the Amount line keeping the
+/// figure alone, so a long figure never pushes the page.
+struct MoveQuickKeys: View {
+    struct Key: Identifiable {
+        let id: String
+        let word: String
+        var on = false
+        let act: () -> Void
+    }
+    let keys: [Key]
+    var disabled = false
+    /// The lit key's ink: the pick's, or Aztec's own (prd §1779).
+    var onInk: Color = DS.pickInk
+
+    var body: some View {
+        HStack(spacing: MoveReceipt.gap) {
+            ForEach(keys) { k in
+                Button {
+                    k.act()
+                    DSHaptic.selection()
+                } label: {
+                    Text(verbatim: k.word)
+                        .dsText(.heading17)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(k.on ? onInk : DS.textPrimary)
+                        .frame(maxWidth: .infinity, minHeight: MoveReceipt.lineHeight)
+                        .background(k.on ? DS.fillStrong : DS.fillFaint, in: Capsule())
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityAddTraits(k.on ? [.isSelected] : [])
+            }
+        }
+        .disabled(disabled)
+        .animation(DS.Motion.standard, value: keys.map(\.on))
     }
 }
 

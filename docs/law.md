@@ -261,16 +261,16 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2112 of 2186 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2113 of 2187 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
-- §5 — How it works today — Bob (amended by §1208c, §1680, §1700f)
+- §5 — How it works today — Bob (amended by §1208c, §1680, §1700f, §1932)
 - §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a, §1916)
-- §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904, §1931)
+- §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904, §1931, §1932)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568, §1931)
-- §9 — Problems (amended by §1556, §1567, §1568)
+- §9 — Problems (amended by §1556, §1567, §1568, §1932)
 - §10 — Solutions (amended by §1208)
 - §11 — Bob vs Alice, per feature (amended by §1556)
 - §12 — Run 2 synthesis (amended by §1719)
@@ -2374,7 +2374,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929)
 - §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher
-- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one…
+- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932)
+- §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details…
 
 ## Dead rulings → what replaced them (generated)
 

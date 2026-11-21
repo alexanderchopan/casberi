@@ -1327,25 +1327,20 @@ struct MoveRailgunSentence<Head: View>: View {
             }
         }, lines: {
             if picking, !isDone {
-                VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-                    MoveReceiptSteps(steps: steps, disabled: !picking)
-                    // **QUICK AMOUNTS ON THE AMOUNT'S LINE (prd §1931).**
-                    if open == .amount {
-                        MoveReceiptLine(label: "") {
-                            ForEach(RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }, id: \.1) { p, value in
-                                MoveChip(text: chipWord(p), tone: move.amount == value ? .open : .answered, compact: true) {
-                                    move.amount = value
-                                }
-                            }
-                        }
-                    }
-                }
+                MoveReceiptSteps(steps: steps, disabled: !picking)
             }
         }, content: {
                 Group {
                     if open == .amount, picking {
-                        VStack(spacing: 0) {
+                        VStack(spacing: MoveReceipt.gap) {
                             Spacer(minLength: 0)
+                            // The quick amounts are the keys' top row (prd §1932).
+                            let quick = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
+                            if !quick.isEmpty {
+                                MoveQuickKeys(keys: quick.map { p, value in
+                                    MoveQuickKeys.Key(id: value, word: chipWord(p), on: move.amount == value) { move.amount = value }
+                                })
+                            }
                             MoveKeypad(text: $move.amount, places: min(move.holding?.decimals ?? 6, 6),
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }

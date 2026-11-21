@@ -1106,25 +1106,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
         }, lines: {
             if live {
-                VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-                    MoveReceiptSteps(steps: steps, disabled: move.acting)
-                    // Half and All on their own line under the amount (prd §1931).
-                    if open == .amount {
-                        MoveReceiptLine(label: "") {
-                            ForEach(AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }, id: \.1) { p, value in
-                                MoveChip(text: p == .half ? String(localized: "Half") : String(localized: "All"),
-                                         tone: move.amount == value ? .aztecOpen : .answered, compact: true) { move.amount = value }
-                            }
-                        }
-                    }
-                }
+                MoveReceiptSteps(steps: steps, disabled: move.acting)
             }
         }, content: {
                 Group {
                     if open == .amount, live {
-                        // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931).**
-                        VStack(spacing: 0) {
+                        // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931)**,
+                        // Half and All their top row (prd §1932).
+                        VStack(spacing: MoveReceipt.gap) {
                             Spacer(minLength: 0)
+                            let quick = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
+                            if !quick.isEmpty {
+                                MoveQuickKeys(keys: quick.map { p, value in
+                                    MoveQuickKeys.Key(id: value, word: p == .half ? String(localized: "Half") : String(localized: "All"),
+                                                      on: move.amount == value) { move.amount = value }
+                                }, onInk: DS.aztecInk)
+                            }
                             MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
                                        places: min(move.decimals, 6),
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
