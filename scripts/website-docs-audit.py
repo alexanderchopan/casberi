@@ -39,6 +39,7 @@ RETIRED = [
     (r"\bThreats\b", "Threats is Risks (prd §1741)"),
     (r"\b[Cc]oins?\b", "say tokens, never coins"),
     (r"\b[Ss]liders?\b", "Move has no slider (prd §1776)"),
+    (r"\bLend\b", "Move's Lend is Earn (prd §1931)"),
 ]
 
 
