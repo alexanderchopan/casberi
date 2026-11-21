@@ -2163,12 +2163,8 @@ body { overflow-x: clip; }
 @media (max-width: 700px) { .what-rows { grid-template-columns: 1fr; gap: 20px; } .what-h { margin-bottom: 30px; } }
 
 
-/* ===== the privacy line and its reel above the close (2026-11-16) ===== */
-.privacy-sec { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 64px; align-items: center; }
+/* ===== the privacy line above the close (2026-11-16; its reel removed 2026-11-21:
+   the showreel carries privacy now, so the page has one film) ===== */
+.privacy-sec { max-width: 1040px; margin: 0 auto; }
 .privacy-sec .what-h { margin: 0; font-size: clamp(34px, 4.4vw, 56px); }
-.privacy-reel video { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 28px; background: #000; }
-@media (max-width: 760px) {
-  .privacy-sec { grid-template-columns: 1fr; gap: 32px; }
-  .privacy-reel { max-width: 340px; margin: 0 auto; width: 100%; }
-}
+
