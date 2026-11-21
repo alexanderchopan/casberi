@@ -42,33 +42,6 @@ struct MoveLendSentence<Head: View>: View {
                     .animation(DS.Motion.standard, value: move.chainId)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    if let run = stepsRun {
-                        PrivateStepRows(run: run).transition(.opacity)
-                    }
-                    // The cost is a row of the facts (prd §1876), the rate a
-                    // fact over it, Aave the one it goes through (prd §1901).
-                    MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen, indented: false) {
-                        // What there is leads the facts, as Send's You have
-                        // does (prd §1898 item 6).
-                        if live, stepsRun == nil, hasAny, let have = move.haveFigure {
-                            // **USE ALL ON THE LINE THAT SAYS WHAT YOU HAVE (prd
-                            // §1916):** while the keys are up, as Send's is.
-                            MoveFactRow(name: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
-                                        value: have, indented: false,
-                                        act: open == .amount && canUseAll
-                                            ? (String(localized: "Use all"), { move.pick(nil, all: true) }) : nil)
-                        }
-                        if live, stepsRun == nil, hasAny, let fact = rateFact {
-                            MoveFactRow(name: fact.name, value: fact.value, indented: false)
-                        }
-                        if live, stepsRun == nil {
-                            MoveFactRow(name: String(localized: "Through"), value: "Aave", indented: false)
-                        }
-                    }
-                    if !costOpen { line }
-                }
-                .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, MoveSentence.sideInset(inTray))
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -263,6 +236,21 @@ struct MoveLendSentence<Head: View>: View {
                         // 2026-11-19: "earn looks weird"):** Send's keypad, Half
                         // and All as its sums, never a ladder of rows.
                         VStack(spacing: 0) {
+                            // **WHAT YOU HAVE IS HOME'S ROW, OVER THE KEYS (prd
+                            // §1917, §1929):** as Send's, Use all under the figure.
+                            if live, stepsRun == nil, hasAny, let have = move.haveFigure {
+                                Button {
+                                    guard canUseAll else { return }
+                                    DSHaptic.selection()
+                                    move.pick(nil, all: true)
+                                } label: {
+                                    TokenRowLabel(symbol: move.market?.symbol ?? "", line: move.network?.name,
+                                                  figure: have, under: canUseAll ? String(localized: "Use all") : nil,
+                                                  underInk: DS.pickInk)
+                                }
+                                .buttonStyle(RowPress())
+                                .accessibilityLabel(Text("Use all, \(have)"))
+                            }
                             Spacer(minLength: DS.Space.s2)
                             MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live)
                         }
@@ -275,7 +263,13 @@ struct MoveLendSentence<Head: View>: View {
                             .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
                             .transition(.opacity)
                     } else {
-                        Color.clear
+                        // **THE RECEIPT IS THE DECK'S (prd §1927, §1929):** the
+                        // facts under the steps, never between the sentence
+                        // and the plate.
+                        ScrollView { receipt.padding(.vertical, DS.Space.s2) }
+                            .scrollIndicators(.hidden)
+                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+                            .transition(.opacity)
                     }
                 }
                 .safeAreaPadding(.bottom, MoveDeck.footHeight)
@@ -308,6 +302,35 @@ struct MoveLendSentence<Head: View>: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .animation(DS.Motion.standard, value: open)
+    }
+
+    /// What the move does, how much it earns, who carries it and the cost.
+    @ViewBuilder private var receipt: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            if let run = stepsRun {
+                PrivateStepRows(run: run).transition(.opacity)
+            }
+            // The cost is a row of the facts (prd §1876), the rate a
+            // fact over it, Aave the one it goes through (prd §1901).
+            MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen, indented: false) {
+                // What there is leads the facts, as Send's You have
+                // does (prd §1898 item 6).
+                if live, stepsRun == nil, hasAny, let have = move.haveFigure {
+                    // **USE ALL ON THE LINE THAT SAYS WHAT YOU HAVE (prd
+                    // §1916):** while the keys are up, as Send's is.
+                    MoveFactRow(name: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
+                                value: have, indented: false,
+                                act: nil)
+                }
+                if live, stepsRun == nil, hasAny, let fact = rateFact {
+                    MoveFactRow(name: fact.name, value: fact.value, indented: false)
+                }
+                if live, stepsRun == nil {
+                    MoveFactRow(name: String(localized: "Through"), value: "Aave", indented: false)
+                }
+            }
+            if !costOpen { line }
+        }
     }
 
     /// The keypad's figure: what was typed, or all of it written out.

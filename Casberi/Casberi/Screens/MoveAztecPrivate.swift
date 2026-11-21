@@ -776,9 +776,15 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     /// The facts, the cost a row of them (prd §1876).
     private var receipt: some View {
-        MoveCostRows(cost: live && move.amountOK ? move.cost : nil, open: $costOpen, ink: DS.aztecInk, indented: false) {
-            ForEach(facts, id: \.name) { f in
-                MoveFactRow(name: f.name, value: f.value, valueInk: f.ink, indented: false)
+        // **THE TOKEN LEADS THE RECEIPT, AS SEND'S DOES (prd §1929):** Home's
+        // row, what leaves and where from; the facts under it.
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            TokenRowLabel(symbol: move.symbol, line: move.mode == .deposit ? String(localized: "Ethereum") : "Aztec",
+                          figure: move.amountUSD.map { "−" + AztecMove.usd($0) } ?? figure)
+            MoveCostRows(cost: live && move.amountOK ? move.cost : nil, open: $costOpen, ink: DS.aztecInk, indented: false) {
+                ForEach(facts, id: \.name) { f in
+                    MoveFactRow(name: f.name, value: f.value, valueInk: f.ink, indented: false)
+                }
             }
         }
     }
@@ -787,17 +793,15 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// is not a choice. Where it goes and comes from, its network, who signs,
     /// what Shield takes, and who carries it.
     private var facts: [(name: String, value: String, ink: Color)] {
-        let yours = String(localized: "Your private account")
         switch move.stage {
         case .ready, .shieldNo(_, _, false), .needsGas: break
         default: return []
         }
         var out: [(name: String, value: String, ink: Color)] = []
+        // **NOTHING THE SENTENCE SAYS (prd §1929):** it names the token,
+        // the account and Aztec; the receipt says where the money comes from.
         if move.mode == .deposit {
-            out.append((String(localized: "From"), String(localized: "Your public account"), DS.textPrimary))
-            out.append((String(localized: "Network"), String(localized: "Ethereum to Aztec"), DS.textPrimary))
-            // What goes in (prd §1872): Shield carries these two.
-            out.append((String(localized: "Takes"), String(localized: "USDC or ETH"), DS.aztecInk))
+            out.append((String(localized: "From"), String(localized: "Your public account on Ethereum"), DS.textPrimary))
             if live, move.viaKey != nil {
                 out.append((String(localized: "Signs"), String(localized: "This iPhone"), DS.textPrimary))
             } else if live, let asks = move.coSignerAsks {
@@ -805,7 +809,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                             asks == 1 ? String(localized: "Signs once") : String(localized: "Signs \(asks) times"), DS.textPrimary))
             }
         } else {
-            out.append((String(localized: "From"), yours, DS.aztecInk))
             // It reaches Aztec, or goes out to Ethereum (prd §1924).
             out.append((String(localized: "Reaches"), String(localized: "Aztec, or out to Ethereum"), DS.aztecInk))
         }
@@ -854,11 +857,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .shieldNo, .needsGas:
             head()
             if move.mode == .deposit {
-                MovePhrase(String(localized: "your private account"), glue: String(localized: "to"), ink: DS.aztecInk)
-                MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
+                MovePhrase("Aztec.", glue: String(localized: "to"), ink: DS.aztecInk)
             } else {
-                MovePhrase(String(localized: "your private account"), glue: String(localized: "from"), ink: DS.aztecInk)
-                MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
+                MovePhrase("Aztec.", glue: String(localized: "from"), ink: DS.aztecInk)
             }
         default:
             if !isDone { head() }
@@ -882,13 +883,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 // "Your private balance", as on Ethereum (prd §1719): in Move
                 // a balance is where money sits; "account" stays where it
                 // has an address and apps (Your account, Receive).
-                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private account"),
+                MoveWordsClause(glue: String(localized: "to"), words: "Aztec.",
                                 ink: move.stage == .ready ? DS.aztecInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks the address"))
-                MovePhrase(String(localized: "Aztec."), glue: String(localized: "on"))
             } else {
-                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private account on Aztec"),
+                MoveWordsClause(glue: String(localized: "from"), words: "Aztec",
                                 ink: move.stage == .ready ? DS.aztecInk : DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))

@@ -526,7 +526,7 @@ final class FreshReceive {
         let said = PrivateMove.words(error, network: network)
         guard let step, error is PrivacyEngineWire.Failure, said == PrivateMove.engineFallback else { return said }
         return step == .gas ? String(localized: "Your private ETH could not pay its gas")
-            : String(localized: "The move into your private balance could not be prepared")
+            : String(localized: "The move in could not be prepared")
     }
 
     /// **ANY OTHER TOKEN AT A FRESH ADDRESS MOVES INTO RAILGUN (prd §1713

@@ -131,6 +131,9 @@ struct RemoteAssetMark: View {
     let size: CGFloat
     let monogram: String
     var tint: Color?
+    /// A disc under a picture drawn on a clear ground (prd §1929): Arc's
+    /// black mark vanished on the dark list.
+    var backing: Color?
     @State private var image: UIImage?
 
     var body: some View {
@@ -146,6 +149,7 @@ struct RemoteAssetMark: View {
                 )
                 .opacity(image == nil ? 1 : 0)
             if let image {
+                if let backing { Circle().fill(backing) }
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()

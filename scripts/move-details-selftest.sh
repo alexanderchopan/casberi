@@ -197,10 +197,12 @@ grep -q 'if let row = missingRow { tapBlank(row) }' "$MS" \
   || { echo "✗ an early Add no longer opens the row it needs"; exit 1; }
 # 3. Into your private account: from where, and which tokens.
 AZP="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
-grep -q 'out.append((String(localized: "From"), String(localized: "Your public account"), DS.textPrimary))' "$AZP" \
-  && grep -q 'out.append((String(localized: "Takes"), String(localized: "USDC or ETH"), DS.aztecInk))' "$AZP" \
-  && grep -q 'out.append((String(localized: "Network"), String(localized: "Ethereum to Aztec"), DS.textPrimary))' "$AZP" \
-  || { echo "✗ Send to your private account no longer says where from and what goes (prd §1872)"; exit 1; }
+# The sentence names the token, the account and Aztec; the receipt says
+# where the money comes from, and never again what the sentence says (prd §1929).
+grep -q 'out.append((String(localized: "From"), String(localized: "Your public account on Ethereum"), DS.textPrimary))' "$AZP" \
+  || { echo "✗ Send to your private account no longer says where from (prd §1872, §1929)"; exit 1; }
+! grep -q 'String(localized: "Ethereum to Aztec")' "$AZP" \
+  || { echo "✗ Aztec's receipt repeats the sentence's network again (prd §1929)"; exit 1; }
 # Spacing: a line under the rows, and a head, at the rows' pitch; a place's
 # line on Receive wraps, never shrinks.
 # prd §1892 amends the pitch: the facts are one block at `factHeight`, the

@@ -4,7 +4,7 @@ import SafariServices
 #endif
 
 /// The seller's page for Move › Buy (prd §1599), opened over
-/// whatever is up, as `ReceiveFromWalletSheet` is: Move lives in a tray, and
+/// whatever is up, as the Signer's sheet is: Move lives in a tray, and
 /// the page is a trip from it, not a sheet it owns. Safari's engine and the
 /// phone's own appearance, as `DSWebSheet` (a seller's page is where a card
 /// is typed); on the Mac the real browser.

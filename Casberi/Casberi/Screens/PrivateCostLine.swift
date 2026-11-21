@@ -201,10 +201,10 @@ struct PrivateWarmingRow: View {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .small)
                     Text(verbatim: firstTime
-                         ? (percent.map { String(localized: "Setting up your private balance · \($0)%") }
-                            ?? String(localized: "Setting up your private balance · \(seconds) s"))
-                         : railgun ? String(localized: "Updating your private balance · \(seconds) s")
-                         : String(localized: "Getting your private balance ready · \(seconds) s"))
+                         ? (percent.map { String(localized: "Setting up Privacy Pools · \($0)%") }
+                            ?? String(localized: "Setting up Privacy Pools · \(seconds) s"))
+                         : railgun ? String(localized: "Updating Railgun · \(seconds) s")
+                         : String(localized: "Getting Privacy Pools ready · \(seconds) s"))
                         .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
                     Spacer(minLength: 0)
                 }

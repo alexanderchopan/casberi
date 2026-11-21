@@ -278,7 +278,7 @@ check(AztecStakeWire.upgradeWaiting(ref: ref, now: Date(timeIntervalSince1970: 1
       && !AztecStakeWire.upgradeWaiting(ref: ref, now: Date(timeIntervalSince1970: 1_793_000_000)),
       "it waits on you until it can execute")
 check(AztecStakeWire.upgradeTitle(v6!).hasSuffix("take your money out of zk.money first"), "its row")
-check(AztecStakeWire.upgradeTitleForAccount(v6!).hasSuffix("move your private account's money out first"), "its row for your own Aztec account (prd §1872)")
+check(AztecStakeWire.upgradeTitleForAccount(v6!).hasSuffix("move your money out of Aztec first"), "its row for your own Aztec account (prd §1872, §1929)")
 check(AztecStakeWire.merged(["0x603bb2c05d474794ea97805e8de69bccfb3bca12", "0xABC"]).last == "0xabc"
       && AztecStakeWire.merged([]).count == AztecStakeWire.rollups.count,
       "the Registry's Rollups join the known ones, once each")

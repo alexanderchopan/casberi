@@ -907,7 +907,7 @@ final class RailgunMove {
         case .noRoot?, .curve?: String(localized: "Face ID did not open the private account")
         case .noBroadcaster?: String(localized: "No Railgun broadcaster answered. Nothing was sent.")
         case .feeNotCovered?: String(localized: "That leaves nothing for the broadcaster's fee. Send a little less.")
-        case .noFeeToken?: String(localized: "A broadcaster takes its fee in WETH or USDC, and your private balance holds neither.")
+        case .noFeeToken?: String(localized: "A broadcaster takes its fee in WETH or USDC, and Railgun holds neither.")
         case .feeTokenPending?: String(localized: "Your ETH for fees is private in about an hour. Send then.")
         case .noPrivateGas?: String(localized: "No broadcaster can send it, and your private ETH can't pay its gas. Nothing was sent.")
         case .gasOnItsWay?: String(localized: "Its gas is on its way from your private ETH. Try again in a minute.")
@@ -953,7 +953,9 @@ struct MoveRailgunSentence<Head: View>: View {
                     } else if move.stage == .quoting {
                         costLine.frame(maxWidth: .infinity, alignment: .leading).transition(.opacity)
                     }
-                    line
+                    // Ready, the floor or the amount's problem is the deck's
+                    // (prd §1929), as Privacy Pools' and Aztec's lines are.
+                    if !lineInDeck { line }
                 }
                 .padding(.top, DS.Space.s4)
             }
@@ -1037,7 +1039,7 @@ struct MoveRailgunSentence<Head: View>: View {
                 MovePhrase(String(localized: "Your \(short.symbol) is \(RailgunMove.usd(short.usd))."), ink: DS.textSecondary)
             } else {
                 MovePhrase(move.mode == .deposit
-                           ? String(localized: "Moving to your private balance takes $10 or more.")
+                           ? String(localized: "Moving to Railgun takes $10 or more.")
                            : move.mode == .swap ? String(localized: "Nothing private to swap yet.")
                            : String(localized: "Nothing private to take back yet."), ink: DS.textSecondary)
             }
@@ -1062,13 +1064,13 @@ struct MoveRailgunSentence<Head: View>: View {
             }
             switch move.mode {
             case .deposit:
-                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
+                MoveWordsClause(glue: String(localized: "to"), words: "Railgun",
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks the address"))
                 MovePhrase(String(localized: "Ethereum."), glue: String(localized: "on"))
             case .takeBack:
-                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance"),
+                MoveWordsClause(glue: String(localized: "from"), words: "Railgun",
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
@@ -1087,7 +1089,7 @@ struct MoveRailgunSentence<Head: View>: View {
                                 ink: move.buy == nil ? DS.textSecondary : DS.textPrimary,
                                 action: { if picking { toggleBuy() } },
                                 hint: Text("Picks what it buys"))
-                MoveWordsClause(glue: String(localized: "in"), words: String(localized: "your private balance."),
+                MoveWordsClause(glue: String(localized: "in"), words: "Railgun.",
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
@@ -1132,7 +1134,7 @@ struct MoveRailgunSentence<Head: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         case .needsFees:
-            Text("A broadcaster takes its fee in WETH or USDC, and your private balance holds neither. Add about $10 of ETH for fees first.")
+            Text("A broadcaster takes its fee in WETH or USDC, and Railgun holds neither. Add about $10 of ETH for fees first.")
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .done(let words):
@@ -1229,7 +1231,7 @@ struct MoveRailgunSentence<Head: View>: View {
     private var problemLine: String {
         switch move.amountProblem {
         case .moreThanHeld(let have)?: String(localized: "You have \(have).")
-        case .underMinimum?: String(localized: "Moving to your private balance takes $10 or more.")
+        case .underMinimum?: String(localized: "Moving to Railgun takes $10 or more.")
         case nil: ""
         }
     }
@@ -1245,29 +1247,32 @@ struct MoveRailgunSentence<Head: View>: View {
     /// **THE FACTS (prd §1927):** what the rows said that is not a choice,
     /// as the deck's receipt.
     private var facts: [(name: String, value: String)] {
-        let yours = String(localized: "Your private balance")
         var out: [(name: String, value: String)] = []
-        switch move.mode {
-        case .deposit:
-            out.append((String(localized: "To"), yours))
-        case .takeBack:
-            out.append((String(localized: "From"), yours))
-            out.append((String(localized: "To"), move.toPrivate ? String(localized: "Private · \(YourAccount.short(move.recipient ?? ""))")
-                        : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")))
-        case .swap:
-            out.append((String(localized: "In"), yours))
+        // **NOTHING THE SENTENCE SAYS (prd §1929):** where it goes and comes
+        // from are the sentence's words; a move-in names Ethereum there too.
+        if move.mode != .deposit {
+            out.append((String(localized: "Network"), String(localized: "Ethereum")))
         }
-        out.append((String(localized: "Network"), String(localized: "Ethereum")))
         // What comes back, after Railgun's two fees (prd §1875).
         if move.mode == .swap, let gets = move.getsWords { out.append((String(localized: "You get"), gets)) }
-        out.append((String(localized: "Through"), "Railgun"))
+        // "Through Railgun" is the sentence's own word now (prd §1929).
         return out
     }
 
     /// The deck's receipt: the facts, the cost a row of them (prd §1876),
     /// and where no price makes a dollar cost, Railgun's percentage.
+    /// The line is the receipt's while the move is ready (prd §1929).
+    private var lineInDeck: Bool { move.stage == .ready || move.stage == .quoting }
+
     private var receipt: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // The token leads the receipt, as Send's does (prd §1929); a
+            // swap's two tokens are its sentence.
+            if move.mode != .swap, let symbol = move.holding?.symbol {
+                TokenRowLabel(symbol: symbol, line: String(localized: "Ethereum"),
+                              figure: move.amountUSD.map { "−" + RailgunMove.usd($0) } ?? figure)
+            }
+            if lineInDeck { line }
             MoveCostRows(cost: costRow, open: $costOpen, indented: false) {
                 ForEach(facts, id: \.name) { f in MoveFactRow(name: f.name, value: f.value, indented: false) }
             }

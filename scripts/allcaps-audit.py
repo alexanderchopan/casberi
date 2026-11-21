@@ -123,6 +123,8 @@ KNOWN_ACRONYMS: set[str] = {
     "USDC",
     "USDT",
     "DAI",
+    # Robinhood's dollar, which Privacy Pools takes (prd §1929).
+    "USDG",
     # Graphics Interchange Format — the word X and Instagram both use for an
     # animated picture, and what a live DM transcript names one (prd §1244).
     "GIF",

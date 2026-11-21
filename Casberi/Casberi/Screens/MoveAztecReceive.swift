@@ -37,8 +37,7 @@ struct MoveAztecReceive<Head: View>: View {
             // holds the address and its one rule.
             MoveFlow {
                 MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
-                MovePhrase(String(localized: "your private account"), glue: String(localized: "to"), ink: DS.aztecInk)
-                MovePhrase("Aztec.", glue: String(localized: "on"))
+                MovePhrase("Aztec.", glue: String(localized: "to"), ink: DS.aztecInk)
             }
             .allowsHitTesting(false)
             .fixedSize(horizontal: false, vertical: true)

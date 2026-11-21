@@ -18,6 +18,9 @@ import SwiftUI
 /// (`FreshReceive.check`); what arrived moves into your private balance by
 /// itself. Sepolia only, DEBUG builds only (`PrivateMove.available`).
 struct MoveFreshSentence<Head: View>: View {
+    /// **PRIVACY POOLS' PAGE (prd §1929).** Receive copies the address in
+    /// place; this page is where a waiting row in Holdings lands, to say what
+    /// arrived at its address.
     var inTray = false
     /// "your private balance" tapped: back to Receive's "on" list.
     var leave: () -> Void = {}
@@ -28,8 +31,6 @@ struct MoveFreshSentence<Head: View>: View {
     @ViewBuilder let head: () -> Head
 
     @State private var copied = false
-    @State private var privateAddress: String?
-    @State private var privateFailed = false
     /// The demo's private address: nothing is opened.
     static var demoPrivateAddress: String { "0zk1qyqrw8a5h9mc0tk3n6fz2l4s7vxj9uq8e5pd3rjkm6g2wa0tyz4h7cxs9ld3unv8kq2fe6mrx5pa4w0jg7t3yhs9cvz2lm8dq6rkue0xan5tw3pfy8hg4jv7f3a" }
     @State private var reading = false
@@ -58,8 +59,12 @@ struct MoveFreshSentence<Head: View>: View {
                 // **THE SENTENCE ON TOP, THE DECK UNDER IT (prd §1928, as
                 // Move's other pages, §1927).**
                 MoveFlow {
-                    MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
-                    MovePhrase(String(localized: "your private balance."), glue: String(localized: "to"), ink: DS.textPrimary)
+                    // The tokens, the place and the networks are the sentence's
+                    // (prd §1929); the plate holds the address.
+                    MoveWord(String(localized: "Receive ETH, USDC"), ink: DS.textPrimary)
+                    MovePhrase("USDG", glue: String(localized: "or"))
+                    MovePhrase("Privacy Pools", glue: String(localized: "to"))
+                    MovePhrase(Self.poolsNetworksSaid + ".", glue: String(localized: "on"))
                 }
                 .allowsHitTesting(false)
                 .fixedSize(horizontal: false, vertical: true)
@@ -79,7 +84,6 @@ struct MoveFreshSentence<Head: View>: View {
         .onChange(of: beat) { was, now in
             if now > was { DSHaptic.success() }
         }
-        .task { if RailgunPocket.available, privateAddress == nil { await readPrivateAddress() } }
         .task {
             book.ensureCurrent()
             #if DEBUG
@@ -112,29 +116,26 @@ struct MoveFreshSentence<Head: View>: View {
             ZStack(alignment: .bottom) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("From any wallet").dsText(.heading17).foregroundStyle(DS.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
                         if let entry {
-                            code(entry.address)
-                            Text("New address each time").dsText(.fact15).foregroundStyle(DS.textSecondary)
-                            // Where what arrives goes, by token (user: "user can't
-                            // be confused which it goes to").
-                            VStack(alignment: .leading, spacing: 0) {
-                                MoveFactRow(name: String(localized: "ETH, USDC"), value: "Privacy Pools", indented: false)
-                                if RailgunPocket.available {
-                                    MoveFactRow(name: String(localized: "DAI, USDT +5"), value: "Railgun", indented: false)
-                                }
-                            }
+                            Button { copy(entry.address) } label: { AddressGroups(address: entry.address) }
+                                .buttonStyle(RowPress())
+                                .accessibilityLabel(Text(verbatim: entry.address))
+                                .accessibilityHint(Text("Copies the address"))
+                            // A token cannot pay its own gas (prd §1779).
+                            Text("Send a little ETH with USDC or USDG")
+                                .dsText(.body17).foregroundStyle(DS.attentionInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("New address each time").dsText(.body17).foregroundStyle(DS.textSecondary)
                             Button {
-                                    DSHaptic.selection()
-                                    withAnimation(DS.Motion.standard) {
-                                        copied = false
-                                        chrome.moveFreshEntry = nil
-                                        book.make()
-                                    }
-                                } label: { MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise") }
-                                    .buttonStyle(RowPress())
-                                    .disabled(moving || DemoMode.isActive)
+                                DSHaptic.selection()
+                                withAnimation(DS.Motion.standard) {
+                                    copied = false
+                                    chrome.moveFreshEntry = nil
+                                    book.make()
+                                }
+                            } label: { MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise") }
+                                .buttonStyle(RowPress())
+                                .disabled(moving || DemoMode.isActive)
                             // **A WAY ON FROM "NEEDS A LITTLE PRIVATE ETH" (prd §1779,
                             // §1823).** Your account can pay it: one send, yours to confirm.
                             if let payGas, waitsForGas(entry), !DemoMode.isActive {
@@ -150,29 +151,6 @@ struct MoveFreshSentence<Head: View>: View {
                                 DSFootnote("From your account, in the open. It links this address to you.")
                             }
                         }
-                        if RailgunPocket.available {
-                            // Your private address (prd §1877): the same every
-                            // time; only a private balance on Railgun can pay it.
-                            HStack {
-                                Text("From Railgun").dsText(.heading17).foregroundStyle(DS.textPrimary)
-                                    .accessibilityAddTraits(.isHeader)
-                                Spacer(minLength: DS.Space.s2)
-                                if let privateAddress {
-                                    Button { copy(privateAddress) } label: {
-                                        Text("Copy").dsText(.heading17).foregroundStyle(DS.pickInk)
-                                    }
-                                    .buttonStyle(RowPress())
-                                }
-                            }
-                            .padding(.top, DS.Space.s4)
-                            if let privateAddress {
-                                code(privateAddress)
-                            } else if privateFailed {
-                                Text("Railgun did not answer").dsText(.body17).foregroundStyle(DS.attentionInk)
-                            } else {
-                                DSSpinner(size: .small)
-                            }
-                        }
                     }
                     .padding(.vertical, DS.Space.s2)
                 }
@@ -185,11 +163,11 @@ struct MoveFreshSentence<Head: View>: View {
                        + MoveFootClearance.gained(inTray: inTray), alignment: .top)
                 .deckUnderFoot()
                 MoveDeckFoot(backDisabled: moving, back: leave) {
-                    if let entry {
+                    if let shown = entry?.address {
                         // Share beside the copy (prd §1928).
                         HStack(spacing: DS.Space.s3) {
-                            if !DemoMode.isActive { MoveShareDisc(item: entry.address) }
-                            MoveFootWord(word: copied ? String(localized: "Copied") : String(localized: "Copy address")) { copy(entry.address) }
+                            if !DemoMode.isActive { MoveShareDisc(item: shown) }
+                            MoveFootWord(word: copied ? String(localized: "Copied") : String(localized: "Copy address")) { copy(shown) }
                         }
                     }
                 }
@@ -243,10 +221,20 @@ struct MoveFreshSentence<Head: View>: View {
     /// Where the address is shown: Ethereum, or Sepolia in a DEBUG build (prd §1567).
     private var network: PrivacyNetwork { book.network ?? .ethereum }
 
-    private func readPrivateAddress() async {
-        privateFailed = false
-        if DemoMode.isActive { privateAddress = Self.demoPrivateAddress; return }
-        do { privateAddress = try await RailgunPocket.privateAddress() } catch { privateFailed = true }
+
+    /// Where Privacy Pools' one-time address is watched: Base, Ethereum and
+    /// Robinhood on Ethereum's home chain (prd §1878), else its one network.
+    static var poolsNetworks: String {
+        let net = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork)
+        return net?.chainId == FreshTx.homeChain || net == nil
+            ? String(localized: "Base, Ethereum, Robinhood") : net?.name ?? ""
+    }
+
+    /// The same, as the sentence says it: "Base, Ethereum, or Robinhood".
+    static var poolsNetworksSaid: String {
+        let net = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork)
+        return net?.chainId == FreshTx.homeChain || net == nil
+            ? String(localized: "Base, Ethereum, or Robinhood") : net?.name ?? ""
     }
 
     /// The address in one quiet line, as public Receive shows yours; a tap
@@ -293,22 +281,9 @@ struct MoveFreshSentence<Head: View>: View {
         } else if let entry, let said = words(entry.state, symbol: entry.token) {
             Text(verbatim: said.0).dsText(.body17).foregroundStyle(said.1)
                 .fixedSize(horizontal: false, vertical: true)
-        } else if entry != nil {
-            // Before anything arrives (prd §1779): the address is a plain
-            // one, good on every network of its kind, and only this network
-            // is watched. And a token cannot pay its own gas: sent alone it
-            // waits (a tester's 1,000 USDC, 2026-11-13). ETH paid on Base or
-            // Robinhood goes home to Ethereum (prd §1878).
-            Group {
-                if network.chainId == FreshTx.homeChain {
-                    Text("On Base, Ethereum, or Robinhood. ETH, USDC and USDG sent on Base or Robinhood move to Ethereum to earn. Anything but ETH needs a little ETH sent with it.")
-                } else {
-                    Text("On the \(network.name) network only. Any token but ETH needs a little ETH sent with it.")
-                }
-            }
-                .dsText(.body17).foregroundStyle(DS.attentionInk)
-                .fixedSize(horizontal: false, vertical: true)
         }
+        // Before anything arrives, the sentence names the tokens and the
+        // networks, and the plate says the ETH a token needs (prd §1929).
     }
 
     private func words(_ state: FreshAddress.State, symbol: String) -> (String, Color)? {

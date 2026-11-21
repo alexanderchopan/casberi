@@ -69,7 +69,7 @@ extension FeedScreen {
                 // The savings goal moved to Your account › Spending (prd
                 // §1700f item 10): Holdings lists what you hold.
                 if store.restoring {
-                    Text("Restoring your private balance")
+                    Text("Restoring Privacy Pools")
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
                         .padding(.leading, DSRoomChassis.headGlyph + DSRoomChassis.headGap)
@@ -98,10 +98,10 @@ extension FeedScreen {
                 // token decides Privacy Pools or Railgun, never the person.
                 if rows.isEmpty, RailgunHoldings.shared.shown.isEmpty, !store.restoring, PrivateMove.available,
                    walletFreshWaiting.isEmpty {
-                    walletPlaceRow(String(localized: "Your private balance"),
+                    walletPlaceRow("Privacy Pools",
                                    line: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
                                    mark: nil,
-                                   hint: String(localized: "Sends to your private balance")) {
+                                   hint: String(localized: "Sends to Privacy Pools")) {
                         walletOpenPrivate(.deposit)
                     }
                 }
@@ -340,7 +340,7 @@ extension FeedScreen {
             }
             .buttonStyle(RowPress())
             .dsHover()
-            .accessibilityHint(Text("Sends to your private balance"))
+            .accessibilityHint(Text("Sends to Privacy Pools"))
             .walletListRow()
         }
     }
@@ -532,7 +532,7 @@ extension FeedScreen {
         .buttonStyle(RowPress())
         .dsHover()
         .accessibilityLabel(Text(verbatim: [String(localized: "Private"), total].compactMap { $0 }.joined(separator: ". ")))
-        .accessibilityHint(Text("Sends to your private balance"))
+        .accessibilityHint(Text("Sends to Privacy Pools"))
         .walletListRow()
         // Where Privacy Pools' and Railgun's Library tiles land (prd §1738).
         .id(ShellChrome.privateAnchor)
@@ -617,7 +617,7 @@ extension FeedScreen {
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: [row.title, state, figure].joined(separator: ". ")))
-        .accessibilityHint(Text("Sends from your private balance"))
+        .accessibilityHint(Text("Sends from Privacy Pools"))
         .walletListRow()
     }
 }

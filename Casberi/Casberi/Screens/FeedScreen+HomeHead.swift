@@ -323,84 +323,159 @@ extension FeedScreen {
     /// reaches the foot of the screen under a three-token head.
     static let homeFeedlessMoves = 6
 
-    /// **PUBLIC, THEN PRIVATE (prd §1858, user: "today our holdings page
-    /// separates public from private in two sections").** Under the balance,
-    /// on the page: each side's name and total, then its biggest tokens, two
-    /// each (three while there is no feed). The names are labels (user:
-    /// "don't do that b/c they go to the same place"); the balance is the
-    /// door to Holdings; a public token opens itself, as on Holdings. Private
-    /// money is yours alone (§1590), and a side with nothing draws nothing.
+    /// **PUBLIC BY NETWORK, PRIVATE BY PLACE (prd §1929, amending §1858's
+    /// two tokens a side; user, 2026-11-20: "maybe we don't show largest
+    /// holding and we just show per network", "for them don't have
+    /// subtext").** Under the balance: each side's name and total, then one
+    /// row per place with everything there, so the rows add up to the side
+    /// and the sides to the balance. Public: each network holding something
+    /// (what no network names is "Other"). Private: Privacy Pools, Railgun
+    /// and Aztec wherever you can have them, $0 in grey when empty. No line
+    /// under a row: the tokens are Holdings', behind the balance.
     @ViewBuilder
     func homeHoldingRows() -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let count = homeFeedless ? 3 : 2
-        let total = portfolioShown?.totalUSD ?? 0
-        let hidden = walletShowsPrivatePlaces ? min(total, walletPrivateUSD) : 0
         // Holdings' Public, never the balance less Private (prd §1862).
         let open = walletPublicUSD
-        let pub = open < 0.01 ? []
-            : Array((portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? [])
-                .filter { $0.usd > 0 }
-                .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.symbol < $1.symbol }
-                .prefix(count))
-        let priv = hidden < 0.01 ? []
-            : Array(homePrivateEntries.filter { $0.usd > 0 }
-                .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.id < $1.id }
-                .prefix(count))
-        let moves = walletHoldingMoves
-        if !pub.isEmpty {
-            homeSideHead(String(localized: "Public"), mask ?? WalletValue.money(open))
-            ForEach(pub) { token in
-                // Ethereum disagreed twice in a row (prd §1825): said in
-                // amber where the networks stand, as on Holdings.
-                let differs = HoldingsCheckStore.shared.mismatched(token)
-                homeTokenRow(token.symbol,
-                             line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
-                             lineInk: differs ? DS.attentionInk : DS.textSecondary,
-                             figure: mask ?? WalletValue.money(token.usd),
-                             move: moves[HoldingMoves.key(token.symbol)]) { walletOpenToken(token) }
-                    .contextMenu { TokenHideMenu(position: token) { walletSetHidden($0, hidden: $1) } }
+        let networks = open < 0.01 ? [] : homePublicPlaces(open)
+        let places = walletShowsPrivatePlaces ? homePrivatePlaces : []
+        // **THE ROWS ADD UP (prd §1929):** every figure here is whole dollars
+        // ("$1,250", never "$1K"), so the sums can be checked by eye. Private
+        // is its places' sum, the
+        // money Holdings counts (what is still being checked included), never
+        // capped at the balance.
+        let hidden = places.reduce(0) { $0 + ($1.usd ?? 0) }
+        if !networks.isEmpty {
+            homeSideHead(String(localized: "Public"), mask ?? WalletValue.exactMoney(open))
+                // What Aave holds for you is Public's too (prd §1929): read
+                // here, as Holdings does, so Home's networks count it.
+                .task { if AaveLend.on, let account = YourAccountDemo.shownAddress { await LendMove.holdings.read(account: account) } }
+            ForEach(networks) { place in
+                homePlaceRow(place, figure: mask ?? WalletValue.exactMoney(place.usd ?? 0))
             }
         }
-        if !priv.isEmpty {
-            homeSideHead(String(localized: "Private"), mask ?? WalletValue.money(hidden))
-            ForEach(priv) { held in
-                homeTokenRow(held.symbol, line: held.line, lineInk: DS.textSecondary,
-                             figure: mask ?? WalletValue.money(held.usd),
-                             move: moves[HoldingMoves.key(held.symbol)]) {
-                    // What the row does on Holdings (prd §1859): Privacy
-                    // Pools opens Send, Railgun its take-back; your Aztec
-                    // account's rows open nothing there, so Holdings.
-                    switch held.place {
-                    case .pools: walletOpenPrivate(.send)
-                    case .railgun(let contract):
-                        chrome.moveRailgun = .init(contract: contract, takeBack: true)
-                        chrome.moveTray = true
-                    case .aztec: homeOpen(.holdings)
-                    }
+        if !places.isEmpty {
+            homeSideHead(String(localized: "Private"), mask ?? WalletValue.exactMoney(hidden))
+                // Home reads the private places' prices itself, as Holdings
+                // does: a place whose price never came drew $0 (prd §1929).
+                .task {
+                    await PrivateMoneyStore.shared.readPrices()
+                    await RailgunHoldings.shared.refresh()
+                    _ = await AztecAccountStore.shared.walletHolding()
                 }
+            ForEach(places) { place in
+                // Unpriced is not $0 (§83): the figure waits for its price.
+                homePlaceRow(place, figure: place.usd.map { $0 < 0.01 ? "$0" : mask ?? WalletValue.exactMoney($0) } ?? "")
             }
         }
     }
 
-    /// **A TOKEN ON HOME (prd §1859).** The feed's row height, the token's
-    /// mark in the rows' lead column; its name over where it is; its dollars
-    /// over its day, in the day's ink (flat in grey, §83).
-    private func homeTokenRow(_ symbol: String, line: String?, lineInk: Color, figure: String,
-                              move: Double?, act: @escaping () -> Void) -> some View {
-        let day = move.map { WatchlistRules.change($0 * 100) }
+    /// One place on Home: a network or a private place, with all it holds.
+    struct HomePlace: Identifiable {
+        let id: String
+        let name: String
+        /// Nil while something there has no price yet.
+        let usd: Double?
+        var ink: Color = DS.textPrimary
+    }
+
+    /// Each network your public tokens sit on, biggest first; what no
+    /// network names (a venue, a last-known sample) is "Other", so the rows
+    /// add up to Public.
+    func homePublicPlaces(_ open: Double) -> [HomePlace] {
+        let positions = (portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []).filter { $0.usd > 0 }
+        var usd: [String: Double] = [:]
+        for position in positions {
+            for part in position.parts {
+                let network = String(part.key.split(separator: ":", maxSplits: 1).first ?? Substring(part.key))
+                usd[network, default: 0] += part.usd
+            }
+            // An app's position (Aave, Round-ups) is read by no contract: its
+            // route names its network, so it counts there, not as "Other".
+            if position.parts.isEmpty, let route = position.route,
+               let network = route.split(separator: ":", maxSplits: 1).first {
+                usd[String(network), default: 0] += position.usd
+            }
+        }
+        // **LENT MONEY ON ITS NETWORK (prd §1929):** Public counts what Aave
+        // holds for you (`walletPublicUSD`); each market's dollars go to its
+        // network, and the rest of the standing (Round-ups' pot) to Base, so
+        // no "Other" row stands for money that has a place.
+        if let lent = walletLentStanding, let standing = lent.lend.standing(account: lent.account) {
+            let networkID: [Int: String] = [8453: "base-mainnet", 1: "eth-mainnet"]   // `AaveLend.chainIds`
+            var counted = 0.0
+            for market in lent.rows {
+                guard let id = networkID[market.chainId],
+                      let dollars = lent.lend.dollars(lent.lend.lent[LendMove.key(market)] ?? "0", in: market) else { continue }
+                usd[id, default: 0] += dollars
+                counted += dollars
+            }
+            if standing.usd - counted >= 0.01 { usd["base-mainnet", default: 0] += standing.usd - counted }
+        }
+        var out: [HomePlace] = []
+        for (id, value) in usd where value >= 0.01 {
+            let name = HiddenTokens.place("\(id):native")
+            out.append(HomePlace(id: id, name: name, usd: value))
+        }
+        out.sort { ($0.usd ?? 0) != ($1.usd ?? 0) ? ($0.usd ?? 0) > ($1.usd ?? 0) : $0.name < $1.name }
+        let rest = open - out.reduce(0) { $0 + ($1.usd ?? 0) }
+        if rest >= 0.5 { out.append(HomePlace(id: "other", name: String(localized: "Other"), usd: rest)) }
+        return out
+    }
+
+    /// Privacy Pools, Railgun and Aztec, each where it exists for you, with
+    /// everything private there; an empty one stays, at $0 (user: "ya 0 for
+    /// none").
+    var homePrivatePlaces: [HomePlace] {
+        // Holdings' sums (`walletPrivateUSD`), place by place.
+        let pools = PrivateMoneyStore.shared
+        let held = pools.rows.filter { $0.kind == .held }
+        let poolsUSD = held.compactMap { PrivateMoney.rowUSD($0, prices: pools.shownPrices) }
+        let railgun = RailgunHoldings.shared
+        let railgunUSD = railgun.shown.map { railgun.usd($0, units: $0.amount) }
+        let aztecStore = AztecAccountStore.shared
+        let aztecUSD = aztecStore.privateHeld.map { aztecStore.usd($0, units: $0.privateUnits) }
+        /// The sum, or nil while a holding there has no price yet.
+        func sum(_ values: [Double?]) -> Double? {
+            values.contains { $0 == nil } ? nil : values.compactMap { $0 }.reduce(0, +)
+        }
+        var out: [HomePlace] = []
+        if PrivateMove.available {
+            out.append(HomePlace(id: "pools", name: "Privacy Pools",
+                                 usd: poolsUSD.count == held.count ? poolsUSD.reduce(0, +) : nil))
+        }
+        if RailgunPocket.available {
+            out.append(HomePlace(id: "railgun", name: "Railgun", usd: sum(railgunUSD)))
+        }
+        if AztecProver.isAvailable, aztecStore.isShown {
+            out.append(HomePlace(id: "aztec", name: "Aztec", usd: sum(aztecUSD), ink: DS.aztecInk))
+        }
+        return out
+    }
+
+    /// **A PLACE ON HOME (prd §1929).** The place's mark in the rows' lead
+    /// column, its name, everything there; one line, no line under it. A tap
+    /// opens Holdings, where its tokens are.
+    private func homePlaceRow(_ place: HomePlace, figure: String) -> some View {
+        let empty = (place.usd ?? 0) < 0.01
         return Button {
             DSHaptic.selection()
-            act()
+            homeOpen(.holdings)
         } label: {
-            // A day that rounds to zero draws nothing (prd §1862, §83).
-            let moved = day.flatMap { $0.tone == .up || $0.tone == .down ? $0 : nil }
-            TokenRowLabel(symbol: symbol, line: line, lineInk: lineInk, figure: figure,
-                          under: moved?.words,
-                          underInk: moved?.tone == .up ? DS.confirmInk : moved?.tone == .down ? DS.destructiveInk : DS.textSecondary)
+            // **NO MARK (prd §1929, user: "i don't think we can show these
+            // icons … b/c they are also tokens"):** Ethereum's, Railgun's and
+            // Aztec's marks are their tokens' too, so a place is its name.
+            HStack(alignment: .center, spacing: DS.Space.s2) {
+                Text(verbatim: place.name).dsText(.body17).foregroundStyle(place.ink).lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                Text(verbatim: figure).dsText(.price17).monospacedDigit()
+                    .foregroundStyle(empty ? DS.textSecondary : DS.textPrimary)
+            }
+            .frame(minHeight: DS.Hit.min)
+            .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-        .accessibilityLabel(Text(verbatim: [symbol, line, figure, day?.words].compactMap { $0 }.joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: "\(place.name), \(figure)"))
         .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)

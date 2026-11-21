@@ -50,7 +50,7 @@ enum PrivateAccount {
         let engine = PrivacyEngine.shared
         if id == PrivateRoot.legacy {
             guard let owner = PrivacyTestnetSender.legacyAddress else { throw PrivacyPoolsKey.Failure.noKey }
-            var seed = try PrivacyPoolsKey.seed(reason: reason ?? String(localized: "Open your private balance"))
+            var seed = try PrivacyPoolsKey.seed(reason: reason ?? String(localized: "Open Privacy Pools"))
             defer { seed.resetBytes(in: 0..<seed.count) }
             _ = try await engine.open(seed: seed, owner: owner, network: .sepolia)
             return owner

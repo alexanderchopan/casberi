@@ -348,8 +348,11 @@ KNOWN_PROPER: set[str] = {
     "UI", "UX", "CLI", "SDK", "JWT", "OAuth", "PKCE", "SIWE", "US", "UK",
     "EU", "EEA", "UTC", "IP", "VPN", "SSH", "P2SH", "OVM", "PoS", "PRT",
     "L2", "TXT", "IMAP", "AM", "PM", "BEGIN", "END", "AKIA", "Bearer", "GPL", "GNU",
+    # Ethereum Virtual Machine: the kind of network Relay's list holds
+    # ("Most EVM networks", prd §1929); "Evm" is no one's spelling.
+    "EVM",
     # Tickers. Re-casing one invents a spelling no exchange or explorer uses.
-    "ETH", "BTC", "SOL", "USDC", "USDT", "DAI", "HYPE", "AERO", "AAPL",
+    "ETH", "BTC", "SOL", "USDC", "USDT", "DAI", "HYPE", "AERO", "AAPL", "USDG",
     "NASA", "COLOR", "ALARM",
 }
 

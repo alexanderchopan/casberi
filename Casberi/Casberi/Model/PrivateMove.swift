@@ -343,7 +343,7 @@ final class PrivateMove {
             // A tag is paid in USDC (prd §1874), on the demo too.
             if mode == .send, tag != nil {
                 guard let first = options.first else {
-                    stage = .failed(String(localized: "A zk.money tag is paid in USDC, and your private balance has none to send"))
+                    stage = .failed(String(localized: "A zk.money tag is paid in USDC, and Privacy Pools has none to send"))
                     return
                 }
                 if !options.contains(where: { $0.symbol == symbol && $0.amount == amount }) { pick(first.amount, of: first.symbol) }
@@ -375,7 +375,7 @@ final class PrivateMove {
             let options = self.options
             // A tag is paid in private USDC alone (prd §1874).
             if tag != nil, options.isEmpty {
-                stage = .failed(String(localized: "A zk.money tag is paid in USDC, and your private balance has none to send"))
+                stage = .failed(String(localized: "A zk.money tag is paid in USDC, and Privacy Pools has none to send"))
                 return
             }
             // Nothing private yet is said as that, never as the relayer's
@@ -600,7 +600,7 @@ final class PrivateMove {
                 return
             }
             stage = .opening
-            try await PrivateAccount.open(account, reason: String(localized: "Send from your private balance"))
+            try await PrivateAccount.open(account, reason: String(localized: "Send from Privacy Pools"))
             stage = .preparing
             // The notes as the pool holds them: what is spendable is theirs.
             let found = try await engine.discover()

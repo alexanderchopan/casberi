@@ -479,7 +479,7 @@ enum AztecStakeWire {
     /// The same row for someone whose own Aztec account holds money (prd
     /// §1872): a move out takes an hour or more, and gas never comes back.
     static func upgradeTitleForAccount(_ u: Upgrade) -> String {
-        String(localized: "Aztec upgrades from \(u.executableFrom.formatted(.dateTime.month(.abbreviated).day())): move your private account's money out first")
+        String(localized: "Aztec upgrades from \(u.executableFrom.formatted(.dateTime.month(.abbreviated).day())): move your money out of Aztec first")
     }
 
     /// `aztec:upgrade:<rollup>:<unix seconds it can execute from>`: the date

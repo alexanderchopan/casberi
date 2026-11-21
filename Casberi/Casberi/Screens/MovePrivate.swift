@@ -227,13 +227,13 @@ struct MovePrivateSentence<Head: View>: View {
                 .accessibilityHint(Text("Picks how much"))
             }
             if move.mode == .send {
-                MoveWordsClause(glue: String(localized: "from"), words: String(localized: "your private balance"),
+                MoveWordsClause(glue: String(localized: "from"), words: "Privacy Pools",
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.switchOff) } },
                                 hint: Text("Picks where it comes from"))
             }
             if move.mode == .deposit {
-                MoveWordsClause(glue: String(localized: "to"), words: String(localized: "your private balance"),
+                MoveWordsClause(glue: String(localized: "to"), words: "Privacy Pools",
                                 ink: DS.textPrimary,
                                 action: { if move.stage == .ready { leave(.pickRecipient) } },
                                 hint: Text("Picks the address"))
@@ -259,7 +259,7 @@ struct MovePrivateSentence<Head: View>: View {
                 guard live else { return }
                 leave(.pickRecipient)
             } label: {
-                MoveWord(String(localized: "your private balance"), ink: MoveSentence.settledInk)
+                MoveWord("Privacy Pools", ink: MoveSentence.settledInk)
             }
             .buttonStyle(RowPress())
             .accessibilityHint(Text("Picks the address"))
@@ -332,7 +332,7 @@ struct MovePrivateSentence<Head: View>: View {
                 DSHaptic.selection()
                 move.mode = .deposit
             } label: {
-                Text("Send to your private balance first").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                Text("Send to Privacy Pools first").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
             }
             .buttonStyle(RowPress())
         case .failed(let words):
@@ -373,9 +373,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// 27 s on Sepolia, the proof a few more), as facts (prd §1896).
     private var sendFacts: [(name: String, value: String?)] {
         var facts: [(name: String, value: String?)] = []
-        if !move.canGoAway || move.stage != .ready {
-            facts.append((String(localized: "Network"), Self.networkName(arrivesOn)))
-        }
+        // The network is the sentence's last word (prd §1929).
         // To someone with a private account of their own, it stays private:
         // balance to balance (prd §1567), nothing paid out.
         if move.balanceToBalance == true, !move.away {
@@ -447,21 +445,17 @@ struct MovePrivateSentence<Head: View>: View {
     /// the facts, how hidden.
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // The token leads the receipt, as Send's does (prd §1929).
+            TokenRowLabel(symbol: move.symbol, line: move.network.name, figure: "−" + figure)
+            // **NOTHING THE SENTENCE SAYS (prd §1929):** from, to and the
+            // network are its words; the receipt holds the rest.
             if move.mode == .send {
-                MoveFactRow(name: String(localized: "From"), value: String(localized: "Your private balance"), indented: false)
-                if let to = move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short) {
-                    MoveFactRow(name: String(localized: "To"), value: to, indented: false)
-                }
-                if move.canGoAway {
-                    MoveFactRow(name: String(localized: "Arrives on"), value: Self.networkName(arrivesOn), indented: false)
-                }
                 ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value, indented: false) }
                 if let hidden { hiddenLine(hidden) }
             } else {
-                MoveFactRow(name: String(localized: "To"), value: String(localized: "Your private balance"), indented: false)
                 line
             }
-            MoveFactRow(name: String(localized: "Through"), value: "Privacy Pools", indented: false)
+            // "Through Privacy Pools" is the sentence's own word now (prd §1929).
         }
     }
 

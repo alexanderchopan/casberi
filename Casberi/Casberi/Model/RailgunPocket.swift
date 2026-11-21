@@ -219,7 +219,7 @@ enum RailgunPocket {
     static func send(token: String, amount: String, to: String, unlocked: @MainActor () -> Void = {},
                      stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> String? {
         guard PrivateMoney.isAddress(to), let hexAmount = PrivateMoney.hex(amount) else { throw Failure.notWritten }
-        try await open(reason: String(localized: "Send from your private balance"))
+        try await open(reason: String(localized: "Send from Railgun"))
         unlocked()
         let synced = try await sync()
         guard let held = synced.balances.first(where: { $0.token.lowercased() == token.lowercased() }),
@@ -231,7 +231,7 @@ enum RailgunPocket {
         }
         let sent = try await YourAccountChain.privateCalls([(to: u.tx.to, data: u.tx.data, value: PrivateMoney.decimal(hex: u.tx.value))],
                                                            on: accountNetwork,
-                                                           reason: String(localized: "Send from your private balance"), stage: stage)
+                                                           reason: String(localized: "Send from Railgun"), stage: stage)
         let hash = landed(sent)
         NSLog("railgunPocket| unshielded | %@ | %@ of %@ to %@ | proof %d ms", hash ?? "not yet seen", amount, token, YourAccount.short(to), u.proofMs)
         return hash
@@ -280,7 +280,7 @@ enum RailgunPocket {
     /// it appears nowhere on the transaction. Returns its hash.
     static func send(_ q: RailgunEngineWire.Quote, unlocked: @MainActor () -> Void = {}) async throws -> String {
         guard YourAccountKey.address != nil else { throw Failure.noAccount }
-        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from Railgun"))
         unlocked()
         let sent = try await RailgunEngine.shared.broadcastSend(token: q.token, amount: q.amount, to: q.to,
                                                                 feeToken: q.feeToken, fee: q.fee)
@@ -341,7 +341,7 @@ enum RailgunPocket {
             throw Failure.noPrivateGas
         }
         let sender = try senderAddress()
-        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from Railgun"))
         unlocked()
         // The gas first, so the proof is made against the pool as it is when
         // it goes.
@@ -353,7 +353,7 @@ enum RailgunPocket {
             guard fee > 0, spendable >= short + fee else { throw Failure.noPrivateGas }
             stage(String(localized: "Paying its gas from your private ETH…"))
             let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(short), to: sender.address,
-                                                      reason: String(localized: "Send from your private balance"))
+                                                      reason: String(localized: "Send from Railgun"))
             NSLog("railgunPocket| sender gas | %@ | %@ wei | %@", YourAccount.short(sender.address), PrivateMoney.plain(short), tx)
             guard try await FreshSigner.landed(tx, on: network) else { throw Failure.gasOnItsWay }
         }
@@ -473,7 +473,7 @@ enum RailgunPocket {
     static func swap(_ plan: SwapPlan, unlocked: @MainActor () -> Void = {}) async throws -> String {
         guard YourAccountKey.address != nil else { throw Failure.noAccount }
         guard plan.broadcast != nil, plan.wire.fee != nil else { throw Failure.noBroadcaster }
-        try await PrivateRootKey.unlock(reason: String(localized: "Swap in your private balance"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Swap in Railgun"))
         unlocked()
         let sent = try await RailgunEngine.shared.broadcastSwap(plan.wire)
         NSLog("railgunPocket| swapped | %@ | %@ for %@ | proof %d ms", sent.txHash, plan.wire.token, plan.wire.buyToken, sent.proofMs)
@@ -489,7 +489,7 @@ enum RailgunPocket {
         guard let (need, network) = await senderGasCost(gas: FreshTx.railgunSwapGas),
               let ethPool = network.yieldPool(for: PrivateMove.eth) else { throw Failure.noPrivateGas }
         let sender = try senderAddress()
-        try await PrivateRootKey.unlock(reason: String(localized: "Swap in your private balance"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Swap in Railgun"))
         unlocked()
         let held = Decimal(string: try await PrivateRPC.decimal(network, "eth_getBalance", [sender.address, "latest"])) ?? 0
         if held < need {
@@ -499,7 +499,7 @@ enum RailgunPocket {
             guard fee > 0, spendable >= short + fee else { throw Failure.noPrivateGas }
             stage(String(localized: "Paying its gas from your private ETH…"))
             let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(short), to: sender.address,
-                                                      reason: String(localized: "Swap in your private balance"))
+                                                      reason: String(localized: "Swap in Railgun"))
             guard try await FreshSigner.landed(tx, on: network) else { throw Failure.gasOnItsWay }
         }
         stage(String(localized: "Proving on this iPhone…"))
@@ -576,7 +576,7 @@ enum RailgunPocket {
     static func transfer(_ plan: TransferPlan, unlocked: @MainActor () -> Void = {}) async throws -> String {
         guard YourAccountKey.address != nil else { throw Failure.noAccount }
         guard plan.broadcast != nil, plan.wire.fee != nil else { throw Failure.noBroadcaster }
-        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from Railgun"))
         unlocked()
         let sent = try await RailgunEngine.shared.broadcastTransfer(plan.wire)
         NSLog("railgunPocket| sent privately | %@ | %@ of %@ | proof %d ms", sent.txHash, plan.wire.amount, plan.wire.token, sent.proofMs)
@@ -592,7 +592,7 @@ enum RailgunPocket {
             throw Failure.noPrivateGas
         }
         let sender = try senderAddress()
-        try await PrivateRootKey.unlock(reason: String(localized: "Send from your private balance"))
+        try await PrivateRootKey.unlock(reason: String(localized: "Send from Railgun"))
         unlocked()
         let held = Decimal(string: try await PrivateRPC.decimal(network, "eth_getBalance", [sender.address, "latest"])) ?? 0
         if held < need {
@@ -602,7 +602,7 @@ enum RailgunPocket {
             guard fee > 0, spendable >= short + fee else { throw Failure.noPrivateGas }
             stage(String(localized: "Paying its gas from your private ETH…"))
             let tx = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(short), to: sender.address,
-                                                      reason: String(localized: "Send from your private balance"))
+                                                      reason: String(localized: "Send from Railgun"))
             guard try await FreshSigner.landed(tx, on: network) else { throw Failure.gasOnItsWay }
         }
         stage(String(localized: "Proving on this iPhone…"))

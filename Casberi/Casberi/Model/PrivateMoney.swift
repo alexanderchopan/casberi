@@ -474,7 +474,7 @@ enum PrivateMoney {
     /// The row's words, with no verb (the Activity rule): "0.001 ETH to your
     /// private balance" moving in, "0.001 ETH to ...a3f1" sent from it.
     static func activityTitle(figure: String, to recipient: String?) -> String {
-        guard let recipient else { return String(localized: "\(figure) to your private balance") }
+        guard let recipient else { return String(localized: "\(figure) to Privacy Pools") }
         return String(localized: "\(figure) to \(recipient)")
     }
 

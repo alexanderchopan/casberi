@@ -103,7 +103,7 @@ enum PrivateSendAway {
                   FreshTx.homeWorthIt(input: planned, output: first.outputAmount, floor: "1") else {
                 throw Failure.across(String(localized: "Across won't carry this amount"))
             }
-            await stage(String(localized: "Sending from your private balance…"))
+            await stage(String(localized: "Sending from Privacy Pools…"))
             withdrawn = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: amount, to: sender.address)
             RailgunPocket.senderUsed(sender)
             keep(Pending(index: sender.index, address: sender.address, root: sender.root, chainId: chainId, payee: payee,
@@ -261,7 +261,7 @@ enum PrivateSendAway {
                   (Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0) >= up + fee else {
                 throw Failure.across(String(localized: "Its gas needs a little private ETH"))
             }
-            await stage(String(localized: "Sending from your private balance…"))
+            await stage(String(localized: "Sending from Privacy Pools…"))
             let gasOut = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: PrivateMoney.plain(up), to: sender.address)
             RailgunPocket.senderUsed(sender)
             keep(Pending(index: sender.index, address: sender.address, root: sender.root, chainId: chainId, payee: payee,

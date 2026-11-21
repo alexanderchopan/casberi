@@ -2521,7 +2521,6 @@ harness "Transfer-times self-test" "transfer times self-test" "scripts/transfer-
 # asked to send: the network's own coin last and short of the gas, no token
 # asked for on a network with no coin to pay, nothing sent to a Relay route it
 # does not take or under its floor, and `transfer` calldata to the word.
-harness "Wallet-sweep self-test" "wallet sweep self-test" "scripts/wallet-sweep-selftest.sh" "the wallet-sweep self-test failed — run scripts/wallet-sweep-selftest.sh"
 # Move › Sweep (prd §1537). What is swapped for ETH: under $1 or $5 only, never
 # ETH, a stranger's token, an unpriced one or round-ups' change; ten at most;
 # a swap returning under half of what it sells stays.

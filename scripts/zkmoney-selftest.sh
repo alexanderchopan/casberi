@@ -715,7 +715,7 @@ grep -q 'receiveDoor(String(localized: "From another network")' "$TMP/from.txt" 
   && ! grep -q 'zk.money' "$TMP/from.txt" \
   || { echo "✗ Receive's ways in changed, or a zk.money claim came back without reading the link's voucher"; exit 1; }
 awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND" \
-  | awk '/String\(localized: "Your public account"\), glyph: "wallet.bifold",/{p=NR} /receiveFromRows/{f=NR} /"Your private balance"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
+  | awk '!p && /String\(localized: "To public account"\)/{p=NR} /receiveFromRows/{f=NR} /"To Privacy Pools"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
   || { echo "✗ the ways in no longer stand under the public account, before the private places"; exit 1; }
 
 # Paying a tag from your private balance (prd §1874): the tag goes to the
@@ -751,8 +751,8 @@ grep -q 'if sendsFromAztec, aztecCanPay {' "$SEND" \
 # Aztec's ink, and offered only where Aztec can pay the To (prd §1908).
 # Drawn through Move's one token list since prd §1910.
 grep -q 'let aztec = aztecCanPay ? privateRows.filter { $0.key.hasPrefix("aztec|") } : \[\]' "$SEND" \
-  && grep -q 'MoveTokenPlace(id: "aztec", title: String(localized: "Your private account"), ink: DS.aztecInk, rule: Self.aztecSendRule,' "$SEND" \
-  && grep -q 'let balance = privateRows.filter { !$0.key.hasPrefix("aztec|") }' "$SEND" \
-  || { echo "✗ Send lists Aztec's tokens under Your private balance, or offers them to a To Aztec cannot pay (prd §1908)"; exit 1; }
+  && grep -q 'MoveTokenPlace(id: "aztec", title: "Aztec", ink: DS.aztecInk, rule: Self.aztecSendRule,' "$SEND" \
+  && grep -q 'let railgunHeld = privateRows.filter { !$0.key.hasPrefix("pools|") && !$0.key.hasPrefix("aztec|") }' "$SEND" \
+  || { echo "✗ Send lists Aztec's tokens under another place, or offers them to a To Aztec cannot pay (prd §1908, §1929)"; exit 1; }
 
 echo "✓ zk.money self-test passed"

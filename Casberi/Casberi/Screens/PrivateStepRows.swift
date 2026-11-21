@@ -204,7 +204,7 @@ struct MoveStepCapsule: View {
         // where Move is not open; open, its row already turned to the price.
         .onChange(of: railgunSync.firstReady) { _, _ in
             guard !chrome.moveTray else { return }
-            chrome.flash(String(localized: "Your private balance is ready"))
+            chrome.flash(String(localized: "Railgun is ready"))
             NSLog("railgunSync| first sync ready")
         }
     }

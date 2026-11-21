@@ -325,7 +325,7 @@ enum PrivateMigration {
         let store = PrivateMoneyStore.shared
         let engine = PrivacyEngine.shared
         do {
-            try await PrivateAccount.open(PrivateRoot.legacy, reason: String(localized: "Back up your private balance"))
+            try await PrivateAccount.open(PrivateRoot.legacy, reason: String(localized: "Back up Privacy Pools"))
             store.reconcile(try await engine.discover(), root: nil)
             await store.refresh(force: true)
             let legacy = store.notes.filter { $0.root == nil }

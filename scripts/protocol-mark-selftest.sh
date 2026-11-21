@@ -126,7 +126,8 @@ guard "the feed row's carried lead is the action glyph with the badge" "$BAND" \
   'case \.carried\(let mark\):'
 guard_absent "Lend's foot repeats no credit: the sentence says Aave (prd §1754)" "$LEND" 'Powered by Aave'
 # §1927: on the deck, the protocol is a fact (Through), as Earn's Aave is.
-guard "the private send names Privacy Pools as its Through fact (prd §1927)" "$PRIVATE" 'MoveFactRow\(name: String\(localized: "Through"\), value: "Privacy Pools"'
+# §1929: the sentence names the place ("to Privacy Pools"), so its receipt does not again.
+guard "the private send names Privacy Pools in its sentence (prd §1929)" "$PRIVATE" 'words: "Privacy Pools",'
 guard_absent "the private send's foot repeats no credit (prd §1927)" "$PRIVATE" 'Powered by Privacy Pools'
 guard "Move's mark door falls back to the rule" \
   "Casberi/Casberi/Screens/MoveSentence.swift" 'ProtocolMark\.mark\(forVenue: service\)'

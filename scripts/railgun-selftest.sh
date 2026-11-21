@@ -103,7 +103,7 @@ use "$HOLD" 'RailgunPocket.hasWallet' "no root is made just to read (§1721 item
 use "$INGEST" 'await RailgunHoldings.shared.walletHolding()' "Railgun counts in the Wallet's number"
 use "$PRIV" 'walletRailgunRows(mask: mask)' "Holdings draws Railgun's rows in Private"
 use "$PRIV" 'String(localized: "Private in about an hour")' "a shield in screening reads as a state (§1713 item 5)"
-use "$MOVE" 'RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract, chainId: network.chainId)' "Your private balance · Ethereum routes by the picked token"
+use "$MOVE" 'RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract,' "Send's To names Railgun for a token that goes there (prd §1713 item 1, §1929)"
 use "$SENT" 'move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account.")' "the recipient is your account, or someone else by their tail"
 use "$SENT" 'case .takeBack where toSomeoneElse:' "a send to someone else is the broadcaster's path, before taking back"
 # §1727: the amount is typed, the $10 floor holds on what is typed, and
@@ -318,7 +318,7 @@ SWIFT
 if ! xcrun swiftc -O -o "$TMP/addr/run" "$SWAP" "$TMP/swap/stubs.swift" "$TMP/addr/main.swift" 2> "$TMP/swap/err2"; then
   echo "  ✗ the private address check does not compile"; head -10 "$TMP/swap/err2"; fail=1
 elif ! "$TMP/addr/run"; then fail=1; fi
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" "privateAddress = try await RailgunPocket.privateAddress()" "Receive reads your private address from your own wallet"
+use "Casberi/Casberi/Screens/MoveSentence.swift" ": try? await RailgunPocket.privateAddress()" "Receive's To Railgun no longer copies your private address from your own wallet (prd §1929)"
 grep -q "broadcastTransfer" Casberi/Casberi/Resources/railgun-engine.js \
   && echo "  ✓ the bundled engine carries the private send" \
   || { echo "  ✗ the bundled engine was not rebuilt with the private send"; fail=1; }

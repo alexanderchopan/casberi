@@ -9974,6 +9974,34 @@
         }
       }
     },
+    "%@ of %@ is in Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de %2$@ está en Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ %1$@ が Railgun にあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ %1$@가 Railgun에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 的 %2$@ 已在 Railgun 中"
+          }
+        }
+      }
+    },
     "%@ of %@ is in your private balance" : {
       "localizations" : {
         "es" : {
@@ -10162,6 +10190,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已使用 %@，共 %@ — 整理暂停至下月。提问仍可使用。"
+          }
+        }
+      }
+    },
+    "%@ of Round-ups moved to Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ de Redondeos se movieron a Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数 %@ を Privacy Pools に移しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기 %@를 Privacy Pools(으)로 옮겼습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 零钱已转入 Privacy Pools"
           }
         }
       }
@@ -14110,6 +14166,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每年 %@ 至 %@"
+          }
+        }
+      }
+    },
+    "%@ to Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ a Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を Privacy Pools へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ → Privacy Pools"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 到 Privacy Pools"
           }
         }
       }
@@ -43313,6 +43397,62 @@
         }
       }
     },
+    "A broadcaster takes its fee in WETH or USDC, and Railgun holds neither." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un broadcaster cobra su comisión en WETH o USDC, y Railgun no tiene ninguno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターの手数料は WETH か USDC ですが、Railgun にはどちらもありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터 수수료는 WETH 또는 USDC인데 Railgun에는 둘 다 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "广播者以 WETH 或 USDC 收取费用，而 Railgun 中两者都没有。"
+          }
+        }
+      }
+    },
+    "A broadcaster takes its fee in WETH or USDC, and Railgun holds neither. Add about $10 of ETH for fees first." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un broadcaster cobra su comisión en WETH o USDC, y Railgun no tiene ninguno. Añade primero unos $10 de ETH para comisiones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロードキャスターの手数料は WETH か USDC ですが、Railgun にはどちらもありません。先に手数料用に約 $10 の ETH を追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "브로드캐스터 수수료는 WETH 또는 USDC인데 Railgun에는 둘 다 없습니다. 먼저 수수료용 ETH 약 $10를 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "广播者以 WETH 或 USDC 收取费用，而 Railgun 中两者都没有。请先添加约 $10 的 ETH 作为费用。"
+          }
+        }
+      }
+    },
     "A broadcaster takes its fee in WETH or USDC, and your private balance holds neither." : {
       "localizations" : {
         "es" : {
@@ -47338,6 +47478,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一年前的今天"
+          }
+        }
+      }
+    },
+    "A zk.money tag is paid in USDC, and Privacy Pools has none to send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una etiqueta de zk.money se paga en USDC y Privacy Pools no tiene para enviar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money のタグは USDC で支払いますが、Privacy Pools に送れる USDC がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 태그는 USDC로 지불하는데 Privacy Pools에 보낼 USDC가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money 标签以 USDC 支付，而 Privacy Pools 中没有可发送的 USDC"
           }
         }
       }
@@ -56808,6 +56976,34 @@
         }
       }
     },
+    "Any token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どのトークンでも"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何代币"
+          }
+        }
+      }
+    },
     "Any token on %@." : {
       "localizations" : {
         "es" : {
@@ -60396,6 +60592,34 @@
         }
       }
     },
+    "At %@ it moves to Privacy Pools." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al llegar a %@ pasa a Privacy Pools."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に達すると Privacy Pools に移ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@가 되면 Privacy Pools(으)로 옮겨집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "达到 %@ 时转入 Privacy Pools。"
+          }
+        }
+      }
+    },
     "At %@ it moves to your private balance." : {
       "localizations" : {
         "es" : {
@@ -61355,6 +61579,34 @@
         }
       }
     },
+    "Aztec upgrades from %@: move your money out of Aztec first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec se actualiza desde el %@: saca primero tu dinero de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec は %@ からアップグレードされます：先に Aztec からお金を移してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec이 %@부터 업그레이드됩니다: 먼저 Aztec에서 돈을 옮기세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 将于 %@ 起升级：请先把资金移出 Aztec"
+          }
+        }
+      }
+    },
     "Aztec upgrades from %@: move your private account's money out first" : {
       "localizations" : {
         "es" : {
@@ -62191,6 +62443,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "备份"
+          }
+        }
+      }
+    },
+    "Back up Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Respaldar Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools をバックアップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 백업"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "备份 Privacy Pools"
           }
         }
       }
@@ -63255,6 +63535,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Base"
+          }
+        }
+      }
+    },
+    "Base, Ethereum, Robinhood" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum, Robinhood"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum, Robinhood"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood"
           }
         }
       }
@@ -75543,6 +75851,34 @@
         }
       }
     },
+    "Copied · new address each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiada · dirección nueva cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コピーしました · 毎回新しいアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복사됨 · 매번 새 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已复制 · 每次都是新地址"
+          }
+        }
+      }
+    },
     "Copied · only on %@" : {
       "localizations" : {
         "es" : {
@@ -86980,6 +87316,34 @@
         }
       }
     },
+    "ETH, USDC, USDG" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH, USDC, USDG"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH、USDC、USDG"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH, USDC, USDG"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH、USDC、USDG"
+          }
+        }
+      }
+    },
     "ETHBEAT" : {
       "localizations" : {
         "es" : {
@@ -89886,6 +90250,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从 Ethereum 到 Aztec"
+          }
+        }
+      }
+    },
+    "Ethereum tokens" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens de Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum のトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 代币"
           }
         }
       }
@@ -100975,6 +101367,34 @@
         }
       }
     },
+    "From Aztec only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo desde Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec からのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限来自 Aztec"
+          }
+        }
+      }
+    },
     "From Ethereum, USDC or ETH" : {
       "localizations" : {
         "es" : {
@@ -101027,6 +101447,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自 Railgun"
+          }
+        }
+      }
+    },
+    "From Railgun only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo desde Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun からのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun에서만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限来自 Railgun"
           }
         }
       }
@@ -103394,6 +103842,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "获取你的令牌"
+          }
+        }
+      }
+    },
+    "Getting Privacy Pools ready · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preparando Privacy Pools · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools を準備中 · %lld 秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 준비 중 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在准备 Privacy Pools · %lld 秒"
           }
         }
       }
@@ -109005,6 +109481,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "室内"
+          }
+        }
+      }
+    },
+    "Inside Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dentro de Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 内"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 안에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Railgun 内"
           }
         }
       }
@@ -121074,6 +121578,34 @@
         }
       }
     },
+    "Most EVM networks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La mayoría de redes EVM"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほとんどの EVM ネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대부분의 EVM 네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "大多数 EVM 网络"
+          }
+        }
+      }
+    },
     "Most active" : {
       "localizations" : {
         "es" : {
@@ -121676,6 +122208,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "把 ETH 转给你的共同签名人"
+          }
+        }
+      }
+    },
+    "Move Round-ups to Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover Redondeos a Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数を Privacy Pools に移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기를 Privacy Pools(으)로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将零钱转入 Privacy Pools"
           }
         }
       }
@@ -122296,6 +122856,34 @@
         }
       }
     },
+    "Moves %@ of Round-ups to Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mueve %@ de Redondeos a Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数 %@ を Privacy Pools に移します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기 %@를 Privacy Pools(으)로 옮깁니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 零钱转入 Privacy Pools"
+          }
+        }
+      }
+    },
     "Moves %@ of Round-ups to your private balance" : {
       "localizations" : {
         "es" : {
@@ -122684,6 +123272,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在转到 %@"
+          }
+        }
+      }
+    },
+    "Moving to Railgun takes $10 or more." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover a Railgun requiere $10 o más."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun への移動は $10 以上からです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun으로 옮기려면 $10 이상이 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入 Railgun 需 $10 或以上。"
           }
         }
       }
@@ -142781,6 +143397,34 @@
         }
       }
     },
+    "Once it reaches %@, it moves to Privacy Pools and keeps earning." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al llegar a %@, pasa a Privacy Pools y sigue generando."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に達すると Privacy Pools に移り、引き続き利回りを得ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@가 되면 Privacy Pools(으)로 옮겨져 계속 수익을 냅니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "达到 %@ 后转入 Privacy Pools 并继续生息。"
+          }
+        }
+      }
+    },
     "Once it reaches %@, it moves to your private balance and keeps earning." : {
       "localizations" : {
         "es" : {
@@ -145105,6 +145749,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开备忘录"
+          }
+        }
+      }
+    },
+    "Open Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools を開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 Privacy Pools"
           }
         }
       }
@@ -159344,6 +160016,34 @@
         }
       }
     },
+    "Railgun is ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun está listo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun の準備ができました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 준비 완료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 已就绪"
+          }
+        }
+      }
+    },
     "Railgun takes %@" : {
       "localizations" : {
         "es" : {
@@ -164576,6 +165276,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从 %2$@ 接收 %1$@。"
+          }
+        }
+      }
+    },
+    "Receive ETH, USDC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibir ETH, USDC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH、USDC"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH, USDC 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "接收 ETH、USDC"
           }
         }
       }
@@ -169995,6 +170723,34 @@
         }
       }
     },
+    "Restoring Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Restaurando Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools を復元中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 복원 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在恢复 Privacy Pools"
+          }
+        }
+      }
+    },
     "Restoring your private balance" : {
       "localizations" : {
         "es" : {
@@ -171835,6 +172591,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每次发送时凑整"
+          }
+        }
+      }
+    },
+    "Round up every buy, send and swap. The change goes to Round-ups and earns interest. At %@, it moves to Privacy Pools, where it keeps earning." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondea cada compra, envío e intercambio. El cambio va a Redondeos y genera intereses. Al llegar a %@, pasa a Privacy Pools, donde sigue generando."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "購入・送金・スワップのたびに端数を切り上げます。端数は「端数」に貯まり利息がつきます。%@ に達すると Privacy Pools に移り、引き続き利回りを得ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구매·송금·스왑마다 잔돈을 올림합니다. 잔돈은 잔돈 모으기에 쌓여 이자를 받습니다. %@가 되면 Privacy Pools(으)로 옮겨져 계속 수익을 냅니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次购买、发送和兑换都向上取整。零钱存入零钱罐并生息。达到 %@ 时转入 Privacy Pools，并继续生息。"
           }
         }
       }
@@ -177367,6 +178151,34 @@
         }
       }
     },
+    "Send %@ out of Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sacar %@ de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を Aztec から送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 %@ 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 %@ 转出 Aztec"
+          }
+        }
+      }
+    },
     "Send %@ out of your private account on Aztec" : {
       "localizations" : {
         "es" : {
@@ -177419,6 +178231,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Logos 上发送 %@ 测试代币"
+          }
+        }
+      }
+    },
+    "Send a little ETH with USDC or USDG" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía un poco de ETH con USDC o USDG"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC や USDG と一緒に少量の ETH を送ってください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 또는 USDG와 함께 소량의 ETH를 보내세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送 USDC 或 USDG 时附带少量 ETH"
           }
         }
       }
@@ -177643,6 +178483,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从 Aztec 发送到 Aztec"
+          }
+        }
+      }
+    },
+    "Send from Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar desde Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools から送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools에서 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Privacy Pools 发送"
+          }
+        }
+      }
+    },
+    "Send from Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar desde Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun から送る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun에서 보내기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Railgun 发送"
           }
         }
       }
@@ -178011,6 +178907,34 @@
         }
       }
     },
+    "Send to Privacy Pools first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía primero a Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に Privacy Pools へ送ってください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 Privacy Pools(으)로 보내세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先发送到 Privacy Pools"
+          }
+        }
+      }
+    },
     "Send to it only on %@." : {
       "localizations" : {
         "es" : {
@@ -178231,6 +179155,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在向 %2$@ 发送 %1$@"
+          }
+        }
+      }
+    },
+    "Sending from Privacy Pools…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando desde Privacy Pools…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools から送金中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools에서 보내는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在从 Privacy Pools 发送…"
           }
         }
       }
@@ -178583,6 +179535,34 @@
         }
       }
     },
+    "Sends from Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía desde Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools から送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools에서 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Privacy Pools 发送"
+          }
+        }
+      }
+    },
     "Sends from your private balance" : {
       "localizations" : {
         "es" : {
@@ -178691,6 +179671,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发送到 %@"
+          }
+        }
+      }
+    },
+    "Sends to Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec へ送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送到 Aztec"
+          }
+        }
+      }
+    },
+    "Sends to Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía a Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools へ送ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools(으)로 보냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送到 Privacy Pools"
           }
         }
       }
@@ -180775,6 +181811,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在 %@ 上设置…"
+          }
+        }
+      }
+    },
+    "Setting up Privacy Pools · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurando Privacy Pools · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools を設定中 · %lld 秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 설정 중 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在设置 Privacy Pools · %lld 秒"
+          }
+        }
+      }
+    },
+    "Setting up Privacy Pools · %lld%%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurando Privacy Pools · %lld%%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools を設定中 · %lld%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 설정 중 · %lld%%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在设置 Privacy Pools · %lld%%"
           }
         }
       }
@@ -193020,6 +194112,34 @@
         }
       }
     },
+    "Swap in Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiar en Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun でスワップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun에서 스왑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Railgun 中兑换"
+          }
+        }
+      }
+    },
     "Swap in your private balance" : {
       "localizations" : {
         "es" : {
@@ -200760,6 +201880,34 @@
         }
       }
     },
+    "The move in could not be prepared" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar la entrada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動の準備ができませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동을 준비하지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法准备转入"
+          }
+        }
+      }
+    },
     "The move into your private balance could not be prepared" : {
       "localizations" : {
         "es" : {
@@ -208397,6 +209545,34 @@
         }
       }
     },
+    "To Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到 Aztec"
+          }
+        }
+      }
+    },
     "To Aztec, or out to Ethereum" : {
       "localizations" : {
         "es" : {
@@ -208449,6 +209625,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "转到 Aztec，或转出到 Ethereum。"
+          }
+        }
+      }
+    },
+    "To Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到 Privacy Pools"
+          }
+        }
+      }
+    },
+    "To Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到 Railgun"
           }
         }
       }
@@ -208589,6 +209821,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "到下一个 $%lld，买入 %@"
+          }
+        }
+      }
+    },
+    "To public account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A la cuenta pública"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開アカウントへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 계정으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到公开账户"
           }
         }
       }
@@ -211768,6 +213028,62 @@
         }
       }
     },
+    "USDC or the network's token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o el token de la red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC またはそのネットワークのトークン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 또는 해당 네트워크 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 或该网络的代币"
+          }
+        }
+      }
+    },
+    "USDC, ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC, ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC、ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC, ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC、ETH"
+          }
+        }
+      }
+    },
     "UTXO" : {
       "localizations" : {
         "es" : {
@@ -213730,6 +215046,34 @@
         }
       }
     },
+    "Updating Railgun · %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Actualizando Railgun · %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun を更新中 · %lld 秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 업데이트 중 · %lld초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在更新 Railgun · %lld 秒"
+          }
+        }
+      }
+    },
     "Updating your private balance · %lld s" : {
       "localizations" : {
         "es" : {
@@ -213928,6 +215272,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "全部使用 %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "Use all, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar todo, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて使う、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모두 사용, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部使用，%@"
           }
         }
       }
@@ -231469,6 +232841,34 @@
         }
       }
     },
+    "Your %@ is in Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu %@ está en Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は Railgun にあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@가 Railgun에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 %@ 已在 Railgun 中"
+          }
+        }
+      }
+    },
     "Your %@ is in your private balance" : {
       "localizations" : {
         "es" : {
@@ -237531,6 +238931,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的公开账户"
+          }
+        }
+      }
+    },
+    "Your public account on Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta pública en Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 上の公開アカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 공개 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在 Ethereum 上的公开账户"
           }
         }
       }

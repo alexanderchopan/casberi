@@ -141,7 +141,7 @@ final class PrivateSendSteps {
         let sent = new.plan.steps.last?.done ?? String(localized: "Sent")
         let body = !ok ? (new.reachedNetwork ? String(localized: "Open Casberi to see where it is")
                                              : String(localized: "Nothing was sent"))
-            : new.swap ? String(localized: "Inside your private balance") : sent
+            : new.swap ? String(localized: "Inside Railgun") : sent
         let kind: NotifyKind = !ok ? .moveFailed : new.swap ? .moveSwapped : .moveSent
         Task { await Notifications.outcome(kind, id: id, place: place, body: body, mark: place) }
     }

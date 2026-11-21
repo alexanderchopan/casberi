@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2109 of 2183 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2110 of 2184 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881)
@@ -1902,7 +1902,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
-- §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there (amended by §1824)
+- §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there (amended by §1824; part superseded by §1929)
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
 - §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice (amended by §1613)
 - §1509 — Signing shows its details behind one word, and a warning is one line you can sign past (amended by §1754, §1876)
@@ -2300,8 +2300,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1855 — Home's head stands on one grey plate, its doors with it, and the feed's sections keep their old gap (amends §1851 ite…
 - §1856 — The plate ends in the map: the Holdings row becomes the plate's foot, three tokens and Other, each its name over its…
 - §1857 — Home's head is the balance's lines: no plate and no foot; the doors, the feed's app circles at a tile's size, then Ne…
-- §1858 — Home: the wallet stands on the page with Public and Private as two sections, and what is new rises on a panel that fa… (amended by §1870)
-- §1859 — Home's token rows take the feed's row height and say where the token is and how its day went; a private row does what…
+- §1858 — Home: the wallet stands on the page with Public and Private as two sections, and what is new rises on a panel that fa… (amended by §1870, §1929)
+- §1859 — Home's token rows take the feed's row height and say where the token is and how its day went; a private row does what… (amended by §1929)
 - §1860 — Account's face and name are a door: one tap asks the name-and-photo question, and Settings' Name row is deleted (amen…
 - §1861 — Permissions names the co-signer: one row per key, a door to its approvals on Revoke.cash (extends §1710; keeps §112,…
 - §1862 — Home and Holdings, polished before the ship: one Public figure, no flat day, a pill that says today, the address in A…
@@ -2339,7 +2339,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1894 — A new address's transaction fits what it holds: its fee ceiling comes down to its balance, under the price now it is…
 - §1895 — A Railgun send is done when it is in a block, and a broadcaster's refusal prices it again at once
 - §1896 — Move, round two: the typed amount is one figure with its unit a step down and one flip, the act stands while typing,… (amended by §1897, §1898, §1900, §1901)
-- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904, §1910, §1911, §1916)
+- §1897 — Move's Buy is a Deck: the sentence stands still on top, every part of the act is a word in one deck under it, picks a… (amended by §1898, §1899, §1903, §1904, §1910, §1911, §1916, §1929)
 - §1898 — Send takes the Deck: three steps (To, From, Amount), To is one field over three groups of rows, From is the Pay with… (amended by §1899, §1904, §1909, §1910, §1916)
 - §1899 — From and Pay with are one list of rows under Public and Private, and Add another keeps each line of a send in the facts (amended by §1900, §1910)
 - §1900 — Swap takes the Deck, the deck stands on Home's panel, and Add another is the deck's first row at Ready (amended by §1904, §1909)
@@ -2370,8 +2370,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1924 — "Aztec to Aztec only" is the address's rule, not the account's
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
-- §1927 — The three private sentences stand on Move's deck
-- §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence
+- §1927 — The three private sentences stand on Move's deck (amended by §1929)
+- §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929)
+- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac…
 
 ## Dead rulings → what replaced them (generated)
 

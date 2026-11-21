@@ -421,7 +421,7 @@ struct MoveSecurity: View {
     /// it is turned on: here, the keys walk and Create.
     @MainActor static var roundUpsSentence: String {
         let at = RoundUpsPot.targetWords
-        return String(localized: "Round up every buy, send and swap. The change goes to Round-ups and earns interest. At \(at), it moves to your private balance, where it keeps earning.")
+        return String(localized: "Round up every buy, send and swap. The change goes to Round-ups and earns interest. At \(at), it moves to Privacy Pools, where it keeps earning.")
     }
 
     /// A worked send, because "the next $1" read as a $1 round-up: what a
@@ -436,13 +436,13 @@ struct MoveSecurity: View {
     /// balance'" and that it earns "at both steps"): the headline says
     /// interest, this says when it turns private and that it keeps earning.
     @MainActor static var roundUpsMoves: String {
-        String(localized: "Once it reaches \(RoundUpsPot.targetWords), it moves to your private balance and keeps earning.")
+        String(localized: "Once it reaches \(RoundUpsPot.targetWords), it moves to Privacy Pools and keeps earning.")
     }
 
     /// The one line the rows cannot say (prd §1803): when the change turns
     /// private.
     @MainActor static var roundUpsAt: String {
-        String(localized: "At \(RoundUpsPot.targetWords) it moves to your private balance.")
+        String(localized: "At \(RoundUpsPot.targetWords) it moves to Privacy Pools.")
     }
 
     /// **$1 OR $5 (prd §1741, its shape §1741a).** The one choice round-ups
