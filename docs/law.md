@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2117 of 2191 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2118 of 2192 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -1130,7 +1130,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §780c — All three finance seats sit on the Wallet shelf, the app count is a rounded claim, and a seat never asks you to do it… (amended by §1049; part superseded by §1564)
 - §780d — NerdWallet stays news-only, and the reason is a choice, not a missing product
 - §781 — Rocket Money's sign-in never opened on a phone, because the site walls every screen 450px wide or narrower
-- §782 — No plates under any spelling: the wallet tray's rows, every well around a row or block, the settings-side List card,…
+- §782 — No plates under any spelling: the wallet tray's rows, every well around a row or block, the settings-side List card,… (amended by §1937)
 - §783 — The X room draws no year chart, and a second pass of generated-looking UI comes off
 - §784 — The face rail gets air, and four smaller generated-looking habits come off
 - §785 — World ID is a fact about an address, not a seat; World Chain is a chain you switch on
@@ -2380,6 +2380,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other g…
 - §1935 — Move's keys and its end: a refused key knocks, holding delete clears, and Done folds the receipt into Activity
 - §1936 — Home adds up: the balance is Public plus Private as drawn, and the demo stands on the account's networks with its Pri…
+- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word…
 
 ## Dead rulings → what replaced them (generated)
 

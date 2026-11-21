@@ -1370,7 +1370,8 @@ use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("Send a little ETH wi
 use "$SENT" 'lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],' "Receive no longer says what Privacy Pools takes and where before it is copied (prd §1779, §1929)"
 use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text(verbatim: MoveSentence.aztecRule).dsText(.body17).foregroundStyle(DS.aztecInk)' "the Aztec address lost its rule on Receive (prd §1779, §1928)"
 use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),' "Your account lost its private balance row (prd §1779)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: String(localized: "A new address each time"), action: {' "Your account lost its private balance line (prd §1779, §1937)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: String(localized: "Your 0zk address"), action: {' "Railgun's line no longer names its one 0zk address (prd §1937)"
 ! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
 # prd §1785: the three money rows left Home; Account opens on the Safe.
@@ -1389,7 +1390,7 @@ use "$HOLD" 'feedSheet = .onItsWay(item)' "a waiting row in Holdings no longer o
 for kind in 'OnItsWay.waitingApproval(' 'OnItsWay.railgun('; do
     use "$HOLD" "$kind" "a kind of waiting lost its steps in Holdings: $kind (prd §1787)"
 done
-use "$PAGES" 'ForEach(YourAccountOp.networks.filter { !$0.isTest }) { net in' "the public address no longer says which networks it is good on (prd §1779)"
+use "Casberi/Casberi/Screens/MoveSecurity.swift" 'let all = Op.networks.filter { !$0.isTest }.map(\.name)' "the public address no longer says which networks it is good on (prd §1779, on Money's Public since §1937)"
 use "Casberi/Casberi/Screens/AztecBrowser.swift" 'tint: asksAztec ? DS.aztecFill : DS.pickInk,' "an Aztec app's ask wears the pick's pink again (prd §1779)"
 
 # On its way's steps, run: which step each trip is on, and the row's count.

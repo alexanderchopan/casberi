@@ -349,29 +349,33 @@ extension FeedScreen {
     func walletPrivatePlaces() -> some View {
         let store = AztecAccountStore.shared
         let aztec = store.isShown ? store.shown.address : nil
+        // **THE THREE PRIVATE PLACES, BY NAME (prd §1937, user: "Private is
+        // the other three"):** each a line on Money's plate. Privacy Pools'
+        // way in is an address made new each time; Railgun's is your one
+        // 0zk address; both are Receive privately's two doors (§1928).
         if PrivateMove.freshAvailable {
-            // No one address to show: its tap is Receive privately, where
-            // one is made.
-            accountListRow(glyph: "eye.slash", title: String(localized: "Private balance"),
-                           line: String(localized: "A new address each time")) {
+            AccountLine(label: "Privacy Pools", value: String(localized: "A new address each time"), action: {
                 chrome.moveFreshReceive = true
                 chrome.moveTray = true
-            }
+            })
         }
-        // The account is yours from the start (prd §1700t): its door stands
+        if RailgunPocket.available, PrivateMove.freshAvailable {
+            AccountLine(label: "Railgun", value: String(localized: "Your 0zk address"), action: {
+                chrome.moveFreshReceive = true
+                chrome.moveTray = true
+            })
+        }
+        // The account is yours from the start (prd §1700t): its line stands
         // from the first frame, and never waits on the address it does not show.
         if store.isShown {
-            accountListRow(glyph: "diamond", title: String(localized: "Private account"),
-                           // Where it moves, never only who pays it (prd §1924).
-                           line: String(localized: "On Aztec, out to Ethereum"),
-                           lineInk: DS.aztecInk, glyphInk: DS.aztecInk) { chrome.yourAccountShowsAztec = true }
+            // Where it moves, never only who pays it (prd §1924).
+            AccountLine(label: "Aztec", value: String(localized: "On Aztec, out to Ethereum"), ink: DS.aztecInk, action: {
+                withAnimation(DS.Motion.standard) { chrome.yourAccountShowsAztec = true }
+            })
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
-            // The account is yours from the start (prd §1700t) but its
-            // address comes from the engine: read it once, here, and keep it.
+            // Its address comes from the engine: read it once, here, and keep it.
             Color.clear.frame(height: 0).task { _ = await store.refresh() }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
         }
     }
 

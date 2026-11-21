@@ -1359,64 +1359,38 @@ struct WalletYourAccountFigure: View {
                         .foregroundStyle(DS.aztecInk)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                } else {
-                    // **PLAINLY THE PUBLIC ONE (prd §1803, user: "make it
-                    // plain this is the public account and address").**
-                    Text("Public account")
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-                Button { copy(address) } label: {
-                    if aztec != nil {
+                    Button { copy(address) } label: {
                         // Two rows at most: an address that is not 64 digits
-                        // (the demo's) falls back to plain text, which took
-                        // three and pushed Copy out of the box.
+                        // (the demo's) falls back to plain text.
                         MoveAztecReceive<EmptyView>.grid(address)
                             .lineLimit(2)
                             .truncationMode(.middle)
-                    } else {
-                        AddressLine(address: address)
                     }
-                }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text(verbatim: address))
                     .accessibilityHint(Text("Copies the address"))
-                // The networks this one address is good on, as facts under
-                // it (prd §1779: every address wears its rule).
-                // One line, the row lines' rung: three quiet stamps side by
-                // side read as one run of grey words on the simulator.
-                // Each under its mark (prd §1803, item 12: a network shows
-                // its icon wherever it is named).
-                if aztec == nil {
-                    HStack(spacing: DS.Space.s3) {
-                        ForEach(YourAccountOp.networks.filter { !$0.isTest }) { net in
-                            HStack(spacing: DS.Space.s1) {
-                                if let mark = MoveSentence.networkMark(net) { MoveRowMark(network: mark, size: 16) }
-                                Text(verbatim: net.name).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                            }
+                    copyWord(aztec: true)
+                } else {
+                    // **THE TAIL AND ITS COPY (prd §1937, §1553):** the
+                    // address as every other place says it; where it works
+                    // is Money's Public line now.
+                    Button { copy(address) } label: {
+                        HStack(spacing: DS.Space.s1) {
+                            Text(verbatim: AddressTail.short(address))
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textSecondary)
+                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                .dsSymbolSwap(copied)
+                                .dsGlyph(.caption)
+                                .foregroundStyle(copied ? DS.confirmInk : DS.textSecondary)
                         }
+                        .padding(.vertical, DS.Space.s3)
+                        .contentShape(Rectangle())
+                        .padding(.vertical, -DS.Space.s3)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text("Copy public address"))
                 }
-                Button { copy(address) } label: {
-                    HStack(spacing: DS.Space.s1) {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .dsSymbolSwap(copied)
-                            .dsGlyph(.caption)
-                        Text(copied ? "Copied" : aztec != nil ? "Copy for Aztec" : "Copy public address")
-                            .dsText(.heading17)
-                    }
-                    .foregroundStyle(copied ? DS.confirmInk : aztec != nil ? DS.aztecInk : DS.pickInk)
-                    // The 44pt hit area without the 44pt of layout: the
-                    // networks line (§1803) left the box no room for the
-                    // air, and the word was clipped at its foot.
-                    .padding(.vertical, DS.Space.s3)
-                    .contentShape(Rectangle())
-                    .padding(.vertical, -DS.Space.s3)
-                }
-                .buttonStyle(RowPress())
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -1424,6 +1398,26 @@ struct WalletYourAccountFigure: View {
                             caption: String(localized: "Move makes one"))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    /// Aztec's Copy, under its address (prd §1779).
+    private func copyWord(aztec: Bool) -> some View {
+        Button {
+            if let a = AztecAccountStore.shared.shown.address { copy(a) }
+        } label: {
+            HStack(spacing: DS.Space.s1) {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .dsSymbolSwap(copied)
+                    .dsGlyph(.caption)
+                Text(copied ? "Copied" : "Copy for Aztec")
+                    .dsText(.heading17)
+            }
+            .foregroundStyle(copied ? DS.confirmInk : DS.aztecInk)
+            .padding(.vertical, DS.Space.s3)
+            .contentShape(Rectangle())
+            .padding(.vertical, -DS.Space.s3)
+        }
+        .buttonStyle(RowPress())
     }
 
     /// One buzz: the success flash carries its own (prd §1587); the Copy

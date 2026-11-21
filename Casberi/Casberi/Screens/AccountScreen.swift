@@ -37,7 +37,7 @@ struct SettingsRows: View {
     /// How the rows draw (prd §1208c): as rows, as the Settings box's grid,
     /// or only the colophon under that box.
     var style: Style = .rows
-    enum Style { case rows, box, colophon, tiles }
+    enum Style { case rows, box, colophon, tiles, lines }
     /// Raises the Nodes tray; set on the Account page alone (prd §1835).
     var openNodes: (() -> Void)? = nil
 
@@ -83,6 +83,10 @@ struct SettingsRows: View {
             case .rows:
                 rowList(allRows)
                 colophon
+            case .lines:
+                // Account's App plate (prd §1937): one line each, the
+                // colophon under the plate, drawn by `.colophon`.
+                lineList(allRows)
             case .box:
                 boxGrid(allRows)
             case .colophon:
@@ -519,6 +523,24 @@ struct SettingsRows: View {
         case "Licenses": "doc.text"
         case "Nodes": "server.rack"
         default: "sparkles"
+        }
+    }
+
+    /// **A SETTING IS A LINE (prd §1937):** its word grey in the label
+    /// column, its value grey where values start (the app's settings are
+    /// quieter than the account's), an arrow where it leaves the app.
+    private func lineList(_ rows: [RowSpec]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(rows, id: \.title) { row in
+                AccountLine(label: String(localized: String.LocalizationValue(row.title)), value: row.value,
+                            ink: DS.textSecondary, action: row.action) {
+                    if row.trail == .leaves {
+                        Image(systemName: "arrow.up.right").dsGlyph(.caption, weight: .semibold)
+                            .foregroundStyle(DS.textSecondary)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
         }
     }
 

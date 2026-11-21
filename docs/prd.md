@@ -74915,3 +74915,20 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Checks.** `widget-selftest.sh` holds Home's printed balance and the tile's total to one function. **Seen** on an iPhone 17 Pro simulator: $23,512 Public + $1,895 Private = $25,407, Public on Ethereum, Base and Robinhood; Receive's To Privacy Pools.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word in a column, its value beside it, the lines 32pt apart; no doors, Risks off the page (amends §782 for Account's three plates; §1786's Private doors, Following door and Your Safes section; §1803's head address and Copy; §1922's co-signer line under the row; §1496's rows on this page) (user, 2026-11-21, over the canvas "Account, updated": "i don't think the content is wrong … but i do think we can update it", "i don't think i want doors", "risks is its own page", "it still feels overwhelming", "it would make them feel like discrete things", "lets do F but keep iterating. the cosigner section looks busy. Money should have Public and Private. Public is Safe. Private is the other three. perhaps networks go there too", "i don't like how icloud keychain is truncated", "like we do for balance", "yea. that's good") — BUILT
+
+**Ruling.**
+
+1. **A setting is a line** (`AccountLine`, `Design/AccountLine.swift`): its word grey in a 118pt column, its value where values start (white for the account's, grey for the app's, a state's own ink where it has one), a verb or Off | On at the end; the whole line is its tap. Lines stand `AccountLines.pitch` (32pt) apart with no gap, as Home's places do (§1930).
+2. **Three plates** (`AccountPlate`, Home's section-panel fill): **Security** (Signs from, Backup, Co-signer with Off | On, Export, Tor); **Money** under three small heads, **Public** (Networks: the public ones, Base, Ethereum, Robinhood; a line per Safe you hold a key to, "Yours · 1 of 3 signers"), **Private** (Privacy Pools "A new address each time", Railgun "Your 0zk address", Aztec in its ink "On Aztec, out to Ethereum") and **Saving** (Round-ups, Goal); **App** (Activity, then Casberi's settings, grey). The wordmark and version stand under the plates. Connection is folded in: Tor into Security, Networks into Public.
+3. **The head** is the face, the name, and the address's tail with its copy glyph (§1553); the full address, "Public account", the networks line and the Copy word are gone from it. The private account's head (Aztec) is as it was.
+4. **Following is a line** at the top ("4 accounts", or "Follow an account" in the pick's ink).
+5. **No doors** (user: "if someone is on account page they are here for this stuff"): every setting stays on the page. **Risks is off the page**; it is its own page, reached from Home.
+6. **The co-signer's Aztec rule is not under its line** (user: "the cosigner section looks busy").
+
+**Declined in the same round:** one screen of doors (B); capsules on every value (A, "overwhelming").
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: the head, Following, Security, Money (Public with two Safes, Private's three lines, Saving), App and the colophon. **Not seen:** a tap on each line, the co-signer's switch, a Backup or Networks verb, the private account's page, iPad, Dynamic Type.

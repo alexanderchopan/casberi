@@ -48,7 +48,7 @@ struct WalletUnsignedSection: View {
     /// Account's, and only once you hold a key to a Safe besides your own:
     /// for your account alone it said the Keys above it again. What can move
     /// a Safe with nobody signing is a permission, and stands on Permissions.
-    enum Part { case safes, unsigned }
+    enum Part { case safes, unsigned, lines }
     var part: Part
     var onOpenSafe: (SafeRoster.Safe) -> Void
     /// The queue's rows, so a signature landing re-reads the roster.
@@ -59,6 +59,24 @@ struct WalletUnsignedSection: View {
 
     var body: some View {
         switch part {
+        case .lines:
+            // **EACH SAFE A LINE ON MONEY'S PUBLIC (prd §1937, user: "Public
+            // is Safe"):** only once you hold a key to a Safe besides your own,
+            // as the section was.
+            if roster.safes.contains(where: { !$0.isYourAccount }) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(roster.safes) { safe in
+                        AccountLine(label: String(localized: "Safe"),
+                                    value: [safe.isYourAccount ? String(localized: "Yours") : safe.name,
+                                            SafeRoster.need(safe).map { String(localized: "\($0) signers") }]
+                                        .compactMap { $0 }.joined(separator: " · "),
+                                    action: { onOpenSafe(safe) })
+                    }
+                }
+                .task(id: queueKey) { await read() }
+            } else {
+                Color.clear.frame(height: 0).task(id: queueKey) { await read() }
+            }
         case .safes:
             if roster.safes.contains(where: { !$0.isYourAccount }) { yourSafes.task(id: queueKey) { await read() } }
             else {

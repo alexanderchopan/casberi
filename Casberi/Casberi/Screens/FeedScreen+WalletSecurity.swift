@@ -75,26 +75,30 @@ extension FeedScreen {
                 // in the box above, its two moves here.
                 walletDoorsSection { walletPrivateAccountRows() }
             } else {
-                // The private places are doors (prd §1786), before the keys.
-                if walletHasPrivatePlaces {
-                    walletCard(String(localized: "Private"), glyph: "eye.slash") { walletPrivatePlaces() }
-                }
-                // FOLLOWING STANDS UNDER THE PRIVATE PLACES (prd §1807, user:
-                // "following becomes a row under private account"): the
-                // wallets you follow, or the verb with none yet.
-                walletDoorsSection {
-                    let followed = walletFollowingSlots
-                    if followed.isEmpty {
-                        walletDoor(.following, name: String(localized: "Follow an account"),
-                                   act: { feedSheet = .walletFollow })
-                    } else {
-                        walletDoor(.following, figure: "\(followed.count)")
-                    }
-                }
-                // Keys, Connection and Spending name themselves (prd §1786):
-                // no "Your account" over them, the page already says Account.
+                // **FOLLOWING, A LINE (prd §1937):** the wallets you follow,
+                // or the verb with none yet.
                 Section {
-                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal })
+                    let followed = walletFollowingSlots
+                    AccountLine(label: String(localized: "Following"),
+                                value: followed.isEmpty ? String(localized: "Follow an account")
+                                    : String(localized: "\(followed.count) accounts"),
+                                ink: followed.isEmpty ? DS.pickInk : DS.textPrimary,
+                                action: {
+                                    if followed.isEmpty { feedSheet = .walletFollow }
+                                    else { chrome.walletSection = .following }
+                                })
+                        .walletListRow()
+                }
+                // **SECURITY AND MONEY, ON PLATES (prd §1937, user picked H):**
+                // `MoveSecurity` draws both; Money's Public takes the Safes
+                // you hold a key to, its Private the three private places.
+                // Risks is its own page and stands on Home (user: "risks is
+                // its own page").
+                Section {
+                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal },
+                                 publicLines: AnyView(WalletUnsignedSection(part: .lines, onOpenSafe: walletOpenSafe,
+                                                                            queueKey: Self.safeQueueKey(visible))),
+                                 privateLines: walletHasPrivatePlaces ? AnyView(walletPrivatePlaces()) : nil)
                         .walletStackRow()
                         // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
                         .task(id: chrome.walletScrollRequest) {
@@ -106,39 +110,23 @@ extension FeedScreen {
                 }
                 .id(SecurityAnchor.account.id)
                 .environment(\.feedSectionPanelFilled, false)
-            }
-            // The Safes you hold a key to besides your own (prd §1786; what
-            // moves each without a signature is Permissions').
-            if !walletOnPrivateAccount {
-            WalletUnsignedSection(part: .safes, onOpenSafe: walletOpenSafe, queueKey: Self.safeQueueKey(visible))
-            // Nodes is a Settings row now, with its tray (prd §1835).
-            }
-            // **RISKS' WAY IN WHEN NOTHING IS NEW (prd §1843).** Home's Risks
-            // card left with the cards; a finding you have not seen is an ask
-            // on Home, and the page is always here.
-            if !walletOnPrivateAccount, roomSizeClass == .compact, PhoneHome.isOn {
-                let unseen = walletLive.flagged.live.filter { !ThreatsSeen.shared.contains($0.id) }.count
-                walletDoor(.threats, word: unseen > 0 ? "\(unseen)" : nil, wordTone: DS.attentionInk)
-            }
-            // ACCOUNT AND SETTINGS ARE ONE PAGE (prd §1807, user: "account
-            // and settings together … as one"): Casberi's own settings close
-            // the page, the rows Apps' folder drew.
-            if !walletOnPrivateAccount {
-                walletCard(String(localized: "Settings"), glyph: "gearshape", anchor: ShellChrome.settingsAnchor) {
-                    // ACTIVITY'S ORDER IS A SETTING AGAIN (prd §1807, amending
-                    // §1345): the Reorder tile left with Activity's tile row,
-                    // so the same sheet opens from here.
-                    DSPushRow(title: Text("Activity order"), action: { feedSheet = .feedOrder }) {
-                        Image(systemName: ScopeTileGlyph.reorder)
-                            .dsGlyph(.body)
-                            .foregroundStyle(DS.brandInk)
-                            .frame(width: DS.Mark.row)
-                            .accessibilityHidden(true)
+                // ACCOUNT AND SETTINGS ARE ONE PAGE (prd §1807): Casberi's own
+                // settings close the page, on the third plate, App (§1937).
+                Section {
+                    AccountPlate(name: String(localized: "App"), glyph: "gearshape") {
+                        // ACTIVITY'S ORDER IS A SETTING (prd §1807).
+                        AccountLine(label: String(localized: "Activity"), value: String(localized: "Section order"),
+                                    ink: DS.textSecondary, action: { feedSheet = .feedOrder })
+                        SettingsRows(style: .lines, openNodes: { feedSheet = .ownNodes })
                     }
-                    .walletListRow()
-                    SettingsRows(style: .rows, openNodes: { feedSheet = .ownNodes })
+                    // The plates' one gap, as Security's from Money's.
+                    .padding(.top, DS.Space.s4)
+                    .walletStackRow()
+                    SettingsRows(style: .colophon)
                         .walletStackRow()
                 }
+                .id(ShellChrome.settingsAnchor)
+                .environment(\.feedSectionPanelFilled, false)
             }
         }
     }
