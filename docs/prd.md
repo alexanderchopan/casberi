@@ -74904,3 +74904,14 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: holding delete clearing "20" to 0, a short press taking one digit. **Not seen:** a refused key's knock, and Done's fold (no receipt was made in this session: the hold to send was not taken).
+
+## §1936 — Home adds up: the balance is Public plus Private as drawn, and the demo stands on the account's networks with its Privacy Pools row (amends §1930 item 3; §1929's places kept) (user, 2026-11-21, of a Home whose balance stood over its sections: "the balances should add up", "it has only public and private, not the accounts section", "it doesn't show optimism or arbitrum b/c those aren't even in the wallet", "the demo should have privacy pools row") — BUILT
+
+1. **The balance is Public plus Private as Home prints them** (`homeBalanceUSD`, `homeSides`), each side its rows' sum in whole dollars, so the three figures can be checked by eye. The portfolio's own total also holds what Home does not list (an app's money on All; a Privacy Pools deposit still being checked is counted by Private but not by the total), so it could not agree. With neither side drawn, the portfolio's total stands. The Wallet widget states the same three figures (§1881).
+2. **Home is Public and Private only.** An app's money (banks, exchanges, cash) stays in Holdings' Accounts; no Accounts section on Home.
+3. **The demo's tokens are on the account's networks**: ETH on Ethereum, Base and Robinhood, USDC on Base and Ethereum, LINK on Ethereum (`WalletPortfolio.demoParts`); nothing on Arbitrum or Optimism. The demo's total counts its private and lent money as the live read does.
+4. **The demo's Receive shows To Privacy Pools**, as an account with a private balance would; its copy says the demo acts later.
+
+**Checks.** `widget-selftest.sh` holds Home's printed balance and the tile's total to one function. **Seen** on an iPhone 17 Pro simulator: $23,512 Public + $1,895 Private = $25,407, Public on Ethereum, Base and Robinhood; Receive's To Privacy Pools.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

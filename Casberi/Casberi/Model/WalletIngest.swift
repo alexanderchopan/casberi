@@ -2328,6 +2328,17 @@ enum WalletIngest {
                     .map { (symbol: $0.symbol, usd: $0.usd,
                             holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
             }
+            // **THE DEMO'S PRIVATE AND LENT MONEY COUNT, AS THEY DO LIVE**
+            // (user, 2026-11-21: "the balances should add up"): Home's
+            // balance is Accounts, Public and Private, so the demo's total
+            // takes the places Home lists, exactly as the live read's venues.
+            if combined {
+                let privately = await PrivateMoneyStore.shared.walletHolding()
+                    + (await RailgunHoldings.shared.walletHolding())
+                    + (await AztecAccountStore.shared.walletHolding())
+                let lentAccount: String? = AaveLend.on ? YourAccountDemo.shownAddress : nil
+                privy += privately + (await Self.lentIfAsked(lentAccount)).venues
+            }
             let account = await MainActor.run { WalletPortfolio.demoAccountHeld(scopeTo: address, only: only) }
             let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy, account: account)
             guard !portfolio.isEmpty else { return (read: nil, failed: false, readAt: nil) }

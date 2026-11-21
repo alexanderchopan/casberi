@@ -390,18 +390,23 @@ struct WalletPortfolio: Equatable, Codable {
     }
 
     /// The demo's networks for a wallet's stake (prd §1670): ETH and USDC
-    /// spread as a person's would be, at USDC's real contracts; anything else
-    /// has no parts and the sheet names its wallet. The shares sum to one, so
+    /// spread as a person's would be, at USDC's real contracts, LINK on
+    /// Ethereum; anything else has no parts and the sheet names its wallet. The shares sum to one, so
     /// the sheet's rows sum to the row.
     static func demoParts(_ symbol: String, usd: Double, holder: String) -> [Part] {
         let split: [(key: String, share: Double)]
         switch symbol {
+        // Only the account's networks, Base, Ethereum and Robinhood (user,
+        // 2026-11-21: "it doesn't show optimism or arbitrum b/c those aren't
+        // even in the wallet").
         case "ETH":
-            split = [("eth-mainnet:native", 0.6), ("base-mainnet:native", 0.25), ("arb-mainnet:native", 0.15)]
+            split = [("eth-mainnet:native", 0.6), ("base-mainnet:native", 0.3), ("robinhood-mainnet:native", 0.1)]
         case "USDC":
-            split = [("base-mainnet:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 0.55),
-                     ("eth-mainnet:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", 0.3),
-                     ("opt-mainnet:0x0b2c639c533813f4aa9d7837caf62653d097ff85", 0.15)]
+            split = [("base-mainnet:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", 0.6),
+                     ("eth-mainnet:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", 0.4)]
+        case "LINK":
+            // On Ethereum, so Home's Public counts it on a network (prd §1930).
+            split = [("eth-mainnet:0x514910771af9ca656af840dff83e8264ecf986ca", 1)]
         default:
             split = []
         }

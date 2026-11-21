@@ -2562,10 +2562,14 @@ struct MoveSentence: View {
             }
             receiveFromRows
             let aztec = AztecProver.isAvailable ? AztecAccountStore.shared.shown.address : nil
-            if PrivateMove.freshAvailable || RailgunPocket.available || aztec != nil {
+            // The demo has no private balance on Ethereum, yet it shows the row
+            // it would have (user, 2026-11-21: "the demo should have privacy
+            // pools row"); its copy says the demo acts later.
+            let poolsRow = PrivateMove.freshAvailable || DemoMode.isActive
+            if poolsRow || RailgunPocket.available || aztec != nil {
                 receiveGroup(String(localized: "Private"))
             }
-            if PrivateMove.freshAvailable {
+            if poolsRow {
                 // A one-time address; what arrives moves in by itself (prd §1560).
                 receiveRow(String(localized: "To Privacy Pools"),
                            lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],

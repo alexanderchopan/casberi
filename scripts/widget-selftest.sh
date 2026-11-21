@@ -138,7 +138,8 @@ strip_comments "$FEEDSCREEN" > "$TMP/feedscreen.nc"
 strip_comments "$HOMEHEAD" > "$TMP/homehead.nc"
 grep -q '.onChange(of: homeWidgetFigures, initial: true)' "$TMP/feedscreen.nc" \
   || { print -u2 "✗ Home no longer hands its figures to the Wallet tile (prd §1881)"; exit 1; }
-grep -q 'total: shown.totalUSD,' "$TMP/homehead.nc" \
+grep -q 'exactMoney(homeBalanceUSD(shown))' "$TMP/homehead.nc" \
+  && grep -q 'total: homeBalanceUSD(shown),' "$TMP/homehead.nc" \
   || { print -u2 "✗ the Wallet tile's total is no longer the balance Home prints (prd §1881)"; exit 1; }
 grep -qE 'combinedValueSamples|WidgetWalletLine' "$TMP/publish.nc" \
   && { print -u2 "✗ the publisher derives a wallet figure of its own again — the tile and Home would state two totals"; exit 1; }

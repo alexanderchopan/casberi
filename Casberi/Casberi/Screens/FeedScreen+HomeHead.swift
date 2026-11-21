@@ -139,7 +139,7 @@ extension FeedScreen {
                     HStack(spacing: DS.Space.s2) {
                         // Whole dollars, as the rows under it (prd §1930):
                         // "$3,151", never "$3K", so the sides add up to it.
-                        Text(verbatim: mask ?? WalletValue.exactMoney(shown.totalUSD))
+                        Text(verbatim: mask ?? WalletValue.exactMoney(homeBalanceUSD(shown)))
                             .dsText(.price52)
                             .monospacedDigit()
                             .foregroundStyle(DS.textPrimary)
@@ -210,9 +210,10 @@ extension FeedScreen {
               let shown = portfolioShown, shown.totalUSD > 0 else { return nil }
         let asOf = shown.asOf ?? .distantFuture
         if BalancePrivacy.shared.hidden { return .withheld(asOf: asOf) }
-        let priv = walletShowsPrivatePlaces ? min(shown.totalUSD, walletPrivateUSD) : 0
-        let pub = walletPublicUSD
-        return WidgetWalletHome(total: shown.totalUSD,
+        // The tile states what Home's heads print (user, 2026-11-21: "the
+        // balances should add up").
+        let (pub, priv) = homeSides
+        return WidgetWalletHome(total: homeBalanceUSD(shown),
                                 dayPct: homeDayChange(shown).map { $0 * 100 },
                                 publicUSD: pub >= 0.01 ? pub : nil,
                                 privateUSD: priv >= 0.01 ? priv : nil,
@@ -383,6 +384,26 @@ extension FeedScreen {
         /// Nil while something there has no price yet.
         let usd: Double?
         var ink: Color = DS.textPrimary
+    }
+
+    /// **THE BALANCE IS ITS SECTIONS' SUM (user, 2026-11-21: "the balances
+    /// should add up", "it has only public and private").** Public and
+    /// Private as Home draws them, whole dollars each, so the sum can be
+    /// checked by eye. The portfolio's own total also holds what Home does
+    /// not list (an app's money on All, a Privacy Pools deposit not yet
+    /// approved counted apart), so it could not agree. With neither side
+    /// drawn, the portfolio's total.
+    func homeBalanceUSD(_ shown: WalletPortfolio) -> Double {
+        let sides = homeSides
+        let sum = sides.publicUSD + sides.privateUSD
+        return sum >= 1 ? sum : shown.totalUSD
+    }
+
+    /// Public and Private as Home's two heads print them, whole dollars.
+    var homeSides: (publicUSD: Double, privateUSD: Double) {
+        let publicUSD = walletPublicUSD < 0.01 ? 0 : homePublicPlaces().reduce(0) { $0 + ($1.usd ?? 0) }
+        let privateUSD = walletShowsPrivatePlaces ? homePrivatePlaces.reduce(0) { $0 + ($1.usd ?? 0) } : 0
+        return (publicUSD.rounded(), privateUSD.rounded())
     }
 
     /// Each network your public tokens sit on, biggest first. No "Other"
