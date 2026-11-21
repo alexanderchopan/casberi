@@ -358,6 +358,10 @@ struct MoveKeypad: View {
     var big = false
 
     private static let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    /// **A REFUSED KEY KNOCKS (prd §1935):** a digit the figure cannot take
+    /// (past the unit's places, a second point) shakes the key once.
+    @State private var refused: String?
+    @State private var knocks = 0
 
     var body: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 3)
@@ -393,7 +397,6 @@ struct MoveKeypad: View {
     private func key(_ label: String) -> some View {
         let delete = label == "\u{232B}"
         return Button {
-            DSHaptic.selection()
             tap(label)
         } label: {
             Group {
@@ -410,17 +413,37 @@ struct MoveKeypad: View {
             .foregroundStyle(DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: keyHeight)
             .contentShape(Rectangle())
+            .shake(on: refused == label ? knocks : 0)
         }
         .buttonStyle(PressSpring())
+        // **HOLD DELETE TO CLEAR (prd §1935):** the hold wins over the key's
+        // tap; a short press still deletes one.
+        .highPriorityGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+            guard !text.isEmpty, !disabled else { return }
+            withAnimation(DS.Motion.standard) { text = "" }
+            DSHaptic.snap()
+        }, isEnabled: delete)
         .accessibilityLabel(Text(delete ? String(localized: "Delete") : label == "." ? String(localized: "Point") : label))
+        .accessibilityHint(delete ? Text("Hold to clear") : Text(verbatim: ""))
     }
 
     private func tap(_ label: String) {
         if label == "\u{232B}" {
-            if !text.isEmpty { text.removeLast() }
+            guard !text.isEmpty else { return }
+            DSHaptic.selection()
+            text.removeLast()
             return
         }
-        text = Self.sanitize(text + label, previous: text, places: places)
+        let next = Self.sanitize(text + label, previous: text, places: places)
+        if next == text {
+            // Refused: the figure stands, the key knocks, a soft buzz.
+            refused = label
+            knocks += 1
+            DSHaptic.failure()
+            return
+        }
+        DSHaptic.selection()
+        text = next
     }
 
     /// The whole edit grammar (as `DevnetAmountInput.sanitize`): one point at

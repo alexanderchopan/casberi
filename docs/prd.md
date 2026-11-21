@@ -74893,3 +74893,14 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: Swap's title, and a tap on Sweep switching to Sweep's receipt. **Not seen:** Buy's and Earn's titles.
+
+## §1935 — Move's keys and its end: a refused key knocks, holding delete clears, and Done folds the receipt into Activity (user, 2026-11-21: "5 is nice", of 7: "oh that is nice. do 7 too") — BUILT
+
+**Ruling.**
+
+1. **The keys answer the hand.** Every key ticks as it lands (as before); a key the figure cannot take (past the unit's places, a second point) leaves the figure as it stood, knocks once (`shake(on:)`) and buzzes softly; holding delete clears the figure with a snap, while a short press still deletes one (`MoveKeypad`, a high-priority hold on delete only).
+2. **Done folds the receipt into Activity.** In the tray over Home, Done shrinks the page down and away, closes Move, and Home lands on Activity, where the move now is, and brightens it once (the Feed's landing, §1208l, through `feedJump`). Elsewhere (a page, iPad) Done starts a fresh move as before; under Reduce Motion nothing shrinks.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: holding delete clearing "20" to 0, a short press taking one digit. **Not seen:** a refused key's knock, and Done's fold (no receipt was made in this session: the hold to send was not taken).

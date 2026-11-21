@@ -361,6 +361,8 @@ struct MoveSentence: View {
     @Namespace private var flight
     /// Bumped as the amount goes over what there is: the chip shakes once.
     @State private var overShakes = 0
+    /// Done: the receipt shrinking into Activity (prd §1935).
+    @State private var folding = false
     /// The receipt's lines as they stood when the move was signed, so the
     /// page keeps them, flat, once it is done (prd §1932); and when.
     @State private var doneLines: [LedgerRow] = []
@@ -7186,6 +7188,9 @@ struct MoveSentence: View {
             }
             .frame(maxHeight: .infinity)
         }
+        // Done folds the page down into Activity (prd §1935).
+        .scaleEffect(folding ? 0.3 : 1, anchor: .bottom)
+        .opacity(folding ? 0 : 1)
         .padding(.horizontal, Self.sideInset(inTray))
         .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
         .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
@@ -7515,6 +7520,30 @@ struct MoveSentence: View {
             .buttonStyle(RowPress())
         }
         .padding(.top, DS.Space.s2)
+    }
+
+    /// **DONE FOLDS THE RECEIPT INTO ACTIVITY (prd §1935, user: "oh that is
+    /// nice. do 7 too").** In the tray over Home the receipt shrinks down and
+    /// away, Move closes, and Home lands on Activity, where the move now is,
+    /// and brightens it once (the Feed's landing, §1208l). Elsewhere, and
+    /// under Reduce Motion, Done starts a fresh move as before.
+    private func foldIntoActivity() {
+        guard inTray, PhoneHome.isOn else {
+            withAnimation(DS.Motion.standard) { receipt = nil; orderShown = nil }
+            return
+        }
+        DSHaptic.lift()
+        withAnimation(reduceMotion ? nil : .easeIn(duration: 0.28)) { folding = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(reduceMotion ? 0 : 260))
+            chrome.moveTray = false
+            chrome.feedJump = FeedScreen.homeWalletName
+            // The sheet is gone before the page underneath resets.
+            try? await Task.sleep(for: .milliseconds(600))
+            receipt = nil
+            orderShown = nil
+            folding = false
+        }
     }
 
     /// **SHARE IN THE FOOT, BESIDE DONE (prd §1932).**
@@ -8133,9 +8162,7 @@ struct MoveSentence: View {
     /// is in.
     @ViewBuilder private var footWord: some View {
         if receipt != nil {
-            MoveFootWord(word: String(localized: "Done")) {
-                withAnimation(DS.Motion.standard) { receipt = nil; orderShown = nil }
-            }
+            MoveFootWord(word: String(localized: "Done")) { foldIntoActivity() }
         } else if stage != nil {
             MoveFootWord(word: footVerb, ink: DS.textSecondary,
                          glyph: stage == .signing && !faceIDPassed ? "faceid" : nil)
