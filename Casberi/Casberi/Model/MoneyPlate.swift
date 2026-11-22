@@ -42,7 +42,7 @@ enum MoneyPlate {
     @MainActor
     static func roundUps(step: Int, baseRate: Double?, privateRate: Double?) -> [Fact] {
         let target = RoundUpsPot.targetWords
-        let networks = YourAccountOp.networks.map(\.name).sorted().formatted(.list(type: .and))
+        let networks = YourAccountOp.networks.map(\.name).sorted().joined(separator: ", ")
         let base = AaveLend.rateOnly(baseRate).map { String(localized: "USDC \($0) on Aave, on Base") }
             ?? String(localized: "USDC on Aave, on Base")
         let pools = AaveLend.rateOnly(privateRate).map { String(localized: "Then USDC \($0) on Aave, in Privacy Pools") }
