@@ -404,7 +404,7 @@ struct MoveSecurity: View {
         }
         .buttonStyle(RowPress())
         .padding(.top, DS.Space.s2)
-        .accessibilityHint(Text("Opens Receive"))
+        .accessibilityHint(Text("Shows each way money comes in"))
     }
 
     /// The setting only: Off, or On and what it rounds to (user: "here it
