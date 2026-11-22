@@ -383,13 +383,16 @@ struct MoveSecurity: View {
                         .padding(.top, DS.Space.s2)
                         .transition(.opacity)
                 }
-                // **THE PLATE, NOT A LINE (user, 2026-11-22: "nobody's gonna
-                // know that from all of this").** Where the change goes, who
-                // carries it, when it moves and what it earns, in the five
-                // rows every money plate answers (`MoneyPlate`).
-                MoneyPlateRows(facts: MoneyPlate.roundUps(
+                // **WHERE THE CHANGE GOES, IN ORDER (user, 2026-11-22:
+                // "nobody's gonna know that from all of this"; then "write
+                // this as a paragraph").** Saved as USDC in public, in Aave on
+                // Base; at the target, to private, in Aave on Ethereum; each
+                // stage's rate read live (`MoneyPlate.roundUps`).
+                Text(verbatim: MoneyPlate.roundUps(
                     step: roundUps.step == 5 ? 5 : 1, baseRate: roundUpsBaseRate,
                     privateRate: DemoMode.isActive ? 0.0379 : PrivateMoneyStore.shared.yieldRate(symbol: "USDC")))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
                 Spacer(minLength: 0)
             }

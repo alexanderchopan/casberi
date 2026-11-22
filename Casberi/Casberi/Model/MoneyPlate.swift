@@ -31,41 +31,31 @@ enum MoneyPlate {
     static var ready: String { String(localized: "When") }
     static var earns: String { String(localized: "Earns") }
 
-    /// **ROUND-UPS (prd §1690, §1830).** The change from every buy, send and
-    /// swap is set aside as USDC lent on Aave on Base, carried there by
-    /// Across from Ethereum and Robinhood; at the target the next send moves
-    /// it into Privacy Pools on Ethereum, where 0xBow checks it.
+    /// **ROUND-UPS, AS SENTENCES (user, 2026-11-22: "instead of the
+    /// sections we should just write this as a paragraph"; "we need to say
+    /// the parts about USDC"; "if we say private balance we need to also say
+    /// public balance").** Round-ups is one sequence, not a place to compare
+    /// on Receive, so it reads in order: the change is saved as USDC in your
+    /// public balance, in Aave on Base, where sends cannot spend it; at the
+    /// target the next send moves it, still USDC, into your private balance,
+    /// in Aave on Ethereum (Privacy Pools' ppUSDC lends to Aave's Ethereum
+    /// market, `PrivateYield.aavePool`).
     ///
     /// `baseRate` is Aave's USDC supply rate on Base; `privateRate` Privacy
-    /// Pools' USDC rate on Ethereum. Either may be unread (nil):
-    /// the row then names where it earns without a figure, never a guess.
+    /// Pools' USDC rate on Ethereum, net of 0xBow's fee. Either may be unread
+    /// (nil): the sentence then says it earns interest, never a guessed figure.
     @MainActor
-    static func roundUps(step: Int, baseRate: Double?, privateRate: Double?) -> [Fact] {
+    static func roundUps(step: Int, baseRate: Double?, privateRate: Double?) -> String {
         let target = RoundUpsPot.targetWords
-        let networks = YourAccountOp.networks.map(\.name).sorted().joined(separator: ", ")
-        // "USDC on Base, in Aave" (user, 2026-11-22): the token, the
-        // network, then the place, and the rate last once it is read.
-        let base = AaveLend.rateOnly(baseRate).map { String(localized: "USDC on Base, in Aave · \($0)") }
-            ?? String(localized: "USDC on Base, in Aave")
-        let pools = AaveLend.rateOnly(privateRate).map { String(localized: "Then USDC on Ethereum, in Privacy Pools · \($0)") }
-            ?? String(localized: "Then USDC on Ethereum, in Privacy Pools")
+        let publicEarns = AaveLend.rateOnly(baseRate).map { String(localized: "where it earns \($0)") }
+            ?? String(localized: "where it earns interest")
+        let privateEarns = AaveLend.rateOnly(privateRate).map { String(localized: "where it earns \($0)") }
+            ?? String(localized: "where it earns interest")
         return [
-            Fact(label: receives, lines: [
-                String(localized: "Your change from every buy, send and swap"),
-                String(localized: "Rounded up to the next $\(step)"),
-            ]),
-            Fact(label: from, lines: [networks]),
-            Fact(label: settles, lines: [
-                String(localized: "Rounds up into USDC on Base, in Aave. Your sends can't spend it."),
-                String(localized: "From Ethereum and Robinhood, through Across"),
-                String(localized: "Then your private balance on Ethereum, in Privacy Pools"),
-            ]),
-            Fact(label: ready, lines: [
-                // User, 2026-11-22: "up to $10, and then … moves to private balance".
-                String(localized: "Up to \(target), then it moves to your private balance"),
-            ]),
-            Fact(label: earns, lines: [base, pools]),
-        ]
+            String(localized: "Every buy, send and swap rounds up to the next $\(step)."),
+            String(localized: "The change is saved as USDC in your public balance, in Aave on Base, \(publicEarns). Your sends can't spend it."),
+            String(localized: "At \(target), it moves as USDC to your private balance, in Aave on Ethereum, \(privateEarns)."),
+        ].joined(separator: " ")
     }
 
     /// Aave's USDC supply rate on Base, read once: one `eth_call` to the
