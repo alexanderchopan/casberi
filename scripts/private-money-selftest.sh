@@ -223,7 +223,8 @@ grep -qF 'saveRoundUpsNow' "$SEC" && { echo "✗ Save now is back (prd §1578)";
 grep -qF 'roundUpsRideInETH' Casberi/Casberi/Model/PrivateOnEthereum.swift && { echo "✗ round-ups deposit into ppETH again (prd §1578)"; exit 1; }
 grep -qF 'fundedByETH' "$SENT" && { echo "✗ round-ups swap ETH ahead of the ride again: the change is set aside in USDC as you go (prd §1690)"; exit 1; }
 use Casberi/Casberi/Model/PrivateOnEthereum.swift 'checked.approvals.isEmpty else {' "the ETH swap before a round-up is not Swap's checked call (prd §1578)"
-use "$SEC" 'Text(verbatim: Self.roundUpsAt)' "the round-ups tray no longer says when the change turns private (prd §1690, §1803)"
+use "$SEC" 'Text(verbatim: MoneyPlate.roundUps(' "the round-ups tray no longer says where the change goes and when it turns private (prd §1690)"
+use "Casberi/Casberi/Model/MoneyPlate.swift" 'At \(target), it moves as USDC to your private balance in Privacy Pools, on Ethereum' "the Round-ups words no longer say when the change turns private (prd §1690)"
 use "$SENT" 'guard RoundUps.setting.on, !network.isTest else { return nil }' "a send on a test network rounds up into Round-ups (prd §1690)"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)
@@ -1370,8 +1371,8 @@ use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("Send a little ETH wi
 use "$SENT" 'lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],' "Receive no longer says what Privacy Pools takes and where before it is copied (prd §1779, §1929)"
 use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text(verbatim: MoveSentence.aztecRule).dsText(.body17).foregroundStyle(DS.aztecInk)' "the Aztec address lost its rule on Receive (prd §1779, §1928)"
 use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: String(localized: "A new address each time"), action: {' "Your account lost its private balance line (prd §1779, §1937)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: String(localized: "Your 0zk address"), action: {' "Railgun's line no longer names its one 0zk address (prd §1937)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: "Ethereum", action: {' "Your account lost its private balance line (prd §1779, §1937)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: "Ethereum", action: {' "Railgun's line on Money is gone (prd §1937)"
 ! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
 # prd §1785: the three money rows left Home; Account opens on the Safe.

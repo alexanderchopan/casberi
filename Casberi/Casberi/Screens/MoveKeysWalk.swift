@@ -31,6 +31,8 @@ struct MoveKeysWalk: View {
     /// What a copy says, in place: a toast draws under the tray (§1442c).
     @State private var said: String?
     @State private var roundUps = RoundUps.Setting(on: true)
+    /// Aave's USDC rate on Base for the round-ups words, read on that step.
+    @State private var roundUpsBaseRate: Double?
 
     init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .intro,
          done: @escaping (Ending) -> Void) {
@@ -189,7 +191,21 @@ struct MoveKeysWalk: View {
             // one line (prd §1803, user: "no pill buttons; far less text").
             MoveSecurity.RoundUpStepPick(setting: $roundUps)
                 .padding(.top, DS.Space.s2)
-            small(MoveSecurity.roundUpsAt)
+            // The same words as Account's Round-ups tray (user, 2026-11-22):
+            // where the change goes, as USDC, in public then private, and
+            // what each earns, read live (`MoneyPlate.roundUps`).
+            small(MoneyPlate.roundUps(
+                step: roundUps.step == 5 ? 5 : 1, baseRate: roundUpsBaseRate,
+                privateRate: YourAccountDemo.isDemo(account) ? 0.0379 : PrivateMoneyStore.shared.yieldRate(symbol: "USDC"),
+                privateFee: YourAccountDemo.isDemo(account) ? "20" : PrivateMoneyStore.shared.yieldFeePercent(symbol: "USDC")))
+                .task {
+                    if roundUpsBaseRate == nil {
+                        roundUpsBaseRate = await MoneyPlate.baseUSDCRate(demo: YourAccountDemo.isDemo(account))
+                    }
+                    if PrivateMove.available, !YourAccountDemo.isDemo(account) {
+                        await PrivateMoneyStore.shared.readYield(including: .ethereum)
+                    }
+                }
         case .created:
             // **WHAT "READY" MEANT (prd §1803, user: "what Ready means; a
             // clearer line about which networks the address works on").**

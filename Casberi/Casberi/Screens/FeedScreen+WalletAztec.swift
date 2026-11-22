@@ -356,17 +356,19 @@ extension FeedScreen {
         let store = AztecAccountStore.shared
         let aztec = store.isShown ? store.shown.address : nil
         // **THE THREE PRIVATE PLACES, BY NAME (prd §1937, user: "Private is
-        // the other three"):** each a line on Money's plate. Privacy Pools'
+        // the other three"):** each a line on Money's plate, in Money's one
+        // formula: the place and the network it holds your money on (user,
+        // 2026-11-22, "we need to standardize this too"). Privacy Pools'
         // way in is an address made new each time; Railgun's is your one
         // 0zk address; both are Receive privately's two doors (§1928).
         if PrivateMove.freshAvailable {
-            AccountLine(label: "Privacy Pools", value: String(localized: "A new address each time"), action: {
+            AccountLine(label: "Privacy Pools", value: "Ethereum", action: {
                 chrome.moveFreshReceive = true
                 chrome.moveTray = true
             })
         }
         if RailgunPocket.available, PrivateMove.freshAvailable {
-            AccountLine(label: "Railgun", value: String(localized: "Your 0zk address"), action: {
+            AccountLine(label: "Railgun", value: "Ethereum", action: {
                 chrome.moveFreshReceive = true
                 chrome.moveTray = true
             })
@@ -375,7 +377,7 @@ extension FeedScreen {
         // from the first frame, and never waits on the address it does not show.
         if store.isShown {
             // Where it moves, never only who pays it (prd §1924).
-            AccountLine(label: "Aztec", value: String(localized: "On Aztec, out to Ethereum"), ink: DS.aztecInk, action: {
+            AccountLine(label: "Aztec", value: "Aztec", ink: DS.aztecInk, action: {
                 withAnimation(DS.Motion.standard) { chrome.yourAccountShowsAztec = true }
             })
         }

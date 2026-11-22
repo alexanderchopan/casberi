@@ -65,6 +65,9 @@ struct MoveSecurity: View {
     @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpsTray = false
+    /// Aave's USDC rate on Base, for the Round-ups plate's Earns row; read
+    /// when the tray opens, nil until then or when unread.
+    @State private var roundUpsBaseRate: Double?
     /// Whether private money is on this phone alone (prd §1562), read in a
     /// task: the Keychain and the store, never in a body.
     @State private var privateBackup: PrivateRoot.Backup = .fine
@@ -135,9 +138,26 @@ struct MoveSecurity: View {
             // have Public and Private. Public is Safe. Private is the other
             // three. perhaps networks go there too").**
             AccountPlate(name: String(localized: "Money"), glyph: Self.savingGlyph) {
+                // **THE VALUES ARE NETWORKS, SAID ONCE (user, 2026-11-22:
+                // "for money we need to say networks"; picked A, a heading
+                // over the values, of a Networks row under every place).**
+                HStack(spacing: 0) {
+                    Color.clear.frame(width: AccountLines.labelWidth, height: 1)
+                    Text("Networks")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: 0)
+                }
+                .frame(minHeight: AccountLines.pitch)
+                .accessibilityAddTraits(.isHeader)
                 AccountSubhead(text: String(localized: "Public"))
-                row(title: String(localized: "Networks"), value: networksValue,
-                    tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
+                // **ONE FORMULA ON MONEY (user, 2026-11-22: "we need to
+                // standardize this too, and it should probably say safe in
+                // public"):** every line is a place by its name and the
+                // networks it holds your money on; how each works is
+                // Receive's plates, behind How your money moves.
+                row(title: "Safe", value: networksValue,
+                    tone: unread.isEmpty || reading ? DS.textPrimary : DS.attentionInk,
                     short: networksShort,
                     verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { _ = Task { _ = await read() } }))
                 if let publicLines { publicLines }
@@ -145,6 +165,7 @@ struct MoveSecurity: View {
                     AccountSubhead(text: String(localized: "Private"))
                     privateLines
                 }
+                howMoneyMovesRow
                 // "Saving", not "Spending" (prd §1803): round-ups and the goal
                 // they fill put money away.
                 AccountSubhead(text: String(localized: "Saving"))
@@ -350,7 +371,7 @@ struct MoveSecurity: View {
         // **THE SWITCH, THEN THE SUM, THEN ONE LINE (prd §1803, user: "no
         // pill buttons; amounts as the large rows Move uses for sums; on/off
         // before the amount; far less text").**
-        DSTray(title: String(localized: "Round-ups"), height: 420) {
+        DSTray(title: String(localized: "Round-ups"), height: 620, detents: [.height(620), .large]) {
             VStack(alignment: .leading, spacing: 0) {
                 DSToggleRow(title: Text("Round up what you send"),
                             isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0 = $0.simple; $0.on = on } }))
@@ -362,14 +383,44 @@ struct MoveSecurity: View {
                         .padding(.top, DS.Space.s2)
                         .transition(.opacity)
                 }
-                Text(verbatim: Self.roundUpsAt)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                // **WHERE THE CHANGE GOES, IN ORDER (user, 2026-11-22:
+                // "nobody's gonna know that from all of this"; then "write
+                // this as a paragraph").** Saved as USDC in public, in Aave on
+                // Base; at the target, to private, in Aave on Ethereum; each
+                // stage's rate read live (`MoneyPlate.roundUps`).
+                Text(verbatim: MoneyPlate.roundUps(
+                    step: roundUps.step == 5 ? 5 : 1, baseRate: roundUpsBaseRate,
+                    privateRate: DemoMode.isActive ? 0.0379 : PrivateMoneyStore.shared.yieldRate(symbol: "USDC"),
+                    privateFee: DemoMode.isActive ? "20" : PrivateMoneyStore.shared.yieldFeePercent(symbol: "USDC")))
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
                 Spacer(minLength: 0)
             }
             .padding(.vertical, DS.Space.s4)
+            .task {
+                if roundUpsBaseRate == nil {
+                    roundUpsBaseRate = await MoneyPlate.baseUSDCRate(demo: DemoMode.isActive || YourAccountDemo.isDemo(account))
+                }
+            }
         }
+    }
+
+    /// **A DOOR TO RECEIVE (user, 2026-11-22: "not sure a user would know to
+    /// tap").** The pick's pink, as Account's other verbs are, so it reads as
+    /// a tap. It opens Receive, where each way in stands on its plate; Account
+    /// keeps its one-line values and repeats none of it.
+    private var howMoneyMovesRow: some View {
+        Button { MoveMenu.pick(.receive, chrome) } label: {
+            Text("How your money moves")
+                .dsText(.body17)
+                .foregroundStyle(DS.pickInk)
+                .frame(maxWidth: .infinity, minHeight: AccountLines.pitch, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .padding(.top, DS.Space.s2)
+        .accessibilityHint(Text("Shows each way money comes in"))
     }
 
     /// The setting only: Off, or On and what it rounds to (user: "here it
@@ -401,12 +452,6 @@ struct MoveSecurity: View {
     /// interest, this says when it turns private and that it keeps earning.
     @MainActor static var roundUpsMoves: String {
         String(localized: "Once it reaches \(RoundUpsPot.targetWords), it moves to Privacy Pools and keeps earning.")
-    }
-
-    /// The one line the rows cannot say (prd §1803): when the change turns
-    /// private.
-    @MainActor static var roundUpsAt: String {
-        String(localized: "At \(RoundUpsPot.targetWords) it moves to Privacy Pools.")
     }
 
     /// **$1 OR $5 (prd §1741, its shape §1741a).** The one choice round-ups
