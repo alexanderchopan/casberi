@@ -28,7 +28,7 @@ Measuring, per network:
      through the pinned quoter, so a pool that does not answer is never pinned.
 A pool of the network's WETH itself is never pinned: Swap's v4 venue swaps ETH.
 """
-import argparse, json, os, re, sys, time, urllib.request
+import argparse, json, os, re, signal, sys, time, urllib.request
 from datetime import datetime, timezone
 
 INIT = "0xdd466e674ea557f56295e2d0218a125ea4b4f0f6f3307b95f85e6110838d6438"
@@ -272,6 +272,10 @@ def self_test():
     return 0 if not bad else 1
 
 
+class BudgetSpent(BaseException):
+    """Not an Exception: `get` retries on every Exception, and would swallow it."""
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--network", choices=list(NETS), action="append")
@@ -279,6 +283,10 @@ def main():
     ap.add_argument("--pages", type=int, default=3)
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--self-test", action="store_true")
+    # --check walks public nodes' logs with retries, and nothing else bounds
+    # it: on 2026-11-22 one node kept it reading for 55 minutes inside the
+    # nightly (#556). A warn-only check gets a total budget, then says so.
+    ap.add_argument("--budget", type=int, default=900, help="--check: seconds before giving up (0 = none)")
     a = ap.parse_args()
     if a.self_test: return self_test()
     nets = a.network or list(NETS)
@@ -288,6 +296,18 @@ def main():
             for k, name, usd in measure(net, a.min_usd, a.pages, print):
                 print(swift_line(k, name, usd))
         return 0
+    if a.budget > 0:
+        def spent(*_): raise BudgetSpent
+        signal.signal(signal.SIGALRM, spent)
+        signal.alarm(a.budget)
+    try:
+        return check(a, nets)
+    except BudgetSpent:
+        print(f"uniswap-v4-pools: gave up after {a.budget}s — the nodes are too slow tonight")
+        return 2
+
+
+def check(a, nets):
     pinned = parse_pinned(open(SWIFT).read())
     drift, read = 0, 0
     for net in nets:
