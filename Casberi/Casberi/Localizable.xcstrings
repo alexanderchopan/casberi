@@ -36243,6 +36243,62 @@
         }
       }
     },
+    ", after Privacy Pools keeps %@%%" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "; Privacy Pools se queda con el %@%%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "（Privacy Pools が %@%% を差し引いた後）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : ", Privacy Pools가 %@%%를 가져간 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "，扣除 Privacy Pools 的 %@%% 后"
+          }
+        }
+      }
+    },
+    ", after Privacy Pools keeps %@%%." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "; Privacy Pools se queda con el %@%%."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "（Privacy Pools が %@%% を差し引いた後）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : ", Privacy Pools가 %@%%를 가져간 후."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "，扣除 Privacy Pools 的 %@%% 后。"
+          }
+        }
+      }
+    },
     ", for about %@" : {
       "localizations" : {
         "es" : {
@@ -47929,6 +47985,34 @@
         }
       }
     },
+    "About %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Unos %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 %@"
+          }
+        }
+      }
+    },
     "About %lld minutes" : {
       "localizations" : {
         "es" : {
@@ -57088,6 +57172,62 @@
         }
       }
     },
+    "Any token · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier token · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任意のトークン · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 토큰 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任意代币 · %@"
+          }
+        }
+      }
+    },
+    "Any token, on %@, at your public address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier token, en %@, en tu dirección pública."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上の任意のトークンを、あなたの公開アドレスで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 모든 토큰을 공개 주소로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上的任意代币，发到你的公开地址。"
+          }
+        }
+      }
+    },
     "Anyone" : {
       "localizations" : {
         "es" : {
@@ -60700,6 +60840,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "达到 %@ 时会转入你的私密余额。"
+          }
+        }
+      }
+    },
+    "At %@, it moves as USDC to your private balance in Privacy Pools, on Ethereum, %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "At %1$@, it moves as USDC to your private balance in Privacy Pools, on Ethereum, %2$@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al llegar a %@, pasa como USDC a tu saldo privado en Privacy Pools, en Ethereum, %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に達すると、USDC として Ethereum の Privacy Pools のプライベート残高へ移ります（%@）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 도달하면 USDC로 Ethereum의 Privacy Pools 비공개 잔액으로 옮겨집니다, %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "达到 %@ 时，会以 USDC 转入你在 Ethereum 上 Privacy Pools 的私密余额，%@。"
           }
         }
       }
@@ -87456,6 +87630,34 @@
         }
       }
     },
+    "ETH earns %@ in Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH gana %@ en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH は Aave で %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH는 Aave에서 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH 在 Aave 中赚取 %@"
+          }
+        }
+      }
+    },
     "ETH or USDC, to an address" : {
       "localizations" : {
         "es" : {
@@ -87512,6 +87714,34 @@
         }
       }
     },
+    "ETH, USDC or USDG, on Base, Ethereum or Robinhood, at a new address each time." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH, USDC o USDG, en Base, Ethereum o Robinhood, en una dirección nueva cada vez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood 上の ETH・USDC・USDG を、毎回新しいアドレスで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum, Robinhood의 ETH, USDC, USDG를 매번 새 주소로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum 或 Robinhood 上的 ETH、USDC 或 USDG，每次使用新地址。"
+          }
+        }
+      }
+    },
     "ETH, USDC, USDG" : {
       "localizations" : {
         "es" : {
@@ -87536,6 +87766,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "ETH、USDC、USDG"
+          }
+        }
+      }
+    },
+    "ETH, USDC, USDG · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH, USDC, USDG · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH、USDC、USDG · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH, USDC, USDG · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ETH、USDC、USDG · %@"
           }
         }
       }
@@ -90478,6 +90736,62 @@
         }
       }
     },
+    "Ethereum tokens · from Railgun only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens de Ethereum · solo desde Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum のトークン · Railgun からのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 토큰 · Railgun에서만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 代币 · 仅限来自 Railgun"
+          }
+        }
+      }
+    },
+    "Ethereum tokens, only from another Railgun balance, at your 0zk address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tokens de Ethereum, solo desde otro saldo de Railgun, en tu dirección 0zk."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum のトークンを、別の Railgun 残高からのみ、あなたの 0zk アドレスで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 토큰을 다른 Railgun 잔액에서만 0zk 주소로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 代币，仅限来自其他 Railgun 余额，发到你的 0zk 地址。"
+          }
+        }
+      }
+    },
     "Ethereum would have turned it down. Nothing was sent." : {
       "localizations" : {
         "es" : {
@@ -91289,6 +91603,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "所有艺人，按字母排序"
+          }
+        }
+      }
+    },
+    "Every buy, send and swap rounds up to the next $%lld." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada compra, envío e intercambio se redondea al siguiente $%lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "購入・送金・スワップのたびに、次の $%lld まで切り上げます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 구매, 보내기, 스왑이 다음 $%lld 단위로 올림됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次购买、发送和兑换都会向上取整到下一个 $%lld。"
           }
         }
       }
@@ -107334,6 +107676,34 @@
         }
       }
     },
+    "How your money moves" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cómo se mueve tu dinero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "お金の動き方"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "돈이 움직이는 방식"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的资金如何流转"
+          }
+        }
+      }
+    },
     "How's %@ doing?" : {
       "localizations" : {
         "es" : {
@@ -110297,6 +110667,62 @@
         }
       }
     },
+    "It arrives in your private account on Aztec." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega a tu cuenta privada en Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec のプライベートアカウントに届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec의 비공개 계정에 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到达你在 Aztec 上的私密账户。"
+          }
+        }
+      }
+    },
+    "It arrives in your private balance on Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llega a tu saldo privado en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum のプライベート残高に届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 비공개 잔액에 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到达你在 Ethereum 上的私密余额。"
+          }
+        }
+      }
+    },
     "It can pair again with a new link. Nothing it asked for is affected." : {
       "localizations" : {
         "es" : {
@@ -110804,6 +111230,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它允许 %@ 以你的名义执行一次此调用。任何人都能看到。"
+          }
+        }
+      }
+    },
+    "It moves into your private balance on Ethereum by itself. From Base and Robinhood, Across bridges it to Ethereum. USDC and USDG arrive as USDC. ETH arrives as ETH." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasa solo a tu saldo privado en Ethereum. Desde Base y Robinhood, Across lo lleva a Ethereum. USDC y USDG llegan como USDC. ETH llega como ETH."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自動で Ethereum のプライベート残高に移ります。Base と Robinhood からは Across が Ethereum へブリッジします。USDC と USDG は USDC として、ETH は ETH として届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 비공개 잔액으로 자동으로 옮겨집니다. Base와 Robinhood에서는 Across가 Ethereum으로 브리지합니다. USDC와 USDG는 USDC로, ETH는 ETH로 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它会自动转入你在 Ethereum 上的私密余额。来自 Base 和 Robinhood 的资金由 Across 桥接到 Ethereum。USDC 和 USDG 以 USDC 到账，ETH 以 ETH 到账。"
           }
         }
       }
@@ -165308,6 +165762,286 @@
         }
       }
     },
+    "Ready in 15 min to a few hours · Earns %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en 15 min a unas horas · Gana %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15分〜数時間で利用可能 · %@ の利息"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15분~몇 시간 후 사용 가능 · %@ 수익"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15 分钟到几小时内可用 · 收益 %@"
+          }
+        }
+      }
+    },
+    "Ready in 15 min to a few hours · Earns interest" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en 15 min a unas horas · Genera interés"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15分〜数時間で利用可能 · 利息あり"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15분~몇 시간 후 사용 가능 · 이자 발생"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15 分钟到几小时内可用 · 赚取利息"
+          }
+        }
+      }
+    },
+    "Ready in 15 minutes to a few hours, once Privacy Pools approves it. Less than the minimum stays at the address, and Receive shows it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en 15 minutos a unas horas, cuando Privacy Pools lo apruebe. Lo que no llegue al mínimo se queda en la dirección, y Recibir lo muestra."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools が承認すると、15分〜数時間で利用できます。最低額に満たない分はアドレスに残り、受け取るに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools가 승인하면 15분~몇 시간 후 사용할 수 있습니다. 최소 금액보다 적으면 주소에 남고 받기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 批准后，15 分钟到几小时内可用。低于最低金额的部分会留在该地址，并显示在“接收”中。"
+          }
+        }
+      }
+    },
+    "Ready in a few minutes · Earns nothing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en unos minutos · No genera nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数分で利用可能 · 利息なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 분 후 사용 가능 · 수익 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几分钟内可用 · 无收益"
+          }
+        }
+      }
+    },
+    "Ready in a few minutes. It earns nothing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en unos minutos. No genera nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数分で利用できます。利息はつきません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 분 후 사용할 수 있습니다. 수익은 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几分钟内可用。没有收益。"
+          }
+        }
+      }
+    },
+    "Ready in about an hour · Earns nothing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en una hora aprox. · No genera nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約1時間で利用可能 · 利息なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1시간 후 사용 가능 · 수익 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约一小时内可用 · 无收益"
+          }
+        }
+      }
+    },
+    "Ready in about an hour, once Railgun's screening lists it. It earns nothing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en una hora aprox., cuando la revisión de Railgun lo incluya. No genera nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun の審査に載ると、約1時間で利用できます。利息はつきません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 심사 목록에 오르면 약 1시간 후 사용할 수 있습니다. 수익은 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 审查列出后，约一小时内可用。没有收益。"
+          }
+        }
+      }
+    },
+    "Ready in seconds · Earns nothing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en segundos · No genera nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数秒で利用可能 · 利息なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 초 후 사용 가능 · 수익 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几秒内可用 · 无收益"
+          }
+        }
+      }
+    },
+    "Ready in seconds. Anyone can see it. It earns nothing until you lend it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en segundos. Cualquiera puede verlo. No genera nada hasta que lo prestes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数秒で利用できます。誰でも見られます。貸し出すまで利息はつきません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 초 후 사용할 수 있습니다. 누구나 볼 수 있습니다. 빌려주기 전까지 수익은 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几秒内可用。任何人都能看到。借出之前没有收益。"
+          }
+        }
+      }
+    },
+    "Ready in seconds. It earns nothing until you lend it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo en segundos. No genera nada hasta que lo prestes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数秒で利用できます。貸し出すまで利息はつきません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 초 후 사용할 수 있습니다. 빌려주기 전까지 수익은 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几秒内可用。借出之前没有收益。"
+          }
+        }
+      }
+    },
     "Ready on Ethereum · " : {
       "localizations" : {
         "es" : {
@@ -166144,6 +166878,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "收到 · %@ · %@"
+          }
+        }
+      }
+    },
+    "Receives" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "接收"
           }
         }
       }
@@ -167641,6 +168403,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Relay 请求的不是这次兑换,因此没有签署任何内容"
+          }
+        }
+      }
+    },
+    "Relay bridges it to your public account. Dollars arrive as your network's dollar. ETH arrives as ETH." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay lo lleva a tu cuenta pública. Los dólares llegan como el dólar de tu red. ETH llega como ETH."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay があなたの公開アカウントへブリッジします。ドルはネットワークのドルとして、ETH は ETH として届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay가 공개 계정으로 브리지합니다. 달러는 해당 네트워크의 달러로, ETH는 ETH로 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 会将其桥接到你的公开账户。美元以你所在网络的美元到账，ETH 以 ETH 到账。"
           }
         }
       }
@@ -178711,6 +179501,34 @@
         }
       }
     },
+    "Send %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を送る。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 보내기."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送 %@。"
+          }
+        }
+      }
+    },
     "Send a little ETH with USDC or USDG" : {
       "localizations" : {
         "es" : {
@@ -185057,6 +185875,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示一个验证帧和一个发送方帧"
+          }
+        }
+      }
+    },
+    "Shows each way money comes in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muestra cada forma en que entra el dinero"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "お金が入ってくる方法をすべて表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "돈이 들어오는 모든 방법을 보여줍니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示资金进入的每种方式"
           }
         }
       }
@@ -200844,6 +201690,34 @@
         }
       }
     },
+    "The change is saved as USDC in your public balance, in Aave on Base, %@. Your sends can't spend it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El cambio se guarda como USDC en tu saldo público, en Aave en Base, %@. Tus envíos no pueden gastarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数は USDC として公開残高に貯まり、Base の Aave に入ります（%@）。送金には使えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈은 USDC로 공개 잔액, Base의 Aave에 저장됩니다, %@. 보내기로는 쓸 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱以 USDC 存入你的公开余额，放在 Base 上的 Aave 中，%@。你的发送无法使用它。"
+          }
+        }
+      }
+    },
     "The change your sends rounded up, and the token it bought; never part of the total." : {
       "localizations" : {
         "es" : {
@@ -213448,6 +214322,96 @@
         }
       }
     },
+    "USDC and ETH earn interest in Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC y ETH generan interés en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC と ETH は Aave で利息がつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC와 ETH는 Aave에서 이자를 받습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 和 ETH 在 Aave 中赚取利息"
+          }
+        }
+      }
+    },
+    "USDC earns %@ and ETH %@ in Aave" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "USDC earns %1$@ and ETH %2$@ in Aave"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC gana %@ y ETH %@ en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave で USDC は %@、ETH は %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 USDC는 %@, ETH는 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 中 USDC 赚取 %@，ETH 赚取 %@"
+          }
+        }
+      }
+    },
+    "USDC earns %@ in Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC gana %@ en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC は Aave で %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC는 Aave에서 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 在 Aave 中赚取 %@"
+          }
+        }
+      }
+    },
     "USDC on %@ did not accept the permit, so nothing was sent" : {
       "localizations" : {
         "es" : {
@@ -213560,6 +214524,90 @@
         }
       }
     },
+    "USDC or ETH, only from another Aztec account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o ETH, solo desde otra cuenta de Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC または ETH を、別の Aztec アカウントからのみ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 또는 ETH를 다른 Aztec 계정에서만."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 或 ETH，仅限来自其他 Aztec 账户。"
+          }
+        }
+      }
+    },
+    "USDC or its token · most EVM networks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o su token · la mayoría de redes EVM"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC またはそのトークン · ほとんどの EVM ネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 또는 해당 토큰 · 대부분의 EVM 네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 或其原生代币 · 大多数 EVM 网络"
+          }
+        }
+      }
+    },
+    "USDC or the network's own token, from most EVM networks, at a deposit address for that network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o el token propio de la red, desde la mayoría de redes EVM, en una dirección de depósito para esa red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほとんどの EVM ネットワークから、USDC またはそのネットワークのトークンを、そのネットワーク用の入金アドレスで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대부분의 EVM 네트워크에서 USDC 또는 해당 네트워크 토큰을 그 네트워크의 입금 주소로."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自大多数 EVM 网络的 USDC 或该网络的原生代币，发到该网络的充值地址。"
+          }
+        }
+      }
+    },
     "USDC or the network's token" : {
       "localizations" : {
         "es" : {
@@ -213612,6 +214660,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "USDC、ETH"
+          }
+        }
+      }
+    },
+    "USDC, ETH · from Aztec only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC, ETH · solo desde Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC、ETH · Aztec からのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC, ETH · Aztec에서만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC、ETH · 仅限来自 Aztec"
           }
         }
       }
@@ -227976,6 +229052,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "与 %@：\n%@"
+          }
+        }
+      }
+    },
+    "With USDC or USDG, send a little ETH too, to pay for the move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con USDC o USDG, envía también un poco de ETH para pagar el movimiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC や USDG と一緒に、移動の手数料として少しの ETH も送ってください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC나 USDG와 함께 이동 비용으로 ETH도 조금 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送 USDC 或 USDG 时，也请发送少量 ETH 支付转移费用。"
           }
         }
       }
@@ -246084,6 +247188,68 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "地址"
+          }
+        }
+      }
+    },
+    "at least %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "al menos %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 以上"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최소 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "至少 %@"
+          }
+        }
+      }
+    },
+    "at least %@ or %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "at least %1$@ or %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "al menos %@ o %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 以上または %@ 以上"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최소 %@ 또는 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "至少 %@ 或 %@"
           }
         }
       }
@@ -265979,6 +267145,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "内容何时到达"
+          }
+        }
+      }
+    },
+    "where it earns %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "donde gana %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の利息がつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 수익을 얻는 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在那里赚取 %@"
+          }
+        }
+      }
+    },
+    "where it earns %@ in Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "donde gana %@ en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave で %@ の利息がつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 %@ 수익을 얻는 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 中赚取 %@"
+          }
+        }
+      }
+    },
+    "where it earns interest" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "donde genera interés"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利息がつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이자를 얻는 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在那里赚取利息"
+          }
+        }
+      }
+    },
+    "where it earns interest in Aave" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "donde genera interés en Aave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave で利息がつきます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aave에서 이자를 얻는 곳"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aave 中赚取利息"
           }
         }
       }
