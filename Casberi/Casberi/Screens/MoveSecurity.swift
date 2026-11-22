@@ -454,12 +454,6 @@ struct MoveSecurity: View {
         String(localized: "Once it reaches \(RoundUpsPot.targetWords), it moves to Privacy Pools and keeps earning.")
     }
 
-    /// The one line the rows cannot say (prd §1803): when the change turns
-    /// private.
-    @MainActor static var roundUpsAt: String {
-        String(localized: "At \(RoundUpsPot.targetWords) it moves to Privacy Pools.")
-    }
-
     /// **$1 OR $5 (prd §1741, its shape §1741a).** The one choice round-ups
     /// has, as one two-part control: the walk draws it under the headline
     /// and the tray under its sentence. Each half says what it does, so no
