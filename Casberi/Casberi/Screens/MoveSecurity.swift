@@ -138,6 +138,18 @@ struct MoveSecurity: View {
             // have Public and Private. Public is Safe. Private is the other
             // three. perhaps networks go there too").**
             AccountPlate(name: String(localized: "Money"), glyph: Self.savingGlyph) {
+                // **THE VALUES ARE NETWORKS, SAID ONCE (user, 2026-11-22:
+                // "for money we need to say networks"; picked A, a heading
+                // over the values, of a Networks row under every place).**
+                HStack(spacing: 0) {
+                    Color.clear.frame(width: AccountLines.labelWidth, height: 1)
+                    Text("Networks")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: 0)
+                }
+                .frame(minHeight: AccountLines.pitch)
+                .accessibilityAddTraits(.isHeader)
                 AccountSubhead(text: String(localized: "Public"))
                 // **ONE FORMULA ON MONEY (user, 2026-11-22: "we need to
                 // standardize this too, and it should probably say safe in
