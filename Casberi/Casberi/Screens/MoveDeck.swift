@@ -649,10 +649,14 @@ struct MoveDeckTile<Face: View>: View {
                 // **ONE CAPTION SIZE UNDER EVERY FACE (prd §1916):** 15, the
                 // size at which "Coinbase" fits its column, so no name is
                 // shrunk to fit while its neighbour is not.
+                // One word never breaks inside itself ("DoorDas / h", walked
+                // 2026-11-21): it takes one line and shrinks a step to fit.
+                let oneWord = !title.contains(" ")
                 Text(verbatim: title)
                     .dsText(.fact15)
                     .foregroundStyle(picked ? DS.pickInk : titleInk)
-                    .lineLimit(2)
+                    .lineLimit(oneWord ? 1 : 2)
+                    .minimumScaleFactor(oneWord ? 0.75 : 1)
                     .multilineTextAlignment(.center)
                     // Wraps inside its own column, never into a neighbour's.
                     .frame(width: DSHomeCircleMetrics.column)

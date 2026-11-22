@@ -4890,10 +4890,9 @@ struct MoveSentence: View {
                 // Receive's first screen now (prd §1803).
             }
         } else if limiting, let with {
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                limitLine(with)
-                ledger(door: false)
-            }
+            // Its ledger stands at the deck's full width (`limitLedger`):
+            // inside this indented line its words wrapped, "Throu / gh".
+            limitLine(with)
         } else if let warning = leadWarning {
             // A warning takes the grey line's place (prd §1509 item 2): red
             // when reported or refused, amber to check; one line, and Details
@@ -5108,49 +5107,6 @@ struct MoveSentence: View {
     /// amount wears the pick's pink. A tap on the figure still types any
     /// other, and the $ · token switch ends the first row's line.
     static let amountSteps: [Int] = [20, 50, 100]
-
-    /// A limit order's amount rows, under its line (prd §1776). A swap's or
-    /// a send's sums stand under the typed figure (`amountChips`, prd §1892).
-    @ViewBuilder private func amountPicks(_ h: Tokens.Held) -> some View {
-        let share = shareBinding(h)
-        let now = share.wrappedValue
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .center, spacing: DS.Space.s2) {
-                Text("Amount").dsText(.body17).foregroundStyle(DS.textSecondary)
-                Spacer(minLength: DS.Space.s2)
-                unitSwitch
-            }
-            .frame(minHeight: 44)
-            if let usd = h.usd, h.price != nil {
-                ForEach(Self.amountSteps.filter { Double($0) <= usd }, id: \.self) { step in
-                    listRow(Self.money(Double(step)).replacingOccurrences(of: ".00", with: ""),
-                            picked: currentDollars.map { abs($0 - Double(step)) < 0.005 } ?? false, rung: .heading24) {
-                        withAnimation(DS.Motion.standard) {
-                            inDollars = true
-                            amount = "\(step)"
-                        }
-                        DSHaptic.selection()
-                    }
-                }
-            }
-            listRow(String(localized: "Half"), trailing: h.usd.map { Self.money($0 / 2) },
-                    picked: now == 50, rung: .heading24) {
-                withAnimation(DS.Motion.standard) { share.wrappedValue = 50 }
-                DSHaptic.selection()
-            }
-            listRow(String(localized: "All"), trailing: h.usd.map { Self.money($0) },
-                    picked: now == 100, rung: .heading24) {
-                // In the token's units: dollars round, and could land a
-                // cent over what is there (prd §1586).
-                withAnimation(DS.Motion.standard) {
-                    inDollars = false
-                    share.wrappedValue = 100
-                }
-                DSHaptic.snap()
-            }
-        }
-        .disabled(stage != nil)
-    }
 
     /// The fee's figure for its row: "up to $0.01", "under a cent".
     private var feeFigure: String? {
@@ -5562,22 +5518,8 @@ struct MoveSentence: View {
         return Self.money(Op.dollars(units ?? "0", decimals: h.token.decimals, price: price))
     }
 
-    /// **$ · ETH (§1442d, user: "a user needs to be able to change token
-    /// value from tokens to dollars ... something i do frequently in one
-    /// transaction").** Two choices at the end of the amount line, the one
-    /// typed in selected; the other converts the figure, keeping its value.
-    /// Drawn once a token is picked: before that there is nothing to convert
-    /// to, and a lone "$" would be a control that does nothing (§83).
-    @ViewBuilder private var unitSwitch: some View {
-        if let with, verb != .receive {
-            HStack(spacing: DS.Space.s1) {
-                unitChip("$", on: inDollars, label: Text("Type in dollars")) { setDollars(true, with) }
-                unitChip(with.token.symbol, on: !inDollars, label: Text("Type in \(with.token.symbol)")) { setDollars(false, with) }
-            }
-            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 8 }
-        }
-    }
-
+    /// A two-way unit chip: the When list's % · $ (the token's $ · ETH is
+    /// `MoveUnitSwitch` on its line, prd §1931).
     private func unitChip(_ text: String, on: Bool, label: Text, act: @escaping () -> Void) -> some View {
         Button(action: act) {
             Chip(text: text, selected: on)
@@ -6901,10 +6843,10 @@ struct MoveSentence: View {
                     }
                     return .handled
                 })
-            // The amount's rows, as every other sentence's (prd §1776).
-            if receipt == nil {
-                amountPicks(with)
-            }
+            // No amount rows here: the keys are the amount on every verb
+            // (prd §1931). The §1776 rows drew a second amount picker under a
+            // limit order's line, on Ready, pushing its facts under the foot
+            // (walked 2026-11-21).
         }
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -7619,8 +7561,17 @@ struct MoveSentence: View {
             }
             .transition(.opacity)
         } else if receivePlacesUp {
-            receiveAddresses.padding(.vertical, DS.Space.s2)
-                .transition(.opacity)
+            // What a copy said stands over the places: the demo's "This
+            // works once you leave the demo." was said and never drawn, so
+            // a tap on a copy did nothing at all (walked 2026-11-21).
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if let hint {
+                    hintText(hint).transition(.opacity)
+                }
+                receiveAddresses
+            }
+            .padding(.vertical, DS.Space.s2)
+            .transition(.opacity)
         } else if verb == .receive, elsewhere != nil || receiveOther {
             // **THE ROUTE IS THE PLATE (prd §1928):** the address under the
             // sentence that names it, on the screen the network was picked on.
@@ -7645,6 +7596,10 @@ struct MoveSentence: View {
             // **READY IS THE RECEIPT, LONGER (prd §1931):** its facts are
             // lines of the receipt's own shape, under its choices.
             ScrollView {
+                // One explicit stack, as `factsOver`'s: two loose children
+                // of a ScrollView drew a hint ("This works once you leave the
+                // demo.") over Details' words (walked 2026-11-21).
+                VStack(alignment: .leading, spacing: 0) {
                 // The facts stand at the receipt's one pitch: nothing above
                 // them takes a gap when it draws nothing (prd §1932).
                 deckFacts
@@ -7662,14 +7617,28 @@ struct MoveSentence: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.bottom, MoveDeck.listClearance)
+                }
             }
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
             .transition(.opacity)
         } else if canAddAnother {
-            factsOver { EmptyView() }.transition(.opacity)
+            factsOver { limitLedger }.transition(.opacity)
         } else {
-            factsOver { EmptyView() }.transition(.opacity)
+            factsOver { limitLedger }.transition(.opacity)
+        }
+    }
+
+    /// A limit order's facts (Through, its fee) under its line, at the
+    /// receipt's full width, as Ready draws a swap's "Swaps".
+    @ViewBuilder private var limitLedger: some View {
+        if limiting, with != nil, receipt == nil {
+            VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+                MoveReceiptFact(label: String(localized: "Through"),
+                                value: "CoW Swap · " + String(localized: "\(YourAccountOrder.feeWords) fee"))
+                ledger(door: false, inDeck: true)
+            }
+            .padding(.top, DS.Space.s2)
         }
     }
 
@@ -7777,7 +7746,10 @@ struct MoveSentence: View {
         // ("of ETH for USDC"). The steps fold by `deckKey`, not the word.
         case (.swap, .network), (.swap, .with), (.swap, .destination), (.swap, .buy): String(localized: "Token")
         case (.buy, .network), (.buy, .with): String(localized: "Pay with")
-        case (.buy, .group), (.buy, .merchant): String(localized: "Merchant")
+        // Each its own word on the receipt (walked 2026-11-21: both lines
+        // said "Merchant"); `deckKey` still folds them into one step.
+        case (.buy, .group): String(localized: "Category")
+        case (.buy, .merchant): String(localized: "Merchant")
         case (.sweep, .under): String(localized: "Under")
         default: Self.rowName(which, verb: verb)
         }
@@ -7789,6 +7761,7 @@ struct MoveSentence: View {
         switch (verb, which) {
         case (.swap, .network), (.swap, .with): "from"
         case (.swap, .destination), (.swap, .buy): "for"
+        case (.buy, .group), (.buy, .merchant): "merchant"
         default: deckWord(which)
         }
     }
@@ -8110,9 +8083,8 @@ struct MoveSentence: View {
                 MoveFactRow(name: String(localized: "Through"),
                             value: TorRoute.available ? String(localized: "Relay, not through Tor") : "Relay", indented: false)
             }
-            if limiting {
-                MoveFactRow(name: String(localized: "Through"), value: "CoW Swap · " + String(localized: "\(YourAccountOrder.feeWords) fee"), indented: false)
-            }
+            // A limit order's Through is a fact of its receipt (`limitLedger`):
+            // in this indented column its word wrapped, "Throu / gh".
             if shownPreview?.signerSigns == true {
                 MoveFactRow(name: String(localized: "Your Signer signs this too"), indented: false)
             }

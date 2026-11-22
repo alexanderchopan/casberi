@@ -13,7 +13,10 @@ struct AztecGasTray: View {
     var body: some View {
         let store = AztecAccountStore.shared
         let juice = store.shown.holdings.first { $0.kind == .feeJuice }
-        let state = adding ? AztecGas.Standing.arriving : AztecGas.state
+        // The Holdings row's own standing (`gasStanding`): gas held is never
+        // "None" (walked 2026-11-21: 2.5 drawn beside an amber "None").
+        let state = adding ? AztecGas.Standing.arriving
+            : FeedScreen.gasStanding(juice.map { NSDecimalNumber(decimal: $0.gasUnits).stringValue })
         DSTray(title: String(localized: "Private gas on Aztec"), height: 360) {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
