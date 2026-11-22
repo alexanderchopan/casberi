@@ -153,6 +153,13 @@ final class PrivateMoneyStore {
         return PrivateYield.line(apy: apys[pool.share.lowercased()])
     }
 
+    /// A token's rate on Ethereum as a number (0.038 for 3.8%), or nil
+    /// unread: the money plates format it beside their own words.
+    func yieldRate(symbol: String) -> Double? {
+        guard let pool = PrivacyNetwork.ethereum.yield.first(where: { $0.symbol == symbol }) else { return nil }
+        return apys[pool.share.lowercased()]
+    }
+
     /// Reads every yield pool's exchange rate, fee and Aave's rate, on each
     /// network a note is on, at most once a minute: three calls a pool to the
     /// network's node, through the engine's door (Tor, a receipt each).

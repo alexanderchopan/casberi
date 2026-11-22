@@ -65,6 +65,9 @@ struct MoveSecurity: View {
     @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpsTray = false
+    /// Aave's USDC rate on Base, for the Round-ups plate's Earns row; read
+    /// when the tray opens, nil until then or when unread.
+    @State private var roundUpsBaseRate: Double?
     /// Whether private money is on this phone alone (prd §1562), read in a
     /// task: the Keychain and the store, never in a body.
     @State private var privateBackup: PrivateRoot.Backup = .fine
@@ -136,8 +139,13 @@ struct MoveSecurity: View {
             // three. perhaps networks go there too").**
             AccountPlate(name: String(localized: "Money"), glyph: Self.savingGlyph) {
                 AccountSubhead(text: String(localized: "Public"))
-                row(title: String(localized: "Networks"), value: networksValue,
-                    tone: unread.isEmpty || reading ? DS.textSecondary : DS.attentionInk,
+                // **ONE FORMULA ON MONEY (user, 2026-11-22: "we need to
+                // standardize this too, and it should probably say safe in
+                // public"):** every line is a place by its name and the
+                // networks it holds your money on; how each works is
+                // Receive's plates, behind How your money moves.
+                row(title: "Safe", value: networksValue,
+                    tone: unread.isEmpty || reading ? DS.textPrimary : DS.attentionInk,
                     short: networksShort,
                     verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { _ = Task { _ = await read() } }))
                 if let publicLines { publicLines }
@@ -145,6 +153,7 @@ struct MoveSecurity: View {
                     AccountSubhead(text: String(localized: "Private"))
                     privateLines
                 }
+                howMoneyMovesRow
                 // "Saving", not "Spending" (prd §1803): round-ups and the goal
                 // they fill put money away.
                 AccountSubhead(text: String(localized: "Saving"))
@@ -350,7 +359,7 @@ struct MoveSecurity: View {
         // **THE SWITCH, THEN THE SUM, THEN ONE LINE (prd §1803, user: "no
         // pill buttons; amounts as the large rows Move uses for sums; on/off
         // before the amount; far less text").**
-        DSTray(title: String(localized: "Round-ups"), height: 420) {
+        DSTray(title: String(localized: "Round-ups"), height: 620, detents: [.height(620), .large]) {
             VStack(alignment: .leading, spacing: 0) {
                 DSToggleRow(title: Text("Round up what you send"),
                             isOn: Binding(get: { roundUps.on }, set: { on in saveRoundUps { $0 = $0.simple; $0.on = on } }))
@@ -362,14 +371,40 @@ struct MoveSecurity: View {
                         .padding(.top, DS.Space.s2)
                         .transition(.opacity)
                 }
-                Text(verbatim: Self.roundUpsAt)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // **THE PLATE, NOT A LINE (user, 2026-11-22: "nobody's gonna
+                // know that from all of this").** Where the change goes, who
+                // carries it, when it moves and what it earns, in the five
+                // rows every money plate answers (`MoneyPlate`).
+                MoneyPlateRows(facts: MoneyPlate.roundUps(
+                    step: roundUps.step == 5 ? 5 : 1, baseRate: roundUpsBaseRate,
+                    privateRate: DemoMode.isActive ? 0.0379 : PrivateMoneyStore.shared.yieldRate(symbol: "USDC")))
                     .padding(.top, DS.Space.s4)
                 Spacer(minLength: 0)
             }
             .padding(.vertical, DS.Space.s4)
+            .task {
+                if roundUpsBaseRate == nil {
+                    roundUpsBaseRate = await MoneyPlate.baseUSDCRate(demo: DemoMode.isActive || YourAccountDemo.isDemo(account))
+                }
+            }
         }
+    }
+
+    /// **A DOOR TO RECEIVE (user, 2026-11-22: "not sure a user would know to
+    /// tap").** The pick's pink, as Account's other verbs are, so it reads as
+    /// a tap. It opens Receive, where each way in stands on its plate; Account
+    /// keeps its one-line values and repeats none of it.
+    private var howMoneyMovesRow: some View {
+        Button { MoveMenu.pick(.receive, chrome) } label: {
+            Text("How your money moves")
+                .dsText(.body17)
+                .foregroundStyle(DS.pickInk)
+                .frame(maxWidth: .infinity, minHeight: AccountLines.pitch, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .padding(.top, DS.Space.s2)
+        .accessibilityHint(Text("Opens Receive"))
     }
 
     /// The setting only: Off, or On and what it rounds to (user: "here it
