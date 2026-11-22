@@ -43,10 +43,12 @@ enum MoneyPlate {
     static func roundUps(step: Int, baseRate: Double?, privateRate: Double?) -> [Fact] {
         let target = RoundUpsPot.targetWords
         let networks = YourAccountOp.networks.map(\.name).sorted().joined(separator: ", ")
-        let base = AaveLend.rateOnly(baseRate).map { String(localized: "USDC \($0) on Aave, on Base") }
-            ?? String(localized: "USDC on Aave, on Base")
-        let pools = AaveLend.rateOnly(privateRate).map { String(localized: "Then USDC \($0) on Aave, in Privacy Pools") }
-            ?? String(localized: "Then USDC on Aave, in Privacy Pools")
+        // "USDC on Base, in Aave" (user, 2026-11-22): the token, the
+        // network, then the place, and the rate last once it is read.
+        let base = AaveLend.rateOnly(baseRate).map { String(localized: "USDC on Base, in Aave · \($0)") }
+            ?? String(localized: "USDC on Base, in Aave")
+        let pools = AaveLend.rateOnly(privateRate).map { String(localized: "Then USDC on Ethereum, in Privacy Pools · \($0)") }
+            ?? String(localized: "Then USDC on Ethereum, in Privacy Pools")
         return [
             Fact(label: receives, lines: [
                 String(localized: "Your change from every buy, send and swap"),
