@@ -224,7 +224,7 @@ grep -qF 'roundUpsRideInETH' Casberi/Casberi/Model/PrivateOnEthereum.swift && { 
 grep -qF 'fundedByETH' "$SENT" && { echo "✗ round-ups swap ETH ahead of the ride again: the change is set aside in USDC as you go (prd §1690)"; exit 1; }
 use Casberi/Casberi/Model/PrivateOnEthereum.swift 'checked.approvals.isEmpty else {' "the ETH swap before a round-up is not Swap's checked call (prd §1578)"
 use "$SEC" 'MoneyPlateRows(facts: MoneyPlate.roundUps(' "the round-ups tray no longer draws its plate: where the change goes and when it turns private (prd §1690)"
-use "Casberi/Casberi/Model/MoneyPlate.swift" 'At \(target), into Privacy Pools on Ethereum' "the Round-ups plate no longer says when the change turns private (prd §1690)"
+use "Casberi/Casberi/Model/MoneyPlate.swift" 'Up to \(target), then it moves to your private balance' "the Round-ups plate no longer says when the change turns private (prd §1690)"
 use "$SENT" 'guard RoundUps.setting.on, !network.isTest else { return nil }' "a send on a test network rounds up into Round-ups (prd §1690)"
 mv=$(grep -n 'await Self.moveRoundUps(engine: engine, context: context)' "$MOVE" | cut -d: -f1)
 dn=$(grep -n '            stage = .done(hash)$' "$MOVE" | tail -1 | cut -d: -f1)

@@ -8,9 +8,9 @@ import Foundation
 ///
 /// - **Receives**: what can arrive.
 /// - **From**: the networks it can come from.
-/// - **Settles**: where it ends up, naming the company that carries it at
+/// - **Where** (was Settles): where it ends up, naming the company that carries it at
 ///   the step it acts (Across, Relay, 0xBow).
-/// - **Ready**: when it can be used.
+/// - **When** (was Ready): when it moves or can be used.
 /// - **Earns**: what it earns and where, or that it earns nothing.
 ///
 /// A question with nothing to say is answered ("Nothing"), never dropped, so
@@ -27,8 +27,8 @@ enum MoneyPlate {
 
     static var receives: String { String(localized: "Receives") }
     static var from: String { String(localized: "From") }
-    static var settles: String { String(localized: "Settles") }
-    static var ready: String { String(localized: "Ready") }
+    static var settles: String { String(localized: "Where") }
+    static var ready: String { String(localized: "When") }
     static var earns: String { String(localized: "Earns") }
 
     /// **ROUND-UPS (prd §1690, §1830).** The change from every buy, send and
@@ -58,11 +58,11 @@ enum MoneyPlate {
             Fact(label: settles, lines: [
                 String(localized: "Rounds up into USDC on Base, in Aave. Your sends can't spend it."),
                 String(localized: "From Ethereum and Robinhood, through Across"),
-                String(localized: "At \(target), into Privacy Pools on Ethereum"),
+                String(localized: "Then your private balance on Ethereum, in Privacy Pools"),
             ]),
             Fact(label: ready, lines: [
-                String(localized: "Moves with your next send once it holds \(target)"),
-                String(localized: "Then once 0xBow approves it"),
+                // User, 2026-11-22: "up to $10, and then … moves to private balance".
+                String(localized: "Up to \(target), then it moves to your private balance"),
             ]),
             Fact(label: earns, lines: [base, pools]),
         ]
