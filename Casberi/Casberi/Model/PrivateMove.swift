@@ -165,6 +165,21 @@ final class PrivateMove {
         return PrivateMoney.leastMoveIn(ladder: usdcLadder, decimals: 6, minimum: usdcMinimum)?.step
     }
 
+    /// **USDC UNDER THE POOL'S MINIMUM SAYS SO (prd §1938).** Moving in on
+    /// Ethereum, an account holding some USDC but less than ppUSDC takes
+    /// was offered ETH alone, with no word why ("i have 6 dollars … only
+    /// shows me ethereum"). Nil when USDC is offered or none is held.
+    var usdcShort: String? {
+        guard onEthereum, mode == .deposit, usdcChoices.isEmpty, let least = leastUSDC,
+              let usdcBalance, (Decimal(string: usdcBalance) ?? 0) > 0 else { return nil }
+        let have = PrivateMoney.figure(usdcBalance, decimals: 6, symbol: "USDC")
+        // The pool's round number (10 shares), never its cents (user: "don't
+        // say 10.08 just say 10"); the amounts still start at the cent.
+        var whole = Decimal(string: least) ?? 0, floor = Decimal()
+        NSDecimalRound(&floor, &whole, 0, .down)
+        return String(localized: "Privacy Pools takes \(NSDecimalNumber(decimal: floor).stringValue) USDC or more. You have \(have).")
+    }
+
     /// USDC's steps moving in: from ppUSDC's minimum, to the cent (prd §1694).
     private var usdcLadder: [String] {
         PrivateMoney.ladder(PrivateMoney.usdcLadder, from: usdcMinimum ?? "0", decimals: 6, places: 2)

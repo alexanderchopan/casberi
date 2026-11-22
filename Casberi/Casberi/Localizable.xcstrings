@@ -63875,6 +63875,34 @@
         }
       }
     },
+    "Being checked by Privacy Pools · since %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En revisión por Privacy Pools · desde %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools が確認中 · %@ から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 확인 중 · %@부터"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 审核中 · 自 %@"
+          }
+        }
+      }
+    },
     "Being screened" : {
       "localizations" : {
         "es" : {
@@ -157935,6 +157963,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Privacy Pools 需要你 %@ 存款的证明 — 请打开 0xBow"
+          }
+        }
+      }
+    },
+    "Privacy Pools takes %@ USDC or more. You have %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools acepta %@ USDC o más. Tienes %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools は %@ USDC 以上から受け付けます。お持ちの残高は %@ です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools는 %@ USDC 이상부터 받습니다. 보유액은 %@입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 最少接受 %@ USDC。你有 %@。"
           }
         }
       }

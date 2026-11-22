@@ -252,6 +252,13 @@ enum PrivateMoney {
     /// drawn (prd §1841): who it waits on, never "approval", which read as
     /// something the person had to approve.
     static var beingChecked: String { String(localized: "Being checked by Privacy Pools") }
+    /// With the day the deposit went in (prd §1938): "Being checked by
+    /// Privacy Pools · since Nov 18", so a wait is never of unknown age.
+    static func beingChecked(since: Date?) -> String {
+        guard let since else { return beingChecked }
+        let day = since.formatted(.dateTime.month(.abbreviated).day())
+        return String(localized: "Being checked by Privacy Pools · since \(day)")
+    }
 
     /// "Since 2:14 PM" today, "Since Oct 19" before.
     static func since(_ at: Date, now: Date, calendar: Calendar = .current, locale: Locale = .current) -> String {

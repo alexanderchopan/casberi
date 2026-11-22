@@ -560,7 +560,9 @@ extension FeedScreen {
             (nil, DS.textSecondary, String(localized: "Doesn't match Ethereum"), DS.attentionInk)
         case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
         // Nobody waits on you (prd §1841): grey, and it says who it waits on.
-        case .waiting: ("clock", DS.textSecondary, PrivateMoney.beingChecked, DS.textSecondary)
+        // Since when (prd §1938): the oldest deposit it sums, by day.
+        case .waiting: ("clock", DS.textSecondary, PrivateMoney.beingChecked(since: PrivateMoneyStore.shared.notes
+            .filter { $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId }.map(\.at).min()), DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
         return Button {

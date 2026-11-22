@@ -74932,3 +74932,8 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: the head, Following, Security, Money (Public with two Safes, Private's three lines, Saving), App and the colophon. **Not seen:** a tap on each line, the co-signer's switch, a Backup or Networks verb, the private account's page, iPad, Dynamic Type.
+
+## §1938 — USDC under Privacy Pools' minimum says so, and a deposit being checked says since when (user, 2026-11-21: "i'm trying to send usdc from my ethereum account to privacy pools. i have 6 dollars … only shows me ethereum to choose", "AH! we need to say that somewhere to alert the user", "don't say 10.08 just say 10", "i have 12 usdc being checked by privacy pools but i'm not sure when it is from") — BUILT
+
+1. **Why no USDC:** moving in on Ethereum with some USDC but less than ppUSDC's minimum (10 shares, about $10.07 measured), Move says in amber "Privacy Pools takes 10 USDC or more. You have 6 USDC." under the amounts and in the receipt (`PrivateMove.usdcShort`). The number is the pool's round figure; the amounts still start at the cent (§1694).
+2. **Since when:** a Holdings row being checked reads "Being checked by Privacy Pools · since Nov 18", the oldest waiting deposit it sums (`PrivateMoney.beingChecked(since:)`).

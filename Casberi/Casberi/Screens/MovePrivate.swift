@@ -278,6 +278,7 @@ struct MovePrivateSentence<Head: View>: View {
                     Text(verbatim: [have, store.yieldLine(symbol: move.symbol)].compactMap { $0 }
                         .joined(separator: " · "))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    if let short = move.usdcShort { usdcShortLine(short) }
                 } else {
                     Text("\(held) test ETH in this build's account")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -328,6 +329,14 @@ struct MovePrivateSentence<Head: View>: View {
         default:
             EmptyView()
         }
+    }
+
+    /// Why USDC is not offered (prd §1938), in amber: under the list's
+    /// amounts and in the receipt.
+    private func usdcShortLine(_ words: String) -> some View {
+        Text(verbatim: words)
+            .dsText(.body17).foregroundStyle(DS.attentionInk)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// "At least 0.005 ETH or 10.05 USDC moves in, plus 0.0044 ETH kept for
@@ -503,7 +512,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// first deposit takes, or switch on, the approved private balance.
     /// ETH's amounts, then on Ethereum USDC's (prd §1567): picking one picks
     /// its token too, so the sentence names it.
-    private var amounts: some View {
+    @ViewBuilder private var amounts: some View {
         ForEach(move.options.map { "\($0.symbol) \($0.amount)" }, id: \.self) { key in
             let parts = key.split(separator: " ").map(String.init)
             let (token, step) = (parts[0], parts[1])
@@ -521,6 +530,9 @@ struct MovePrivateSentence<Head: View>: View {
             }
             .buttonStyle(RowPress())
             .accessibilityAddTraits(picked ? [.isSelected] : [])
+        }
+        if let short = move.usdcShort {
+            usdcShortLine(short).padding(.top, DS.Space.s2)
         }
     }
 
