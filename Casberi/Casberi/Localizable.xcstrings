@@ -85064,6 +85064,34 @@
         }
       }
     },
+    "Deposit %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Depositar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を預け入れ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 예치"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存入 %@"
+          }
+        }
+      }
+    },
     "Deposit in your co-signer's wallet" : {
       "localizations" : {
         "es" : {
@@ -228032,6 +228060,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "取出"
+          }
+        }
+      }
+    },
+    "Withdraw %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を引き出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 인출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取出 %@"
           }
         }
       }
