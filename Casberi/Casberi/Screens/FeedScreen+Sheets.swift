@@ -300,13 +300,9 @@ extension FeedScreen {
         case .walletToken(let symbol):
             if let position = portfolioUnhidden?.positions.first(where: { $0.symbol == symbol }) {
                 WalletTokenSheet(position: position) { draft in
-                    feedSheet = nil
-                    // Move rises once this sheet has gone (§872).
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(450))
-                        chrome.moveDraft = draft
-                        chrome.moveTray = true
-                    }
+                    // Called once this sheet has gone (§872): one sheet at a time.
+                    chrome.moveDraft = draft
+                    chrome.moveTray = true
                 }
             }
         case .socialFaces:

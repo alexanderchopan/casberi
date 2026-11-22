@@ -13,6 +13,18 @@ struct WalletTokenSheet: View {
     /// Opens Move with this token picked (prd §1684): the sheet closes first,
     /// one sheet at a time (§872).
     let move: (MoveSentence.Draft) -> Void
+    @Environment(\.dismiss) private var dismiss
+    /// Send or Swap was tapped: Move rises as this sheet leaves, never on a
+    /// timer. Raised while the sheet was still closing, Move mounted twice,
+    /// its second mount found the draft already taken and showed the menu
+    /// (user, 2026-11-21: "it starts to go to the page but then brings up
+    /// the move menu").
+    @State private var pending: MoveSentence.Draft?
+
+    private func ask(_ draft: MoveSentence.Draft) {
+        pending = draft
+        dismiss()
+    }
 
     /// The read's route, else one off its biggest contract.
     private var chartRoute: String? {
@@ -124,10 +136,10 @@ struct WalletTokenSheet: View {
                 if send != nil || swap != nil {
                     VStack(alignment: .leading, spacing: 0) {
                         if let send {
-                            DSDoorRow(icon: "arrow.up.right", title: Text("Send \(position.symbol)")) { move(send) }
+                            DSDoorRow(icon: "arrow.up.right", title: Text("Send \(position.symbol)")) { ask(send) }
                         }
                         if let swap {
-                            DSDoorRow(icon: "arrow.left.arrow.right", title: Text("Swap \(position.symbol)")) { move(swap) }
+                            DSDoorRow(icon: "arrow.left.arrow.right", title: Text("Swap \(position.symbol)")) { ask(swap) }
                         }
                     }
                     .padding(.horizontal, DS.Space.s4)
@@ -152,5 +164,10 @@ struct WalletTokenSheet: View {
         .scrollIndicators(.hidden)
         .dsInk()
         .dsReadSheet()
+        .onDisappear {
+            guard let draft = pending else { return }
+            pending = nil
+            move(draft)
+        }
     }
 }
