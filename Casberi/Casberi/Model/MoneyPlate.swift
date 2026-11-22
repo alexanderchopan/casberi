@@ -49,12 +49,12 @@ enum MoneyPlate {
         let target = RoundUpsPot.targetWords
         let publicEarns = AaveLend.rateOnly(baseRate).map { String(localized: "where it earns \($0)") }
             ?? String(localized: "where it earns interest")
-        let privateEarns = AaveLend.rateOnly(privateRate).map { String(localized: "where it earns \($0)") }
-            ?? String(localized: "where it earns interest")
+        let privateEarns = AaveLend.rateOnly(privateRate).map { String(localized: "where it earns \($0) in Aave") }
+            ?? String(localized: "where it earns interest in Aave")
         return [
             String(localized: "Every buy, send and swap rounds up to the next $\(step)."),
             String(localized: "The change is saved as USDC in your public balance, in Aave on Base, \(publicEarns). Your sends can't spend it."),
-            String(localized: "At \(target), it moves as USDC to your private balance, in Aave on Ethereum, \(privateEarns)."),
+            String(localized: "At \(target), it moves as USDC to your private balance in Privacy Pools, on Ethereum, \(privateEarns)."),
         ].joined(separator: " ")
     }
 
