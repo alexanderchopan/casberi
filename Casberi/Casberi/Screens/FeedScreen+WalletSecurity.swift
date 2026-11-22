@@ -116,7 +116,7 @@ extension FeedScreen {
                     AccountPlate(name: String(localized: "App"), glyph: "gearshape") {
                         // ACTIVITY'S ORDER IS A SETTING (prd §1807).
                         AccountLine(label: String(localized: "Activity"), value: String(localized: "Section order"),
-                                    ink: DS.textSecondary, action: { feedSheet = .feedOrder })
+                                    action: { feedSheet = .feedOrder })
                         SettingsRows(style: .lines, openNodes: { feedSheet = .ownNodes })
                     }
                     // The plates' one gap, as Security's from Money's.

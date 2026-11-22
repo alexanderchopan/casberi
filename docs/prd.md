@@ -74951,3 +74951,12 @@ Holdings had a rule per kind: a public token opened its page (§1670), a lent ro
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: lent USDC's page and its Deposit; Round-ups' page; Privacy Pools ETH's page at $1,117; Railgun DAI's long press and its Swap; Aztec USDC's page and its Send. **Not seen:** Withdraw from the page, Privacy Pools' Send landing on a balance (the demo's private Send reads none, a demo mismatch), iPad, Dynamic Type.
+
+## §1940 — Account's App plate: values white, words grey, as on Security and Money (amends §1937's grey App values) (user, 2026-11-22, over a screenshot of the App plate: "the categories and status look the same so it looks like two columns instead of however many rows"; "ok do it") — BUILT
+
+1. Every `AccountLine` on the App plate (Activity and `SettingsRows(style: .lines)`) draws its value in `DS.textPrimary`, its word in `DS.textSecondary` — the same ink as the other two plates. Grey on grey gave the eye no row, only two columns.
+2. The "leaves the app" arrow stays grey.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893), so no Account plate.
+
+**Not seen:** built in a Linux container with no Mac; no simulator pass yet.

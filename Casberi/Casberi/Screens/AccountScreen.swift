@@ -527,13 +527,14 @@ struct SettingsRows: View {
     }
 
     /// **A SETTING IS A LINE (prd §1937):** its word grey in the label
-    /// column, its value grey where values start (the app's settings are
-    /// quieter than the account's), an arrow where it leaves the app.
+    /// column, its value white where values start, as on every plate (prd
+    /// §1940: grey on grey read as two columns), an arrow where it leaves
+    /// the app.
     private func lineList(_ rows: [RowSpec]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(rows, id: \.title) { row in
                 AccountLine(label: String(localized: String.LocalizationValue(row.title)), value: row.value,
-                            ink: DS.textSecondary, action: row.action) {
+                            action: row.action) {
                     if row.trail == .leaves {
                         Image(systemName: "arrow.up.right").dsGlyph(.caption, weight: .semibold)
                             .foregroundStyle(DS.textSecondary)

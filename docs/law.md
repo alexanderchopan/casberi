@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2120 of 2194 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2121 of 2195 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2380,9 +2380,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other g…
 - §1935 — Move's keys and its end: a refused key knocks, holding delete clears, and Done folds the receipt into Activity
 - §1936 — Home adds up: the balance is Public plus Private as drawn, and the demo stands on the account's networks with its Pri…
-- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word…
+- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word… (amended by §1940)
 - §1938 — USDC under Privacy Pools' minimum says so, and a deposit being checked says since when
 - §1939 — Every holding opens its page; the long press offers the same verbs
+- §1940 — Account's App plate: values white, words grey, as on Security and Money
 
 ## Dead rulings → what replaced them (generated)
 
