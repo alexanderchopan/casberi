@@ -1453,6 +1453,35 @@
     }
    ],
    "anchor": "text:=Require co-signer"
+  },
+  {
+   "id": "move-receive-info",
+   "covers": [
+    "Screens/MoveSentence.swift:receiveInfo#apps",
+    "Screens/MoveSentence.swift:receiveInfo#settings",
+    "Screens/MoveSentence.swift:receiveInfo#move"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Move"
+    },
+    {
+     "tap": "button:=Receive"
+    },
+    {
+     "wait": 1
+    },
+    {
+     "tap": "button:=About To Privacy Pools"
+    }
+   ],
+   "anchor": "text:^It moves into your private balance on Ethereum by itself"
   }
  ],
  "exempt": [

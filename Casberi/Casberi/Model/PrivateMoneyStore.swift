@@ -163,6 +163,13 @@ final class PrivateMoneyStore {
         return apys[pool.share.lowercased()]
     }
 
+    /// A pool's smallest deposit on Ethereum in the token's units (USDC 6,
+    /// ETH 18), or nil unread: Receive's "at least" (`ReceiveWords.Pools`).
+    func minimumUnits(symbol: String) -> String? {
+        guard let pool = PrivacyNetwork.ethereum.yield.first(where: { $0.symbol == symbol }) else { return nil }
+        return minimums[pool.share.lowercased()]
+    }
+
     /// The pool's fee on a token's interest on Ethereum, as a whole percent
     /// ("20"), or nil unread.
     func yieldFeePercent(symbol: String) -> String? {

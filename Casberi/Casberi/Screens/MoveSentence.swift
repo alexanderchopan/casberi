@@ -103,6 +103,8 @@ struct MoveSentence: View {
     @State private var aztecReceive = false
     /// Which Receive row's Copy reads "Copied" just now (prd §1929).
     @State private var copiedPlace: String?
+    /// The Receive place whose ⓘ is open (`ReceiveWords`).
+    @State private var receiveInfo: ReceiveWords.Place?
     /// "From another network" taken: the Network row and its list.
     @State private var receiveOther = false
     /// Your private balance on Ethereum for any token but ETH and USDC:
@@ -2573,8 +2575,8 @@ struct MoveSentence: View {
                            lineInk: DS.attentionInk, place: "public", copy: nil)
             } else {
                 receiveRow(String(localized: "To your public account"),
-                           lines: [String(localized: "Any token"), receiveNetworks.map(\.name).joined(separator: ", ")],
-                           place: "public",
+                           lines: ReceiveWords.row(.public, networks: receiveNetworkNames, pools: receivePools),
+                           place: "public", info: .public,
                            copy: { copy(); if !YourAccountDemo.isDemo(account) { markCopied("public") } })
             }
             receiveFromRows
@@ -2589,8 +2591,8 @@ struct MoveSentence: View {
             if poolsRow {
                 // A one-time address; what arrives moves in by itself (prd §1560).
                 receiveRow(String(localized: "To Privacy Pools"),
-                           lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],
-                           place: "pools",
+                           lines: ReceiveWords.row(.pools, networks: receiveNetworkNames, pools: receivePools),
+                           place: "pools", info: .pools,
                            copy: {
                                guard !DemoMode.isActive else { say(YourAccountDemo.actsLater); return }
                                FreshReceive.shared.ensureCurrent()
@@ -2607,8 +2609,8 @@ struct MoveSentence: View {
                 // Your 0zk address, the same every time; only a Railgun
                 // balance pays it (prd §1877).
                 receiveRow(String(localized: "To Railgun"),
-                           lines: [String(localized: "Ethereum tokens"), String(localized: "From Railgun only")],
-                           place: "railgun",
+                           lines: ReceiveWords.row(.railgun, networks: receiveNetworkNames, pools: receivePools),
+                           place: "railgun", info: .railgun,
                            copy: {
                                Task { @MainActor in
                                    let address = DemoMode.isActive ? MoveFreshSentence<EmptyView>.demoPrivateAddress
@@ -2622,8 +2624,8 @@ struct MoveSentence: View {
             }
             if let aztec {
                 receiveRow(String(localized: "To Aztec"), nameInk: DS.aztecInk,
-                           lines: [String(localized: "USDC, ETH"), String(localized: "From Aztec only")], lineInk: DS.aztecInk,
-                           place: "aztec", copyInk: DS.aztecInk,
+                           lines: ReceiveWords.row(.aztec, networks: receiveNetworkNames, pools: receivePools), lineInk: DS.aztecInk,
+                           place: "aztec", copyInk: DS.aztecInk, info: .aztec,
                            copy: {
                                if DemoMode.isActive { say(YourAccountDemo.actsLater); return }
                                DSPasteboard.copy(aztec)
@@ -2631,6 +2633,89 @@ struct MoveSentence: View {
                                markCopied("aztec")
                            })
             }
+        }
+        // Privacy Pools' minimums, rates and fee for the rows and the ⓘ,
+        // read once a minute at most (`PrivateMoneyStore.readYield`).
+        .task {
+            if PrivateMove.available, !DemoMode.isActive {
+                await PrivateMoneyStore.shared.readYield(including: .ethereum)
+            }
+        }
+        .sheet(item: $receiveInfo) { place in receiveInfoTray(place) }
+    }
+
+    /// The public networks, A–Z as the row has always said them.
+    private var receiveNetworkNames: String { receiveNetworks.map(\.name).joined(separator: ", ") }
+
+    /// Privacy Pools' figures as Receive says them; the demo's are fixed.
+    private var receivePools: ReceiveWords.Pools {
+        guard !DemoMode.isActive else { return .demo }
+        let store = PrivateMoneyStore.shared
+        return ReceiveWords.Pools(
+            dollarsAtLeast: ReceiveWords.Pools.dollars(minimumUnits: store.minimumUnits(symbol: "USDC")),
+            ethAtLeast: ReceiveWords.Pools.eth(minimumWei: store.minimumUnits(symbol: "ETH")),
+            usdcRate: store.yieldRate(symbol: "USDC"), ethRate: store.yieldRate(symbol: "ETH"),
+            feePercent: store.yieldFeePercent(symbol: "USDC"))
+    }
+
+    /// **THE ⓘ'S TRAY:** the place's name, then its short paragraphs.
+    private func receiveInfoTray(_ place: ReceiveWords.Place) -> some View {
+        DSTray(title: ReceiveWords.title(place), height: 520, detents: [.height(520), .large]) {
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                ForEach(Array(ReceiveWords.info(place, networks: receiveNetworkNames, pools: receivePools).enumerated()),
+                        id: \.offset) { _, words in
+                    Text(verbatim: words)
+                        .dsText(.body17)
+                        .foregroundStyle(place == .aztec ? DS.aztecInk : DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, DS.Space.s4)
+        }
+    }
+
+    /// **THE ⓘ (user, 2026-11-22):** after a row's name, never beside its
+    /// Copy, so the two are not mistaken for each other. Drawn over the row
+    /// (`receiveInfoLayer`), because a button cannot stand inside the row's
+    /// own button.
+    private func infoButton(_ place: ReceiveWords.Place, ink: Color) -> some View {
+        Button {
+            DSHaptic.selection()
+            receiveInfo = place
+        } label: {
+            Image(systemName: "info.circle")
+                .dsGlyph(.caption, weight: .regular)
+                .foregroundStyle(ink)
+                .frame(width: DS.Hit.min, height: DS.Hit.min)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text("About \(ReceiveWords.title(place))"))
+    }
+
+    /// The ⓘ over a row: the row's own words laid out again, unseen and
+    /// untouchable, so the ⓘ lands right after the name whatever its width.
+    private func receiveInfoLayer(_ name: String, lines: [String], place: ReceiveWords.Place, ink: Color) -> some View {
+        HStack(spacing: DS.Space.s2) {
+            HStack(alignment: .center, spacing: MoveDeck.leadGap) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 0) {
+                        Text(verbatim: name).dsText(.heading17).lineLimit(1).hidden()
+                        infoButton(place, ink: ink)
+                            .padding(.vertical, -(DS.Hit.min - 17) / 2)
+                        Spacer(minLength: 0).allowsHitTesting(false)
+                    }
+                    ForEach(lines, id: \.self) { line in
+                        Text(verbatim: line).dsText(.fact15).lineLimit(1).minimumScaleFactor(0.85).hidden()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, DS.Space.s2)
+            .frame(minHeight: Self.receiveRow)
+            Color.clear.frame(width: DS.Hit.min, height: 1).allowsHitTesting(false)
         }
     }
 
@@ -2640,7 +2725,7 @@ struct MoveSentence: View {
     /// glyph at its edge turning to a tick for a moment (§867).
     private func receiveRow(_ name: String, nameInk: Color = DS.textPrimary, lines: [String],
                             lineInk: Color = DS.textSecondary, place: String, copyInk: Color = DS.pickInk,
-                            copy: (() -> Void)?) -> some View {
+                            info: ReceiveWords.Place? = nil, copy: (() -> Void)?) -> some View {
         let done = copiedPlace == place
         return Button {
             copy?()
@@ -2660,6 +2745,12 @@ struct MoveSentence: View {
         .buttonStyle(RowPress())
         .disabled(copy == nil)
         .accessibilityLabel(Text("Copy the \(name) address"))
+        .overlay(alignment: .topLeading) {
+            if let info {
+                receiveInfoLayer(name, lines: lines, place: info,
+                                 ink: nameInk == DS.textPrimary ? DS.textSecondary : nameInk)
+            }
+        }
     }
 
     /// **A RECEIVE ROW'S WORDS (prd §1929):** its name, then each line (what
@@ -2724,8 +2815,14 @@ struct MoveSentence: View {
                     withAnimation(DS.Motion.standard) { open = .elsewhere }
                 }
             } label: { receiveDoor(String(localized: "From another network"),
-                                   sub: String(localized: "USDC or the network's token") + "\n" + String(localized: "Most EVM networks")) }
+                                   sub: ReceiveWords.row(.elsewhere, networks: receiveNetworkNames, pools: receivePools)
+                                        .joined(separator: "\n")) }
                 .buttonStyle(RowPress())
+                .overlay(alignment: .topLeading) {
+                    receiveInfoLayer(String(localized: "From another network"),
+                                     lines: ReceiveWords.row(.elsewhere, networks: receiveNetworkNames, pools: receivePools),
+                                     place: .elsewhere, ink: DS.textSecondary)
+                }
             // Direct from wallet (prd §1506) is deleted (prd §1929): a wallet
             // of yours pays To public account like anyone else.
         }
