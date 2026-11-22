@@ -74960,3 +74960,11 @@ Holdings had a rule per kind: a public token opened its page (§1670), a lent ro
 **Mac half (§1402).** None: the Mac carries no wallet (§1893), so no Account plate.
 
 **Not seen:** built in a Linux container with no Mac; no simulator pass yet.
+
+## §1941 — Move's receipt chip wears the ramp's row face, 30pt, never its own 28 (user, 2026-11-22: "I don't wanna handroll some new font size") — BUILT
+
+1. `MoveReceipt.chipMark` is `DS.Face.row` (30pt, was a hand-set 28); To's address face in the chip takes `DS.Face.row` by name, so `face-ramp-audit.py` resolves it. The token and network marks in the same chip follow `chipMark` and grow 2pt with it, inside the 40pt chip.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Mac; no simulator pass yet.

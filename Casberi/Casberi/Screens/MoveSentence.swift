@@ -7292,7 +7292,7 @@ struct MoveSentence: View {
     private func chipFace(_ r: LedgerRow) -> AnyView? {
         guard r.opens == .to, r.mark == nil, let a = resolved?.address, ENS.isHexAddress(a),
               !WalletWatch.sameAddress(a, account) else { return nil }
-        return AnyView(WalletFace(address: a, size: MoveReceipt.chipMark, circular: true).accessibilityHidden(true))
+        return AnyView(WalletFace(address: a, size: DS.Face.row, circular: true).accessibilityHidden(true))
     }
 
     /// The token chip's flight key: its row in the list shares it.

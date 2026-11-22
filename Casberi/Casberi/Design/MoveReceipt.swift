@@ -15,7 +15,9 @@ enum MoveReceipt {
     static let gap: CGFloat = 12
     static let labelWidth: CGFloat = 78
     static let chipHeight: CGFloat = 40
-    static let chipMark: CGFloat = 28
+    /// A chip's face or mark: the ramp's row tier (prd §1941), never a
+    /// number of its own.
+    static let chipMark: CGFloat = DS.Face.row
 }
 
 // MARK: - The pick flies (prd §1933)
