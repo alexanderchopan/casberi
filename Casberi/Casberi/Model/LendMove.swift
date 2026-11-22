@@ -219,8 +219,10 @@ final class LendMove {
     var cost: PrivateCost? {
         guard units != nil, let price = gasPriceWei[chainId], let eth = prices["eth"] else { return nil }
         let usd = NSDecimalNumber(decimal: Decimal(Self.gas) * price / pow(10, 18)).doubleValue * eth
-        return PrivateCost(usd: usd, parts: [.init(words: String(localized: "Gas, from your account"),
-                                                   figure: String(localized: "about \(Self.usd(usd))"))])
+        // The part's figure is the total's own words: one part, one figure,
+        // never "under $0.01" over "about $0.00" (user, 2026-11-21).
+        let figure = PrivateCost(usd: usd, parts: []).amount
+        return PrivateCost(usd: usd, parts: [.init(words: String(localized: "Gas, from your account"), figure: figure)])
     }
 
     /// The step rows' plan: signed, sent on this network (prd §1700z).

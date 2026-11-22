@@ -22,7 +22,6 @@ struct MoveLendSentence<Head: View>: View {
 
     @State private var open: Blank?
     /// The cost's list stands in the rows' place (prd §1876).
-    @State private var costOpen = false
     @Environment(\.openURL) private var openURL
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -162,6 +161,9 @@ struct MoveLendSentence<Head: View>: View {
             move.mode = mode
             move.pick(nil, all: false)
             move.settle()
+            // The amount was cleared, so the keys ask it, as Deposit's open
+            // does (user, 2026-11-21: Withdraw opened on an empty "0 USDC").
+            if live { open = .amount }
         }
         DSHaptic.selection()
     }
@@ -261,7 +263,7 @@ struct MoveLendSentence<Head: View>: View {
                 MoveDeckFoot(backDisabled: move.acting, back: {
                     withAnimation(DS.Motion.standard) {
                         // Back is the menu, never the step before (prd §1911).
-                        if costOpen { costOpen = false } else { open = nil; back?() }
+                        open = nil; back?()
                     }
                 }) { footWord }
             }
@@ -319,26 +321,29 @@ struct MoveLendSentence<Head: View>: View {
             if let run = stepsRun {
                 PrivateStepRows(run: run).transition(.opacity)
             }
-            // The cost is a row of the facts (prd §1876), the rate a
-            // fact over it, Aave the one it goes through (prd §1901).
-            MoveCostRows(cost: live && move.units != nil && stepsRun == nil ? move.cost : nil, open: $costOpen, indented: false) {
-                // What there is leads the facts, as Send's You have
-                // does (prd §1898 item 6).
-                if live, stepsRun == nil, hasAny, let have = move.haveFigure {
-                    // **USE ALL ON THE LINE THAT SAYS WHAT YOU HAVE (prd
-                    // §1916):** while the keys are up, as Send's is.
-                    MoveFactRow(name: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
-                                value: have, indented: false,
-                                act: nil)
+            // **READY IS THE RECEIPT, AS SEND'S AND SWAP'S (prd §1932; user,
+            // 2026-11-21: "fix earn's ready screen").** Each fact's word in
+            // the label column, its value where the chips' words start: what
+            // there is, the rate, who carries it, the fee. The fee is a plain
+            // fact: its one part (gas) said again behind a door, rounded
+            // another way ("under $0.01" over "about $0.00"), told nothing.
+            if live, stepsRun == nil {
+                VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+                    if hasAny, let have = move.haveFigure {
+                        MoveReceiptFact(label: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
+                                        value: have)
+                    }
+                    if hasAny, let fact = rateFact {
+                        MoveReceiptFact(label: fact.name, value: fact.value)
+                    }
+                    MoveReceiptFact(label: String(localized: "Through"), value: "Aave")
+                    if move.units != nil, let cost = move.cost {
+                        MoveReceiptFact(label: String(localized: "Fee"), value: cost.amount)
+                    }
                 }
-                if live, stepsRun == nil, hasAny, let fact = rateFact {
-                    MoveFactRow(name: fact.name, value: fact.value, indented: false)
-                }
-                if live, stepsRun == nil {
-                    MoveFactRow(name: String(localized: "Through"), value: "Aave", indented: false)
-                }
+                .transition(.opacity)
             }
-            if !costOpen { line }
+            line
         }
     }
 

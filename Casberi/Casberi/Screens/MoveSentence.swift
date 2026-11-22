@@ -1605,6 +1605,8 @@ struct MoveSentence: View {
                 VStack(alignment: .leading, spacing: 0) {
                     if rawOpen {
                         rawPage
+                            // Its last row clears the foot's back arrow.
+                            .padding(.bottom, MoveDeck.footHeight)
                             .transition(.opacity)
                     } else if open == .verb {
                         // The menu stands under Move's own name (prd §1781).
@@ -1685,6 +1687,21 @@ struct MoveSentence: View {
         // **THE RECEIPT IS THE PAGE (prd §1931).** It covers the unseen
         // sentence, edge to edge, from the top.
         .overlay { if open != .verb, !rawOpen { deck.transition(.opacity) } }
+        // **RAW TRANSACTION HAS THE FOOT'S BACK ARROW (user, 2026-11-21:
+        // "add the back arrow").** The deck, and its foot, step aside for
+        // the page; the arrow stands where the deck's does, so the way back
+        // is where it is on every other Move page, not only the grey "Move".
+        .overlay(alignment: .bottom) {
+            if rawOpen {
+                MoveDeckFoot(back: {
+                    withAnimation(DS.Motion.standard) { rawOpen = false }
+                }) { EmptyView() }
+                .padding(.horizontal, Self.sideInset(inTray))
+                .background { DS.surfaceSheet.padding(.horizontal, inTray ? -DS.Space.s4 : 0).ignoresSafeArea(edges: .bottom) }
+                .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
+                .transition(.opacity)
+            }
+        }
         // A network picked is read again; the first pass is `readHoldings`'
         // (prd §1586: Base was read twice on every open).
         .task(id: network.chainId) { if !heldBy.isEmpty { await readNetwork() } }
