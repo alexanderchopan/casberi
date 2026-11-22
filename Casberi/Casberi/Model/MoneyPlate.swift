@@ -54,7 +54,7 @@ enum MoneyPlate {
             ]),
             Fact(label: from, lines: [networks]),
             Fact(label: settles, lines: [
-                String(localized: "Round-ups, as USDC on Aave, on Base. Your sends can't spend it."),
+                String(localized: "Rounds up into USDC on Aave, on Base. Your sends can't spend it."),
                 String(localized: "From Ethereum and Robinhood, through Across"),
                 String(localized: "At \(target), into Privacy Pools on Ethereum"),
             ]),
