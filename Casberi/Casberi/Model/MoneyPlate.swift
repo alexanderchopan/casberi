@@ -60,7 +60,9 @@ enum MoneyPlate {
             String(localized: "Every buy, send and swap rounds up to the next $\(step)."),
             String(localized: "The change is saved as USDC in your public balance, in Aave on Base, \(publicEarns). Your sends can't spend it."),
             String(localized: "At \(target), it moves as USDC to your private balance in Privacy Pools, on Ethereum, \(privateEarns)."),
-        ].joined(separator: " ")
+        // Three short paragraphs with a line between (user, 2026-11-22:
+        // "the paragraph is too long. need to break it up").
+        ].joined(separator: "\n\n")
     }
 
     /// Aave's USDC supply rate on Base, read once: one `eth_call` to the
