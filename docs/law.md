@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2122 of 2196 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2123 of 2197 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2283,7 +2283,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1838 — The balance is Holdings' door: Home's resting balance and the line under it open Holdings, a chevron after the figure…
 - §1839 — Activity is two halves on the phone: what came in on the page, Apps on a panel under it; the Wallet leads from the fi…
 - §1840 — An Activity row is its app, Needs you's rows are things, and Money opened from Activity stands under it (amends §1813…
-- §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki…
+- §1841 — Needs you draws no box and holds only what needs you: "Held up" is deleted (retires §1669), a deposit 0xBow is checki… (amended by §1942)
 - §1842 — The title path is one size, and a name too long is cut at its tail (amends §1812, §1811, §1389, §1622) (numbered §182…
 - §1843 — The phone's Home is one scroll: your money on one card, the watchlist as a line, Account and its address as chips, ch… (amended by §1870, §1871, §1893)
 - §1844 — Needs you holds what is near and can be marked as seen; a page goes back to the top of Home; each band tile opens its…
@@ -2385,6 +2385,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1939 — Every holding opens its page; the long press offers the same verbs
 - §1940 — Account's App plate: values white, words grey, as on Security and Money
 - §1941 — Move's receipt chip wears the ramp's row face, 30pt, never its own 28
+- §1942 — A deposit 0xBow has never seen is not "being checked"
 
 ## Dead rulings → what replaced them (generated)
 

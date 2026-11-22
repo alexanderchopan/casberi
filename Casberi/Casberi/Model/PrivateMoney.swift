@@ -93,6 +93,20 @@ enum PrivateMoney {
         }
     }
 
+    /// **"UNKNOWN" IS NOT "BEING CHECKED" (prd §1942).** The ASP answers
+    /// `unknown` for a label it has never seen: a deposit that never reached
+    /// the pool. Read as waiting, its row said "Being checked by Privacy
+    /// Pools" for days over 12.98 USDC that sat at the address (2026-11-22).
+    static func aspNeverSaw(_ data: Data) -> Bool {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        return (json["status"] as? String)?.lowercased() == "unknown"
+    }
+
+    /// How long a deposit may read `unknown` before it is taken as never
+    /// made: the ASP lists a deposit within minutes, a crossing from Base
+    /// within the hour.
+    static let neverSeenAfter: TimeInterval = 6 * 60 * 60
+
     /// The ASP's address for a label: by its HASH, never the label (asked
     /// with the raw label an approved deposit reads `unknown` forever).
     static func statusURL(aspUrl: String, labelHash: String) -> URL? {

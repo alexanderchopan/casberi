@@ -408,6 +408,14 @@ final class PrivateMoneyStore {
                   let url = PrivateMoney.statusURL(aspUrl: network.aspUrl, labelHash: note.labelHash),
                   let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: PrivacyEngine.service),
                   http.statusCode == 200, let status = PrivateMoney.status(asp: data) else { continue }
+            // Never seen by the ASP hours on: no deposit was made, so no
+            // row says it is being checked (prd §1942).
+            if PrivateMoney.aspNeverSaw(data), Date().timeIntervalSince(note.at) > PrivateMoney.neverSeenAfter {
+                NSLog("privateMoney| asp never saw | %@… | kept %@ | removed", String(note.commitment.prefix(10)),
+                      note.at.formatted(.iso8601))
+                remove(commitment: note.commitment)
+                continue
+            }
             NSLog("privateMoney| asp | %@… | %@", String(note.commitment.prefix(10)), status.rawValue)
             guard status != note.status, let i = notes.firstIndex(where: { $0.commitment == note.commitment }) else { continue }
             notes[i].status = status

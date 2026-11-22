@@ -74968,3 +74968,7 @@ Holdings had a rule per kind: a public token opened its page (§1670), a lent ro
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Not seen:** written in a Linux container with no Mac; no simulator pass yet.
+
+## §1942 — A deposit 0xBow has never seen is not "being checked" (amends §1841) (user, 2026-11-22: "my app still says i have a usdc being checked by privacy pools for 12.9$. it's been there over a day") — BUILT
+
+The ASP answers `unknown` for a label it has never seen, and the app read that as waiting, so a deposit that never reached the pool drew "Being checked by Privacy Pools" for good. Measured on the user's account: 12.98 USDC sat at the one-time address on Ethereum (sent there from their own wallet on Nov 19), its approval to ppUSDC's router landed Nov 22, no deposit followed, and the row stood. Now a waiting note the ASP still calls `unknown` six hours after it was kept is removed (`PrivateMoney.aspNeverSaw`, `neverSeenAfter`); the address's USDC is moved in again when Receive opens, as a failed move is. **Not seen:** why the deposit after the Nov 22 approval was not sent.
