@@ -25,6 +25,9 @@ extension FeedScreen {
         case token(TokenQuickRoute)
         /// One held token, itemized by where it is (prd §1670), by symbol.
         case walletToken(String)
+        /// Any other holding's page: lent, private, Railgun, Aztec,
+        /// Round-ups, each with its own verbs (`WalletHoldingSheet`). Values only.
+        case walletHolding(WalletHolding)
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
         /// resolves to the same presenting controller as this one and the picker
@@ -102,6 +105,7 @@ extension FeedScreen {
             case .thing(let t, let walk): "thing:\(t.id.uuidString)@\(walk.key)"
             case .token(let r): "token:\(r.id)"
             case .walletToken(let symbol): "walletToken:\(symbol)"
+            case .walletHolding(let h): "walletHolding:\(h.id)"
             case .socialFaces: "socialFaces"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room, let seat): "followingAdd:\(room.rawValue):\(seat ?? "")"
@@ -305,6 +309,9 @@ extension FeedScreen {
                     chrome.moveTray = true
                 }
             }
+        case .walletHolding(let holding):
+            // The verb runs once this sheet has gone (§872).
+            WalletHoldingSheet(holding: holding) { walletDo($0) }
         case .socialFaces:
             socialFacesTray
         case .socialFollow:
@@ -337,13 +344,13 @@ extension FeedScreen {
                 WalletTokensSheet(positions: portfolio.positions,
                                   total: portfolio.totalUSD,
                                   moves: walletHoldingMoves, hidden: hidden) { position in
-                    feedSheet = nil
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(450))
-                        walletOpenToken(position)
-                    }
+                    // Called once the tray has gone (§872).
+                    walletOpenToken(position)
                 } onHide: { target, hide in
                     walletSetHidden(target, hidden: hide)
+                } onMove: { draft in
+                    chrome.moveDraft = draft
+                    chrome.moveTray = true
                 }
             }
         case .subscription(let id):

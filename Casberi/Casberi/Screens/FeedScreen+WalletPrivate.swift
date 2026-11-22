@@ -216,6 +216,11 @@ extension FeedScreen {
         let store = RailgunHoldings.shared
         let figure = mask ?? store.usd(h, units: units).map(WalletValue.money)
             ?? RailgunHoldings.figure(units, decimals: h.decimals)
+        // Its page, Send and Swap on it (user, 2026-11-21); Send opens with
+        // your account in To, as the row's tap did (§1721 item 3).
+        let holding = WalletHolding(id: "railgun:" + h.id, symbol: h.symbol, figure: figure,
+                                    usd: mask == nil ? store.usd(h, units: units) : nil, line: line,
+                                    verbs: pending ? [] : [.railgunSend(contract: h.contract), .railgunSwap(contract: h.contract)])
         return Button {
             DSHaptic.selection()
             // Still in Railgun's hour: its steps (prd §1787), nothing to move yet.
@@ -225,8 +230,7 @@ extension FeedScreen {
                 feedSheet = .onItsWay(item)
                 return
             }
-            chrome.moveRailgun = .init(contract: h.contract, takeBack: true)
-            chrome.moveTray = true
+            walletOpenHolding(holding)
         } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
                 Group {
@@ -258,6 +262,7 @@ extension FeedScreen {
         }
         .buttonStyle(RowPress())
         .dsHover()
+        .contextMenu { walletHoldingMenu(holding) }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: [h.symbol, line, figure].joined(separator: ". ")))
@@ -565,6 +570,10 @@ extension FeedScreen {
             .filter { $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId }.map(\.at).min()), DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
+        // Its page, Send on it (user, 2026-11-21), as every holding's.
+        let holding = WalletHolding(id: "private:" + row.id, symbol: row.symbol, title: row.title, figure: figure,
+                                    usd: mask == nil ? PrivateMoney.rowUSD(row, prices: prices) : nil,
+                                    line: state, verbs: [.privateSend])
         return Button {
             // Being checked: its steps (prd §1787), nothing to send yet, and
             // Take it back for the notes it sums (§1576, §1841).
@@ -578,7 +587,7 @@ extension FeedScreen {
                 DSHaptic.selection()
                 feedSheet = .onItsWay(item)
             } else {
-                walletOpenPrivate(.send)
+                walletOpenHolding(holding)
             }
         } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
@@ -616,10 +625,10 @@ extension FeedScreen {
         }
         .buttonStyle(RowPress())
         .dsHover()
+        .contextMenu { if row.kind != .waiting { walletHoldingMenu(holding) } }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: [row.title, state, figure].joined(separator: ". ")))
-        .accessibilityHint(Text("Sends from Privacy Pools"))
         .walletListRow()
     }
 }

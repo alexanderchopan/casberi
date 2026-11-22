@@ -64,7 +64,23 @@ extension FeedScreen {
         // · fact · place): both are Aave on Base.
         let state = (["Base"] + (mask == nil ? [String(localized: "\(RoundUpsPot.figure(units)) of \(at)")] : []) + ["Aave"])
             .joined(separator: " · ")
-        return HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+        // Its page like every holding's (user, 2026-11-21). No verb: the pot
+        // moves itself into your private balance at its figure.
+        let holding = WalletHolding(id: "roundups", symbol: "USDC", title: String(localized: "Round-ups"),
+                                    figure: figure, usd: mask == nil ? usd : nil, line: state, verbs: [])
+        return Button { walletOpenHolding(holding) } label: {
+            walletRoundUpsLabel(figure: figure, state: state)
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: [String(localized: "Round-ups"), state, figure].joined(separator: ". ")))
+        .walletListRow()
+    }
+
+    private func walletRoundUpsLabel(figure: String, state: String) -> some View {
+        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             AssetMark(name: "USDC", size: DS.Mark.row)
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
@@ -84,9 +100,7 @@ extension FeedScreen {
             walletRowFigure(figure, tone: DS.textPrimary)
         }
         .walletRowPitch()
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: [String(localized: "Round-ups"), state, figure].joined(separator: ". ")))
-        .walletListRow()
+        .contentShape(Rectangle())
     }
 
     func walletLentUSD(_ m: AaveLend.Market, lend: LendMove, prices: [String: Double]) -> Double? {
@@ -111,7 +125,13 @@ extension FeedScreen {
         // Network · fact · place (prd §1718): "Base · 5.1% · Aave"; the rate
         // unread, "Base · Aave".
         let state = [m.network, AaveLend.rateOnly(lend.rates[LendMove.key(m)]), "Aave"].compactMap { $0 }.joined(separator: " · ")
-        return Button { walletOpenLend(.takeBack, m) } label: {
+        // Its page, Withdraw and Deposit on it (user, 2026-11-21): a tap
+        // never jumps straight into Move.
+        let holding = WalletHolding(id: "lent:" + m.aToken, symbol: m.symbol, figure: figure,
+                                    usd: mask == nil ? walletLentUSD(m, lend: lend, prices: prices) : nil, line: state,
+                                    verbs: [.lendWithdraw(chainId: m.chainId, symbol: m.symbol),
+                                            .lendDeposit(chainId: m.chainId, symbol: m.symbol)])
+        return Button { walletOpenHolding(holding) } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
                 AssetMark(name: m.symbol, size: DS.Mark.row)
                     .frame(width: DSRoomChassis.headGlyph)
@@ -136,10 +156,10 @@ extension FeedScreen {
         }
         .buttonStyle(RowPress())
         .dsHover()
+        .contextMenu { walletHoldingMenu(holding) }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text(verbatim: [title, state, figure].joined(separator: ". ")))
-        .accessibilityHint(Text("Takes it back"))
         .walletListRow()
     }
 }

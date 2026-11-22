@@ -151,7 +151,17 @@ struct WalletTokensSheet: View {
     /// Hide (true) or show (false) a token or one contract of it, from a
     /// row's long press (prd §1591).
     var onHide: ((HiddenTokens.Target, Bool) -> Void)? = nil
+    /// Send or Swap from a row's long press: Move with that token, raised
+    /// once this tray has gone. Raised over it, Move could not rise, and
+    /// rose late when the tray closed with its token already lost, on the
+    /// menu instead (user, 2026-11-21: "walk all the move paths").
+    var onMove: ((MoveSentence.Draft) -> Void)? = nil
 
+    @Environment(\.dismiss) private var dismiss
+    /// What the tray was closed for, done as it leaves (one sheet at a time,
+    /// §872): a token to open, or Move to raise.
+    @State private var opening: WalletPortfolio.Position?
+    @State private var moving: MoveSentence.Draft?
     @State private var query = ""
     @State private var dustOpen = false
     @FocusState private var fieldFocused: Bool
@@ -195,12 +205,22 @@ struct WalletTokensSheet: View {
                 }
             }
         }
+        .onDisappear {
+            if let position = opening {
+                opening = nil
+                onOpen(position)
+            } else if let draft = moving {
+                moving = nil
+                onMove?(draft)
+            }
+        }
     }
 
     private func row(_ position: WalletPortfolio.Position) -> some View {
         Button {
             DSHaptic.selection()
-            onOpen(position)
+            opening = position
+            dismiss()
         } label: {
             WalletTokenRowLabel(position: position, total: total,
                                 move: moves[HoldingMoves.key(position.symbol)])
@@ -211,7 +231,13 @@ struct WalletTokensSheet: View {
         .contextMenu {
             // Out of the list and the total (user: "when i open tokens i
             // should be able to long press and hide tokens").
-            if let onHide { TokenHideMenu(position: position, onHide: onHide) }
+            if let onHide {
+                TokenHideMenu(position: position, onHide: onHide,
+                              onMove: onMove == nil ? nil : { (draft: MoveSentence.Draft) in
+                                  moving = draft
+                                  dismiss()
+                              })
+            }
         }
         .padding(.horizontal, DS.Space.s4)
     }
@@ -300,6 +326,9 @@ struct WalletTokensSheet: View {
 struct TokenHideMenu: View {
     let position: WalletPortfolio.Position
     let onHide: (HiddenTokens.Target, Bool) -> Void
+    /// Where Move is raised from, when the row stands in a sheet that must
+    /// close first (the Tokens tray); nil raises it here, over a page.
+    var onMove: ((MoveSentence.Draft) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
 
     /// Contracts, plus one for any exchange, bank or app holding the symbol.
@@ -322,6 +351,7 @@ struct TokenHideMenu: View {
     }
 
     private func move(_ draft: MoveSentence.Draft) {
+        if let onMove { onMove(draft); return }
         chrome.moveDraft = draft
         chrome.moveTray = true
     }

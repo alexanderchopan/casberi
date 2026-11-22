@@ -74937,3 +74937,17 @@ Railgun's sentence still types on the iPhone's pad (`MoveRailgunPrivate.amountFi
 
 1. **Why no USDC:** moving in on Ethereum with some USDC but less than ppUSDC's minimum (10 shares, about $10.07 measured), Move says in amber "Privacy Pools takes 10 USDC or more. You have 6 USDC." under the amounts and in the receipt (`PrivateMove.usdcShort`). The number is the pool's round figure; the amounts still start at the cent (§1694).
 2. **Since when:** a Holdings row being checked reads "Being checked by Privacy Pools · since Nov 18", the oldest waiting deposit it sums (`PrivateMoney.beingChecked(since:)`).
+
+## §1939 — Every holding opens its page; the long press offers the same verbs (user, 2026-11-21: "if i tap some the token page opens. others open send. shouldn't the token page open for all of them which itself has send and swap on it? or do we have rules? i don't understand"; "yes i guess it should open send", of the Aztec USDC row; "Build it now") — BUILT
+
+Holdings had a rule per kind: a public token opened its page (§1670), a lent row went straight to Withdraw, a Privacy Pools row straight to Send privately, a Railgun row straight to Send, and Round-ups and an Aztec token did nothing. One rule now:
+
+1. **A tap on any holding opens its page** (`WalletHoldingSheet`, `FeedSheetRoute.walletHolding`; a public token keeps `WalletTokenSheet`, which itemizes its networks). The page is the mark, "Token", the name, the dollars whole ("$1,117", where the row says "$1K"; the row's figure while balances are hidden or unpriced), the row's own line (network · fact · place, §1718; Aztec's in its ink), then the verbs that work for that place.
+2. **Verbs by place:** lent on Aave, Withdraw and Deposit; Privacy Pools, Send; Railgun, Send (your account in To, as the row did, §1721 item 3) and Swap (§1875); Aztec, Send from Aztec; Round-ups, none (the pot moves itself at its figure).
+3. **The long press offers the page's verbs**, as a public token's already did (Send · Swap · Hide, §1609).
+4. **A verb runs once the page has gone** (one sheet at a time, §872): never on a timer.
+5. **Unchanged:** a row still on its way (being checked by Privacy Pools, in Railgun's hour, arriving on Aztec) opens its steps (§1787); Fee Juice opens Gas on Aztec (§1761); the empty places' rows and Add money stay verbs.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: lent USDC's page and its Deposit; Round-ups' page; Privacy Pools ETH's page at $1,117; Railgun DAI's long press and its Swap; Aztec USDC's page and its Send. **Not seen:** Withdraw from the page, Privacy Pools' Send landing on a balance (the demo's private Send reads none, a demo mismatch), iPad, Dynamic Type.

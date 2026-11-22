@@ -1227,6 +1227,24 @@
    "anchor": "button:=Add gas"
   },
   {
+   "id": "wallet-holding",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#walletHolding"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:^DAI"
+    }
+   ],
+   "anchor": "button:=Send DAI"
+  },
+  {
    "id": "wallet-on-its-way",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#onItsWay"

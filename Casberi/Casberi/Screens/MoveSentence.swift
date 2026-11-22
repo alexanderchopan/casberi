@@ -7592,7 +7592,13 @@ struct MoveSentence: View {
         } else if let o = deckOpen {
             // **NO SEARCH BAR OVER THE LIST (prd §1931):** the open chip is
             // the search; the list starts under the receipt.
-            choices(room: room + MoveDeck.footHeight, inset: MoveDeck.listClearance,
+            // `room` already runs to the foot's bottom (the GeometryReader
+            // spans the foot), so the list is that tall and no taller: a
+            // list a foot taller ran past the foot, spent its clearance
+            // there, and its last row stayed under the fade (user,
+            // 2026-11-21: "the last token in a list is partially covered by
+            // the bottom and you can barely tap it").
+            choices(room: room, inset: MoveDeck.listClearance,
                     searches: Self.searches(o) && !Self.searchesInChip(o), which: o, named: false) { list(for: o) }
                 .id(o)
                 .transition(.opacity)

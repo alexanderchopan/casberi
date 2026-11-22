@@ -34,10 +34,15 @@ extension FeedScreen {
             // Network · fact · place (prd §1718): on Aztec the network is the
             // place, so the line is the one word.
             ForEach(store.privateHeld) { holding in
-                aztecRow(title: holding.name, line: "Aztec",
-                         figure: mask ?? store.usd(holding, units: holding.privateUnits).map(WalletValue.money)
-                             ?? Self.aztecFigure(holding, units: holding.privateUnits),
-                         mark: holding.name, tone: DS.textPrimary)
+                let figure = mask ?? store.usd(holding, units: holding.privateUnits).map(WalletValue.money)
+                    ?? Self.aztecFigure(holding, units: holding.privateUnits)
+                // Its page, Send from Aztec on it (user, 2026-11-21: "yes i
+                // guess it should open send"); the row did nothing.
+                let page = WalletHolding(id: "aztec:\(holding.id)", symbol: holding.name, figure: figure,
+                                         usd: mask == nil ? store.usd(holding, units: holding.privateUnits) : nil,
+                                         line: "Aztec", aztec: true, verbs: [.aztecSend])
+                aztecRow(title: holding.name, line: "Aztec", figure: figure, mark: holding.name, tone: DS.textPrimary,
+                         page: page, act: { walletOpenHolding(page) })
             }
             .background { aztecReading }
             // NFTs you hold privately (prd §1766): one row a collection, its
@@ -211,7 +216,7 @@ extension FeedScreen {
 
     @ViewBuilder
     private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color,
-                          arriving: Bool = false, act: (() -> Void)? = nil) -> some View {
+                          arriving: Bool = false, page: WalletHolding? = nil, act: (() -> Void)? = nil) -> some View {
         if let act {
             Button {
                 DSHaptic.selection()
@@ -222,6 +227,7 @@ extension FeedScreen {
             }
             .buttonStyle(RowPress())
             .dsHover()
+            .contextMenu { if let page { walletHoldingMenu(page) } }
             .walletListRow()
         } else {
             aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
