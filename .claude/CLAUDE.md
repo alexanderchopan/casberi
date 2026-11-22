@@ -239,7 +239,7 @@ deliberately does not check are in `docs/verify.md`.
 - No hairlines — zero exceptions; nothing draws a line. Widget/tile radius = `DS.Radius.widget`. **The catalog is rows (what you could add) and the sources tray is tiles (what you have); keep that split** → docs/hooks/design.md · prd §518
 - **White words, pink glyphs (prd §1252): the day divider takes `DS.headInk`; `DS.brandInk` is a glyph's.** → docs/hooks/design.md · prd §1252 · §740
 - **The elevated card has ONE caller left, and it is a control (prd §759).** `dsWidgetSurface` is off every block in the app. → docs/hooks/design.md · prd §759
-- **No plates under ANY spelling (prd §782, user: "these plates").** `dsInkFill` is the floating layer's only. → docs/hooks/design.md · prd §782
+- **No plates under ANY spelling (prd §782, user: "these plates"), one exception: Account is lines on three plates, Security, Money and App (§1937).** `dsInkFill` is the floating layer's only. → docs/hooks/design.md · prd §782 · §1937
 - **A room head draws NO PLATE (prd §758, supersedes §745's "one surface" and §757's "the head keeps its card").** `dsRoomHeadCard()` is `dsRoomHeadBlock()` and applies no `dsWidgetSurface`. → docs/hooks/design.md · prd §758
 - **The wallet family's rows stand on NOTHING (prd §757).** → docs/hooks/design.md · prd §757
 - **Wallet and Logos take every room's anatomy: box · tiles · account menu · list (prd §1039, amends §750); the Wallet's tiles are §1480's Home · Activity · Holdings · Spending, doors on Home.** The Overview rows and the Actions block are deleted; verbs are rows (§1107, §1108) → prd §1480 · §1039 · §750
