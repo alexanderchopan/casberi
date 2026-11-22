@@ -42,15 +42,20 @@ enum MoneyPlate {
     /// market, `PrivateYield.aavePool`).
     ///
     /// `baseRate` is Aave's USDC supply rate on Base; `privateRate` Privacy
-    /// Pools' USDC rate on Ethereum, net of 0xBow's fee. Either may be unread
+    /// Pools' USDC rate on Ethereum, net of 0xBow's fee; `privateFee` that
+    /// fee as a whole percent. Either may be unread
     /// (nil): the sentence then says it earns interest, never a guessed figure.
     @MainActor
-    static func roundUps(step: Int, baseRate: Double?, privateRate: Double?) -> String {
+    static func roundUps(step: Int, baseRate: Double?, privateRate: Double?, privateFee: String?) -> String {
         let target = RoundUpsPot.targetWords
         let publicEarns = AaveLend.rateOnly(baseRate).map { String(localized: "where it earns \($0)") }
             ?? String(localized: "where it earns interest")
-        let privateEarns = AaveLend.rateOnly(privateRate).map { String(localized: "where it earns \($0) in Aave") }
-            ?? String(localized: "where it earns interest in Aave")
+        // Why the rate drops when it turns private (user, 2026-11-22: "say
+        // it"): Privacy Pools keeps a share of the interest, read off the
+        // pool (`feeBps`, 2000 measured that day). Unread, the clause goes.
+        let keeps = privateFee.map { String(localized: ", after Privacy Pools keeps \($0)%") } ?? ""
+        let privateEarns = (AaveLend.rateOnly(privateRate).map { String(localized: "where it earns \($0) in Aave") }
+            ?? String(localized: "where it earns interest in Aave")) + keeps
         return [
             String(localized: "Every buy, send and swap rounds up to the next $\(step)."),
             String(localized: "The change is saved as USDC in your public balance, in Aave on Base, \(publicEarns). Your sends can't spend it."),

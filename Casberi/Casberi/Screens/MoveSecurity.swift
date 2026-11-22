@@ -390,7 +390,8 @@ struct MoveSecurity: View {
                 // stage's rate read live (`MoneyPlate.roundUps`).
                 Text(verbatim: MoneyPlate.roundUps(
                     step: roundUps.step == 5 ? 5 : 1, baseRate: roundUpsBaseRate,
-                    privateRate: DemoMode.isActive ? 0.0379 : PrivateMoneyStore.shared.yieldRate(symbol: "USDC")))
+                    privateRate: DemoMode.isActive ? 0.0379 : PrivateMoneyStore.shared.yieldRate(symbol: "USDC"),
+                    privateFee: DemoMode.isActive ? "20" : PrivateMoneyStore.shared.yieldFeePercent(symbol: "USDC")))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, DS.Space.s4)
