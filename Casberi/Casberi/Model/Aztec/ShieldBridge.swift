@@ -394,7 +394,7 @@ extension ShieldBridge {
     /// a message for Shield's portal. `finish` withdraws it on Ethereum once
     /// Aztec's proof is there.
     @MainActor
-    static func exit(_ asset: Asset, units: String, to recipient: String) async throws -> AztecAccountStore.ShieldExit {
+    static func exit(_ asset: Asset, units: String, to recipient: String, usd: Double? = nil) async throws -> AztecAccountStore.ShieldExit {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
@@ -407,13 +407,23 @@ extension ShieldBridge {
         // Always by your co-signer (prd §1890): your account's own sign-in
         // is refused, whatever Shield's screening tier says of it.
         guard !standing.sanctioned else { throw Failure(message: String(localized: "Shield will not move money for this account")) }
-        let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first
-        let theirs: Eligibility? = if let found { await eligibility(found) } else { nil }
-        guard let coSigner = found, let theirs, theirs.eligible, !theirs.sanctioned else {
-            throw Failure(message: String(localized: "Shield needs a Human Passport score of \(Int(theirs?.threshold ?? standing.threshold)) on your co-signer; it has \(Int(theirs?.score ?? 0))"))
+        // **THIS IPHONE FIRST, OUT AS IN (prd §1950, user: "Yes, build it").**
+        // Up to what your Shield key has left of Shield's $100 a day out, the
+        // key signs in, no co-signer; past it, your co-signer and its score.
+        let signer: String
+        let byCoSigner: Bool
+        if let key = await exitKey(usd: usd) {
+            signer = key
+            byCoSigner = false
+        } else {
+            let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first
+            let theirs: Eligibility? = if let found { await eligibility(found) } else { nil }
+            guard let coSigner = found, let theirs, theirs.eligible, !theirs.sanctioned else {
+                throw Failure(message: String(localized: "Over $100 a day, Shield needs a Human Passport score of \(Int(theirs?.threshold ?? standing.threshold)) on your co-signer; it has \(Int(theirs?.score ?? 0))"))
+            }
+            signer = coSigner
+            byCoSigner = true
         }
-        let signer = coSigner
-        let byCoSigner = true
         let aztec = try await AztecEngine.shared.accountAddress()
         let limit = try await limit(.outOfAztec, asset: asset, units: units, account: signer, aztec: aztec, coSigner: byCoSigner)
         guard let max = Decimal(string: limit.maxAmount), let want = Decimal(string: units), want <= max else {
@@ -437,11 +447,22 @@ extension ShieldBridge {
             throw Failure(message: String(localized: "Aztec did not take this move"))
         }
         AztecGas.spent(by: out)
+        if !byCoSigner, let usd { ShieldKey.noteMovedOut(usd) }
         let exit = AztecAccountStore.ShieldExit(symbol: asset.symbol, amountUnits: units, recipient: recipient, transaction: transaction,
                                                 message: message, outbox: out["outbox"] as? String, withdrawal: nil, at: .now)
         AztecAccountStore.shared.addExit(exit)
         await AztecAccountStore.shared.refresh()
         return exit
+    }
+
+    /// Your Shield key, when a send out of `usd` fits what it has left of
+    /// Shield's day out and Shield still takes it (prd §1950); nil otherwise,
+    /// or while the amount is unpriced.
+    @MainActor
+    static func exitKey(usd: Double?) async -> String? {
+        guard let usd, let key = ShieldKey.address, let mine = await eligibility(key), mine.eligible, !mine.sanctioned,
+              usd <= max(0, mine.screeningUSD - ShieldKey.movedOutToday()) else { return nil }
+        return key
     }
 
     /// Where an exit stands on Ethereum.

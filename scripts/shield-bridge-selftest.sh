@@ -99,6 +99,11 @@ grep -q 'bought >= leastBought' "$GAS" \
   || { echo "✗ a move-in in ETH no longer wraps it first, in both ways in (prd §1943)"; exit 1; }
 grep -q '"amount": units, "tokenSymbol": asset.symbol, "tokenDecimals": asset.decimals\]' "$APP" \
   || { echo "✗ Shield's limit is asked without the amount: an exit is refused (prd §1949)"; exit 1; }
+# Out as in (prd §1950): the key signs in for a send out that fits its day
+# out, the co-signer past it, and the day out is counted after it went.
+grep -q 'if let key = await exitKey(usd: usd) {' "$APP" && grep -q 'if !byCoSigner, let usd { ShieldKey.noteMovedOut(usd) }' "$APP" \
+  && grep -q 'usd <= max(0, mine.screeningUSD - ShieldKey.movedOutToday()) else { return nil }' "$APP" \
+  || { echo "✗ a send out of Aztec under \$100 a day no longer goes through this iPhone's key (prd §1950)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

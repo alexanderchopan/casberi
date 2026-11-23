@@ -106,6 +106,21 @@ enum ShieldKey {
         UserDefaults.standard.set(["day": day(now), "usd": movedToday(now: now) + usd], forKey: dayKey)
     }
 
+    /// **OUT OF AZTEC TOO (prd §1950).** Shield gives the key its own $100 a
+    /// day out (measured 2026-11-23, §1949), counted here apart from the
+    /// day in, the same way: by this phone, never by asking Shield.
+    private static let dayOutKey = "aztec.shieldKey.dayOut"
+
+    static func movedOutToday(now: Date = .now) -> Double {
+        guard let kept = UserDefaults.standard.dictionary(forKey: dayOutKey),
+              kept["day"] as? String == day(now) else { return 0 }
+        return kept["usd"] as? Double ?? 0
+    }
+
+    static func noteMovedOut(_ usd: Double, now: Date = .now) {
+        UserDefaults.standard.set(["day": day(now), "usd": movedOutToday(now: now) + usd], forKey: dayOutKey)
+    }
+
     private static func day(_ date: Date) -> String {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!

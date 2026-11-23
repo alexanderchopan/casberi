@@ -151131,6 +151131,62 @@
         }
       }
     },
+    "Over $100 a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Más de $100 al día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日$100超"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 $100 초과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天超过 $100"
+          }
+        }
+      }
+    },
+    "Over $100 a day, Shield needs a Human Passport score of %lld on your co-signer; it has %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima de $100 al día, Shield necesita una puntuación de Human Passport de %lld en tu cofirmante; tiene %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日$100を超える場合、Shieldには共同署名者のHuman Passportスコア%lldが必要です。現在は%lldです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 $100를 넘으면 Shield는 공동 서명자의 Human Passport 점수 %lld이 필요합니다. 현재 %lld입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天超过 $100 时，Shield 需要你的共同签名人 Human Passport 分数达到 %lld；目前为 %lld"
+          }
+        }
+      }
+    },
     "Over %@ %@, %@ signs too" : {
       "localizations" : {
         "es" : {

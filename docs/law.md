@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2130 of 2204 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2131 of 2205 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2332,7 +2332,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1887 — The first private swap on a phone, what it took: a re-sync says it updates, gas paid from private ETH says so, a swap… (amended by §1891)
 - §1888 — Move's sentence is one quiet paragraph: regular weight, one ink, balanced lines (amended by §1917)
 - §1889 — Move's choices are Home's rows, and their lists open in place under them; the Move menu takes Home's section rung; a… (amended by §1892, §1912)
-- §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says (amended by §1949)
+- §1890 — Into and out of Aztec, always by your co-signer: Shield refuses your account's sign-in, whatever its screening tier says (amended by §1949, §1950)
 - §1891 — A private swap that a broadcaster cannot carry still goes: Railgun's proving files stay on the phone, a refusal says… (amended by §1894, §1895)
 - §1892 — Move, tightened: a row is named by what it asks, an open list and a typed figure take the sentence's room, the amount… (amended by §1896, §1897, §1902, §1914, §1916, §1928)
 - §1893 — The Mac's last build carries no wallet: Activity, Apps, Notes and Settings, read from what syncs; Settings are a page…
@@ -2393,6 +2393,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1947 — Account leads with Your accounts: How your accounts work, Public, Private, Following, each account its name, where it… (amended by §1948)
 - §1948 — How your accounts work is its own page: an intro, then each account closed to a line, opening to Receive, Send (Swap…
 - §1949 — Out of Aztec under $100 needs no score, measured; and an exit names its amount
+- §1950 — Out of Aztec, this iPhone first: your Shield key signs in for a send out up to $100 a day, the co-signer only past it
 
 ## Dead rulings → what replaced them (generated)
 

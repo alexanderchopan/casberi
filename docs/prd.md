@@ -75065,3 +75065,15 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 - **Not built:** a send out of Aztec up to $100 a day could go through your Shield key (§1920) as a move in does (§1922), with no co-signer, and a link's claimer with no score could take up to $100 out to Ethereum. Shield's day counts a limit when it is asked, before anything moves.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1950 — Out of Aztec, this iPhone first: your Shield key signs in for a send out up to $100 a day, the co-signer only past it (amends §1890's "always by your co-signer" for exits, as §1922 did for move-ins; applies §1949's measurement) (user, 2026-11-23: "Yes, build it") — BUILT, UNPROVEN WITH MONEY
+
+1. **The route** (`ShieldBridge.exit(_:units:to:usd:)`, `exitKey(usd:)`): when what goes out fits Shield's $100 a day less what this phone counted going out today (`ShieldKey.movedOutToday`, UTC days, apart from the day in, never by asking Shield), your Shield key signs in on the phone and takes Shield's limit; past it, or unpriced, your co-signer and its score as before. The day out is counted after the exit is proved (`ShieldKey.noteMovedOut`).
+2. **The rows.** A send out names who signs: **Signs · This iPhone** when it fits (`AztecMove.outFitsKey`), **Over $100 a day · Your co-signer signs** when not.
+3. **Unchanged:** with Co-signer on, your co-signer still approves every Aztec transaction (`AztecCoSign`, §1700f item 4): that is your own rule, not Shield's.
+
+**Also proven here: §1943's wrap, with money** (the user's TestFlight run, build 1066, 2026-11-23): Ethereum block 26479621, your account's one operation wrapped 0.0005 ETH (WETH `Deposit`) and handed 0.0005 WETH to your Shield key; 26479622 the key approved the portal; 26479623 the key deposited, the portal's event reading 0.0004975 WETH after Shield's 0.0000025 fee (0.5%).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds the route, the limit's arithmetic and the count after; removing the count was caught.

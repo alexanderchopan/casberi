@@ -122,6 +122,13 @@ final class AztecMove {
         return (amountUSD ?? 0) <= left ? key : nil
     }
 
+    /// A send out fits this iPhone's day out (prd §1950): Shield's $100 less
+    /// what this phone counted going out today. The co-signer past it.
+    var outFitsKey: Bool {
+        guard mode == .send, ShieldKey.address != nil, let usd = amountUSD else { return false }
+        return usd <= max(0, 100 - ShieldKey.movedOutToday())
+    }
+
     /// What the sentence moves, in dollars; nil while unpriced.
     var amountUSD: Double? {
         guard let units, let n = Decimal(string: units) else { return nil }
@@ -659,7 +666,7 @@ final class AztecMove {
                 } else if toEthereum {
                     steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
-                    let exit = try await ShieldBridge.exit(asset, units: units, to: recipient)
+                    let exit = try await ShieldBridge.exit(asset, units: units, to: recipient, usd: amountUSD)
                     stage = .done(exit.transaction)
                 }
                 await AztecAccountStore.shared.refresh()
@@ -803,6 +810,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         } else {
             // It reaches Aztec, or goes out to Ethereum (prd §1924).
             out.append((String(localized: "Reaches"), String(localized: "Aztec, or out to Ethereum"), DS.aztecInk))
+            // Out to Ethereum: who signs in to Shield (prd §1950).
+            if live, move.toEthereum {
+                out.append(move.outFitsKey
+                           ? (String(localized: "Signs"), String(localized: "This iPhone"), DS.textPrimary)
+                           : (String(localized: "Over $100 a day"), String(localized: "Your co-signer signs"), DS.textPrimary))
+            }
         }
         if live {
             out.append((String(localized: "Through"), move.mode == .send && !move.toEthereum ? "Aztec" : "Shield", DS.textPrimary))
