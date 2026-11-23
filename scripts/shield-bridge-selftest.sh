@@ -97,6 +97,8 @@ grep -q 'bought >= leastBought' "$GAS" \
 # only an ETH pick wraps, with WETH's own deposit(), before anything else.
 (( $(grep -c '(wraps ? wrapCall(asset, needs: max(0, wanted - held) + (Decimal(string: sale ?? "0") ?? 0)) : nil).map { \[\$0\] } ?? \[\]' "$APP") == 2 )) \
   || { echo "✗ a move-in in ETH no longer wraps it first, in both ways in (prd §1943)"; exit 1; }
+grep -q '"amount": units, "tokenSymbol": asset.symbol, "tokenDecimals": asset.decimals\]' "$APP" \
+  || { echo "✗ Shield's limit is asked without the amount: an exit is refused (prd §1949)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

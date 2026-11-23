@@ -79,13 +79,13 @@ extension ShieldBridge {
     static func limit(_ direction: Direction, asset: Asset, units: String, account: String, aztec: String,
                       coSigner: Bool = false) async throws -> Limit {
         let token = try await token(account: account, aztec: aztec, coSigner: coSigner)
-        var body: [String: Any] = ["portalAddress": asset.portal, "direction": direction.rawValue]
-        if direction == .intoAztec {
-            body["amount"] = units; body["tokenSymbol"] = asset.symbol; body["tokenDecimals"] = asset.decimals
-        } else {
-            // Shield's client sends only the direction and the two addresses.
-            body["bridgeAddress"] = asset.bridge
-        }
+        // **AN EXIT NAMES ITS AMOUNT TOO (prd §1949).** Shield's API answered
+        // an exit without one "Validation error: amount — required" (measured
+        // 2026-11-23); the amount, token and decimals go both ways, and an
+        // exit adds the bridge.
+        var body: [String: Any] = ["portalAddress": asset.portal, "direction": direction.rawValue,
+                                   "amount": units, "tokenSymbol": asset.symbol, "tokenDecimals": asset.decimals]
+        if direction == .outOfAztec { body["bridgeAddress"] = asset.bridge }
         let (json, status) = await IngestSupport.requestJSON("\(base)/api/attestation/passport", method: "POST", body: body,
                                                             headers: ["Authorization": "Bearer \(token)"], service: service)
         let o = json as? [String: Any]

@@ -75050,3 +75050,18 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.
+
+## §1949 — Out of Aztec under $100 needs no score, measured; and an exit names its amount (amends §1890's "always by your co-signer" for what Shield allows; §1700r's limit request) (user, 2026-11-23, of sending money by link to someone without Casberi: "does anything change now that shield has a below 100$ limit for using aztec w/o passport score?"; "Yes, measure it") — MEASURED; the amount FIXED
+
+**Measured** 2026-11-23 as §1918a was, with a key made for the test and thrown away (no money, nothing sent on chain, the key never kept or printed), Aztec address made up:
+1. `l1-eligibility`: eligible, score 0, tiers `screeningUsd` 100, `passportUsd` 1,000, `cleanHandsUsd` 25,000.
+2. Sign-in: **200, a token**; Shield records the Aztec address from the message's resource.
+3. Exit limit with no amount (what Casberi sent): **400** "Validation error: amount — required".
+4. Exit limit for 10 USDC: **200**, an `l2Signature`, `maxAmount` 10000000.
+5. Exit limit for 150 USDC: **403** `needs_passport`, "Above $100 a day, withdrawals need a Human Passport score of 20 or more. You can withdraw up to $90 more today."
+
+**What it means.**
+- **Fixed now:** `ShieldBridge.limit` sends the amount, token and decimals for an exit as for a deposit (`shield-bridge-selftest.sh` holds it). Every send out of Aztec would have been refused by Shield's own API before it was proved. Unproven with money.
+- **Not built:** a send out of Aztec up to $100 a day could go through your Shield key (§1920) as a move in does (§1922), with no co-signer, and a link's claimer with no score could take up to $100 out to Ethereum. Shield's day counts a limit when it is asked, before anything moves.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
