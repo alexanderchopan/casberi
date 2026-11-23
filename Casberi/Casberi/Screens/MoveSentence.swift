@@ -7502,13 +7502,21 @@ struct MoveSentence: View {
             // What a copy said stands over the places: the demo's "This
             // works once you leave the demo." was said and never drawn, so
             // a tap on a copy did nothing at all (walked 2026-11-21).
+            // The places scroll: four places and their lines run past the
+            // foot on a phone, and a plain stack clipped them unreachable.
+            // The last line clears the foot as every Move list does (§1939).
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 if let hint {
                     hintText(hint).transition(.opacity)
                 }
-                receiveAddresses
+                ScrollView {
+                    receiveAddresses
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .scrollIndicators(.hidden)
+                .contentMargins(.bottom, MoveDeck.listClearance, for: .scrollContent)
             }
-            .padding(.vertical, DS.Space.s2)
+            .padding(.top, DS.Space.s2)
             .transition(.opacity)
         } else if verb == .receive, elsewhere != nil || receiveOther {
             // **THE ROUTE IS THE PLATE (prd §1928):** the address under the

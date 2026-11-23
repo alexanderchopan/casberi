@@ -10,6 +10,9 @@ struct AccountsGuideTray: View {
 
     var body: some View {
         DSTray(title: AccountsGuide.title, height: 720, detents: [.large]) {
+            // Its own scroll: DSTray adds none on the phone, and four
+            // accounts opened run well past the sheet.
+            ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s4) {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     Text(verbatim: AccountsGuide.intro)
@@ -28,6 +31,8 @@ struct AccountsGuideTray: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, DS.Space.s3)
+            }
+            .scrollIndicators(.hidden)
         }
         .task {
             // Privacy Pools' minimum, rates and fee, as Receive reads them.
