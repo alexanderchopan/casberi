@@ -1368,7 +1368,7 @@ use "Casberi/Casberi/Model/ReceiveWords.swift" 'var lines = [Fact(label: takes, 
 use "Casberi/Casberi/Model/ReceiveWords.swift" 'Fact(label: from, value: String(localized: "Another Aztec account only")),' "the Aztec address lost its rule on Receive (prd §1779, §1945)"
 # prd §1943: the Aztec account's own page is deleted; Receive holds its address and rule.
 ! grep -rq 'yourAccountShowsAztec' Casberi/Casberi || { echo "✗ the Aztec account's own page is back (prd §1943)"; exit 1; }
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: "Ethereum", end: .opens, action: {' "Your account lost its private balance line (prd §1779, §1937)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: ReceivePools.networks, end: .opens, action: {' "Your account lost its private balance line (prd §1779, §1937)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: "Ethereum", end: .opens, action: {' "Railgun's line on Money is gone (prd §1937)"
 # prd §1943: every place on Money opens Receive, the Safe included.
 [[ $(grep -c 'MoveMenu.pick(.receive, chrome)' Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift) -eq 3 ]] \

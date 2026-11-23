@@ -365,7 +365,9 @@ extension FeedScreen {
         // address, Copy and ⓘ stand; Railgun opened Privacy Pools' one-time
         // address, and Aztec a page of its own.
         if PrivateMove.freshAvailable {
-            AccountLine(label: "Privacy Pools", value: "Ethereum", end: .opens, action: {
+            // Where its one-time address is watched: Base, Ethereum and Robinhood,
+            // as Receive says it (prd §1878, §1945); "Ethereum" was wrong.
+            AccountLine(label: "Privacy Pools", value: ReceivePools.networks, end: .opens, action: {
                 MoveMenu.pick(.receive, chrome)
             })
         }
