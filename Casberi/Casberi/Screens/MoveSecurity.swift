@@ -247,7 +247,7 @@ struct MoveSecurity: View {
 
     /// The fix beside the fact: Add or Finish the recovery key, or Back up
     /// private money that sits on this phone alone (prd §1562). With iCloud
-    /// off the fix is its own row under this one.
+    /// off the fix is the line's Turn on (prd §1943).
     private var backupVerb: (String, () -> Void)? {
         guard unsettled == nil, !backupOff else { return nil }
         if let word = recoveryVerb { return (word, setUp) }
