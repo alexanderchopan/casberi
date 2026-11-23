@@ -930,11 +930,29 @@ struct MoveRailgunSentence<Head: View>: View {
     @State private var costOpen = false
     /// The note to a private address is being written (prd §1877).
     @FocusState private var writing: Bool
+    /// The Railgun address being named, and the name typed (prd §1965).
+    @State private var saving: String?
+    @State private var savingName = ""
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
         // **A RECEIPT, AS EVERY VERB'S (prd §1931).**
         deck
+        // **SAVE WHO YOU PAY (prd §1965, as Aztec's §1964):** one field, the
+        // address under it; the book files it as Railgun's.
+        .alert("Save this Railgun address", isPresented: Binding(get: { saving != nil }, set: { if !$0 { saving = nil } })) {
+            TextField("Name", text: $savingName)
+            Button("Save") {
+                if let address = saving, !savingName.trimmingCharacters(in: .whitespaces).isEmpty {
+                    AddressBook.shared.setName(savingName, for: address, networks: ["railgun"])
+                    DSHaptic.success()
+                }
+                saving = nil
+            }
+            Button("Cancel", role: .cancel) { saving = nil }
+        } message: {
+            Text(verbatim: saving.map { AddressTail.short($0) } ?? "")
+        }
         // Send opens whole: its deck clips in the short sheet.
         .onAppear { chrome.moveTall = true }
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
@@ -1107,8 +1125,27 @@ struct MoveRailgunSentence<Head: View>: View {
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case .done(let words):
-            Text(verbatim: doneLine(words)).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(verbatim: doneLine(words)).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                // The Railgun address this send paid, if it has no name yet.
+                if let address = unsavedRecipient {
+                    Button {
+                        savingName = ""
+                        saving = address
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Text("Save \(AddressTail.short(address))").dsText(.heading17).fontWeight(.semibold)
+                                .foregroundStyle(DS.pickInk)
+                            Spacer(minLength: DS.Space.s2)
+                        }
+                        .frame(minHeight: DS.Hit.min)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Saves this Railgun address by a name you give"))
+                }
+            }
         default:
             EmptyView()
         }
@@ -1399,7 +1436,9 @@ struct MoveRailgunSentence<Head: View>: View {
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: "Railgun", glyph: "lock.fill") { leave(.pickRecipient) })
         case .takeBack:
             out.append(MoveDeckStep(id: "from", word: String(localized: "From"), answered: true, value: "Railgun", glyph: "lock.fill") { leave(.switchOff) })
-            let to = move.toPrivate || move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")
+            // A Railgun address you saved is said by its name (prd §1965).
+            let to = move.toPrivate ? (AddressBook.shared.name(for: move.recipient ?? "") ?? YourAccount.short(move.recipient ?? ""))
+                : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: to) { leave(.pickRecipient) })
         case .swap:
             break
@@ -1420,8 +1459,22 @@ struct MoveRailgunSentence<Head: View>: View {
         if move.toPrivate {
             out.append(MoveDeckStep(id: "note", word: String(localized: "Note"), on: open == .note,
                                     answered: !move.note.isEmpty, value: move.note.isEmpty ? nil : move.note) { toggle(.note) })
+            // **NAME IT BEFORE IT GOES (prd §1965):** a send to someone
+            // leaves its sheet once Face ID answers, so the receipt asks too.
+            if let address = unsavedRecipient {
+                out.append(MoveDeckStep(id: "name", word: String(localized: "Name"), answered: false, value: String(localized: "Save")) {
+                    savingName = ""
+                    saving = address
+                })
+            }
         }
         return out
+    }
+
+    /// The Railgun address this send pays, if the book has no name for it (prd §1965).
+    private var unsavedRecipient: String? {
+        guard move.toPrivate, let address = move.recipient, AddressBook.shared.entry(for: address) == nil else { return nil }
+        return address
     }
 
     /// **THE FOOT'S ONE WORD (prd §1897 item 7).**

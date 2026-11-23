@@ -476,6 +476,10 @@ final class AddressBook {
     /// Send from Aztec lists them before anything else.
     var aztecAccounts: [Entry] { all.filter { AztecAddressText.isAztec($0.address) } }
 
+    /// **RAILGUN ADDRESSES, BY NAME (prd §1965):** the private balances you
+    /// saved, newest first: Send's To list offers them in Contacts.
+    var railgunAccounts: [Entry] { all.filter { RailgunSwap.isPrivateAddress($0.address) } }
+
     /// The person's own name for an address, or nil. The one read every
     /// resolver consults first — their word beats ENS, a known-contract table,
     /// and every other source, because it's their record.

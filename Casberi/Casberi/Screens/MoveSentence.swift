@@ -5967,7 +5967,9 @@ struct MoveSentence: View {
             // To is someone's private balance: the send stays inside Railgun,
             // and nothing public names either side or the amount.
             if RailgunPocket.available, RailgunSwap.isPrivateAddress(q) {
-                toRow(String(localized: "Their private balance"), sub: YourAccount.short(q), symbol: "eye.slash") {
+                // A saved one is called by the name you gave it (prd §1965).
+                toRow(AddressBook.shared.name(for: q) ?? String(localized: "Their private balance"),
+                      sub: YourAccount.short(q), symbol: "eye.slash") {
                     goRailgun(.takeBack, contract: nil, recipient: q)
                 }
             }
@@ -6043,8 +6045,18 @@ struct MoveSentence: View {
             // addresses, found by its name, its tag or `@name`.
             let tags = ZkMoneyWire.savedTags(ContactBook.shared.all.map { ($0.id, $0.name) }, query: q)
                 .filter { saved in !recent.contains { $0.caseInsensitiveCompare(saved.tag) == .orderedSame } }
-            if !(book.isEmpty && tags.isEmpty && found.isEmpty) {
+            // **THE RAILGUN ADDRESSES YOU SAVED (prd §1965)**, by name: a
+            // send to one stays inside Railgun, as a pasted one does.
+            let railgunSaved = RailgunPocket.available && !RailgunSwap.isPrivateAddress(q)
+                ? AddressBook.shared.railgunAccounts.filter { q.isEmpty || $0.name.lowercased().contains(q) || $0.address.lowercased().hasPrefix(q) }
+                : []
+            if !(book.isEmpty && tags.isEmpty && found.isEmpty && railgunSaved.isEmpty) {
                 listHeader(String(localized: "Contacts"))
+            }
+            ForEach(Array(railgunSaved.prefix(8)), id: \.address) { e in
+                toRow(e.name, sub: String(localized: "Private balance · \(AddressTail.short(e.address))"), symbol: "eye.slash") {
+                    goRailgun(.takeBack, contract: nil, recipient: e.address)
+                }
             }
             ForEach(Array(tags.prefix(8)), id: \.tag) { saved in
                 toRow(saved.name, sub: saved.name.lowercased() == saved.tag ? "zk.money" : saved.tag, mark: saved.tag) {

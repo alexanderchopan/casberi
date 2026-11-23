@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2146 of 2220 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2147 of 2221 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2319,7 +2319,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1874 — Pay a zk.money tag from your private balance: the relayer pays the tag's one-time deposit address in USDC, asked fres…
 - §1875 — A swap inside your private balance: Railgun's tokens swap for Railgun's tokens in one transaction through Railgun's c… (amended by §1885, §1891, §1895)
 - §1876 — Cost is a row on every Move sentence: the lines that unfolded are retired (amended by §1892, §1896, §1914)
-- §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva… (amended by §1895)
+- §1877 — Send to someone's private balance and receive at your private address: a Railgun address pasted in To is "Their priva… (amended by §1895, §1965)
 - §1878 — Receive on Base or Robinhood, earn on Ethereum
 - §1879 — Send from your private balance to Base or Robinhood
 - §1880 — Dollars on Base and Robinhood, both ways
@@ -2409,6 +2409,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1963 — Aztec, tightened: Receive says about 20 seconds, pay many declares gas for its payments, and a send out ready to fini…
 - §1964 — Aztec accounts by name: the book keeps them, Send lists them first, a send offers to save who it paid (amended by §1964a)
 - §1964a — Name it before it goes: a Name line on Send from Aztec's receipt
+- §1965 — Railgun addresses by name: saved from the send's receipt or after it, offered in Send's To, said by name
 
 ## Dead rulings → what replaced them (generated)
 

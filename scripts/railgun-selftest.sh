@@ -352,5 +352,10 @@ use "Casberi/Casberi/Model/FreshSigner.swift" "guard fits >= max(price, tip) els
 [[ $(grep -c "try await Self.mined(hash)" Casberi/Casberi/Screens/MoveRailgunPrivate.swift) -ge 6 ]] && echo "  ✓ every Railgun send waits for its block before it is done (§1895)" || { echo "  ✗ a Railgun send is called done when handed over"; fail=1; }
 use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" 'guard try await FreshSigner.landed(hash, on: network) else { throw RailgunPocket.Failure.notMined }' "four minutes with no block is said, never as done"
 use "Casberi/Casberi/Screens/MoveRailgunPrivate.swift" 'if mode == .swap { await requoteSwap() }' "a refusal prices the swap again past that broadcaster"
+use "Casberi/Casberi/Model/AddressBook.swift" "var railgunAccounts: [Entry] { all.filter { RailgunSwap.isPrivateAddress(\$0.address) } }" "the book lists the Railgun addresses you saved (§1965)"
+use "$MOVEF" 'AddressBook.shared.setName(savingName, for: address, networks: ["railgun"])' "a Railgun address you paid can be saved by name"
+use "$MOVEF" 'out.append(MoveDeckStep(id: "name", word: String(localized: "Name")' "the receipt asks the name before the send leaves its sheet"
+use "Casberi/Casberi/Screens/MoveSentence.swift" "AddressBook.shared.railgunAccounts.filter" "Send's To lists your saved Railgun addresses"
+use "Casberi/Casberi/Screens/MoveSentence.swift" "goRailgun(.takeBack, contract: nil, recipient: e.address)" "a saved Railgun address is paid inside Railgun, never publicly"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

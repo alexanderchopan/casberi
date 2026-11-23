@@ -75230,3 +75230,14 @@ Amends §1956 item 1's "ETH Privacy Pools".
 ## §1964a — Name it before it goes: a Name line on Send from Aztec's receipt (amends §1964 item 3) (the Railgun session, 2026-11-23: the sheet goes behind once Face ID answers (§1806), so the done state's Save is seldom seen; its §1965 added the same line for a 0zk) — BUILT
 
 An unsaved Aztec account on the line gets a **Name · Save** line under To, before the send, opening the same one-field ask; the done state's rows stay. A saved account is called by its name in To's chip.
+
+## §1965 — Railgun addresses by name: saved from the send's receipt or after it, offered in Send's To, said by name (amends §1877's To row; mirrors §1964) (user, 2026-11-23: "we are adding a feature in another session to save aztec addresses should we do the same for railgun?", "lets mirror the aztec address saving … probably we need to have in send a 'save this address'") — BUILT
+
+1. **The book lists them** (`AddressBook.railgunAccounts`, over §1964's acceptance of a 0zk address, filed with the network tag `railgun`).
+2. **The receipt asks a name before the send goes:** a send to a Railgun address the book has no name for carries a Name line ("Save"); a tap asks the name (an alert, one field, the address's tail under it). A send to someone leaves its sheet once Face ID answers (§1806), so the finished state's "Save ...tail" row alone would rarely be seen; both stand.
+3. **Send's To offers your saved Railgun addresses** in Contacts, "Private balance · ...tail" under the name, and a pasted one you saved is called by its name; a tap is a send inside Railgun, never a public one. The book's Ethereum list in To keeps to Ethereum addresses, so a 0zk entry can never become a public send.
+4. **To says the name** on the receipt once saved.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `railgun-selftest.sh`: the list, the save, the receipt's Name line, To's rows and that they send inside Railgun.

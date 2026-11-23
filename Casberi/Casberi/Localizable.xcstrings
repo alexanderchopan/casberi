@@ -159671,6 +159671,34 @@
         }
       }
     },
+    "Private balance · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saldo privado · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開残高 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密余额 · %@"
+          }
+        }
+      }
+    },
     "Private balances" : {
       "localizations" : {
         "es" : {
@@ -177386,6 +177414,34 @@
         }
       }
     },
+    "Save this Railgun address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardar esta dirección de Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Railgun アドレスを保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Railgun 주소 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存此 Railgun 地址"
+          }
+        }
+      }
+    },
     "Save to Casberi" : {
       "localizations" : {
         "es" : {
@@ -177949,6 +178005,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "以你起的名字保存此 Aztec 账户"
+          }
+        }
+      }
+    },
+    "Saves this Railgun address by a name you give" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guarda esta dirección de Railgun con el nombre que le des"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Railgun アドレスを付けた名前で保存します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Railgun 주소를 지정한 이름으로 저장합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以你起的名字保存此 Railgun 地址"
           }
         }
       }
