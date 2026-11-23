@@ -74985,3 +74985,17 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.
+
+## §1944 — Privacy Pools' page is a receipt: its name, Takes · On · Status, the address on its plate; a failed move says Try again; a dollar at cents (amends §1928, §1929 for this page; §1931's receipt reaches it) (user, 2026-11-23, over a screenshot of the page holding 12.978123 USDC "arrived, not moved yet": "also, this looks like shit") — BUILT
+
+**Why.** The page kept the 52pt sentence §1931 retired from every other Move page, four lines of it with grey glue words; two amber lines, one a state and one a standing rule; a six-place dollar figure; "New address each time" over a New address row; and a failed move with nothing to do about it.
+
+1. **The name, then the receipt** (`MoveFreshSentence`): "Privacy Pools" at `heading34`; `MoveReceiptFact` lines Takes (ETH, USDC, USDG) and On (its networks); a Status line when something has arrived, in its state's ink.
+2. **A failed move says Try again** at the Status line's end: `FreshReceive.check(force: true)`, the same look the page makes on opening.
+3. **The rule is grey, once:** "A token needs a little ETH sent with it." under the address, `fact15`; amber is for a state. "New address each time" is deleted: the New address row says it.
+4. **A dollar at cents, a coin at four places** in the page's figures ("12.98 USDC").
+5. The plate's address, New address, Pay the gas and the foot (back, Share, Copy address) are unchanged.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass. **Not answered:** why that 12.98 USDC has not moved (§1942); Try again runs the same move that failed.

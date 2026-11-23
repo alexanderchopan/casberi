@@ -56,21 +56,19 @@ struct MoveFreshSentence<Head: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // **THE SENTENCE ON TOP, THE DECK UNDER IT (prd §1928, as
-                // Move's other pages, §1927).**
-                MoveFlow {
-                    // The tokens, the place and the networks are the sentence's
-                    // (prd §1929); the plate holds the address.
-                    MoveWord(String(localized: "Receive ETH, USDC"), ink: DS.textPrimary)
-                    MovePhrase("USDG", glue: String(localized: "or"))
-                    MovePhrase("Privacy Pools", glue: String(localized: "to"))
-                    MovePhrase(Self.poolsNetworksSaid + ".", glue: String(localized: "on"))
+                // **THE NAME, THEN THE RECEIPT (prd §1944, as Move's every
+                // page since §1931):** the 52pt sentence is retired here
+                // too. What it takes, where, and where the money is.
+                Text("Privacy Pools")
+                    .dsText(.heading34)
+                    .foregroundStyle(DS.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.bottom, DS.Space.s2)
+                VStack(alignment: .leading, spacing: 0) {
+                    MoveReceiptFact(label: String(localized: "Takes"), value: String(localized: "ETH, USDC, USDG"))
+                    MoveReceiptFact(label: String(localized: "On"), value: Self.poolsNetworks)
+                    status
                 }
-                .allowsHitTesting(false)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // One line, only when there is something to say.
-                line.padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, MoveSentence.sideInset(inTray))
             .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -121,11 +119,11 @@ struct MoveFreshSentence<Head: View>: View {
                                 .buttonStyle(RowPress())
                                 .accessibilityLabel(Text(verbatim: entry.address))
                                 .accessibilityHint(Text("Copies the address"))
-                            // A token cannot pay its own gas (prd §1779).
-                            Text("Send a little ETH with USDC or USDG")
-                                .dsText(.body17).foregroundStyle(DS.attentionInk)
+                            // A token cannot pay its own gas (prd §1779): a
+                            // rule, said grey, never a warning (prd §1944).
+                            Text("A token needs a little ETH sent with it.")
+                                .dsText(.fact15).foregroundStyle(DS.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Text("New address each time").dsText(.body17).foregroundStyle(DS.textSecondary)
                             Button {
                                 DSHaptic.selection()
                                 withAnimation(DS.Motion.standard) {
@@ -230,13 +228,6 @@ struct MoveFreshSentence<Head: View>: View {
             ? String(localized: "Base, Ethereum, Robinhood") : net?.name ?? ""
     }
 
-    /// The same, as the sentence says it: "Base, Ethereum, or Robinhood".
-    static var poolsNetworksSaid: String {
-        let net = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork)
-        return net?.chainId == FreshTx.homeChain || net == nil
-            ? String(localized: "Base, Ethereum, or Robinhood") : net?.name ?? ""
-    }
-
     /// The address in one quiet line, as public Receive shows yours; a tap
     /// copies the whole (prd §1719: no QR).
     private func code(_ address: String) -> some View {
@@ -251,6 +242,41 @@ struct MoveFreshSentence<Head: View>: View {
         DSPasteboard.copy(address)
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) { copied = true }
+    }
+
+    /// **STATUS, ONE RECEIPT LINE (prd §1944):** what arrived and where it
+    /// is, in its state's ink; a move that failed says Try again at its end,
+    /// never a dead amber line.
+    @ViewBuilder private var status: some View {
+        if let entry, !DemoMode.isActive, book.failure == nil,
+           book.homeNeedsGas[entry.id] == nil, book.homeMoving[entry.id] == nil,
+           let said = words(entry.state, symbol: entry.token) {
+            MoveReceiptLine(label: String(localized: "Status")) {
+                Text(verbatim: said.0)
+                    .dsText(.body17)
+                    .foregroundStyle(said.1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .padding(.leading, 16)
+                Spacer(minLength: DS.Space.s2)
+                if case .failed = entry.state {
+                    Button {
+                        DSHaptic.selection()
+                        Task { await book.check(context: context, force: true) }
+                    } label: {
+                        Text("Try again").dsText(.body17).foregroundStyle(DS.pickInk)
+                            .fixedSize()
+                            .frame(minHeight: DS.Hit.min)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                }
+            }
+            .frame(minHeight: MoveReceipt.lineHeight)
+        } else {
+            line.padding(.leading, MoveReceipt.labelWidth + 16)
+                .padding(.vertical, DS.Space.s2)
+        }
     }
 
     /// One line, only when there is something to say.
@@ -288,8 +314,13 @@ struct MoveFreshSentence<Head: View>: View {
 
     private func words(_ state: FreshAddress.State, symbol: String) -> (String, Color)? {
         let railgun = FreshTx.railgunToken(symbol: symbol)
+        // A dollar at cents, a coin at four places (prd §1944: "12.978123
+        // USDC" read as noise).
         func figure(_ amount: String) -> String {
-            PrivateMoney.figure(amount, decimals: railgun?.decimals ?? (symbol == "USDC" ? 6 : 18), symbol: symbol)
+            let dollar = symbol == "USDC" || symbol == "USDG"
+            let decimals = railgun?.decimals ?? (symbol == "USDC" ? 6 : 18)
+            guard let n = PrivateMoney.number(amount, decimals: decimals, places: dollar ? 2 : 4) else { return symbol }
+            return "\(n) \(symbol)"
         }
         switch state {
         case .waiting:

@@ -1367,7 +1367,8 @@ use "Casberi/Casberi/Screens/MoveScreen.swift" 'chrome.moveFreshReceive = false;
 use "Casberi/Casberi/Model/FreshReceive.swift" 'failure = Self.words(error, step: .gas, network: network)' "a token's gas failure no longer names its step (prd §1823)"
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'if let mended = AddressSafety.pasted(text) {' "Send's To no longer mends an address read off a picture (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("Send a little ETH with USDC or USDG")' "the private address no longer says a token needs ETH sent with it (prd §1779, §1929)"
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("A token needs a little ETH sent with it.")' "the private address no longer says a token needs ETH sent with it (prd §1779, §1944)"
+use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if case .failed = entry.state {' "a failed move on Privacy Pools' page has no Try again (prd §1944)"
 use "$SENT" 'lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],' "Receive no longer says what Privacy Pools takes and where before it is copied (prd §1779, §1929)"
 use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text(verbatim: MoveSentence.aztecRule).dsText(.body17).foregroundStyle(DS.aztecInk)' "the Aztec address lost its rule on Receive (prd §1779, §1928)"
 # prd §1943: the Aztec account's own page is deleted; Receive holds its address and rule.
