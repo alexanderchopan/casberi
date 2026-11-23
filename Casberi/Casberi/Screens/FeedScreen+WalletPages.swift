@@ -724,6 +724,7 @@ extension FeedScreen {
     /// The name and figure are the primary ink (prd §1731): grey at this
     /// rung read as a row you could not press.
     func walletPreviewRow<Mark: View>(_ name: String, line: String? = nil, lineInk: Color = DS.textSecondary,
+                                      held: String? = nil,
                                       figure: String?, tone: Color = DS.textPrimary,
                                       move: Double? = nil,
                                       act: @escaping () -> Void,
@@ -739,10 +740,22 @@ extension FeedScreen {
                 // A line under the name where the row has one to say: a
                 // token's networks (prd §1718); an app's row has none.
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
+                    // How many you hold, after the name on its line, grey
+                    // (prd §1953): the row reads "ETH 1.42".
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(verbatim: name)
+                            .dsText(.body17)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                        if let held {
+                            Text(verbatim: held)
+                                .dsText(.fact15)
+                                .monospacedDigit()
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                    }
                     if let line {
                         Text(verbatim: line)
                             .dsText(.subhead12)
@@ -754,28 +767,49 @@ extension FeedScreen {
                 // The figure over its day, as Home's token rows (prd §1862);
                 // a day that rounds to zero draws nothing (§83).
                 let day = move.map { WatchlistRules.change($0 * 100) }
-                VStack(alignment: .trailing, spacing: 2) {
-                    if let figure {
-                        walletRowFigure(figure, tone: tone)
+                let moved = day.map { $0.tone == .up || $0.tone == .down } ?? false
+                if line == nil {
+                    // **ONE LINE, THE DAY BEFORE THE FIGURE (prd §1953):**
+                    // the figure pins to the edge, so the dollars read down
+                    // one column and the day down the one beside it.
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        if let day, moved {
+                            Text(verbatim: day.words)
+                                .dsText(.fact15)
+                                .monospacedDigit()
+                                .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
+                                .lineLimit(1)
+                        }
+                        if let figure {
+                            walletRowFigure(figure, tone: tone)
+                        }
                     }
-                    if let day, day.tone == .up || day.tone == .down {
-                        Text(verbatim: day.words)
-                            .dsText(.subhead12)
-                            .monospacedDigit()
-                            .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
-                            .lineLimit(1)
+                } else {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        if let figure {
+                            walletRowFigure(figure, tone: tone)
+                        }
+                        if let day, moved {
+                            Text(verbatim: day.words)
+                                .dsText(.subhead12)
+                                .monospacedDigit()
+                                .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
+                                .lineLimit(1)
+                        }
                     }
                 }
             }
-            // The app's one row pitch (prd §1496): a preview is a row; a
-            // one-line row takes half the air (prd §1862).
-            .frame(minHeight: DSFeed.headHeight)
-            .padding(.vertical, line == nil ? FeedScreen.rowAir / 2 : FeedScreen.rowAir)
+            // **HOLDINGS IS A LEDGER (prd §1953, amending §1482 and §1862):**
+            // a one-line row stands at the ledger's 40pt pitch so the whole
+            // list reads at once; a row with a line under it keeps the
+            // Wallet's 52.
+            .frame(minHeight: line == nil ? WalletCardStyle.ledgerHead : DSFeed.headHeight)
+            .padding(.vertical, line == nil ? 0 : FeedScreen.rowAir)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .dsHover()
-        .accessibilityLabel(Text(verbatim: [name, line, figure].compactMap { $0 }.joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [name, held, line, figure].compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }
 
@@ -785,12 +819,15 @@ extension FeedScreen {
     func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
                             act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
         ForEach(tokens) { token in
-            // Ethereum disagreed twice in a row (prd §1825): said in amber
-            // where the networks stand, as on the Tokens list.
+            // One line (prd §1953): the symbol, how many you hold, the day,
+            // the dollars. The networks are the token's page's (its places).
+            // Ethereum disagreeing twice in a row (prd §1825) still takes a
+            // line of its own in amber: a warning is never folded away.
             let differs = HoldingsCheckStore.shared.mismatched(token)
             walletPreviewRow(token.symbol,
-                             line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
-                             lineInk: differs ? DS.attentionInk : DS.textSecondary,
+                             line: differs ? String(localized: "Doesn't match Ethereum") : nil,
+                             lineInk: DS.attentionInk,
+                             held: token.amount.map { WalletValue.held($0) },
                              figure: mask ?? WalletValue.money(token.usd),
                              move: walletHoldingMoves[HoldingMoves.key(token.symbol)], act: { act(token) }) {
                 AssetMark(name: token.symbol, size: DS.Mark.row)

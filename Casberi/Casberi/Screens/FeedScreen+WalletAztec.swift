@@ -114,6 +114,7 @@ extension FeedScreen {
                              ?? Self.aztecFigure(holding, units: units),
                          // Grey, as every Tokens row's figure is.
                          mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary,
+                         ledger: true,
                          // The gas row opens Gas on Aztec (prd §1761).
                          act: gas ? { feedSheet = .aztecGas } : nil)
             }
@@ -127,12 +128,12 @@ extension FeedScreen {
                     // §1886): gas you hold, never None.
                     aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state),
                              figure: mask ?? Self.gasFigure(carried), mark: "AZTEC", tone: DS.textSecondary,
-                             act: { feedSheet = .aztecGas })
+                             ledger: true, act: { feedSheet = .aztecGas })
                 } else {
                     // The figure says None; the line does not say it twice.
                     aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state),
                              figure: String(localized: "None"), mark: "AZTEC", tone: DS.attentionInk,
-                             act: { feedSheet = .aztecGas })
+                             ledger: true, act: { feedSheet = .aztecGas })
                 }
             }
         }
@@ -216,13 +217,15 @@ extension FeedScreen {
 
     @ViewBuilder
     private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color,
-                          arriving: Bool = false, page: WalletHolding? = nil, act: (() -> Void)? = nil) -> some View {
+                          arriving: Bool = false, page: WalletHolding? = nil, ledger: Bool = true,
+                          act: (() -> Void)? = nil) -> some View {
         if let act {
             Button {
                 DSHaptic.selection()
                 act()
             } label: {
-                aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
+                aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving,
+                              ledger: ledger)
                     .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -230,13 +233,57 @@ extension FeedScreen {
             .contextMenu { if let page { walletHoldingMenu(page) } }
             .walletListRow()
         } else {
-            aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
+            aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving,
+                          ledger: ledger)
                 .walletListRow()
         }
     }
 
+    /// `ledger`: Public's one line at 40pt (prd §1953), the line's words
+    /// after the name; else the name over its line at 52.
+    @ViewBuilder
     private func aztecRowLabel(title: String, line: String, figure: String, mark: String?, tone: Color,
-                               arriving: Bool) -> some View {
+                               arriving: Bool, ledger: Bool = false) -> some View {
+        if ledger {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                aztecRowMark(mark: mark, arriving: arriving)
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(verbatim: title)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                    // Aztec's own ink (prd §1779).
+                    Text(verbatim: line)
+                        .dsText(.fact15)
+                        .foregroundStyle(DS.aztecInk)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(figure, tone: tone)
+            }
+            .frame(minHeight: WalletCardStyle.ledgerHead) // its List row carries the air (prd §1953)
+        } else {
+            aztecRowStacked(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
+        }
+    }
+
+    private func aztecRowMark(mark: String?, arriving: Bool) -> some View {
+        Group {
+            if arriving {
+                Image(systemName: "clock").dsGlyph(.body, weight: .regular).foregroundStyle(DS.textSecondary)
+            } else if let mark {
+                AssetMark(name: mark, size: DS.Mark.row)
+            } else {
+                ProtocolInlineMark(mark: "aztec")
+            }
+        }
+        .frame(width: DSRoomChassis.headGlyph)
+        .accessibilityHidden(true)
+    }
+
+    private func aztecRowStacked(title: String, line: String, figure: String, mark: String?, tone: Color,
+                                 arriving: Bool) -> some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             Group {
                 if arriving {

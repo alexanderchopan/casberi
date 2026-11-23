@@ -400,7 +400,7 @@ extension FeedScreen {
             } rows: {
                 if let wants {
                     activityAskRow(glyph: WalletSection.yourAccount.glyph,
-                                   name: WalletSection.yourAccount.label, word: wants) {
+                                   name: String(localized: "Account"), word: wants) {
                         if pending {
                             chrome.moveWalk = true
                             chrome.moveTray = true

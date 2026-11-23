@@ -41,6 +41,22 @@ struct WalletPortfolio: Equatable, Codable {
         var parts: [Part] = []
         var id: String { symbol }
 
+        /// **HOW MANY YOU HOLD (prd §1953)** — the parts' counts summed, and
+        /// only when they are the whole: every part counted, and the parts'
+        /// dollars the row's. A row with money no part carries (an exchange,
+        /// validators, staked SOL, Private) has no count, never a short one.
+        var amount: Double? {
+            guard !parts.isEmpty else { return nil }
+            var sum = 0.0
+            for part in parts {
+                guard let amount = part.amount else { return nil }
+                sum += amount
+            }
+            let covered = parts.reduce(0) { $0 + $1.usd }
+            guard abs(covered - usd) <= max(0.01, usd * 0.001) else { return nil }
+            return sum
+        }
+
         /// The distinct contracts, summed across wallets, biggest first.
         var contracts: [(key: String, usd: Double)] {
             Dictionary(parts.map { ($0.key, $0.usd) }, uniquingKeysWith: +)
@@ -54,6 +70,8 @@ struct WalletPortfolio: Equatable, Codable {
         let key: String
         let holder: String
         let usd: Double
+        /// How many tokens (prd §1953); nil where the read gave no count.
+        var amount: Double? = nil
     }
 
     var totalUSD: Double = 0
@@ -202,7 +220,9 @@ struct WalletPortfolio: Equatable, Codable {
                 holdersBySymbol[symbol, default: []]
                     .append(Holder(address: address, label: label, usd: usd))
                 for (key, partUSD) in group.partsBySymbol[symbol] ?? [:] {
-                    partsBySymbol[symbol, default: []].append(Part(key: key, holder: address, usd: partUSD))
+                    partsBySymbol[symbol, default: []].append(
+                        Part(key: key, holder: address, usd: partUSD,
+                             amount: group.amountsBySymbol[symbol]?[key]))
                 }
                 guard usd > (routeBySymbol[symbol]?.usd ?? 0),
                       let route = group.routeBySymbol[symbol] else { continue }
@@ -336,7 +356,8 @@ struct WalletPortfolio: Equatable, Codable {
                     holders[symbol, default: []].append(
                         Holder(address: account.address, label: account.label, usd: held.usd))
                 }
-                parts[symbol, default: []].append(Part(key: held.key, holder: account.address, usd: held.usd))
+                parts[symbol, default: []].append(Part(key: held.key, holder: account.address, usd: held.usd,
+                                                       amount: demoAmount(symbol, usd: held.usd)))
             }
         }
         // THE CONNECTED EXCHANGES MERGE, exactly as they do live (2026-08-26,
@@ -410,7 +431,16 @@ struct WalletPortfolio: Equatable, Codable {
         default:
             split = []
         }
-        return split.map { Part(key: $0.key, holder: holder, usd: usd * $0.share) }
+        return split.map { Part(key: $0.key, holder: holder, usd: usd * $0.share,
+                                amount: demoAmount(symbol, usd: usd * $0.share)) }
+    }
+
+    /// The demo's token count for a stake (prd §1953), at the demo's own
+    /// round prices (`MainnetPrices.demoPrices`, spelled here so this file
+    /// stays Foundation-only); nil for a symbol with none.
+    static func demoAmount(_ symbol: String, usd: Double) -> Double? {
+        let price: [String: Double] = ["ETH": 2_600, "USDC": 1, "LINK": 14]
+        return price[symbol].map { usd / $0 }
     }
 
     /// Lent's position symbol (prd §1695), here so code off the main actor

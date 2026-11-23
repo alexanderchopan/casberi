@@ -124,6 +124,7 @@ struct DSHomeFactRow: View {
     /// words start (prd §1858, user: "make the indent the same so the glyphs
     /// are aligned").
     var inRowColumns = false
+    @Environment(\.dsTitleOnly) private var titleOnly
 
     var body: some View {
         // **A NAME IS NEVER CUT TO FIT (prd §1851).** The row drops its last
@@ -137,7 +138,8 @@ struct DSHomeFactRow: View {
         }
         .dsText(.fact15)
         .lineLimit(1)
-        .frame(maxWidth: .infinity, minHeight: DS.Hit.min, alignment: .leading)
+        // Home's rows are the ledger's (prd §1954).
+        .frame(maxWidth: .infinity, minHeight: titleOnly ? DSFeed.ledgerHead : DS.Hit.min, alignment: .leading)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)

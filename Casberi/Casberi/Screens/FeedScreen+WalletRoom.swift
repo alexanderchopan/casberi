@@ -665,7 +665,7 @@ extension FeedScreen {
             if let own {
                 // Named as Home names it (user, 2026-10-25: "should both say
                 // your account"; Home's door is the section's label, §1536).
-                walletNFTChooseRow(address: own, name: WalletSection.yourAccount.label)
+                walletNFTChooseRow(address: own, name: String(localized: "Account"))
             }
             ForEach(followed, id: \.address) { entry in
                 walletNFTChooseRow(address: entry.address, name: entry.label.isEmpty ? entry.short : entry.label)

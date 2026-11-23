@@ -64,12 +64,15 @@ extension FeedScreen {
         // · fact · place): both are Aave on Base.
         let state = (["Base"] + (mask == nil ? [String(localized: "\(RoundUpsPot.figure(units)) of \(at)")] : []) + ["Aave"])
             .joined(separator: " · ")
+        // On Holdings' one line the network is the page's (prd §1953).
+        let fact = ((mask == nil ? [String(localized: "\(RoundUpsPot.figure(units)) of \(at)")] : []) + ["Aave"])
+            .joined(separator: " · ")
         // Its page like every holding's (user, 2026-11-21). No verb: the pot
         // moves itself into your private balance at its figure.
         let holding = WalletHolding(id: "roundups", symbol: "USDC", title: String(localized: "Round-ups"),
                                     figure: figure, usd: mask == nil ? usd : nil, line: state, verbs: [])
         return Button { walletOpenHolding(holding) } label: {
-            walletRoundUpsLabel(figure: figure, state: state)
+            walletRoundUpsLabel(figure: figure, state: fact)
         }
         .buttonStyle(RowPress())
         .dsHover()
@@ -84,22 +87,24 @@ extension FeedScreen {
             AssetMark(name: "USDC", size: DS.Mark.row)
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
+            // One line (prd §1953): the name, then what it is doing in grey.
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text("Round-ups")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(1)
-                // The line's words carry the place (prd §1718): no small mark
+                    .layoutPriority(1)
+                // The words carry the place (prd §1718): no small mark
                 // beside them, which read as a second token.
                 Text(verbatim: state)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
+                    .dsText(.fact15)
+                    .foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
             }
             Spacer(minLength: DS.Space.s2)
             walletRowFigure(figure, tone: DS.textPrimary)
         }
-        .walletRowPitch()
+        .frame(minHeight: WalletCardStyle.ledgerHead) // its List row carries the air (prd §1953)
         .contentShape(Rectangle())
     }
 
@@ -125,6 +130,8 @@ extension FeedScreen {
         // Network · fact · place (prd §1718): "Base · 5.1% · Aave"; the rate
         // unread, "Base · Aave".
         let state = [m.network, AaveLend.rateOnly(lend.rates[LendMove.key(m)]), "Aave"].compactMap { $0 }.joined(separator: " · ")
+        // Holdings' one line drops the network to the page (prd §1953): "5.1% · Aave".
+        let fact = [AaveLend.rateOnly(lend.rates[LendMove.key(m)]), "Aave"].compactMap { $0 }.joined(separator: " · ")
         // Its page, Withdraw and Deposit on it (user, 2026-11-21): a tap
         // never jumps straight into Move.
         let holding = WalletHolding(id: "lent:" + m.aToken, symbol: m.symbol, figure: figure,
@@ -136,22 +143,23 @@ extension FeedScreen {
                 AssetMark(name: m.symbol, size: DS.Mark.row)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(verbatim: title)
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
-                    // The line's words carry the place (prd §1718, amending
-                    // §1685's mark before the rate): "Base · 5.1% · Aave".
-                    Text(verbatim: state)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
+                        .layoutPriority(1)
+                    // The words carry the place (prd §1718, amending §1685's
+                    // mark before the rate), on the name's line (§1953).
+                    Text(verbatim: fact)
+                        .dsText(.fact15)
+                        .foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: DS.textPrimary)
             }
-            .walletRowPitch()
+            .frame(minHeight: WalletCardStyle.ledgerHead) // its List row carries the air (prd §1953)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

@@ -165,6 +165,23 @@ enum WalletValue {
                                      unit: symbol)
     }
 
+    /// "1.42", "40K" — how many of a token you hold, no unit (the row's
+    /// symbol says it, prd §1953): compact from ten thousand so the row's
+    /// money columns never move. Gated, as every amount is.
+    static func held(_ amount: Double) -> String {
+        let words: String
+        if amount >= 10_000 {
+            words = amount.formatted(.number.notation(.compactName).precision(.significantDigits(1...3)))
+        } else if amount >= 100 {
+            words = amount.formatted(.number.precision(.fractionLength(0)))
+        } else if amount >= 1 {
+            words = amount.formatted(.number.precision(.fractionLength(0...2)))
+        } else {
+            words = amount.formatted(.number.precision(.significantDigits(1...3)))
+        }
+        return BalancePrivacy.shared.value(words)
+    }
+
     /// A bare number with no unit and no currency — a health factor, a vote
     /// weight. Gated because `WalletIngest.format` is also how token amounts
     /// are spelled, and a caller reaching for the raw formatter in a view is

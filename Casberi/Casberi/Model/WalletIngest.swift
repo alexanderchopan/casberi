@@ -2224,6 +2224,10 @@ enum WalletIngest {
         /// contracts behind each symbol, so one can be hidden apart (prd
         /// §1591). Empty on a last-known group (a sample keeps symbols only).
         var partsBySymbol: [String: [String: Double]] = [:]
+        /// symbol → contract key → how many TOKENS (prd §1953), keyed as
+        /// `partsBySymbol`; a contract read without a count is absent. Empty
+        /// on a last-known group, which keeps dollars only.
+        var amountsBySymbol: [String: [String: Double]] = [:]
         /// Set only on a LAST-KNOWN group (an unreachable wallet showing its
         /// cached treemap): the moment it was sampled, so the subline can say
         /// "as of 2h ago" instead of claiming the number is current
@@ -2736,6 +2740,7 @@ enum WalletIngest {
                                     bySymbolAll: g.bySymbol,
                                     routeBySymbol: g.routes,
                                     partsBySymbol: g.parts,
+                                    amountsBySymbol: g.amounts,
                                     readAt: g.at))
     }
 
@@ -2794,7 +2799,8 @@ enum WalletIngest {
     private static func holdings(addresses: [String])
         async -> (reached: Bool, group: (cells: [String], total: Double, count: Int,
                                          bySymbol: [String: Double], routes: [String: String],
-                                         parts: [String: [String: Double]], at: Date)?) {
+                                         parts: [String: [String: Double]],
+                                         amounts: [String: [String: Double]], at: Date)?) {
         // THE DEMO REACHES NOTHING, at the FUNNEL (2026-08-12). Gating
         // `ZerionAPI` alone was not enough and the measurement said so: this
         // path falls back to Alchemy the moment Zerion is unreached, so the
@@ -2824,9 +2830,20 @@ enum WalletIngest {
         // real symbol sums into the real one's row, so a hide must be able
         // to take the one contract and leave the rest.
         var parts: [String: [String: Double]] = [:]
+        // How many tokens each contract holds (prd §1953), beside its
+        // dollars. A contract any read of which came without a count has
+        // none: a partial count presented as the whole is §83's failure.
+        var amounts: [String: [String: Double]] = [:]
+        var uncounted: Set<String> = []
         for token in tokens {
             bySymbol[token.symbol, default: 0] += token.usd
-            parts[token.symbol, default: [:]][HiddenTokens.contractKey(network: token.network, contract: token.contract), default: 0] += token.usd
+            let partKey = HiddenTokens.contractKey(network: token.network, contract: token.contract)
+            parts[token.symbol, default: [:]][partKey, default: 0] += token.usd
+            if let amount = token.amount, amount.isFinite, amount >= 0 {
+                amounts[token.symbol, default: [:]][partKey, default: 0] += amount
+            } else {
+                uncounted.insert(token.symbol + "|" + partKey)
+            }
             guard token.usd > (routeBySymbol[token.symbol]?.usd ?? 0),
                   let slug = chainSlug[token.network] else { continue }
             if let contract = token.contract {
@@ -2854,7 +2871,10 @@ enum WalletIngest {
 
         let routes = routeBySymbol.mapValues(\.route)
         return (true, (treemapCells(bySymbol: bySymbol, routes: routes),
-                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes, parts, dated.at))
+                       bySymbol.values.reduce(0, +), bySymbol.count, bySymbol, routes, parts,
+                       amounts.reduce(into: [:]) { out, entry in
+                           out[entry.key] = entry.value.filter { !uncounted.contains(entry.key + "|" + $0.key) }
+                       }, dated.at))
     }
 
     /// The top-5-by-value treemap cells for a by-symbol map. Extracted

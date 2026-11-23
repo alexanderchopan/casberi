@@ -170,6 +170,7 @@ enum WalletIngest {
         var bySymbolAll: [String: Double] = [:]
         var routeBySymbol: [String: String] = [:]
         var partsBySymbol: [String: [String: Double]] = [:]
+        var amountsBySymbol: [String: [String: Double]] = [:]
     }
     static func treemapCells(bySymbol: [String: Double],
                              routes: [String: String]) -> [String] { [] }

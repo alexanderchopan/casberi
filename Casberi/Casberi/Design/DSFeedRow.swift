@@ -151,7 +151,8 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
             // pushed air between this app and the next. The app's name over
             // it and the icon beside it (§1157) keep the cell taller than a
             // finger.
-            .frame(minHeight: groupedSource == nil ? Self.headHeight : 0,
+            // A title-only row is the ledger's (prd §1954): Home reads down.
+            .frame(minHeight: groupedSource == nil ? (titleOnly ? DSFeed.ledgerHead : Self.headHeight) : 0,
                    alignment: groupedSource == nil ? .center : .top)
             below
                 .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : 0)
@@ -235,6 +236,12 @@ enum DSFeed {
     /// The head every row shares (prd §902, §1071, §1482): 44pt, the tap
     /// minimum. Here, off the generic, so a row drawn by hand can name it.
     static let headHeight: CGFloat = 44
+
+    /// **THE LEDGER'S HEAD (prd §1953, §1954).** A one-line row in a list
+    /// read down — Holdings, and Home's and Activity's title-only rows —
+    /// stands 32pt with the list's 4pt air above and below: a 40pt pitch.
+    /// The 30pt mark still fits (§1071).
+    static let ledgerHead: CGFloat = 32
 
     /// The line from whatever clauses a row has, joined the way every row
     /// joins them. Nil when there are none, so no row draws an empty line.

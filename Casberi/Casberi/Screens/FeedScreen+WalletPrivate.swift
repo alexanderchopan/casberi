@@ -168,20 +168,11 @@ extension FeedScreen {
                     .foregroundStyle(DS.attention)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: symbol)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    Text(verbatim: state)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.attentionInk)
-                        .lineLimit(1)
-                }
+                walletLedgerWords(symbol, fact: state, factInk: DS.attentionInk)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: DS.textSecondary)
             }
-            .walletRowPitch()
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -243,20 +234,12 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: h.symbol)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    Text(verbatim: line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
+                // The place alone (prd §1955); the network is the page's.
+                walletLedgerWords(h.symbol, fact: pending ? line : String(localized: "Railgun"))
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: pending ? DS.textSecondary : DS.textPrimary)
             }
-            .walletRowPitch()
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -289,19 +272,10 @@ extension FeedScreen {
                 }
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    Text(verbatim: line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
+                walletLedgerWords(name, fact: line)
                 Spacer(minLength: DS.Space.s2)
             }
-            .walletRowPitch()
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -339,7 +313,7 @@ extension FeedScreen {
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
                 }
-                .walletRowPitch()
+                .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -371,22 +345,11 @@ extension FeedScreen {
                     .foregroundStyle(DS.brandInk)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Savings goal")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    if let line {
-                        Text(verbatim: line)
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
+                walletLedgerWords(String(localized: "Savings goal"), fact: line)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(percent, tone: DS.textPrimary)
             }
-            .walletRowPitch()
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: [String(localized: "Savings goal"), line, percent].compactMap { $0 }.joined(separator: ". ")))
             .walletListRow()
@@ -569,6 +532,12 @@ extension FeedScreen {
             .filter { $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId }.map(\.at).min()), DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
+        let fact: String = switch row.kind {
+        case .held where PrivateMoneyStore.shared.mismatched: String(localized: "Doesn't match")
+        case .held: String(localized: "Privacy Pools")
+        case .waiting: String(localized: "Being checked")
+        case .refused: state
+        }
         // Its page, Send on it (user, 2026-11-21), as every holding's.
         let holding = WalletHolding(id: "private:" + row.id, symbol: row.symbol, title: row.title, figure: figure,
                                     usd: mask == nil ? PrivateMoney.rowUSD(row, prices: prices) : nil,
@@ -601,25 +570,14 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: row.title)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    // The line's words carry the place, last (prd §1718,
-                    // amending §1700f item 9's mark beside them): "Ethereum ·
-                    // 1.5% on Aave · Privacy Pools". No small mark, which read
-                    // as a second token. A waiting or refused deposit keeps
-                    // its state word alone.
-                    Text(verbatim: state)
-                        .dsText(.subhead12)
-                        .foregroundStyle(stateInk)
-                        .lineLimit(1)
-                }
+                // One line (prd §1955): the place alone, or a short state;
+                // the whole line ("Ethereum · 1.5% on Aave · Privacy Pools",
+                // "since Nov 18") is the row's page's.
+                walletLedgerWords(row.title, fact: fact, factInk: stateInk)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary)
             }
-            .walletRowPitch()
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -780,5 +738,27 @@ extension WalletPortfolio {
         }
         out.positions.sort { $0.usd == $1.usd ? $0.symbol < $1.symbol : $0.usd > $1.usd }
         return out
+    }
+}
+
+extension FeedScreen {
+    /// **A LEDGER ROW'S WORDS (prd §1953, §1955):** the name, then one short
+    /// fact after it in grey on the same line. The name never gives way; the
+    /// fact is cut at its tail.
+    func walletLedgerWords(_ name: String, fact: String?, factInk: Color = DS.textTertiary,
+                           nameInk: Color = DS.textSecondary) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: name)
+                .dsText(.body17)
+                .foregroundStyle(nameInk)
+                .lineLimit(1)
+                .layoutPriority(1)
+            if let fact, !fact.isEmpty {
+                Text(verbatim: fact)
+                    .dsText(.fact15)
+                    .foregroundStyle(factInk)
+                    .lineLimit(1)
+            }
+        }
     }
 }

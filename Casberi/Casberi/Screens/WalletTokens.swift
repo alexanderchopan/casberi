@@ -33,36 +33,40 @@ struct WalletTokenFold {
     var restUSD: Double { rest.reduce(0) { $0 + $1.usd } }
 }
 
-/// A token, as Holdings and the all-tokens tray draw it: its mark, its
-/// symbol, whose it is where that is a question, then the day's move (or its
-/// share) beside the amount, which pins to the edge.
+/// A token, as the all-tokens tray draws it — Holdings' row (prd §1953): its
+/// mark, its symbol and how many you hold on one line, then the day's move
+/// (or its share) beside the dollars, which pin to the edge. Where it sits is
+/// the token's page's; Ethereum disagreeing (§1825) still takes a line.
 struct WalletTokenRowLabel: View {
     let position: WalletPortfolio.Position
     let total: Double
     let move: Double?
+
+    /// A row with a line under it keeps the Wallet's 52pt pitch; a one-line
+    /// row is the ledger's 40 (prd §1953).
+    var twoLine: Bool { HoldingsCheckStore.shared.mismatched(position) }
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             // Always a mark — `TokenIcon` draws nothing for a token with no
             // picture, and the row's name then stood in a different column.
             AssetMark(name: position.symbol, size: DS.Face.list)
-            // The networks it sits on, under its name (prd §1718, amending
-            // §1338's "no subtext": the line is WHERE, as every Holdings
-            // row's is). Whose it is still lives in the token's sheet.
             VStack(alignment: .leading, spacing: 2) {
-                Text(position.symbol)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                // A holding Ethereum itself disagreed with twice in a row
-                // (prd §1825) says so where its networks stand, in amber,
-                // as a private balance does (§1569a).
-                if HoldingsCheckStore.shared.mismatched(position) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(position.symbol)
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                    if let amount = position.amount {
+                        Text(verbatim: WalletValue.held(amount))
+                            .dsText(.fact15).foregroundStyle(DS.textTertiary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
+                }
+                if twoLine {
                     Text("Doesn't match Ethereum")
                         .dsText(.subhead12).foregroundStyle(DS.attentionInk)
-                        .lineLimit(1)
-                } else if let line = position.networksLine {
-                    Text(verbatim: line)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
             }
@@ -76,7 +80,7 @@ struct WalletTokenRowLabel: View {
                 if let move {
                     if !TokenChartStyle.isFlat(move) {
                         Text(TokenChartStyle.changeText(move))
-                            .dsText(.subhead12)
+                            .dsText(.fact15)
                             .foregroundStyle(move > 0 ? DS.confirmInk : DS.destructiveInk)
                             .monospacedDigit()
                     }
@@ -84,7 +88,7 @@ struct WalletTokenRowLabel: View {
                     let pct = Int((position.usd / total * 100).rounded())
                     if pct >= 1 {
                         Text("\(pct)%")
-                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .dsText(.fact15).foregroundStyle(DS.textTertiary)
                             .monospacedDigit()
                     }
                 }
@@ -93,6 +97,8 @@ struct WalletTokenRowLabel: View {
                     .monospacedDigit()
             }
         }
+        .frame(minHeight: twoLine ? DSFeed.headHeight : WalletCardStyle.ledgerHead)
+        .padding(.vertical, FeedScreen.rowAir)
     }
 }
 
@@ -224,7 +230,6 @@ struct WalletTokensSheet: View {
         } label: {
             WalletTokenRowLabel(position: position, total: total,
                                 move: moves[HoldingMoves.key(position.symbol)])
-                .walletRowPitch()
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

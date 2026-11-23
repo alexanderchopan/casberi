@@ -133,7 +133,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .activity:        return String(localized: "Wallet")
         case .holdings:        return String(localized: "Holdings")
         case .spending:        return String(localized: "Spending")
-        case .yourAccount:     return String(localized: "Account")
+        // Plural (user, 2026-11-23: "on home it says Account w/ a chevron,
+        // can you make that plural please"): the page holds yours and the
+        // ones you follow (§1843).
+        case .yourAccount:     return String(localized: "Accounts")
         case .following:       return String(localized: "Following")
         case .needsYou:        return String(localized: "Needs you")
         case .permissions:     return String(localized: "Permissions")
