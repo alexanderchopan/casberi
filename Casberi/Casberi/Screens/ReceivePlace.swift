@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-/// **ONE PLACE ON RECEIVE (prd §1945).** Its name, Copy at the end (the head
+/// **ONE PLACE ON RECEIVE (prd §1946).** Its name, Copy at the end (the head
 /// is the copy's whole target), then its labelled lines (`ReceiveWords.Fact`)
 /// in Move's receipt column, so every place on the page reads the same way
 /// and none needs a page or an ⓘ of its own. Aztec's words wear its ink.
@@ -96,7 +96,7 @@ enum ReceiveDemo {
     static var privateAddress: String { "0zk1qyqrw8a5h9mc0tk3n6fz2l4s7vxj9uq8e5pd3rjkm6g2wa0tyz4h7cxs9ld3unv8kq2fe6mrx5pa4w0jg7t3yhs9cvz2lm8dq6rkue0xan5tw3pfy8hg4jv7f3a" }
 }
 
-/// **PRIVACY POOLS ON RECEIVE, WITH WHAT ARRIVED (prd §1945, retiring its
+/// **PRIVACY POOLS ON RECEIVE, WITH WHAT ARRIVED (prd §1946, retiring its
 /// page, user: "if we already have the receive page, why do we need another
 /// privacy pools page").** The place's lines, then one Status line for each
 /// one-time address money has reached and not yet finished with: what
@@ -264,7 +264,7 @@ struct ReceivePoolsPlace: View {
         }
         let symbol = entry.token
         let railgun = FreshTx.railgunToken(symbol: symbol)
-        // A dollar at cents, a coin at four places (prd §1944).
+        // A dollar at cents, a coin at four places (prd §1945).
         func figure(_ amount: String) -> String {
             let dollar = symbol == "USDC" || symbol == "USDG"
             let decimals = railgun?.decimals ?? (symbol == "USDC" ? 6 : 18)
@@ -318,7 +318,7 @@ enum ReceivePools {
     }
 }
 
-/// **RECEIVE WITH NO ACCOUNT YET (prd §1945):** Privacy Pools alone, which
+/// **RECEIVE WITH NO ACCOUNT YET (prd §1946):** Privacy Pools alone, which
 /// never needs your account (prd §1560): the page's name, then the place
 /// as Receive draws it. No Pay the gas: no account of yours can pay.
 struct ReceiveWithoutAccount: View {

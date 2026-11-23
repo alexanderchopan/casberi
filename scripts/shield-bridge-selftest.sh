@@ -93,6 +93,14 @@ grep -q 'YourAccountSwap.checked(quote, sell: sell, amount: units, chainId: net.
   || { echo "✗ gas is bought through calls Swap's own check has not read"; exit 1; }
 grep -q 'bought >= leastBought' "$GAS" \
   || { echo "✗ a gas sale that buys almost nothing is sent anyway"; exit 1; }
+# ETH and WETH are two choices (prd §1943, user: "we can't call weth eth"):
+# only an ETH pick wraps, with WETH's own deposit(), before anything else.
+(( $(grep -c '(wraps ? wrapCall(asset, needs: max(0, wanted - held) + (Decimal(string: sale ?? "0") ?? 0)) : nil).map { \[\$0\] } ?? \[\]' "$APP") == 2 )) \
+  || { echo "✗ a move-in in ETH no longer wraps it first, in both ways in (prd §1943)"; exit 1; }
+grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
+  || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
+grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \
+  || { echo "✗ ETH and WETH are no longer separate choices going into Aztec (prd §1943)"; exit 1; }
 
 # ── A deposit arrives on its own (prd §1700ac) ──────────────────────────
 # The claim ran only while Move's Aztec sentence stood. It is now asked from

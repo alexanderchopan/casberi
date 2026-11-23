@@ -122,7 +122,7 @@ struct MoveTrayPresenter: ViewModifier {
             chrome.moveTray = true
         }
         // `-moveFreshReceive YES` raises Receive, where Privacy Pools' one-time
-        // address and what reached it stand (prd §1560, §1945).
+        // address and what reached it stand (prd §1560, §1946).
         .task {
             guard UserDefaults.standard.bool(forKey: "moveFreshReceive") else { return }
             try? await Task.sleep(for: .seconds(1))
@@ -250,7 +250,7 @@ struct MoveScreen: View {
                 .onAppear { privateMove.mode = mode }
             } else if chrome.moveAsk == MoveMenu.Verb.receive.rawValue, PrivateMove.freshAvailable {
                 // No account yet: Receive is Privacy Pools alone, which never
-                // needs your account (prd §1560, §1945).
+                // needs your account (prd §1560, §1946).
                 ReceiveWithoutAccount(inTray: inTray)
             } else {
                 before

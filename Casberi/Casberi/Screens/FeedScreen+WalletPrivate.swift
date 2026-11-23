@@ -159,7 +159,7 @@ extension FeedScreen {
         return Button {
             DSHaptic.selection()
             // Receive, where every address money reached has its Status line
-            // (prd §1945; §1823's pinned address is every live one now).
+            // (prd §1946; §1823's pinned address is every live one now).
             MoveMenu.pick(.receive, chrome)
         } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {

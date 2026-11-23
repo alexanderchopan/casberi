@@ -680,7 +680,7 @@ perl -0ne 'print $1 if /(func walletHomeDoors\(upcoming.*?)\n    \/\/ MARK: - Ho
 deny WalletHome "walletDoor(.following, figure:" \
   "Home has a Following door again beside the switch's Following (prd §1536)"
 grep -q -- 'AccountLine(label: String(localized: "Other accounts, read-only"),' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift \
-  || fail "drift: Your accounts no longer lists the accounts you follow (prd §1807, under Your accounts since §1946)"
+  || fail "drift: Your accounts no longer lists the accounts you follow (prd §1807, under Your accounts since §1947)"
 # The switch: three words, Following lit for any wallet you follow, its lit
 # word a way back (a second tap on Following leaves one wallet for all).
 guard WalletWhose.swift "case yours, following, everything" \

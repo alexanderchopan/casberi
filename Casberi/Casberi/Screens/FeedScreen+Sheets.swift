@@ -327,7 +327,7 @@ extension FeedScreen {
         case .aztecGas:
             AztecGasTray()
         case .onItsWay(let item):
-            // Receive, where the one-time address and its Status stand (prd §1945).
+            // Receive, where the one-time address and its Status stand (prd §1946).
             OnItsWaySheet(item: item, openAddress: {
                 MoveMenu.pick(.receive, chrome)
             }, takeBack: walletTakeBack)

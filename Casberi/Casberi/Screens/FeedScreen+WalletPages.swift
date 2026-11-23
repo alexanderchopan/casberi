@@ -1338,7 +1338,7 @@ struct WalletYourAccountFigure: View {
                 .buttonStyle(RowPress())
                 .accessibilityHint(Text("Changes your name or photo"))
                 .profileEditing(isPresented: $profileOpen)
-                // No address under the name (prd §1946, user: "is user going to
+                // No address under the name (prd §1947, user: "is user going to
                 // understand what that is … why do we have that one instead
                 // of the others"): each account copies its own, in Your accounts.
             }

@@ -18,9 +18,9 @@ struct MoveSecurity: View {
     /// Your accounts' Public lines past the Safe: the Safes you hold a key to
     /// (prd §1937). Drawn by the Wallet, which reads them.
     var publicLines: AnyView? = nil
-    /// Following, under Your accounts (prd §1946): the line the Wallet draws.
+    /// Following, under Your accounts (prd §1947): the line the Wallet draws.
     var following: AnyView? = nil
-    /// Your accounts' Private lines: Privacy Pools, Railgun, Aztec (prd §1946).
+    /// Your accounts' Private lines: Privacy Pools, Railgun, Aztec (prd §1947).
     var privateLines: AnyView? = nil
     @Environment(ShellChrome.self) private var chrome
 
@@ -67,7 +67,7 @@ struct MoveSecurity: View {
     @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpsTray = false
-    /// How your accounts work (prd §1947).
+    /// How your accounts work (prd §1948).
     @State private var guideOpen = false
     /// Aave's USDC rate on Base, for the Round-ups plate's Earns row; read
     /// when the tray opens, nil until then or when unread.
@@ -89,7 +89,7 @@ struct MoveSecurity: View {
     /// send", the network list on every row) are gone; the networks are one
     /// row, said once.
     var body: some View {
-        // **THREE PLATES (prd §1946, amending §1937):** Your accounts, then
+        // **THREE PLATES (prd §1947, amending §1937):** Your accounts, then
         // Security, who signs and how it is reached, then Saving.
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             accountsPlate
@@ -102,7 +102,7 @@ struct MoveSecurity: View {
             // saved, "Not backed up" in amber where iCloud is off or private
             // money sits on this phone alone, with the fix beside or under it.
             // iCloud Keychain off: the fix is the line's own verb, never a
-            // second line under it (prd §1943).
+            // second line under it (prd §1944).
             row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone,
                 verb: backupOff ? (String(localized: "Turn on"), {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
@@ -130,7 +130,7 @@ struct MoveSecurity: View {
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             }
-            // **SAVING, ITS OWN PLATE (prd §1946):** round-ups and the goal
+            // **SAVING, ITS OWN PLATE (prd §1947):** round-ups and the goal
             // they fill put money away ("Saving", not "Spending", §1803).
             AccountPlate(name: String(localized: "Saving"), glyph: Self.savingGlyph) {
                 roundUpsRow
@@ -225,7 +225,7 @@ struct MoveSecurity: View {
 
     /// The fix beside the fact: Add or Finish the recovery key, or Back up
     /// private money that sits on this phone alone (prd §1562). With iCloud
-    /// off the fix is the line's Turn on (prd §1943).
+    /// off the fix is the line's Turn on (prd §1944).
     private var backupVerb: (String, () -> Void)? {
         guard unsettled == nil, !backupOff else { return nil }
         if let word = recoveryVerb { return (word, setUp) }
@@ -251,10 +251,10 @@ struct MoveSecurity: View {
     static let keysGlyph = "person.badge.key"
     static let connectionGlyph = "globe"
 
-    /// **YOUR ACCOUNTS (prd §1946, user: "the user will want to know what
+    /// **YOUR ACCOUNTS (prd §1947, user: "the user will want to know what
     /// their accounts are", "they will also want to know and copy their
     /// addresses").** How your accounts work first (its own tray, prd
-    /// §1947); then Public, the Safe and the Safes you
+    /// §1948); then Public, the Safe and the Safes you
     /// hold a key to; Private, each private account; Following, the
     /// read-only accounts. Each account its name, where it is, and its copy.
     @ViewBuilder private var accountsPlate: some View {
@@ -297,7 +297,7 @@ struct MoveSecurity: View {
     /// ("Setting up…") in the verb's place, grey.
     private func row(title: String, value: String?, tone: Color = DS.textSecondary, short: String? = nil,
                      verb: (String, () -> Void)?) -> some View {
-        // **A LINE (prd §1937, §1943):** the name, the fact at the trailing
+        // **A LINE (prd §1937, §1944):** the name, the fact at the trailing
         // edge (grey, or its state's ink), the verb at the end in the pick's
         // ink, and the whole line is the verb. A line with no verb is a fact
         // and takes no tap.

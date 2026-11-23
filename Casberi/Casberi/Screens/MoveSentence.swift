@@ -2513,7 +2513,7 @@ struct MoveSentence: View {
     // MARK: - Receive's three addresses (prd §1803)
 
     @ViewBuilder private var receiveAddresses: some View {
-        // **RECEIVE IS EVERY PLACE, ON ONE PAGE (prd §1945, amending §1929;
+        // **RECEIVE IS EVERY PLACE, ON ONE PAGE (prd §1946, amending §1929;
         // user: "if we already have the receive page, why do we need another
         // privacy pools page").** Public, then the private places; each its
         // name, Copy, and the same labelled lines (`ReceiveWords.facts`), no
@@ -5565,7 +5565,7 @@ struct MoveSentence: View {
     /// reaches Aztec or goes out to Ethereum, and money comes in from
     /// Ethereum through Shield.
     static var aztecSendRule: String { String(localized: "To Aztec, or out to Ethereum") }
-    static var aztecInRule: String { String(localized: "From Ethereum, USDC or ETH") }
+    static var aztecInRule: String { String(localized: "From Ethereum, USDC, ETH or WETH") }
     static var aztecRules: Set<String> { [aztecRule, aztecSendRule, aztecInRule] }
 
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
@@ -6204,7 +6204,7 @@ struct MoveSentence: View {
                 }
             }
             // The private places are Receive's own, with their lines (prd
-            // §1945); this list is the public networks and Relay's.
+            // §1946); this list is the public networks and Relay's.
             // **ANOTHER NETWORK'S TOKENS, ONE PICK (prd §1910):** each network
             // Relay brings from, under its title, what it takes as tiles.
             MoveTokenGrid(places: [MoveTokenPlace(id: "relay", title: String(localized: "Through Relay"), choices: elsewhereNetworks.flatMap { n in

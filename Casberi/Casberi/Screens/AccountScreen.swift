@@ -190,7 +190,7 @@ struct SettingsRows: View {
         /// Bump to make the badge give one bounce (a milestone crossing).
         var bounce = 0
         /// A row that flips (`.flips`) as Account's line draws it: its two
-        /// words, and whether the second is lit (prd §1943).
+        /// words, and whether the second is lit (prd §1944).
         var flip: (words: (String, String), second: Bool)? = nil
         var action: () -> Void = {}
     }
@@ -531,7 +531,7 @@ struct SettingsRows: View {
         }
     }
 
-    /// **A SETTING IS A LINE (prd §1937, §1943):** its name, its value grey
+    /// **A SETTING IS A LINE (prd §1937, §1944):** its name, its value grey
     /// at the trailing edge, and its end saying what a tap does: the
     /// chevron where it opens, the arrow where it leaves the app, and a
     /// row that flips is its two words on one track, the lit one the

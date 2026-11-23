@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **HOW YOUR ACCOUNTS WORK (prd §1947).** Account's door opens this tray:
+/// **HOW YOUR ACCOUNTS WORK (prd §1948).** Account's door opens this tray:
 /// the intro, then each account on Account's plate fill, closed to its name
 /// and Public or Private; a tap opens its Receive, Send (Swap for
 /// Railgun) and Earns in place, the chevron turning. Every account starts

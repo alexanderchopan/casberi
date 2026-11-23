@@ -1,6 +1,6 @@
 import Foundation
 
-/// **RECEIVE, EVERY PLACE ON ONE PAGE IN ONE SHAPE (prd §1945, user: "i'm
+/// **RECEIVE, EVERY PLACE ON ONE PAGE IN ONE SHAPE (prd §1946, user: "i'm
 /// not sure why we need those little eyes for more information … all the
 /// information should be on the main page", retiring §1929's ⓘ).** Every
 /// place answers the same questions, in the same order, as labelled lines
@@ -142,7 +142,7 @@ enum ReceiveWords {
                     Fact(label: ready, value: String(localized: "In about an hour")),
                     Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]
         case .aztec:
-            return [Fact(label: takes, value: "USDC, ETH"),
+            return [Fact(label: takes, value: "USDC, WETH"),  // On Aztec it is WETH (prd §1943).
                     Fact(label: from, value: String(localized: "Another Aztec account only")),
                     Fact(label: ready, value: String(localized: "In a few minutes")),
                     Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]

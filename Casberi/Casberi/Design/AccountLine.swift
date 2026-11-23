@@ -1,14 +1,14 @@
 import SwiftUI
 
 /// **ACCOUNT IS LINES ON PLATES (prd §1937), EACH LINE SAYING WHAT A TAP DOES
-/// (prd §1943, user: "you can't tell which things are tappable and which
+/// (prd §1944, user: "you can't tell which things are tappable and which
 /// aren't").** A line is the app's row: the setting's name white at the left
 /// edge, its value grey at the trailing edge (a state in its own ink), 44pt
 /// tall as every row is. Its END is the one thing that says what it does,
 /// and there are four ends, never a fifth:
 ///
 /// - **opens** (a page, a sheet, a tray): the grey chevron (§1815, extended
-///   by §1943 to sheets on this page);
+///   by §1944 to sheets on this page);
 /// - **acts** (a verb run in place): the verb in the pick's ink, and the
 ///   whole line is the verb;
 /// - **switches**: `AccountSwitch`, two words on one track;
@@ -20,11 +20,11 @@ enum AccountLines {
     /// §1937's 32.
     static let pitch: CGFloat = DS.Hit.min
     /// Money's plate rows (`MoneyPlateRows`) keep a word column; Account's
-    /// lines no longer do (§1943).
+    /// lines no longer do (§1944).
     static let labelWidth: CGFloat = 118
 }
 
-/// What a line's end says it does (prd §1943).
+/// What a line's end says it does (prd §1944).
 enum AccountLineEnd {
     /// A fact: no mark, no tap.
     case states
@@ -128,7 +128,7 @@ extension AccountLine where Trailing == EmptyView {
     }
 }
 
-/// A group's part on its plate: Public, Private, Following (prd §1946).
+/// A group's part on its plate: Public, Private, Following (prd §1947).
 struct AccountSubhead: View {
     let text: String
 
@@ -167,7 +167,7 @@ struct AccountPlate<Content: View>: View {
     }
 }
 
-/// **A SWITCH IS TWO WORDS ON ONE TRACK (prd §1937, §1943):** Off | On,
+/// **A SWITCH IS TWO WORDS ON ONE TRACK (prd §1937, §1944):** Off | On,
 /// Dark | Light, Wallet | Activity; the lit one is the setting. A tap on the
 /// other word asks. Move's $ | token switch in a setting's place.
 struct AccountSwitch: View {
@@ -223,7 +223,7 @@ struct AccountOnOff: View {
     }
 }
 
-/// **AN ACCOUNT OF YOURS, ON ACCOUNT (prd §1946).** Its name, the one line
+/// **AN ACCOUNT OF YOURS, ON ACCOUNT (prd §1947).** Its name, the one line
 /// under it that says where it is ("On Base, Ethereum and Robinhood"), and
 /// the copy glyph at the end, which copies its address and turns to a tick
 /// for a moment (§867). The name and line take no tap: the glyph is the one

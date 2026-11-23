@@ -1,6 +1,6 @@
 import Foundation
 
-/// **HOW YOUR ACCOUNTS WORK (prd §1947).** The words of the page behind
+/// **HOW YOUR ACCOUNTS WORK (prd §1948).** The words of the page behind
 /// Account's "How your accounts work": an intro, then each account under its
 /// name and Public or Private (no line under it: user, "they are kind of misleading"), open to Receive, Send (Swap for Railgun) and
 /// Earns, each with its "Good to know". The words were settled with the user
@@ -9,7 +9,7 @@ import Foundation
 /// read live (`ReceiveWords.Pools`); unread, the line says so without a number.
 ///
 /// Learning lives here; Send and Receive carry only the rule that changes the
-/// move in hand, when it applies (prd §1947 item 4).
+/// move in hand, when it applies (prd §1948 item 4).
 enum AccountsGuide {
     struct Part: Identifiable, Hashable {
         let title: String

@@ -355,7 +355,7 @@ extension FeedScreen {
     func walletPrivatePlaces() -> some View {
         let store = AztecAccountStore.shared
         let aztec = store.isShown ? store.shown.address : nil
-        // **YOUR PRIVATE ACCOUNTS (prd §1946):** each its name, where it is,
+        // **YOUR PRIVATE ACCOUNTS (prd §1947):** each its name, where it is,
         // and the copy glyph for its address. Privacy Pools' address is made
         // new each time; Railgun's is your one 0zk address; Aztec's is paid
         // from Aztec only, which the copy says (prd §1779).

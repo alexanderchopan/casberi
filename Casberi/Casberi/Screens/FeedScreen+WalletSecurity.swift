@@ -70,7 +70,7 @@ extension FeedScreen {
         // The demo's own account in the demo (prd §1475), else this phone's.
         if let account = YourAccountDemo.shownAddress,
            chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
-            // **YOUR ACCOUNTS, SECURITY, SAVING (prd §1946):** `MoveSecurity`
+            // **YOUR ACCOUNTS, SECURITY, SAVING (prd §1947):** `MoveSecurity`
             // draws the three plates; Your accounts' Public takes the Safes
             // you hold a key to, its Private the private accounts, and
             // Following the read-only ones (user: "it belongs on the Your
