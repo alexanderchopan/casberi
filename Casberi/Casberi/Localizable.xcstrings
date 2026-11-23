@@ -177358,6 +177358,34 @@
         }
       }
     },
+    "Save this Aztec account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardar esta cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このAztecアカウントを保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Aztec 계정 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存此 Aztec 账户"
+          }
+        }
+      }
+    },
     "Save to Casberi" : {
       "localizations" : {
         "es" : {
@@ -177893,6 +177921,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "把文字或链接保存成一条内容 —— 无需应用，无需选择去向。"
+          }
+        }
+      }
+    },
+    "Saves this Aztec account by a name you give" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guarda esta cuenta de Aztec con el nombre que le des"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このAztecアカウントを付けた名前で保存します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Aztec 계정을 지정한 이름으로 저장합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以你起的名字保存此 Aztec 账户"
           }
         }
       }

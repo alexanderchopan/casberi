@@ -144,6 +144,13 @@ grep -q 'Fact(label: ready, value: String(localized: "In about 20 seconds")),' C
   && grep -q 'await AztecArrivals.tellReadyExits()' "$STORE" \
   && grep -q 'guard case .ready = await ShieldBridge.state(of: exit) else { continue }' Casberi/Casberi/Model/Aztec/AztecArrivals.swift \
   || { echo "✗ Receive's Aztec wait, pay many's gas or the ready-to-finish notice is gone (prd §1963)"; exit 1; }
+# Aztec accounts by name (prd §1964): the book keys and takes them, Send
+# lists them first, and a send offers to save who it paid.
+grep -q 'AztecAddressText.isAztec(token) || RailgunSwap.isPrivateAddress(token)' Casberi/Casberi/Model/AddressBook.swift \
+  && grep -q 'ENS.isHexAddress(canonical) || AztecAddressText.isAztec(canonical) ? canonical.lowercased()' Casberi/Casberi/Model/AddressBook.swift \
+  && grep -q 'var out: \[Suggestion\] = AddressBook.shared.aztecAccounts' "$MOVE" \
+  && grep -q 'AddressBook.shared.setName(savingName, for: address, networks: \["aztec"\])' "$MOVE" \
+  || { echo "✗ an Aztec account can no longer be saved, or Send no longer offers the saved ones (prd §1964)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

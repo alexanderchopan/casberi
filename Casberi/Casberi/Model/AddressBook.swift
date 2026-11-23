@@ -289,7 +289,8 @@ final class AddressBook {
     /// the same asymmetry `WalletStore.dedupeKey` keeps.
     static func key(for address: String) -> String {
         let canonical = resolvedForm(of: address)
-        return ENS.isHexAddress(canonical) ? canonical.lowercased() : canonical
+        // An Aztec account is hex too, 32 bytes: case is not identity (prd §1964).
+        return ENS.isHexAddress(canonical) || AztecAddressText.isAztec(canonical) ? canonical.lowercased() : canonical
     }
 
     // MARK: - Names are not identities (2026-07-25, prd §212)
@@ -469,6 +470,11 @@ final class AddressBook {
     var count: Int { entries.count }
 
     func entry(for address: String) -> Entry? { entries[Self.key(for: address)] }
+
+    /// **AZTEC ACCOUNTS, BY NAME (prd §1964, user: "a user who pays an aztec
+    /// address today has no way to save it?").** The ones saved, newest first:
+    /// Send from Aztec lists them before anything else.
+    var aztecAccounts: [Entry] { all.filter { AztecAddressText.isAztec($0.address) } }
 
     /// The person's own name for an address, or nil. The one read every
     /// resolver consults first — their word beats ENS, a known-contract table,
@@ -948,6 +954,8 @@ final class AddressBook {
     func looksLikeAddress(_ token: String) -> Bool {
         ENS.isHexAddress(token) || SNS.isAddress(token)
             || BitcoinAddress.isWatchable(token)
+            // Private places' own addresses, saved by name (prd §1964).
+            || AztecAddressText.isAztec(token) || RailgunSwap.isPrivateAddress(token)
             || NameResolve.looksLikeName(token)
     }
 

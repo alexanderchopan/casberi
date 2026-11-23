@@ -75214,3 +75214,15 @@ Amends §1956 item 1's "ETH Privacy Pools".
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds all three; `test/private-fees.test.mjs` holds the limits' growth and cap.
+
+## §1964 — Aztec accounts by name: the book keeps them, Send lists them first, a send offers to save who it paid (amends §511's one list for private addresses; §1700r's To list for Aztec) (user, 2026-11-23: "so the thing about 5 is that a user who pays an aztec address today has no way to save it?", "we could do 5 also couldn't we?", "ok" to the flow) — BUILT
+
+1. **The book takes them** (`AddressBook.looksLikeAddress`, `key`): an Aztec account (32-byte hex, lowercased as Ethereum's are) and a Railgun 0zk address (`RailgunSwap.isPrivateAddress`, agreed with the Railgun session so the one list serves both), filed with a network tag (`aztec`).
+2. **Send from Aztec lists your saved Aztec accounts first** (`AddressBook.aztecAccounts`): "Ana · Aztec · ...4d4d", and while paying several, only those.
+3. **After a send, "Save ...1a1a"** for each Aztec account it paid that has no name; a tap asks the name (an alert, its one field) and files it.
+
+**Not built:** an Aztec contact drawn in Aztec's ink in Contacts with "Aztec to Aztec only"; sharing your own Aztec address as a contact. The Railgun send's own Save and its To list are the Railgun session's.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds the book's acceptance and key, the list and the save. **Seen** on an iPhone 17 Pro simulator with `-addressBook "Ana:0x4d…"`: Ana first in Send from Aztec's list.

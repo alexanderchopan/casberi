@@ -810,6 +810,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     @State private var notAnAddress = false
     @State private var copied = false
     @State private var passport = false
+    /// The Aztec account being named, and the name typed (prd §1964).
+    @State private var saving: String?
+    @State private var savingName = ""
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -847,6 +850,19 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 try? await Task.sleep(for: .seconds(30))
             }
         }
+        .alert("Save this Aztec account", isPresented: Binding(get: { saving != nil }, set: { if !$0 { saving = nil } })) {
+            TextField("Name", text: $savingName)
+            Button("Save") {
+                if let address = saving, !savingName.trimmingCharacters(in: .whitespaces).isEmpty {
+                    AddressBook.shared.setName(savingName, for: address, networks: ["aztec"])
+                    DSHaptic.success()
+                }
+                saving = nil
+            }
+            Button("Cancel", role: .cancel) { saving = nil }
+        } message: {
+            Text(verbatim: saving.map { AddressTail.short($0) } ?? "")
+        }
         // Back from Human Passport, Shield is asked again. While the page is
         // open the co-signer's score is read under it (prd §1820).
         .sheet(isPresented: $passport, onDismiss: { Task { await move.read() } }) {
@@ -859,6 +875,13 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     }
 
     private var live: Bool { move.stage == .ready }
+
+    /// The Aztec accounts this send paid that the book has no name for (prd §1964).
+    private var unsavedAztec: [String] {
+        let paid = move.pays.map(\.recipient) + (move.recipient.map { [$0] } ?? [])
+        var seen = Set<String>()
+        return paid.filter { AztecAddressText.isAztec($0) && AddressBook.shared.entry(for: $0) == nil && seen.insert($0.lowercased()).inserted }
+    }
 
     /// The facts, the cost a row of them (prd §1876).
     private var receipt: some View {
@@ -1080,8 +1103,28 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 if move.failedForScore { HumanPassportDoor { passport = true } }
             }
         case .done:
-            Text(verbatim: doneLine).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(verbatim: doneLine).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                // **SAVE WHO YOU PAID (prd §1964):** each Aztec account sent
+                // to that has no name yet, one row each.
+                ForEach(unsavedAztec, id: \.self) { address in
+                    Button {
+                        savingName = ""
+                        saving = address
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Text("Save \(AddressTail.short(address))").dsText(.heading17).fontWeight(.semibold)
+                                .foregroundStyle(DS.aztecInk)
+                            Spacer(minLength: DS.Space.s2)
+                        }
+                        .frame(minHeight: DS.Hit.min)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Saves this Aztec account by a name you give"))
+                }
+            }
         default:
             EmptyView()
         }
@@ -1209,10 +1252,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         let q = typed.trimmingCharacters(in: .whitespaces).lowercased()
         let typingAnAddress = AztecAddressText.isAztec(q) || PrivateMoney.isAddress(q)
         guard !typingAnAddress else { return [] }
-        // Several payments go to Aztec accounts only (prd §1952): these are
-        // Ethereum addresses, so none is offered.
-        guard move.pays.isEmpty else { return [] }
-        var out: [Suggestion] = []
+        // **YOUR SAVED AZTEC ACCOUNTS FIRST (prd §1964)**, by the name you gave.
+        var out: [Suggestion] = AddressBook.shared.aztecAccounts
+            .filter { q.isEmpty || $0.name.lowercased().contains(q) || $0.address.lowercased().hasPrefix(q) }
+            .prefix(20)
+            .map { Suggestion(name: $0.name, line: "Aztec · " + AddressTail.short($0.address), address: $0.address) }
+        // Several payments go to Aztec accounts only (prd §1952): the rest
+        // are Ethereum addresses, so none is offered.
+        guard move.pays.isEmpty else { return out }
         let mine = YourAccountKey.address
         let yours = String(localized: "Your account")
         if let mine, q.isEmpty || yours.lowercased().contains(q) || mine.lowercased().hasPrefix(q) {
