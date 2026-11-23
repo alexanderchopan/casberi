@@ -124,7 +124,7 @@ extension ShieldBridge {
     /// deposits. The claim on Aztec follows in `settle()` as for any deposit.
     @MainActor
     static func depositFromCoSigner(_ asset: Asset, units: String, coSigner: String, gas: AztecGas.Plan? = nil,
-                                    said: @escaping @MainActor (String) -> Void) async throws -> AztecAccountStore.ShieldDeposit {
+                                    sale: String? = nil, wraps: Bool = false, said: @escaping @MainActor (String) -> Void) async throws -> AztecAccountStore.ShieldDeposit {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard YourAccountKey.address != nil else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let standing = await eligibility(coSigner), standing.eligible else {
@@ -147,7 +147,8 @@ extension ShieldBridge {
         let wanted = Decimal(string: units) ?? 0
         let allowed = Decimal(string: await allowance(of: asset.ethToken, owner: coSigner, spender: asset.portal)) ?? 0
         let ethNeeded = try await coSignerGas(coSigner, approves: allowed < wanted)
-        var calls: [(to: String, data: String, value: String)] = gas?.calls ?? []
+        var calls: [(to: String, data: String, value: String)] = (wraps ? wrapCall(asset, needs: max(0, wanted - held) + (Decimal(string: sale ?? "0") ?? 0)) : nil).map { [$0] } ?? []
+        calls += gas?.calls ?? []
         if held < wanted, let short = word(decimal: NSDecimalNumber(decimal: wanted - held).stringValue),
            let to = word(hex: coSigner) {
             calls.append((to: asset.ethToken, data: "0xa9059cbb" + to + short, value: "0"))
@@ -196,7 +197,7 @@ extension ShieldBridge {
     /// the next. The claim on Aztec follows in `settle()`.
     @MainActor
     static func depositFromKey(_ asset: Asset, units: String, gas: AztecGas.Plan? = nil,
-                               said: @escaping @MainActor (String) -> Void) async throws -> AztecAccountStore.ShieldDeposit {
+                               sale: String? = nil, wraps: Bool = false, said: @escaping @MainActor (String) -> Void) async throws -> AztecAccountStore.ShieldDeposit {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let key = ShieldKey.address else { throw Failure(message: String(localized: "Private money is not set up on this iPhone")) }
@@ -219,7 +220,8 @@ extension ShieldBridge {
         let wanted = Decimal(string: units) ?? 0
         let allowed = Decimal(string: await allowance(of: asset.ethToken, owner: key, spender: asset.portal)) ?? 0
         let ethNeeded = try await keyGas(key, approves: allowed < wanted)
-        var calls: [(to: String, data: String, value: String)] = gas?.calls ?? []
+        var calls: [(to: String, data: String, value: String)] = (wraps ? wrapCall(asset, needs: max(0, wanted - held) + (Decimal(string: sale ?? "0") ?? 0)) : nil).map { [$0] } ?? []
+        calls += gas?.calls ?? []
         if held < wanted, let short = word(decimal: NSDecimalNumber(decimal: wanted - held).stringValue), let to = word(hex: key) {
             calls.append((to: asset.ethToken, data: "0xa9059cbb" + to + short, value: "0"))
         }
@@ -227,7 +229,7 @@ extension ShieldBridge {
         if !calls.isEmpty {
             said(String(localized: "Confirm with Face ID"))
             let sent = try await YourAccountChain.appCalls(calls, on: net,
-                reason: String(localized: "Move \(asset.symbol) into Aztec"),
+                reason: String(localized: "Move \(wraps ? "ETH" : asset.symbol) into Aztec"),
                 signer: { SignerRequestSheet.coSigner(owner: $0, chainId: net.chainId) }) { _ in }
             guard case .landed = sent.outcome else {
                 throw Failure(message: String(localized: "On its way to your Shield key. Try again once it lands."))
@@ -261,6 +263,21 @@ extension ShieldBridge {
     }
 
     /// ETH the Shield key lacks for its sends, wei, or nil: as the co-signer's.
+    /// **PLAIN ETH GOES IN TOO (prd §1943, user: "Yes, wrap ETH").** Shield
+    /// takes WETH only, so when ETH is the pick, all your account hands over
+    /// (the move, and gas bought with it) is wrapped first in the same
+    /// operation (WETH's own `deposit()`): ETH in, as much WETH out, no fee
+    /// but gas. WETH you hold is never spent for an ETH pick.
+    static func wrapCall(_ asset: Asset, needs: Decimal) -> (to: String, data: String, value: String)? {
+        guard asset.symbol == "WETH", needs > 0 else { return nil }
+        var short = needs, rounded = Decimal()
+        NSDecimalRound(&rounded, &short, 0, .up)
+        return (to: asset.ethToken, data: wrapSelector, value: NSDecimalNumber(decimal: rounded).stringValue)
+    }
+
+    /// WETH's `deposit()`.
+    static let wrapSelector = "0xd0e30db0"
+
     private static func keyGas(_ key: String, approves: Bool) async throws -> String? {
         let net = YourAccountOp.ethereum
         guard let balanceHex = try await YourAccountChain.rpc(net, "eth_getBalance", [key, "latest"]) as? String,

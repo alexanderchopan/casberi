@@ -74972,3 +74972,19 @@ Holdings had a rule per kind: a public token opened its page (§1670), a lent ro
 ## §1942 — A deposit 0xBow has never seen is not "being checked" (amends §1841) (user, 2026-11-22: "my app still says i have a usdc being checked by privacy pools for 12.9$. it's been there over a day") — BUILT
 
 The ASP answers `unknown` for a label it has never seen, and the app read that as waiting, so a deposit that never reached the pool drew "Being checked by Privacy Pools" for good. Measured on the user's account: 12.98 USDC sat at the one-time address on Ethereum (sent there from their own wallet on Nov 19), its approval to ppUSDC's router landed Nov 22, no deposit followed, and the row stood. Now a waiting note the ASP still calls `unknown` six hours after it was kept is removed (`PrivateMoney.aspNeverSaw`, `neverSeenAfter`); the address's USDC is moved in again when Receive opens, as a failed move is. **Not seen:** why the deposit after the Nov 22 approval was not sent.
+
+## §1943 — Into Aztec in ETH: Move wraps it, and ETH and WETH are two choices (amends §1700d's USDC or WETH; §1922's move-in; §1929 item 7's Receive words for Aztec) (user, 2026-11-22, of the accounts page's "USDC or WETH (wrapped ETH)": "Yes, wrap ETH"; of the first build, which drew WETH as ETH: "if user holds weth it needs to say weth", "we can't call weth eth") — BUILT, UNPROVEN WITH MONEY
+
+**Why.** Shield's portal takes WETH only, and Move never wrapped, so plain ETH, the way nearly everyone holds it, could not go into Aztec.
+
+1. **Three choices going in** (`AztecMove.depositHoldings`): USDC, ETH and WETH, each by its own name and labelled Ethereum (the list had said Aztec). ETH counts your account's plain ETH less 0.001 ETH kept back for the moves' own gas (`AztecMove.ethReserve`).
+2. **An ETH pick wraps first** (`ShieldBridge.wrapCall`, WETH's own `deposit()`): everything your account hands over for the move, the amount and any gas bought with it, is wrapped in the same operation, under the same Face ID, before the hand-over to your Shield key or co-signer. WETH you hold is never spent for an ETH pick, and a WETH pick wraps nothing.
+3. **On Aztec it is WETH.** What Shield carries is WETH, and an Ethereum address paid out of Aztec gets WETH, so Receive says "USDC, WETH · from Aztec only" and "USDC or WETH, only from another Aztec account."; the move-in's rule says "From Ethereum, USDC, ETH or WETH".
+
+**Unproven:** a real move in from ETH (the wrap and the gas sale of the fresh WETH in one operation). The money-moving tap is the user's.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds the wrap in both ways in, WETH's `deposit()`, and the three choices; a removed wrap was caught.
+
+**Seen** on an iPhone 17 Pro simulator with `-moveToAztec YES -aztecWayInSample key`: USDC, ETH and WETH listed on Ethereum; ETH picked reads "ETH · Ethereum".

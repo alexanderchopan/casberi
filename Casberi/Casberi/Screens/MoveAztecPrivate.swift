@@ -320,7 +320,7 @@ final class AztecMove {
         var found: [String: Double] = [:]
         let mainnet = await MainnetPrices.prices(for: ["usdc", "eth"])
         if let usdc = mainnet["usdc"] { found["USDC"] = usdc }
-        if let eth = mainnet["eth"] { found["WETH"] = eth }
+        if let eth = mainnet["eth"] { found["WETH"] = eth; found["ETH"] = eth }
         let aztec = await DefiLlamaPrices.prices(for: [("eth-mainnet", AztecGas.token)])
         if let p = aztec.values.first?.price { found["AZTEC"] = p }
         prices = found
@@ -338,7 +338,11 @@ final class AztecMove {
     }
 
     var decimals: Int { symbol == "USDC" ? 6 : 18 }
-    var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == symbol } }
+    /// Shield's asset for the picked token: ETH goes in as WETH, wrapped
+    /// first (prd §1943).
+    var asset: ShieldBridge.Asset? { ShieldBridge.assets.first { $0.symbol == (wraps ? "WETH" : symbol) } }
+    /// Plain ETH picked: the move wraps it into WETH first (prd §1943).
+    var wraps: Bool { mode == .deposit && symbol == "ETH" }
     /// What was typed, in base units: a comma is a decimal point, a leading
     /// point reads as "0.", and a trailing point (mid-typing) is ignored.
     var units: String? {
@@ -415,10 +419,13 @@ final class AztecMove {
             if amount.isEmpty { amount = "20" }
             // `key`: no co-signer, the move-in goes through your Shield key (prd §1920).
             if sample == "key" {
+                // ETH and WETH as their own choices (prd §1943).
+                holdings = [Holding(symbol: "USDC", units: "25000000"), Holding(symbol: "ETH", units: "40000000000000000"),
+                            Holding(symbol: "WETH", units: "10000000000000000")]
                 keyOption = "0x0000000000000000000000000000000000005e1d"
                 keyLeft = 100
                 maxUSD = 100
-                prices = ["USDC": 1, "WETH": 3000, "AZTEC": 0.0124]
+                prices = ["USDC": 1, "ETH": 3000, "WETH": 3000, "AZTEC": 0.0124]
                 stage = .ready
                 NSLog("[Casberi] aztecWayIn| sample | key")
                 return
@@ -435,7 +442,7 @@ final class AztecMove {
             symbol = "USDC"
             if amount.isEmpty { amount = "2" }
             // The demo's cost is a sample, as Railgun's demo fee is (prd §1700y).
-            prices = ["USDC": 1, "WETH": 3000, "AZTEC": 0.0124]
+            prices = ["USDC": 1, "ETH": 3000, "WETH": 3000, "AZTEC": 0.0124]
             feePerL2Gas = 2_186_613_113_685
             gasPriceWei = 400_000_000
             // The steps' row counts a co-signer's asks (prd §1918); made up.
@@ -450,6 +457,12 @@ final class AztecMove {
             async let safeStanding = ShieldBridge.eligibility(safe)
             var held: [String: String] = [:]
             for asset in ShieldBridge.assets { held[asset.symbol] = await Self.balance(of: asset.ethToken, at: safe) }
+            // **PLAIN ETH IS ITS OWN CHOICE (prd §1943; user: "if user holds
+            // weth it needs to say weth", "we can't call weth eth").** ETH is
+            // wrapped into WETH in the move itself; WETH goes in as it is.
+            // A little ETH stays back for the moves' own gas.
+            let wrappable = await Self.wrappableETH(at: safe)
+            if wrappable > 0 { held["ETH"] = NSDecimalNumber(decimal: wrappable).stringValue }
             held["AZTEC"] = await Self.balance(of: AztecGas.token, at: safe)
             ownHeld = held
             bringsGas = AztecProver.isAvailable && AztecGas.ridesAlong
@@ -548,10 +561,24 @@ final class AztecMove {
     }
 
     private func depositHoldings(_ held: [String: String]) -> [Holding] {
-        ShieldBridge.assets.compactMap { asset -> Holding? in
-            guard let units = held[asset.symbol], let have = Decimal(string: units), have > 0 else { return nil }
-            return Holding(symbol: asset.symbol, units: units)
+        // USDC, then plain ETH, then WETH: each by its own name (prd §1943).
+        ["USDC", "ETH", "WETH"].compactMap { symbol -> Holding? in
+            guard let units = held[symbol], let have = Decimal(string: units), have > 0 else { return nil }
+            return Holding(symbol: symbol, units: units)
         }
+    }
+
+    /// ETH kept back from wrapping for the moves' own gas (prd §1943): the
+    /// operation, and the ETH your account hands its Shield key or
+    /// co-signer for their two sends.
+    static let ethReserve: Decimal = 1_000_000_000_000_000   // 0.001 ETH
+
+    /// Your account's plain ETH a move in may wrap, base units: its balance
+    /// less `ethReserve`, never below zero.
+    static func wrappableETH(at owner: String) async -> Decimal {
+        guard let hex = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_getBalance", [owner, "latest"]) as? String,
+              let units = ShieldBridge.decimal(hex: String(hex.dropFirst(2))), let wei = Decimal(string: units) else { return 0 }
+        return max(0, wei - ethReserve)
     }
 
     /// An ERC-20 balance on Ethereum, base units, or "0".
@@ -591,7 +618,7 @@ final class AztecMove {
                 let gas = try await gasPlan(asset)
                 if viaKey != nil {
                     let moved = amountUSD
-                    let sent = try await ShieldBridge.depositFromKey(asset, units: units, gas: gas) { words in
+                    let sent = try await ShieldBridge.depositFromKey(asset, units: units, gas: gas, sale: buysGas ? gasSale : nil, wraps: wraps) { words in
                         self.stage = .working(words)
                     }
                     // Counted against the key's day (prd §1922).
@@ -601,7 +628,7 @@ final class AztecMove {
                     break
                 }
                 guard let coSigner = viaCoSigner else { return }
-                let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas) { words in
+                let sent = try await ShieldBridge.depositFromCoSigner(asset, units: units, coSigner: coSigner, gas: gas, sale: buysGas ? gasSale : nil, wraps: wraps) { words in
                     self.stage = .working(words)
                 }
                 steps.finish()
@@ -660,8 +687,8 @@ final class AztecMove {
         }
         // The sale is your account's own, even when your co-signer deposits
         // (prd §1720): it must hold that much itself.
-        guard (Decimal(string: ownHeld[asset.symbol] ?? "0") ?? 0) >= (Decimal(string: sale) ?? 0) else {
-            throw AztecGas.Failure(message: String(localized: "Your account needs a little \(asset.symbol) of its own to buy gas for Aztec"))
+        guard (Decimal(string: ownHeld[symbol] ?? "0") ?? 0) >= (Decimal(string: sale) ?? 0) else {
+            throw AztecGas.Failure(message: String(localized: "Your account needs a little \(symbol) of its own to buy gas for Aztec"))
         }
         let sell = YourAccountOp.Token(symbol: asset.symbol, decimals: asset.decimals, contract: asset.ethToken)
         return try await AztecGas.plan(selling: sell, units: sale, account: safe)
@@ -959,7 +986,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     /// Gas is bought with what you move (prd §1700aa), so holding no AZTEC
     /// stops nobody here: only holding nothing Shield moves does.
     private var fundsLine: String {
-        String(localized: "Shield moves USDC or WETH from your account on Ethereum.")
+        String(localized: "Shield moves USDC, ETH or WETH from your account on Ethereum.")
     }
 
     /// How long the send took, tap to block, so the next wait feels known (prd §1700w).
@@ -992,7 +1019,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     private var tokens: some View {
         MoveTokenGrid(places: [MoveTokenPlace(id: "aztec", choices: move.holdings.map { holding in
             let places = holding.symbol == "USDC" ? 6 : 18
-            return MoveTokenChoice(id: holding.symbol, symbol: holding.symbol, network: "Aztec", badge: "brand-aztec",
+            // Going in, the tokens are on Ethereum (prd §1943): said so.
+            return MoveTokenChoice(id: holding.symbol, symbol: holding.symbol, network: move.mode == .deposit ? "Ethereum" : "Aztec",
+                                   badge: move.mode == .deposit ? MoveSentence.networkMark(chainId: 1) : "brand-aztec",
                                    sub: PrivateMoney.figure(holding.units, decimals: places, symbol: ""),
                                    picked: holding.symbol == move.symbol) {
                 withAnimation(DS.Motion.standard) { move.pick(holding.symbol); open = nil }

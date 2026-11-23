@@ -101961,6 +101961,34 @@
         }
       }
     },
+    "From Ethereum, USDC, ETH or WETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desde Ethereum, USDC, ETH o WETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "EthereumからUSDC、ETHまたはWETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 USDC, ETH 또는 WETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Ethereum，USDC、ETH 或 WETH"
+          }
+        }
+      }
+    },
     "From Railgun" : {
       "localizations" : {
         "es" : {
@@ -184377,6 +184405,34 @@
         }
       }
     },
+    "Shield moves USDC, ETH or WETH from your account on Ethereum." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield mueve USDC, ETH o WETH desde tu cuenta en Ethereum."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ShieldはEthereum上のあなたのアカウントからUSDC、ETHまたはWETHを移動します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield는 Ethereum의 내 계정에서 USDC, ETH 또는 WETH를 옮깁니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Shield 从你在 Ethereum 上的账户转移 USDC、ETH 或 WETH。"
+          }
+        }
+      }
+    },
     "Shield moves up to $%lld at a time for your score." : {
       "localizations" : {
         "es" : {
@@ -214552,6 +214608,34 @@
         }
       }
     },
+    "USDC or WETH, only from another Aztec account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o WETH, solo desde otra cuenta de Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC または WETH を、別の Aztec アカウントからのみ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 또는 WETH를 다른 Aztec 계정에서만."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 或 WETH，仅限来自其他 Aztec 账户。"
+          }
+        }
+      }
+    },
     "USDC or its token · most EVM networks" : {
       "localizations" : {
         "es" : {
@@ -214688,6 +214772,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "USDC、ETH · 仅限来自 Aztec"
+          }
+        }
+      }
+    },
+    "USDC, WETH · from Aztec only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC, WETH · solo desde Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC、WETH · Aztec からのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC, WETH · Aztec에서만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC、WETH · 仅限来自 Aztec"
           }
         }
       }

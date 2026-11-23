@@ -92,7 +92,7 @@ enum ReceiveWords {
             [String(localized: "Ethereum tokens · from Railgun only"),
              String(localized: "Ready in about an hour · Earns nothing")]
         case .aztec:
-            [String(localized: "USDC, ETH · from Aztec only"),
+            [String(localized: "USDC, WETH · from Aztec only"),
              String(localized: "Ready in a few minutes · Earns nothing")]
         }
     }
@@ -150,7 +150,7 @@ enum ReceiveWords {
             ]
         case .aztec:
             return [
-                String(localized: "USDC or ETH, only from another Aztec account."),
+                String(localized: "USDC or WETH, only from another Aztec account."),
                 String(localized: "It arrives in your private account on Aztec."),
                 String(localized: "Ready in a few minutes. It earns nothing."),
             ]

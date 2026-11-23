@@ -5717,7 +5717,7 @@ struct MoveSentence: View {
     /// reaches Aztec or goes out to Ethereum, and money comes in from
     /// Ethereum through Shield.
     static var aztecSendRule: String { String(localized: "To Aztec, or out to Ethereum") }
-    static var aztecInRule: String { String(localized: "From Ethereum, USDC or ETH") }
+    static var aztecInRule: String { String(localized: "From Ethereum, USDC, ETH or WETH") }
     static var aztecRules: Set<String> { [aztecRule, aztecSendRule, aztecInRule] }
 
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
