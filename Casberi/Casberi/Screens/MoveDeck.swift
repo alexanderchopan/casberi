@@ -716,6 +716,9 @@ struct MoveTokenChoice: Identifiable {
     /// The grey line under the symbol: dollars, else the amount.
     var sub: String?
     var subInk: Color = DS.textSecondary
+    /// What it earns today ("4.8%"), after the network on its line (prd
+    /// §1958): Earn's rows differ by rate, so the rate is on the choice.
+    var rate: String?
     var picked = false
     var dim = false
     let act: () -> Void
@@ -774,7 +777,7 @@ struct MoveTokenGrid: View {
                     .disabled(c.dim)
                     .opacity(c.dim ? 0.4 : 1)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text(verbatim: [String(localized: "\(c.symbol) on \(c.network)"), c.sub].compactMap { $0 }.joined(separator: ". ")))
+                    .accessibilityLabel(Text(verbatim: [String(localized: "\(c.symbol) on \(c.network)"), c.sub, c.rate.map { String(localized: "Earns \($0) today") }].compactMap { $0 }.joined(separator: ". ")))
                     .accessibilityAddTraits(c.picked ? [.isButton, .isSelected] : .isButton)
                 }
             }
@@ -790,7 +793,7 @@ struct MoveTokenGrid: View {
     static func row(_ c: MoveTokenChoice) -> TokenRowLabel {
         let sub = c.sub ?? ""
         let figure = sub.first.map { $0 == "$" || $0.isNumber } ?? false
-        let line = figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)"
+        let line = [figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)", c.rate].compactMap { $0 }.joined(separator: " · ")
         return TokenRowLabel(symbol: c.symbol, line: line,
                              lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
                              figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,

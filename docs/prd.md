@@ -75146,6 +75146,9 @@ A ledger row inside its own `List` row takes the air from the list's insets only
 **Seen** on an iPhone 17 Pro simulator over the demo: Private's eight rows at one 40pt pitch. **Not seen:** the amber states (no demo money waits at a fresh address or mismatches), Dynamic Type.
 
 ## §1943 — Earn's From rows show today's rate (user, 2026-11-23: "do you think our Earn page should show the rates of what you can earn … so user can decide"; "but we have more than one lending rate right now user can get"; of the mockup, "yes definitely build it") — BUILT
+**Seen** on an iPhone 17 Pro simulator over the demo: Private's eight rows at one 40pt pitch. **Not seen:** the amber states (no demo money waits at a fresh address or mismatches), Dynamic Type.
+
+## §1958 — Earn's From rows show today's rate (user, 2026-11-23: "do you think our Earn page should show the rates of what you can earn … so user can decide"; "but we have more than one lending rate right now user can get"; of the mockup, "yes definitely build it") — BUILT
 
 1. **Each From row in Earn's Deposit carries Aave's rate today** after its network, on the row's grey line ("USDC Base · 4.8%"), through `MoveTokenChoice.rate`, the same live `AaveLend.rateOnly` the picked market's "Earns N% today" fact reads. A row with nothing to lend keeps its rate, dimmed; a market whose rate did not read shows none. Withdraw's rows draw no rate.
 2. **A fact, never advice:** no "best", no ordering by rate, no rate kept or promised. Safe and Privacy Pools are not Earn's places; the private balance's rate stays in Holdings (`PrivateYield`).
