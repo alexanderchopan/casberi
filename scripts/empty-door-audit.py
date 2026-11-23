@@ -42,6 +42,8 @@ TREE = "Casberi/Casberi/Model"
 
 # file name → (doorless rows it may build, why). Counted; a stale row fails.
 ALLOWED = {
+    "FreshReceive.swift": (1, "a payment in on Aztec is known only as the private balance "
+                              "rising: no transaction is named, so no page (prd §1961)"),
     "AppleWalletBridge.swift": (4, "FinanceKit is on the phone: an account, a charge, a "
                                    "balance and a card have no web page"),
     "HealthIngest.swift": (1, "a HealthKit workout has no page; the rider seats add none"),

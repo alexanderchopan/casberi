@@ -270,6 +270,61 @@ final class AztecAccountStore {
         save()
     }
 
+    // MARK: - Paid on Aztec (prd §1961)
+
+    /// What this phone's own moves bring into the private balance before the
+    /// next reading, by token name (a Shield claim): a rise they explain is
+    /// not a payment someone made you.
+    private var expectedIn: [String: Decimal] = [:]
+
+    /// Your own move is bringing `units` of `symbol` in (prd §1961).
+    func expect(symbol: String, units: String) {
+        expectedIn[symbol, default: 0] += Decimal(string: units) ?? 0
+    }
+
+    /// **PAID ON AZTEC (prd §1961, user: "1 is good", "build 1").** Aztec is
+    /// private, so a payment from another Aztec account is known only as your
+    /// private balance rising. A rise your own moves do not explain is a
+    /// payment in: told at once (money someone sent you is news, away or not)
+    /// and landed in Activity. Never on the first reading, which has nothing
+    /// to compare with.
+    static func risen(before: [Holding], after: [Holding], expected: [String: Decimal]) -> [(name: String, units: Decimal, decimals: Int)] {
+        var out: [(name: String, units: Decimal, decimals: Int)] = []
+        for h in after where h.kind == .token {
+            guard let decimals = h.decimals, let now = h.privateUnits.flatMap({ Decimal(string: $0) }) else { continue }
+            let was = before.first { $0.address == h.address }?.privateUnits.flatMap { Decimal(string: $0) } ?? 0
+            let rise = now - was - (expected[h.name] ?? 0)
+            if rise > 0 { out.append((h.name, rise, decimals)) }
+        }
+        return out
+    }
+
+    private func noticeIncoming(before: [Holding], after: [Holding]) {
+        let found = Self.risen(before: before, after: after, expected: expectedIn)
+        // What was expected and has not shown yet stays expected (a claim
+        // read before its notes synced is not a payment on the next reading).
+        var left: [String: Decimal] = [:]
+        for (name, want) in expectedIn {
+            let h = after.first { $0.kind == .token && $0.name == name }
+            let now = h?.privateUnits.flatMap { Decimal(string: $0) } ?? 0
+            let was = before.first { $0.address == h?.address }?.privateUnits.flatMap { Decimal(string: $0) } ?? 0
+            let rest = want - max(0, now - was)
+            if rest > 0 { left[name] = rest }
+        }
+        expectedIn = left
+        guard !DemoMode.isActive else { return }
+        for r in found {
+            let figure = PrivateMoney.figure(NSDecimalNumber(decimal: r.units).stringValue, decimals: r.decimals, symbol: r.name)
+            let title = String(localized: "Received \(figure) privately on Aztec")
+            NSLog("aztecEngine| paid | %@", figure)
+            if let context = SharedStore.live?.mainContext {
+                PrivateActivity.landAztecReceived(title: title, context: context)
+            }
+            let id = "aztec-in:\(r.name):\(Int(Date().timeIntervalSince1970))"
+            Task { await Notifications.outcome(.moneyInPrivately, id: id, place: "Aztec", body: title, mark: "Aztec", awayOnly: false) }
+        }
+    }
+
     func markShieldClaimed(_ nonce: UInt64) {
         guard let i = snapshot.shield?.firstIndex(where: { $0.nonce == nonce }) else { return }
         snapshot.shield?[i].claimed = true
@@ -354,8 +409,10 @@ final class AztecAccountStore {
         do {
             let address = try await AztecEngine.shared.accountAddress()
             guard let rows = try await AztecEngine.shared.call("holdings") as? [[String: Any]] else { return false }
+            let before = snapshot.readAt == nil ? nil : snapshot.holdings
             snapshot.address = address
             snapshot.holdings = rows.compactMap(Self.holding)
+            if let before { noticeIncoming(before: before, after: snapshot.holdings) }
             snapshot.readAt = Date()
             if snapshot.holdings.contains(where: \.isHeld) { snapshot.used = true }
             save()

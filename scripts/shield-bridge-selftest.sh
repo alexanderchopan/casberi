@@ -122,6 +122,13 @@ grep -q 'want += paysUnits' "$MOVE" \
 (( $(grep -c 'PrivateActivity.landAztec(hash:' "$MOVE") == 2 )) \
   && grep -q '"https://aztecscan.xyz/tx-effects/' Casberi/Casberi/Model/FreshReceive.swift \
   || { echo "✗ a send from Aztec, or out of it, no longer lands an Activity row (prd §1953)"; exit 1; }
+# A payment in on Aztec is told and landed; your own claim is not one (prd §1961).
+STORE="Casberi/Casberi/Model/Aztec/AztecAccountStore.swift"
+grep -q 'AztecAccountStore.shared.expect(symbol: d.symbol, units: d.amountUnits)' "$APP" \
+  && grep -q 'let rise = now - was - (expected\[h.name\] ?? 0)' "$STORE" \
+  && grep -q 'if let before { noticeIncoming(before: before, after: snapshot.holdings) }' "$STORE" \
+  && grep -q 'awayOnly: false' "$STORE" \
+  || { echo "✗ a payment in on Aztec is no longer told, or your own claim is told as one (prd §1961)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

@@ -167706,6 +167706,34 @@
         }
       }
     },
+    "Received %@ privately on Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibiste %@ de forma privada en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecで%@をプライベートに受け取りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec에서 %@을(를) 비공개로 받았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 上私下收到 %@"
+          }
+        }
+      }
+    },
     "Received from" : {
       "localizations" : {
         "es" : {

@@ -364,6 +364,8 @@ extension ShieldBridge {
             do {
                 // The claim mints a waiting gas deposit and pays from it (prd §1700aa).
                 let out = try await AztecEngine.shared.call("shieldClaim", [d.symbol, d.amountUnits, String(d.nonce), d.leafIndex, AztecGas.unminted]) as? [String: Any]
+                // Your own money coming in, not a payment to you (prd §1961).
+                AztecAccountStore.shared.expect(symbol: d.symbol, units: d.amountUnits)
                 AztecGas.spent(by: out)
                 AztecAccountStore.shared.markShieldClaimed(d.nonce)
                 // Told when you are away from Casberi (prd §1881).

@@ -75178,3 +75178,17 @@ Amends §1956 item 1's "ETH Privacy Pools".
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Seen** on an iPhone 17 Pro simulator over the demo: Public's six names and Private's in white, "ETH 1.5% · Aave · Privacy Pools", "USDC 3.8% · Aave · Privacy Po…" (the fact is cut at its tail, §1956). **Not seen:** a live rate read (the demo's rates are fixed), Dynamic Type.
+
+## §1961 — Paid on Aztec: a payment in is told at once and lands in Activity (builds §1953 for money in) (user, 2026-11-23, of "know when you've been paid": "1 is good", "ok build 1") — BUILT, UNPROVEN WITH A STRANGER'S PAYMENT
+
+**Why.** Only a move in through Shield was told and landed. Aztec is private, so a payment from another Aztec account shows only as your private balance being higher.
+
+1. **A rise your own moves do not explain is a payment** (`AztecAccountStore.risen`, `noticeIncoming`): each reading compares the private balances with the last; a Shield claim says beforehand what it brings (`expect`), and what it brought is not counted. What a claim expected and has not shown yet stays expected, so a claim read before its notes synced is not told on the next reading. Never on the first reading.
+2. **Told at once, away or not** (`.moneyInPrivately`, `awayOnly: false`): money someone sent you is news. "Received 5 USDC privately on Aztec".
+3. **One Activity row with no door** (`PrivateActivity.landAztecReceived`): no transaction is named, so there is no page to open; `empty-door-audit.py` allows it for this reason.
+
+**Unproven:** a payment from another person's Aztec account. Aztec v6 finds notes from a sender it knows or through its handshake registry (`@aztec-labs/pxe` 6.0.0, `log_service.js`); one from a stranger has not been seen arriving in Casberi. A wrong "Received" would come from a rise nobody here counted, such as money an Aztec app returns, which is money in all the same.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds the claim's expectation, the comparison, the first reading's silence and the notice; removing the expectation was caught.

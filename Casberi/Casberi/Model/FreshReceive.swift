@@ -883,5 +883,15 @@ enum PrivateActivity {
         NSLog("privateMove| landed aztec | %@", title)
     }
 
+    /// A payment in on Aztec (prd §1961): known only as the balance rising,
+    /// so it has no transaction to open; keyed by the moment it was seen.
+    static func landAztecReceived(title: String, context: ModelContext) {
+        let ref = PrivateMoney.activityPrefix + "aztec-in-" + String(Int(Date().timeIntervalSince1970 * 1000))
+        let thing = Thing(kind: .link, title: title, content: "", source: "Wallet", capturedAt: .now, sourceRef: ref)
+        context.insert(thing)
+        try? context.save()
+        NSLog("privateMove| landed aztec in | %@", title)
+    }
+
     static func aztecscanTx(_ hash: String) -> String { "https://aztecscan.xyz/tx-effects/\(hash.lowercased())" }
 }
