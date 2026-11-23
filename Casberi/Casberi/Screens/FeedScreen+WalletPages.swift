@@ -35,10 +35,6 @@ extension FeedScreen {
                     wordTone: Color = DS.textSecondary, act: (() -> Void)? = nil) -> some View {
         walletDoorRow(name: name ?? section.label, figure: figure,
                       figureTone: figureTone, word: word, wordTone: wordTone, opens: act == nil) {
-            // Account opens on the Safe, whatever was looked at last (prd
-            // §1785): the address someone comes to copy is never Aztec's
-            // by leftover.
-            if section == .yourAccount { chrome.yourAccountShowsAztec = false }
             if let act { act() } else { chrome.walletSection = section }
         }
         // Where back from this door's page lands (prd §1587).
@@ -413,7 +409,6 @@ extension FeedScreen {
                     chrome.moveWalk = true
                     chrome.moveTray = true
                 } else {
-                    chrome.yourAccountShowsAztec = false
                     chrome.walletSection = .yourAccount
                 }
             }
@@ -1323,10 +1318,7 @@ struct WalletYourAccountFigure: View {
     @State private var profileOpen = false
 
     var body: some View {
-        // The account picked under Your account (prd §1700f item 2): the
-        // Aztec account's address when its row is lit, else the Safe's.
-        let aztec = chrome.yourAccountShowsAztec ? AztecAccountStore.shared.shown.address : nil
-        if let address = aztec ?? address {
+        if let address {
             VStack(spacing: DS.Space.s1) {
                 // **THE FACE AND THE NAME ARE YOURS TO SET HERE (prd §1860,
                 // user: "on your account page user should be able to tap to
@@ -1335,9 +1327,8 @@ struct WalletYourAccountFigure: View {
                 // the name you gave leads, else the account's label.
                 Button { profileOpen = true } label: {
                     VStack(spacing: DS.Space.s1) {
-                        WalletFace(address: self.address ?? address, size: DS.Face.sheet, circular: true)
-                        Text(verbatim: aztec != nil ? String(localized: "You on Aztec")
-                             : ProfileStore.shared.name
+                        WalletFace(address: address, size: DS.Face.sheet, circular: true)
+                        Text(verbatim: ProfileStore.shared.name
                                 ?? WalletStore.shared.displayName(forWatched: address)
                                 ?? WalletStore.yourAccountName)
                             .dsText(.heading24).foregroundStyle(DS.textPrimary)
@@ -1349,28 +1340,6 @@ struct WalletYourAccountFigure: View {
                 .buttonStyle(RowPress())
                 .accessibilityHint(Text("Changes your name or photo"))
                 .profileEditing(isPresented: $profileOpen)
-                // Beside the Aztec address wherever it can be copied (prd
-                // §1779): an Ethereum wallet refuses it, and this says why.
-                // Its 64 digits stand in Receive's two rows of eight, which
-                // is the room the line takes in the box's fixed height.
-                if aztec != nil {
-                    Text("Aztec to Aztec only.")
-                        .dsText(.heading17)
-                        .foregroundStyle(DS.aztecInk)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Button { copy(address) } label: {
-                        // Two rows at most: an address that is not 64 digits
-                        // (the demo's) falls back to plain text.
-                        MoveAztecReceive<EmptyView>.grid(address)
-                            .lineLimit(2)
-                            .truncationMode(.middle)
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityLabel(Text(verbatim: address))
-                    .accessibilityHint(Text("Copies the address"))
-                    copyWord(aztec: true)
-                } else {
                     // **THE TAIL AND ITS COPY (prd §1937, §1553):** the
                     // address as every other place says it; where it works
                     // is Money's Public line now.
@@ -1390,7 +1359,6 @@ struct WalletYourAccountFigure: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Copy public address"))
-                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -1398,26 +1366,6 @@ struct WalletYourAccountFigure: View {
                             caption: String(localized: "Move makes one"))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    /// Aztec's Copy, under its address (prd §1779).
-    private func copyWord(aztec: Bool) -> some View {
-        Button {
-            if let a = AztecAccountStore.shared.shown.address { copy(a) }
-        } label: {
-            HStack(spacing: DS.Space.s1) {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    .dsSymbolSwap(copied)
-                    .dsGlyph(.caption)
-                Text(copied ? "Copied" : "Copy for Aztec")
-                    .dsText(.heading17)
-            }
-            .foregroundStyle(copied ? DS.confirmInk : DS.aztecInk)
-            .padding(.vertical, DS.Space.s3)
-            .contentShape(Rectangle())
-            .padding(.vertical, -DS.Space.s3)
-        }
-        .buttonStyle(RowPress())
     }
 
     /// One buzz: the success flash carries its own (prd §1587); the Copy

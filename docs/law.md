@@ -261,13 +261,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2123 of 2197 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2124 of 2198 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b)
 - §5 — How it works today — Bob (amended by §1208c, §1680, §1700f, §1932)
-- §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a, §1916)
+- §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a, §1916, §1943)
 - §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904, §1931, §1932)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568, §1931)
 - §9 — Problems (amended by §1556, §1567, §1568, §1932)
@@ -2228,7 +2228,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1783 — The phone's bar is Feed · Wallet with Move apart; Apps leaves the bar for the top right of the title row (amends §171…
 - §1784 — A choice's list is a menu on its row, in every Move sentence (amends §1781, §1782, §1616)
 - §1785 — The three money rows leave the Wallet's Home; Account opens on the Safe (amends §1779)
-- §1786 — Account is your public account; the private places are doors, and Aztec's address stands only on its own page (amends… (amended by §1919)
+- §1786 — Account is your public account; the private places are doors, and Aztec's address stands only on its own page (amends… (amended by §1919, §1943)
 - §1787 — On its way leaves Home; Holdings' waiting rows open its steps (amends §1779)
 - §1788 — Fixes from the screen-by-screen walk: the private account's door stands from the first frame, its rows carry no line,…
 - §1789 — Move's rows read To, From, Token, Amount (amends §1781)
@@ -2257,7 +2257,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1812 — Home and Move share one capsule, the title is the last three levels, every title is one size, and a page under Activi… (amended by §1828)
 - §1813 — A category has no page: it is a word on Activity, an app is one step from it, and what waits on you in your apps stan…
 - §1814 — Every page swipes right to its parent, the bar is Move alone, and a section's name is its name alone at the left edge… (amended by §1827)
-- §1815 — A door wears a chevron, an app's lists are rows, a folder's name is centred with no glyph, and Home says the day as a…
+- §1815 — A door wears a chevron, an app's lists are rows, a folder's name is centred with no glyph, and Home says the day as a… (amended by §1943)
 - §1816 — Activity's rows are white until seen (amends §1813, §744)
 - §1817 — Risks reads privacy, then permissions, then threats (amends §1809)
 - §1818 — Activity and Home, polished: a state is said once, one size at a row's right, one line, the tile's name over its mone…
@@ -2380,12 +2380,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other g…
 - §1935 — Move's keys and its end: a refused key knocks, holding delete clears, and Done folds the receipt into Activity
 - §1936 — Home adds up: the balance is Public plus Private as drawn, and the demo stands on the account's networks with its Pri…
-- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word… (amended by §1940)
+- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word… (amended by §1940; part superseded by §1943)
 - §1938 — USDC under Privacy Pools' minimum says so, and a deposit being checked says since when
 - §1939 — Every holding opens its page; the long press offers the same verbs
-- §1940 — Account's App plate: values white, words grey, as on Security and Money
+- §1940 — Account's App plate: values white, words grey, as on Security and Money (amended by §1943)
 - §1941 — Move's receipt chip wears the ramp's row face, 30pt, never its own 28
 - §1942 — A deposit 0xBow has never seen is not "being checked"
+- §1943 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive…
 
 ## Dead rulings → what replaced them (generated)
 

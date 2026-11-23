@@ -70,64 +70,59 @@ extension FeedScreen {
         // The demo's own account in the demo (prd §1475), else this phone's.
         if let account = YourAccountDemo.shownAddress,
            chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
-            if walletOnPrivateAccount {
-                // The private account's own page (prd §1786): its address
-                // in the box above, its two moves here.
-                walletDoorsSection { walletPrivateAccountRows() }
-            } else {
-                // **FOLLOWING, A LINE (prd §1937):** the wallets you follow,
-                // or the verb with none yet.
-                Section {
-                    let followed = walletFollowingSlots
-                    AccountLine(label: String(localized: "Following"),
-                                value: followed.isEmpty ? String(localized: "Follow an account")
-                                    : String(localized: "\(followed.count) accounts"),
-                                ink: followed.isEmpty ? DS.pickInk : DS.textPrimary,
-                                action: {
-                                    if followed.isEmpty { feedSheet = .walletFollow }
-                                    else { chrome.walletSection = .following }
-                                })
-                        .walletListRow()
-                }
-                // **SECURITY AND MONEY, ON PLATES (prd §1937, user picked H):**
-                // `MoveSecurity` draws both; Money's Public takes the Safes
-                // you hold a key to, its Private the three private places.
-                // Risks is its own page and stands on Home (user: "risks is
-                // its own page").
-                Section {
-                    MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal },
-                                 publicLines: AnyView(WalletUnsignedSection(part: .lines, onOpenSafe: walletOpenSafe,
-                                                                            queueKey: Self.safeQueueKey(visible))),
-                                 privateLines: walletHasPrivatePlaces ? AnyView(walletPrivatePlaces()) : nil)
-                        .walletStackRow()
-                        // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
-                        .task(id: chrome.walletScrollRequest) {
-                            guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
-                            try? await Task.sleep(for: .milliseconds(300))
-                            cardScrollTarget = SecurityAnchor.account.id
-                            chrome.walletScrollRequest = nil
-                        }
-                }
-                .id(SecurityAnchor.account.id)
-                .environment(\.feedSectionPanelFilled, false)
-                // ACCOUNT AND SETTINGS ARE ONE PAGE (prd §1807): Casberi's own
-                // settings close the page, on the third plate, App (§1937).
-                Section {
-                    AccountPlate(name: String(localized: "App"), glyph: "gearshape") {
-                        // ACTIVITY'S ORDER IS A SETTING (prd §1807).
-                        AccountLine(label: String(localized: "Activity"), value: String(localized: "Section order"),
-                                    action: { feedSheet = .feedOrder })
-                        SettingsRows(style: .lines, openNodes: { feedSheet = .ownNodes })
-                    }
-                    // The plates' one gap, as Security's from Money's.
-                    .padding(.top, DS.Space.s4)
-                    .walletStackRow()
-                    SettingsRows(style: .colophon)
-                        .walletStackRow()
-                }
-                .id(ShellChrome.settingsAnchor)
-                .environment(\.feedSectionPanelFilled, false)
+            // **FOLLOWING, A LINE (prd §1937):** the wallets you follow,
+            // or the verb with none yet.
+            Section {
+                let followed = walletFollowingSlots
+                // None yet, Follow is the line's verb; else the count
+                // opens the list (prd §1943).
+                AccountLine(label: String(localized: "Following"),
+                            value: followed.isEmpty ? nil : String(localized: "\(followed.count) accounts"),
+                            end: followed.isEmpty ? .acts(String(localized: "Follow")) : .opens,
+                            action: {
+                                if followed.isEmpty { feedSheet = .walletFollow }
+                                else { chrome.walletSection = .following }
+                            })
+                    .walletListRow()
             }
+            // **SECURITY AND MONEY, ON PLATES (prd §1937, user picked H):**
+            // `MoveSecurity` draws both; Money's Public takes the Safes
+            // you hold a key to, its Private the three private places.
+            // Risks is its own page and stands on Home (user: "risks is
+            // its own page").
+            Section {
+                MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal },
+                             publicLines: AnyView(WalletUnsignedSection(part: .lines, onOpenSafe: walletOpenSafe,
+                                                                        queueKey: Self.safeQueueKey(visible))),
+                             privateLines: walletHasPrivatePlaces ? AnyView(walletPrivatePlaces()) : nil)
+                    .walletStackRow()
+                    // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
+                    .task(id: chrome.walletScrollRequest) {
+                        guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
+                        try? await Task.sleep(for: .milliseconds(300))
+                        cardScrollTarget = SecurityAnchor.account.id
+                        chrome.walletScrollRequest = nil
+                    }
+            }
+            .id(SecurityAnchor.account.id)
+            .environment(\.feedSectionPanelFilled, false)
+            // ACCOUNT AND SETTINGS ARE ONE PAGE (prd §1807): Casberi's own
+            // settings close the page, on the third plate, App (§1937).
+            Section {
+                AccountPlate(name: String(localized: "App"), glyph: "gearshape") {
+                    // ACTIVITY'S ORDER IS A SETTING (prd §1807).
+                    AccountLine(label: String(localized: "Activity"), value: String(localized: "Section order"),
+                                end: .opens, action: { feedSheet = .feedOrder })
+                    SettingsRows(style: .lines, openNodes: { feedSheet = .ownNodes })
+                }
+                // The plates' one gap, as Security's from Money's.
+                .padding(.top, DS.Space.s4)
+                .walletStackRow()
+                SettingsRows(style: .colophon)
+                    .walletStackRow()
+            }
+            .id(ShellChrome.settingsAnchor)
+            .environment(\.feedSectionPanelFilled, false)
         }
     }
 

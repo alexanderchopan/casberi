@@ -360,25 +360,26 @@ extension FeedScreen {
         // formula: the place and the network it holds your money on (user,
         // 2026-11-22, "we need to standardize this too"). Privacy Pools'
         // way in is an address made new each time; Railgun's is your one
-        // 0zk address; both are Receive privately's two doors (§1928).
+        // 0zk address. **EVERY PLACE OPENS RECEIVE (prd §1943):** Safe,
+        // Privacy Pools, Railgun and Aztec alike, where each place's
+        // address, Copy and ⓘ stand; Railgun opened Privacy Pools' one-time
+        // address, and Aztec a page of its own.
         if PrivateMove.freshAvailable {
-            AccountLine(label: "Privacy Pools", value: "Ethereum", action: {
-                chrome.moveFreshReceive = true
-                chrome.moveTray = true
+            AccountLine(label: "Privacy Pools", value: "Ethereum", end: .opens, action: {
+                MoveMenu.pick(.receive, chrome)
             })
         }
         if RailgunPocket.available, PrivateMove.freshAvailable {
-            AccountLine(label: "Railgun", value: "Ethereum", action: {
-                chrome.moveFreshReceive = true
-                chrome.moveTray = true
+            AccountLine(label: "Railgun", value: "Ethereum", end: .opens, action: {
+                MoveMenu.pick(.receive, chrome)
             })
         }
         // The account is yours from the start (prd §1700t): its line stands
         // from the first frame, and never waits on the address it does not show.
         if store.isShown {
             // Where it moves, never only who pays it (prd §1924).
-            AccountLine(label: "Aztec", value: "Aztec", ink: DS.aztecInk, action: {
-                withAnimation(DS.Motion.standard) { chrome.yourAccountShowsAztec = true }
+            AccountLine(label: "Aztec", value: "Aztec", ink: DS.aztecInk, end: .opens, action: {
+                MoveMenu.pick(.receive, chrome)
             })
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
@@ -390,72 +391,5 @@ extension FeedScreen {
     /// Whether Account has a private place to list.
     var walletHasPrivatePlaces: Bool {
         PrivateMove.freshAvailable || AztecAccountStore.shared.isShown
-    }
-
-    /// **THE PRIVATE ACCOUNT'S OWN PAGE (prd §1786).** Its box is Aztec's
-    /// address in Aztec's ink (`WalletYourAccountFigure`); under it, the two
-    /// ways its money moves, each named for both ends, and the way back.
-    @ViewBuilder
-    func walletPrivateAccountRows() -> some View {
-        // No line under either (user, 2026-11-13): the rule stands once, over
-        // the address, and each name already says both ends.
-        accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"), glyphInk: DS.aztecInk) {
-            chrome.moveAztec = .deposit
-            chrome.moveTray = true
-        }
-        accountListRow(glyph: "arrow.up", title: String(localized: "Send from Aztec to Aztec"),
-                       glyphInk: DS.aztecInk) {
-            chrome.moveAztec = .send
-            chrome.moveTray = true
-        }
-    }
-
-    /// Whether the private account's page is the one showing.
-    var walletOnPrivateAccount: Bool {
-        chrome.yourAccountShowsAztec && AztecAccountStore.shared.isShown && AztecAccountStore.shared.shown.address != nil
-    }
-
-    /// The Holdings row's anatomy: the mark, the name over its line, a
-    /// chevron because it opens.
-    private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String = "",
-                                lineInk: Color = DS.textSecondary, glyphInk: Color = DS.textSecondary,
-                                pick: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { pick() }
-        } label: {
-        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-            Group {
-                if let glyph {
-                    Image(systemName: glyph).dsGlyph(.body).foregroundStyle(glyphInk)
-                } else {
-                    ProtocolInlineMark(mark: mark)
-                }
-            }
-                .frame(width: DSRoomChassis.headGlyph)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                if !line.isEmpty {
-                    Text(verbatim: line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(lineInk)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
-                .foregroundStyle(DS.textSecondary)
-                .accessibilityHidden(true)
-        }
-        .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .walletRowPitch()
-        .accessibilityElement(children: .combine)
-        .walletStackRow()
     }
 }

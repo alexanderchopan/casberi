@@ -1458,9 +1458,6 @@ final class ShellChrome {
     /// card under §1436): the recovery and Signer nudges land on its keys.
     /// The section's card reads `walletScrollRequest` as it appears.
     var walletScrollRequest: String?
-    /// Your Account's header shows the Aztec account's address, picked by
-    /// its row under Your account (prd §1700f item 2); else the Safe's.
-    var yourAccountShowsAztec = false
     /// Settings' card on the Account page, as a scroll request.
     static let settingsAnchor = "account.settings"
 

@@ -258,13 +258,6 @@ extension FeedScreen {
                 rail.onPick(nil)
             }
         }
-        // The private account's page goes back to Account (prd §1786).
-        if walletOnPrivateAccountPage {
-            return {
-                DSHaptic.selection()
-                withAnimation(DS.Motion.standard) { chrome.yourAccountShowsAztec = false }
-            }
-        }
         if source == CategoryFold.walletRoom, selectedSeat == nil,
            let section = chrome.walletSection, section != .home {
             // A page goes back to where you opened it (prd §1827, amending
@@ -379,7 +372,6 @@ extension FeedScreen {
         // The Wallet's tile, now a page (prd §1321): "Wallet · Holdings".
         if source == CategoryFold.walletRoom, pinnedWalletSection == nil,
            let section = chrome.walletSection, section != .home {
-            if walletOnPrivateAccountPage { return String(localized: "Private account") }
             // A token's page is named by the token (prd §1632 item 5).
             if section == .watchedToken, let token = Watchlist.shared.token(chrome.watchedTokenID) {
                 return token.symbol
@@ -426,13 +418,7 @@ extension FeedScreen {
     /// press and the swipe right all read this one fact.
     var walletBacksToActivity: Bool {
         source == CategoryFold.walletRoom && pinnedWalletSection == nil && !inSheet
-            && !walletOnPrivateAccountPage && chrome.walletBacksToActivity
-    }
-
-    /// The Wallet's Account page is showing the private account's own page.
-    var walletOnPrivateAccountPage: Bool {
-        source == CategoryFold.walletRoom && pinnedWalletSection == nil && selectedSeat == nil
-            && chrome.walletSection == .yourAccount && walletOnPrivateAccount
+            && chrome.walletBacksToActivity
     }
 
     /// The open Notes folder's name as the title draws it (a vault folder

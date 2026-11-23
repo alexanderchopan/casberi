@@ -680,7 +680,6 @@ extension FeedScreen {
                         chrome.moveWalk = true
                         chrome.moveTray = true
                     } else {
-                        chrome.yourAccountShowsAztec = false
                         homeOpen(.yourAccount)
                     }
                 } label: {

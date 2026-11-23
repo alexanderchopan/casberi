@@ -96,21 +96,12 @@ struct MoveSecurity: View {
             // no recovery key yet, "iCloud Keychain" when everything is
             // saved, "Not backed up" in amber where iCloud is off or private
             // money sits on this phone alone, with the fix beside or under it.
-            row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone, verb: backupVerb)
-            if backupOff {
-                Button {
+            // iCloud Keychain off: the fix is the line's own verb, never a
+            // second line under it (prd §1943).
+            row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone,
+                verb: backupOff ? (String(localized: "Turn on"), {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Text("Turn on iCloud Keychain").dsText(.body17).foregroundStyle(DS.pickInk)
-                        Spacer(minLength: DS.Space.s2)
-                    }
-                    .padding(.leading, AccountLines.labelWidth)
-                    .walletRowPitch()
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-            }
+                }) : backupVerb)
             if coSignerSwitchable {
                 coSignerSwitchRow
             } else {
@@ -141,31 +132,27 @@ struct MoveSecurity: View {
                 // **THE VALUES ARE NETWORKS, SAID ONCE (user, 2026-11-22:
                 // "for money we need to say networks"; picked A, a heading
                 // over the values, of a Networks row under every place).**
-                HStack(spacing: 0) {
-                    Color.clear.frame(width: AccountLines.labelWidth, height: 1)
-                    Text("Networks")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                    Spacer(minLength: 0)
-                }
-                .frame(minHeight: AccountLines.pitch)
-                .accessibilityAddTraits(.isHeader)
-                AccountSubhead(text: String(localized: "Public"))
+                // Over the values' edge since §1943, which moved values there.
+                AccountSubhead(text: String(localized: "Public"), over: String(localized: "Networks"))
                 // **ONE FORMULA ON MONEY (user, 2026-11-22: "we need to
                 // standardize this too, and it should probably say safe in
                 // public"):** every line is a place by its name and the
-                // networks it holds your money on; how each works is
-                // Receive's plates, behind How your money moves.
-                row(title: "Safe", value: networksValue,
-                    tone: unread.isEmpty || reading ? DS.textPrimary : DS.attentionInk,
-                    short: networksShort,
-                    verb: unread.isEmpty || reading ? nil : (String(localized: "Try again"), { _ = Task { _ = await read() } }))
+                // networks it holds your money on. **EVERY PLACE OPENS
+                // RECEIVE (prd §1943, user: "you can tap on privacy pools
+                // and Aztec, but you can't tap on the safe one"):** each
+                // place's address, its Copy and its ⓘ stand there.
+                if unread.isEmpty || reading {
+                    AccountLine(label: "Safe", value: networksValue, short: networksShort, end: .opens,
+                                action: { MoveMenu.pick(.receive, chrome) })
+                } else {
+                    row(title: "Safe", value: networksValue, tone: DS.attentionInk, short: networksShort,
+                        verb: (String(localized: "Try again"), { _ = Task { _ = await read() } }))
+                }
                 if let publicLines { publicLines }
                 if let privateLines {
                     AccountSubhead(text: String(localized: "Private"))
                     privateLines
                 }
-                howMoneyMovesRow
                 // "Saving", not "Spending" (prd §1803): round-ups and the goal
                 // they fill put money away.
                 AccountSubhead(text: String(localized: "Saving"))
@@ -292,28 +279,15 @@ struct MoveSecurity: View {
     /// ("Setting up…") in the verb's place, grey.
     private func row(title: String, value: String?, tone: Color = DS.textSecondary, short: String? = nil,
                      verb: (String, () -> Void)?) -> some View {
-        // **A LINE (prd §1937):** the word in the label column, the fact
-        // where values start (white, or its state's ink), the verb at the
-        // end in the pick's ink.
-        AccountLine(label: title, value: working?.row == title ? nil : value,
-                    ink: tone == DS.textSecondary ? DS.textPrimary : tone, short: short) {
-            if let (word, action) = verb {
-                Button(action: action) {
-                    Text(verbatim: working?.row == title ? working!.label : word)
-                        .dsText(.body17)
-                        .foregroundStyle(working == nil ? DS.pickInk : DS.textTertiary)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .frame(minHeight: AccountLines.pitch)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .disabled(working != nil)
-                // The verb keeps its width ("Setting up…" is longer than
-                // "Finish"); the fact beside it gives way instead.
-                .layoutPriority(2)
-            }
-        }
+        // **A LINE (prd §1937, §1943):** the name, the fact at the trailing
+        // edge (grey, or its state's ink), the verb at the end in the pick's
+        // ink, and the whole line is the verb. A line with no verb is a fact
+        // and takes no tap.
+        let acting = working?.row == title
+        let end: AccountLineEnd = acting ? .acts(working!.label, busy: true)
+            : verb.map { AccountLineEnd.acts($0.0, busy: working != nil) } ?? .states
+        return AccountLine(label: title, value: acting ? nil : value, ink: tone, short: short,
+                           end: end, action: verb?.1)
     }
 
     /// The demo's account changes no key (§1475): it says so, and nothing runs.
@@ -337,16 +311,16 @@ struct MoveSecurity: View {
         let saved = SavingsGoal.savedNow()
         let word = goal.map { BalancePrivacy.shared.withheld ? SavingsGoal.percent(saved: saved, goal: $0)
             : String(localized: "\(WalletValue.money(saved)) of \(WalletValue.money($0.dollars))") } ?? String(localized: "Set")
-        return AccountLine(label: String(localized: "Goal"), value: word, ink: goal == nil ? DS.pickInk : DS.textPrimary,
-                           action: open)
+        // Unset, "Set" is the line's verb; set, the figure opens its tray.
+        return AccountLine(label: String(localized: "Goal"), value: goal == nil ? nil : word,
+                           end: goal == nil ? .acts(word) : .opens, action: open)
             .accessibilityLabel(Text("Savings goal, \(word)"))
     }
 
     @ViewBuilder private var roundUpsRow: some View {
         // The setting and its tray (the switch, $1 or $5, what it buys):
         // one line, its word where values start (prd §1937).
-        AccountLine(label: String(localized: "Round-ups"), value: roundUpWord,
-                    ink: roundUps.on ? DS.textPrimary : DS.textSecondary,
+        AccountLine(label: String(localized: "Round-ups"), value: roundUpWord, end: .opens,
                     action: { roundUpsTray = true })
         .accessibilityLabel(Text("Round-ups, \(roundUpWord)"))
         .task {
@@ -404,23 +378,6 @@ struct MoveSecurity: View {
                 }
             }
         }
-    }
-
-    /// **A DOOR TO RECEIVE (user, 2026-11-22: "not sure a user would know to
-    /// tap").** The pick's pink, as Account's other verbs are, so it reads as
-    /// a tap. It opens Receive, where each way in stands on its plate; Account
-    /// keeps its one-line values and repeats none of it.
-    private var howMoneyMovesRow: some View {
-        Button { MoveMenu.pick(.receive, chrome) } label: {
-            Text("How your money moves")
-                .dsText(.body17)
-                .foregroundStyle(DS.pickInk)
-                .frame(maxWidth: .infinity, minHeight: AccountLines.pitch, alignment: .leading)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .padding(.top, DS.Space.s2)
-        .accessibilityHint(Text("Shows each way money comes in"))
     }
 
     /// The setting only: Off, or On and what it rounds to (user: "here it
@@ -871,7 +828,7 @@ struct MoveSecurity: View {
         // The line: its address, Off | On at the end (prd §1937).
         AccountLine(label: String(localized: "Co-signer"),
                     value: partly ? String(localized: "Not on \(names(notRequired))") : who,
-                    ink: partly ? DS.attentionInk : DS.textPrimary) {
+                    ink: partly ? DS.attentionInk : DS.textSecondary) {
             AccountOnOff(on: coSignerRequired, disabled: coSignerWalking || working != nil) { on in
                 coSignerSteps = [:]
                 coSignerTray = on

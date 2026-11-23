@@ -70,7 +70,7 @@ struct WalletUnsignedSection: View {
                                     value: [safe.isYourAccount ? String(localized: "Yours") : safe.name,
                                             SafeRoster.need(safe).map { String(localized: "\($0) signers") }]
                                         .compactMap { $0 }.joined(separator: " · "),
-                                    action: { onOpenSafe(safe) })
+                                    end: .opens, action: { onOpenSafe(safe) })
                     }
                 }
                 .task(id: queueKey) { await read() }

@@ -105,7 +105,7 @@ use "Casberi/Casberi/Shell/RootShell.swift" 'PrivateWatchTask.schedule()' "the w
 use "Casberi/Casberi/Shell/ProbeHooks.swift" 'Hook(key: "backgroundRefreshProbe")' "the watch has no probe"
 use "$SEC" 'if backupOff || privateBackup == .deviceOnly { return (String(localized: "Not backed up"), DS.attentionInk) }' "Backup no longer says Not backed up, in amber, when private money sits on this phone alone (prd §1562, §1803)"
 use "$SEC" 'if privateBackup == .deviceOnly { return (String(localized: "Back up"), backUpPrivate) }' "Backup has no fix beside Not backed up (prd §1562, §1803)"
-use "$SEC" 'row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone, verb: backupVerb)' "Keys has no Backup row (prd §1803)"
+use "$SEC" 'row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone,' "Keys has no Backup row (prd §1803)"
 echo "  ok   one root in iCloud Keychain: the seed, the owner and the fresh addresses from it, found again, the watch through Tor"
 
 # Private is Send's, never a verb (prd §1554): "Your private balance" leads
@@ -1370,20 +1370,22 @@ use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your acco
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("Send a little ETH with USDC or USDG")' "the private address no longer says a token needs ETH sent with it (prd §1779, §1929)"
 use "$SENT" 'lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],' "Receive no longer says what Privacy Pools takes and where before it is copied (prd §1779, §1929)"
 use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text(verbatim: MoveSentence.aztecRule).dsText(.body17).foregroundStyle(DS.aztecInk)' "the Aztec address lost its rule on Receive (prd §1779, §1928)"
-use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: "Ethereum", action: {' "Your account lost its private balance line (prd §1779, §1937)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: "Ethereum", action: {' "Railgun's line on Money is gone (prd §1937)"
+# prd §1943: the Aztec account's own page is deleted; Receive holds its address and rule.
+! grep -rq 'yourAccountShowsAztec' Casberi/Casberi || { echo "✗ the Aztec account's own page is back (prd §1943)"; exit 1; }
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: "Ethereum", end: .opens, action: {' "Your account lost its private balance line (prd §1779, §1937)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: "Ethereum", end: .opens, action: {' "Railgun's line on Money is gone (prd §1937)"
+# prd §1943: every place on Money opens Receive, the Safe included.
+[[ $(grep -c 'MoveMenu.pick(.receive, chrome)' Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift) -eq 3 ]] \
+    || { echo "✗ a private place on Money no longer opens Receive (prd §1943)"; exit 1; }
+use "$SEC" 'AccountLine(label: "Safe", value: networksValue, short: networksShort, end: .opens,' "the Safe on Money no longer opens Receive (prd §1943)"
 ! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
 # prd §1785: the three money rows left Home; Account opens on the Safe.
 ! grep -rq 'walletPlaceRows' Casberi/Casberi/Screens || { echo "✗ Home's three money rows are back (prd §1785)"; exit 1; }
-use "$PAGES" 'if section == .yourAccount { chrome.yourAccountShowsAztec = false }' "Account can open on the Aztec address by leftover (prd §1785)"
 # prd §1786: the private places are doors; Aztec's address has its own page.
 AZT="Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift"
 use "$AZT" 'func walletPrivatePlaces() -> some View {' "Account lost its private doors (prd §1786)"
-use "$AZT" 'title: String(localized: "Send from Aztec to Aztec"),' "the private account's send no longer names both ends (prd §1786)"
 ! grep -q 'mark: "safe", title: String(localized: "Safe")' "$AZT" || { echo "✗ the Safe is a row under its own box again (prd §1786)"; exit 1; }
-use "Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift" 'if walletOnPrivateAccount {' "the private account's page draws the public account's rows (prd §1786)"
 use "$PAGES" 'WalletUnsignedSection(part: .unsigned,' "Without a signature left Permissions (prd §1786)"
 # prd §1787: On its way left Home; Holdings' waiting rows open its steps.
 ! grep -rq 'walletOnItsWaySection' Casberi/Casberi/Screens || { echo "✗ On its way is on Home again (prd §1787)"; exit 1; }

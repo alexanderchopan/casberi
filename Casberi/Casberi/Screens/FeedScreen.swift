@@ -1601,8 +1601,6 @@ struct FeedScreen: View {
     /// pill beside it names the place.
     var roomName: String {
         if let pinnedWalletSection { return pinnedWalletSection.label }
-        // The private account's page reads "Account · Private account" (prd §1786).
-        if walletOnPrivateAccountPage { return WalletSection.yourAccount.label }
         // **ACTIVITY IS HOME'S (prd §1809)**: "Home · Activity" on the
         // phone, Home pressable back, as every page of the Wallet reads.
         if activityUnderHome { return PlaceTab.wallet.label }

@@ -189,6 +189,9 @@ struct SettingsRows: View {
         var countsUp = false
         /// Bump to make the badge give one bounce (a milestone crossing).
         var bounce = 0
+        /// A row that flips (`.flips`) as Account's line draws it: its two
+        /// words, and whether the second is lit (prd §1943).
+        var flip: (words: (String, String), second: Bool)? = nil
         var action: () -> Void = {}
     }
 
@@ -270,6 +273,7 @@ struct SettingsRows: View {
                     value: ThemeStore.shared.summary,
                     trail: .flips,
                     badge: (ThemeStore.shared.isLight ? "sun.max.fill" : "moon.fill", DS.textPrimary),
+                    flip: ((String(localized: "Dark"), String(localized: "Light")), ThemeStore.shared.isLight),
                     action: {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) { ThemeStore.shared.isLight.toggle() }
@@ -281,6 +285,7 @@ struct SettingsRows: View {
                     trail: .flips,
                     badge: ((OpenOn(rawValue: opensOn) ?? .wallet) == .wallet
                                 ? ScopeTileGlyph.wallets : ScopeTileGlyph.activity, DS.textPrimary),
+                    flip: ((OpenOn.wallet.label, OpenOn.feed.label), (OpenOn(rawValue: opensOn) ?? .wallet) == .feed),
                     action: {
                         DSHaptic.tap()
                         withAnimation(DS.Motion.standard) {
@@ -526,20 +531,22 @@ struct SettingsRows: View {
         }
     }
 
-    /// **A SETTING IS A LINE (prd §1937):** its word grey in the label
-    /// column, its value white where values start, as on every plate (prd
-    /// §1940: grey on grey read as two columns), an arrow where it leaves
-    /// the app.
+    /// **A SETTING IS A LINE (prd §1937, §1943):** its name, its value grey
+    /// at the trailing edge, and its end saying what a tap does: the
+    /// chevron where it opens, the arrow where it leaves the app, and a
+    /// row that flips is its two words on one track, the lit one the
+    /// setting, with no value beside it.
     private func lineList(_ rows: [RowSpec]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(rows, id: \.title) { row in
-                AccountLine(label: String(localized: String.LocalizationValue(row.title)), value: row.value,
-                            action: row.action) {
-                    if row.trail == .leaves {
-                        Image(systemName: "arrow.up.right").dsGlyph(.caption, weight: .semibold)
-                            .foregroundStyle(DS.textSecondary)
-                            .accessibilityHidden(true)
+                let label = String(localized: String.LocalizationValue(row.title))
+                if row.trail == .flips, let flip = row.flip {
+                    AccountLine(label: label, value: nil) {
+                        AccountSwitch(words: flip.words, second: flip.second) { _ in row.action() }
                     }
+                } else {
+                    AccountLine(label: label, value: row.value,
+                                end: row.trail == .leaves ? .leaves : .opens, action: row.action)
                 }
             }
         }
