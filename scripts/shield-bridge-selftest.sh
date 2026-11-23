@@ -150,6 +150,7 @@ grep -q 'AztecAddressText.isAztec(token) || RailgunSwap.isPrivateAddress(token)'
   && grep -q 'ENS.isHexAddress(canonical) || AztecAddressText.isAztec(canonical) ? canonical.lowercased()' Casberi/Casberi/Model/AddressBook.swift \
   && grep -q 'var out: \[Suggestion\] = AddressBook.shared.aztecAccounts' "$MOVE" \
   && grep -q 'AddressBook.shared.setName(savingName, for: address, networks: \["aztec"\])' "$MOVE" \
+  && grep -q 'out.append(MoveDeckStep(id: "name", word: String(localized: "Name"), value: String(localized: "Save")) {' "$MOVE" \
   || { echo "✗ an Aztec account can no longer be saved, or Send no longer offers the saved ones (prd §1964)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }

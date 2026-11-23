@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2145 of 2219 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2146 of 2220 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2407,7 +2407,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1961 — Paid on Aztec: a payment in is told at once and lands in Activity (builds §1953 for money in)
 - §1962 — Human Passport's door wherever its score is named, one link watched nightly
 - §1963 — Aztec, tightened: Receive says about 20 seconds, pay many declares gas for its payments, and a send out ready to fini…
-- §1964 — Aztec accounts by name: the book keeps them, Send lists them first, a send offers to save who it paid
+- §1964 — Aztec accounts by name: the book keeps them, Send lists them first, a send offers to save who it paid (amended by §1964a)
+- §1964a — Name it before it goes: a Name line on Send from Aztec's receipt
 
 ## Dead rulings → what replaced them (generated)
 

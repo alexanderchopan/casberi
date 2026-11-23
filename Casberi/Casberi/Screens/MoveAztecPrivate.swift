@@ -1409,9 +1409,21 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                                         value: "\(AddressTail.short(pay.recipient)) · \(pay.amount) \(move.symbol)",
                                         remove: { withAnimation(DS.Motion.standard) { move.removePay(pay.id) } }) {})
             }
+            // A saved account is called by its name (prd §1964).
             out.append(MoveDeckStep(id: "to", word: move.pays.isEmpty ? String(localized: "To") : String(localized: "And"),
                                     on: open == .recipient,
-                                    answered: move.recipient != nil, value: move.recipient.map { AddressTail.short($0) }) { toggle(.recipient) })
+                                    answered: move.recipient != nil,
+                                    value: move.recipient.map { AddressBook.shared.entry(for: $0)?.name ?? AddressTail.short($0) }) { toggle(.recipient) })
+            // **NAME IT BEFORE IT GOES (prd §1964, from the Railgun session's
+            // §1965):** the sheet goes behind once Face ID answers, so the
+            // done state's Save is seldom seen. An unsaved Aztec account on
+            // the line has a Name line that saves it now.
+            if let to = move.recipient, AztecAddressText.isAztec(to), AddressBook.shared.entry(for: to) == nil {
+                out.append(MoveDeckStep(id: "name", word: String(localized: "Name"), value: String(localized: "Save")) {
+                    savingName = ""
+                    saving = to
+                })
+            }
         }
         let place = move.mode == .deposit ? "Ethereum" : "Aztec"
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), on: open == .token, answered: true,

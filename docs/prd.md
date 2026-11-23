@@ -75226,3 +75226,7 @@ Amends §1956 item 1's "ETH Privacy Pools".
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds the book's acceptance and key, the list and the save. **Seen** on an iPhone 17 Pro simulator with `-addressBook "Ana:0x4d…"`: Ana first in Send from Aztec's list.
+
+## §1964a — Name it before it goes: a Name line on Send from Aztec's receipt (amends §1964 item 3) (the Railgun session, 2026-11-23: the sheet goes behind once Face ID answers (§1806), so the done state's Save is seldom seen; its §1965 added the same line for a 0zk) — BUILT
+
+An unsaved Aztec account on the line gets a **Name · Save** line under To, before the send, opening the same one-field ask; the done state's rows stay. A saved account is called by its name in To's chip.
