@@ -97,6 +97,13 @@ final class FreshReceive {
         entries[i].state = state
         entries[i].symbol = symbol
         save()
+        // A move under way or made answers an earlier failure: Receive drew
+        // "The move in could not be prepared" over the address's own
+        // "being checked" once a retry had worked (2026-11-23).
+        switch state {
+        case .moving, .sent, .moved: failure = nil
+        default: break
+        }
     }
 
     /// The first address of the current root on this network, when there is none yet.

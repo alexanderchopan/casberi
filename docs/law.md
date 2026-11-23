@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2131 of 2205 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2132 of 2206 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2394,6 +2394,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1948 — How your accounts work is its own page: an intro, then each account closed to a line, opening to Receive, Send (Swap…
 - §1949 — Out of Aztec under $100 needs no score, measured; and an exit names its amount
 - §1950 — Out of Aztec, this iPhone first: your Shield key signs in for a send out up to $100 a day, the co-signer only past it
+- §1951 — Receive's Try again answers at once, and a move that worked clears the failure above it
 
 ## Dead rulings → what replaced them (generated)
 

@@ -75077,3 +75077,10 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds the route, the limit's arithmetic and the count after; removing the count was caught.
+
+## §1951 — Receive's Try again answers at once, and a move that worked clears the failure above it (user, 2026-11-23, retrying the 12.98 USDC: "when i clicked try again … it didn't confirm it was working, then about 15 or so seconds later it said it was being moved. then it had two status lines, one saying move in can't be prepared and then another saying its being checked by pp") — BUILT
+
+1. **Try again says so:** its Status line reads "Trying again…" the moment it is pressed, the verb gone, until the look answers (`ReceivePlace.retrying`).
+2. **One status:** `FreshReceive.failure` (the plate's first Status line) clears whenever an address's move starts, is sent or is made; USDC's move never cleared it, so the failure stood over "being checked".
+
+The retry itself worked: 12.98 USDC went into ppUSDC on Ethereum at 18:29 (depositExactShares), now waiting on 0xBow's approval.

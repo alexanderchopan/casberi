@@ -118,6 +118,9 @@ struct ReceivePoolsPlace: View {
     /// Failed token moves whose address is short of gas (prd §1823), read
     /// after each look, never in a body.
     @State private var shortOfGas: Set<String> = []
+    /// Try again pressed and not yet answered: its line says so at once
+    /// (a retry read nothing on screen for ~15 s, 2026-11-23).
+    @State private var retrying: Set<String> = []
     @Environment(\.modelContext) private var context
     @Environment(ShellChrome.self) private var chrome
     private var book: FreshReceive { .shared }
@@ -174,11 +177,17 @@ struct ReceivePoolsPlace: View {
     }
 
     @ViewBuilder private func statusLine(_ entry: FreshAddress.Entry) -> some View {
-        let said = Self.status(entry, book: book)
+        let said = retrying.contains(entry.id) ? (words: String(localized: "Trying again…"), ink: DS.textSecondary)
+            : Self.status(entry, book: book)
         ReceiveFactLine(label: String(localized: "Status"), value: said.words, ink: said.ink) {
-            if case .failed = entry.state, !shortOfGas.contains(entry.id) {
+            if case .failed = entry.state, !shortOfGas.contains(entry.id), !retrying.contains(entry.id) {
                 verb(String(localized: "Try again")) {
-                    Task { await book.check(context: context, force: true); await readShortOfGas() }
+                    withAnimation(DS.Motion.standard) { _ = retrying.insert(entry.id) }
+                    Task {
+                        await book.check(context: context, force: true)
+                        await readShortOfGas()
+                        withAnimation(DS.Motion.standard) { _ = retrying.remove(entry.id) }
+                    }
                 }
             } else if let payGas, waitsForGas(entry), !DemoMode.isActive {
                 verb(reading == entry.id ? String(localized: "Reading the fee…") : String(localized: "Pay the gas")) {
