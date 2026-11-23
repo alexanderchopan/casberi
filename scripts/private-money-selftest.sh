@@ -136,8 +136,10 @@ use "$SENT" 'MoveTokenPlace(id: "pools", title: "Privacy Pools", choices: privat
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
 use "$MSCREEN" 'chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
-grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q '                walletOpenPrivate(.send)' "$HOLD" \
-    || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
+# A private row opens its holding's page, and Send is on the page (prd §1939).
+grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q '                walletOpenHolding(holding)' "$HOLD" \
+  && grep -q '            walletOpenPrivate(.send)' "Casberi/Casberi/Screens/WalletHoldingSheet.swift" \
+    || { echo "✗ Holdings' header no longer sends to your private balance, or a private row's page no longer sends from it (prd §1939)"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
 # would be a private flow outside Move.
 # On its way's steps (prd §1779) are a read: the sheet moves nothing, and its
@@ -1368,7 +1370,9 @@ use "Casberi/Casberi/Model/FreshReceive.swift" 'failure = Self.words(error, step
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'if let mended = AddressSafety.pasted(text) {' "Send's To no longer mends an address read off a picture (prd §1823)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
 use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("Send a little ETH with USDC or USDG")' "the private address no longer says a token needs ETH sent with it (prd §1779, §1929)"
-use "$SENT" 'lines: [String(localized: "ETH, USDC, USDG"), MoveFreshSentence<EmptyView>.poolsNetworks],' "Receive no longer says what Privacy Pools takes and where before it is copied (prd §1779, §1929)"
+# The row names the tokens and the ⓘ the networks (ReceiveWords, ddecf1062).
+use "Casberi/Casberi/Model/ReceiveWords.swift" 'pools.atLeast.map { String(localized: "ETH, USDC, USDG · \($0)") } ?? String(localized: "ETH, USDC, USDG")' "Receive no longer says what Privacy Pools takes before it is copied (prd §1779, §1929)"
+use "Casberi/Casberi/Model/ReceiveWords.swift" 'var what = String(localized: "ETH, USDC or USDG, on Base, Ethereum or Robinhood, at a new address each time.")' "Receive's ⓘ no longer says where Privacy Pools takes money (prd §1779, §1929)"
 use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text(verbatim: MoveSentence.aztecRule).dsText(.body17).foregroundStyle(DS.aztecInk)' "the Aztec address lost its rule on Receive (prd §1779, §1928)"
 use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: "Ethereum", action: {' "Your account lost its private balance line (prd §1779, §1937)"
