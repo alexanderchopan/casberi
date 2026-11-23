@@ -142,3 +142,7 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 
 
 - `-fileverseSync YES` — **Fileverse (2026-10-16, prd §1346 and the seat ruling after it), `Model/FileverseBridge.swift`.** Runs the seat's pass at mount and logs `fileverse| portals N · live N · landed N · reread N · pruned N · failed N · unreadable N`; nothing of a doc is printed. The connect is `FileverseLoginSheet` (Fileverse's own page, its sign-in pressed for you); the keys are per portal in `TokenVault` (`fileverse.portals`). A doc leaves only on its own `DeletedFile` event.
+
+## Logos sends (prd §1084)
+
+- **Logos names token moves, holds a Holdings tile, and sends (prd §1084): `token` is a built-in program (`SHA256("/LEE-BuiltinProgram/v1/AccountId" ‖ name)`), a holding is a shard on the holder's account, Create · Send sign BIP-340 with one device-only key (`LogosKey`, `casberi-logos-signer`) and `sendTransaction` lives in `LogosSend.swift` alone; no faucet exists on v0.3; a reset and a stopped node notify (`nodeDown`), test coins never do** → prd §1084
