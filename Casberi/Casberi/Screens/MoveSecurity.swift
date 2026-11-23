@@ -67,6 +67,8 @@ struct MoveSecurity: View {
     @State private var coSignerWalking = false
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpsTray = false
+    /// How your accounts work (prd §1947).
+    @State private var guideOpen = false
     /// Aave's USDC rate on Base, for the Round-ups plate's Earns row; read
     /// when the tray opens, nil until then or when unread.
     @State private var roundUpsBaseRate: Double?
@@ -153,6 +155,7 @@ struct MoveSecurity: View {
             if !shown { coSignerTray = nil; if !coSignerWalking { coSignerSteps = [:] } }
         })) { coSignerTraySheet }
         .sheet(isPresented: $roundUpsTray) { roundUpsTraySheet }
+        .sheet(isPresented: $guideOpen) { AccountsGuideTray() }
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
         .task(id: "\(account)·\(chrome.roomRevision)") { await readUntilAnswered() }
@@ -250,14 +253,14 @@ struct MoveSecurity: View {
 
     /// **YOUR ACCOUNTS (prd §1946, user: "the user will want to know what
     /// their accounts are", "they will also want to know and copy their
-    /// addresses").** How your accounts work first (the door, Receive until
-    /// its own page is designed); then Public, the Safe and the Safes you
+    /// addresses").** How your accounts work first (its own tray, prd
+    /// §1947); then Public, the Safe and the Safes you
     /// hold a key to; Private, each private account; Following, the
     /// read-only accounts. Each account its name, where it is, and its copy.
     @ViewBuilder private var accountsPlate: some View {
         AccountPlate(name: String(localized: "Your accounts")) {
             AccountLine(label: String(localized: "How your accounts work"), end: .opens,
-                        action: { MoveMenu.pick(.receive, chrome) })
+                        action: { guideOpen = true })
             AccountSubhead(text: String(localized: "Public"))
             if unread.isEmpty || reading {
                 AccountCopyRow(name: "Safe", line: AccountNetworks.on(Self.publicNetworks),

@@ -75023,3 +75023,14 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass. **Open:** what How your accounts work shows (receiving and sending for each account) and where it lives.
+
+## §1947 — How your accounts work is its own page: an intro, then each account closed to a line, opening to Receive, Send (Swap for Railgun) and Earns with their Good to know; Send and Receive carry only what changes the move in hand (amends §1946 item 1's door to Receive) (user, 2026-11-23: "we want the info that is on the receive screen today … but we need to add send. we also need an intro", line by line through the Safe, Privacy Pools and Railgun text, "keep railgun term", the Aztec text corrected by the Aztec session, "what if they are collapsible", "yes closed", "ok build it") — BUILT
+
+1. **Account's "How your accounts work" opens this tray** (`AccountsGuideTray`, `MoveSecurity.guideOpen`), never Receive.
+2. **The page:** "You have one public account and three private ones." at `heading24`, the lede in grey; then Safe (Public), Privacy Pools, Railgun and Aztec (Private), each on Account's plate fill, **closed** to its name, Public or Private and a chevron, no line under it (user: "the closed short lines … are kind of misleading. we wrap eth so eth can go into aztec and privacy pools we accept on base ethereum and robinhood", "perhaps they should have no subtext"); a tap opens it in place, more than one at a time. Open, Receive, Send, Swap (Railgun alone) and Earns, each its paragraphs and a grey note under its label ("Good to know", Safe's "From another network").
+3. **The words are `AccountsGuide`'s**, as settled with the user; Privacy Pools' minimum, rates and fee are read live (`ReceiveWords.Pools.current`), and unread, the line says so without a number (§83). "Relayer" for Privacy Pools, "Railgun broadcaster" for Railgun.
+4. **Send and Receive carry only what changes the move in hand** (user, "how should we think about it"): a rule shows where it can stop or change this move, when it applies; a list of tokens shows only where it rules something out. Receive's lines follow in its own pass.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.

@@ -1453,6 +1453,27 @@
     }
    ],
    "anchor": "text:=Require co-signer"
+  },
+  {
+   "id": "your-account-how-it-works",
+   "covers": [
+    "Screens/MoveSecurity.swift:guideOpen"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Account"
+    },
+    {
+     "tap": "button:^How your accounts work"
+    }
+   ],
+   "anchor": "text:=You have one public account and three private ones."
   }
  ],
  "exempt": [
