@@ -73,7 +73,7 @@ final class PrivateMove {
     }
 
     /// `-privateNetwork ethereum` (DEBUG): Ethereum in place of Sepolia.
-    static var debugNetwork: String? {
+    nonisolated static var debugNetwork: String? {
         #if DEBUG
         UserDefaults.standard.string(forKey: "privateNetwork")
         #else

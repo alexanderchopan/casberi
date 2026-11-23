@@ -805,16 +805,18 @@ final class FreshReceive {
         }
         return config
     }
+    #endif
 
     /// The newest address of the current root that was never used: where a
     /// move from another account is withdrawn to (prd §1562), so the watch
-    /// moves it in as it would any payment.
+    /// moves it in as it would any payment. Release reaches it too (Receive).
     func unusedCurrent() -> FreshAddress.Entry? {
         ensureCurrent()
         if let entry = current, case .waiting = entry.state { return entry }
         return make()
     }
 
+    #if DEBUG
     /// `-freshAddressForget YES`: the book and the device-only root go.
     func forget() {
         entries = []
