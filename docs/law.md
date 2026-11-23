@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2126 of 2200 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2127 of 2201 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2380,15 +2380,16 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other g…
 - §1935 — Move's keys and its end: a refused key knocks, holding delete clears, and Done folds the receipt into Activity
 - §1936 — Home adds up: the balance is Public plus Private as drawn, and the demo stands on the account's networks with its Pri…
-- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word… (amended by §1940; part superseded by §1943)
+- §1937 — Account is lines on three plates: Security, Money (Public · Private · Saving) and App; every setting a line, its word… (amended by §1940, §1946; part superseded by §1943)
 - §1938 — USDC under Privacy Pools' minimum says so, and a deposit being checked says since when
 - §1939 — Every holding opens its page; the long press offers the same verbs
 - §1940 — Account's App plate: values white, words grey, as on Security and Money (amended by §1943)
 - §1941 — Move's receipt chip wears the ramp's row face, 30pt, never its own 28
 - §1942 — A deposit 0xBow has never seen is not "being checked"
-- §1943 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive…
+- §1943 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive… (amended by §1946)
 - §1944 — Privacy Pools' page is a receipt: its name, Takes · On · Status, the address on its plate; a failed move says Try aga…
-- §1945 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receiv…
+- §1945 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receiv… (amended by §1946)
+- §1946 — Account leads with Your accounts: How your accounts work, Public, Private, Following, each account its name, where it…
 
 ## Dead rulings → what replaced them (generated)
 

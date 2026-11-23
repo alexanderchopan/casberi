@@ -301,6 +301,13 @@ struct ReceivePoolsPlace: View {
 /// Where Privacy Pools' one-time address is watched: Base, Ethereum and
 /// Robinhood on Ethereum's home chain (prd §1878), else its one network.
 enum ReceivePools {
+    /// The same, one name each, for a sentence ("On Base, Ethereum and Robinhood").
+    static var names: [String] {
+        let net = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork)
+        return net?.chainId == FreshTx.homeChain || net == nil
+            ? ["Base", "Ethereum", "Robinhood"] : [net?.name ?? ""]
+    }
+
     static var networks: String {
         let net = PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork)
         return net?.chainId == FreshTx.homeChain || net == nil

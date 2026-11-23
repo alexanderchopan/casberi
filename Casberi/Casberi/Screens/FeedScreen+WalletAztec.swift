@@ -355,34 +355,42 @@ extension FeedScreen {
     func walletPrivatePlaces() -> some View {
         let store = AztecAccountStore.shared
         let aztec = store.isShown ? store.shown.address : nil
-        // **THE THREE PRIVATE PLACES, BY NAME (prd §1937, user: "Private is
-        // the other three"):** each a line on Money's plate, in Money's one
-        // formula: the place and the network it holds your money on (user,
-        // 2026-11-22, "we need to standardize this too"). Privacy Pools'
-        // way in is an address made new each time; Railgun's is your one
-        // 0zk address. **EVERY PLACE OPENS RECEIVE (prd §1943):** Safe,
-        // Privacy Pools, Railgun and Aztec alike, where each place's
-        // address, Copy and ⓘ stand; Railgun opened Privacy Pools' one-time
-        // address, and Aztec a page of its own.
+        // **YOUR PRIVATE ACCOUNTS (prd §1946):** each its name, where it is,
+        // and the copy glyph for its address. Privacy Pools' address is made
+        // new each time; Railgun's is your one 0zk address; Aztec's is paid
+        // from Aztec only, which the copy says (prd §1779).
         if PrivateMove.freshAvailable {
-            // Where its one-time address is watched: Base, Ethereum and Robinhood,
-            // as Receive says it (prd §1878, §1945); "Ethereum" was wrong.
-            AccountLine(label: "Privacy Pools", value: ReceivePools.networks, end: .opens, action: {
-                MoveMenu.pick(.receive, chrome)
+            // Watched on Base, Ethereum and Robinhood (prd §1878).
+            AccountCopyRow(name: "Privacy Pools", line: AccountNetworks.on(ReceivePools.names), copy: {
+                guard !DemoMode.isActive else { chrome.flash(YourAccountDemo.actsLater); return }
+                guard let entry = FreshReceive.shared.unusedCurrent() else {
+                    chrome.flash(FreshReceive.shared.failure ?? String(localized: "No new address could be made"), tone: .failure)
+                    return
+                }
+                DSPasteboard.copy(entry.address)
+                chrome.flash(String(localized: "Copied · new address each time"), tone: .success)
             })
         }
         if RailgunPocket.available, PrivateMove.freshAvailable {
-            AccountLine(label: "Railgun", value: "Ethereum", end: .opens, action: {
-                MoveMenu.pick(.receive, chrome)
+            AccountCopyRow(name: "Railgun", line: AccountNetworks.on(["Ethereum"]), copy: {
+                Task { @MainActor in
+                    let address = DemoMode.isActive ? ReceiveDemo.privateAddress
+                        : try? await RailgunPocket.privateAddress()
+                    guard let address else { chrome.flash(String(localized: "Railgun did not answer"), tone: .failure); return }
+                    DSPasteboard.copy(address)
+                    chrome.flash(String(localized: "Address copied"), tone: .success)
+                }
             })
         }
         // The account is yours from the start (prd §1700t): its line stands
-        // from the first frame, and never waits on the address it does not show.
+        // from the first frame; its copy waits on the address it reads.
         if store.isShown {
-            // Where it moves, never only who pays it (prd §1924).
-            AccountLine(label: "Aztec", value: "Aztec", ink: DS.aztecInk, end: .opens, action: {
-                MoveMenu.pick(.receive, chrome)
-            })
+            AccountCopyRow(name: "Aztec", line: AccountNetworks.on(["Aztec"]), ink: DS.aztecInk,
+                           copy: aztec.map { address -> () -> Void in {
+                               if DemoMode.isActive { chrome.flash(YourAccountDemo.actsLater); return }
+                               DSPasteboard.copy(address)
+                               chrome.flash(String(localized: "Copied · paid from Aztec only"), tone: .success)
+                           } })
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
             // Its address comes from the engine: read it once, here, and keep it.

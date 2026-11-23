@@ -128,29 +128,18 @@ extension AccountLine where Trailing == EmptyView {
     }
 }
 
-/// A group's part on its plate: Public, Private, Saving (prd §1937).
+/// A group's part on its plate: Public, Private, Following (prd §1946).
 struct AccountSubhead: View {
     let text: String
-    /// A grey word over the values' edge: Money's "Networks" (§1937, §1943).
-    var over: String? = nil
 
     var body: some View {
-        HStack(alignment: .lastTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: text)
-                .dsText(.heading17)
-                .fontWeight(.bold)
-                .foregroundStyle(DS.textPrimary)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: DS.Space.s2)
-            if let over {
-                Text(verbatim: over)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
-        }
-        .frame(minHeight: 32, alignment: .bottom)
-        .padding(.top, DS.Space.s2)
+        Text(verbatim: text)
+            .dsText(.heading17)
+            .fontWeight(.bold)
+            .foregroundStyle(DS.textPrimary)
+            .frame(minHeight: 32, alignment: .bottomLeading)
+            .padding(.top, DS.Space.s2)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -231,5 +220,66 @@ struct AccountOnOff: View {
     var body: some View {
         AccountSwitch(words: (String(localized: "Off"), String(localized: "On")), second: on,
                       disabled: disabled, pick: pick)
+    }
+}
+
+/// **AN ACCOUNT OF YOURS, ON ACCOUNT (prd §1946).** Its name, the one line
+/// under it that says where it is ("On Base, Ethereum and Robinhood"), and
+/// the copy glyph at the end, which copies its address and turns to a tick
+/// for a moment (§867). The name and line take no tap: the glyph is the one
+/// act, and "How your accounts work" over the accounts is the door.
+struct AccountCopyRow: View {
+    let name: String
+    let line: String
+    /// Aztec's whole line wears its ink (prd §1779).
+    var ink: Color = DS.textPrimary
+    /// Nil draws no glyph: an address not read yet is never a dead copy (§83).
+    var copy: (() -> Void)?
+
+    @State private var copied = false
+
+    var body: some View {
+        HStack(spacing: DS.Space.s2) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: name)
+                    .dsText(.body17)
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                Text(verbatim: line)
+                    .dsText(.fact15)
+                    .foregroundStyle(ink == DS.textPrimary ? DS.textSecondary : ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            if let copy {
+                Button {
+                    copy()
+                    DSHaptic.tap()
+                    withAnimation(DS.Motion.standard) { copied = true }
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(1200))
+                        withAnimation(DS.Motion.standard) { copied = false }
+                    }
+                } label: {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .dsGlyph(.body, weight: .regular)
+                        .foregroundStyle(copied ? DS.confirm : ink == DS.textPrimary ? DS.pickInk : ink)
+                        .contentTransition(.symbolEffect(.replace))
+                        .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .trailing)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Copy the \(name) address"))
+            }
+        }
+        .padding(.vertical, DS.Space.s1)
+    }
+}
+
+/// "Base, Ethereum and Robinhood": a list of networks as a sentence says it.
+enum AccountNetworks {
+    static func on(_ names: [String]) -> String {
+        String(localized: "On \(ListFormatter.localizedString(byJoining: names))")
     }
 }

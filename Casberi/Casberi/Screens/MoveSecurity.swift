@@ -15,10 +15,12 @@ struct MoveSecurity: View {
     let account: String
     /// Raises the savings goal's tray; nil where there is none to raise.
     var openGoal: (() -> Void)? = nil
-    /// Money's Public lines past the networks: the Safes you hold a key to
+    /// Your accounts' Public lines past the Safe: the Safes you hold a key to
     /// (prd §1937). Drawn by the Wallet, which reads them.
     var publicLines: AnyView? = nil
-    /// Money's Private lines: Privacy Pools, Railgun, Aztec (prd §1937).
+    /// Following, under Your accounts (prd §1946): the line the Wallet draws.
+    var following: AnyView? = nil
+    /// Your accounts' Private lines: Privacy Pools, Railgun, Aztec (prd §1946).
     var privateLines: AnyView? = nil
     @Environment(ShellChrome.self) private var chrome
 
@@ -85,9 +87,10 @@ struct MoveSecurity: View {
     /// send", the network list on every row) are gone; the networks are one
     /// row, said once.
     var body: some View {
-        // **TWO PLATES (prd §1937):** Security, who signs and how it is
-        // reached; Money, Public · Private · Saving. Lines, not rows.
+        // **THREE PLATES (prd §1946, amending §1937):** Your accounts, then
+        // Security, who signs and how it is reached, then Saving.
         VStack(alignment: .leading, spacing: DS.Space.s4) {
+            accountsPlate
             AccountPlate(name: String(localized: "Security"), glyph: Self.keysGlyph) {
             row(title: String(localized: "Signs from"), value: deviceValue,
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
@@ -125,37 +128,9 @@ struct MoveSecurity: View {
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             }
-            // **MONEY IS PUBLIC AND PRIVATE (prd §1937, user: "Money should
-            // have Public and Private. Public is Safe. Private is the other
-            // three. perhaps networks go there too").**
-            AccountPlate(name: String(localized: "Money"), glyph: Self.savingGlyph) {
-                // **THE VALUES ARE NETWORKS, SAID ONCE (user, 2026-11-22:
-                // "for money we need to say networks"; picked A, a heading
-                // over the values, of a Networks row under every place).**
-                // Over the values' edge since §1943, which moved values there.
-                AccountSubhead(text: String(localized: "Public"), over: String(localized: "Networks"))
-                // **ONE FORMULA ON MONEY (user, 2026-11-22: "we need to
-                // standardize this too, and it should probably say safe in
-                // public"):** every line is a place by its name and the
-                // networks it holds your money on. **EVERY PLACE OPENS
-                // RECEIVE (prd §1943, user: "you can tap on privacy pools
-                // and Aztec, but you can't tap on the safe one"):** each
-                // place's address, its Copy and its ⓘ stand there.
-                if unread.isEmpty || reading {
-                    AccountLine(label: "Safe", value: networksValue, short: networksShort, end: .opens,
-                                action: { MoveMenu.pick(.receive, chrome) })
-                } else {
-                    row(title: "Safe", value: networksValue, tone: DS.attentionInk, short: networksShort,
-                        verb: (String(localized: "Try again"), { _ = Task { _ = await read() } }))
-                }
-                if let publicLines { publicLines }
-                if let privateLines {
-                    AccountSubhead(text: String(localized: "Private"))
-                    privateLines
-                }
-                // "Saving", not "Spending" (prd §1803): round-ups and the goal
-                // they fill put money away.
-                AccountSubhead(text: String(localized: "Saving"))
+            // **SAVING, ITS OWN PLATE (prd §1946):** round-ups and the goal
+            // they fill put money away ("Saving", not "Spending", §1803).
+            AccountPlate(name: String(localized: "Saving"), glyph: Self.savingGlyph) {
                 roundUpsRow
                 // Beside Round-ups, which feed it (prd §1700f item 10).
                 if let openGoal { savingsGoalRow(openGoal) }
@@ -272,6 +247,46 @@ struct MoveSecurity: View {
     /// bare key (who can spend FROM you) and not Your account's shield.
     static let keysGlyph = "person.badge.key"
     static let connectionGlyph = "globe"
+
+    /// **YOUR ACCOUNTS (prd §1946, user: "the user will want to know what
+    /// their accounts are", "they will also want to know and copy their
+    /// addresses").** How your accounts work first (the door, Receive until
+    /// its own page is designed); then Public, the Safe and the Safes you
+    /// hold a key to; Private, each private account; Following, the
+    /// read-only accounts. Each account its name, where it is, and its copy.
+    @ViewBuilder private var accountsPlate: some View {
+        AccountPlate(name: String(localized: "Your accounts")) {
+            AccountLine(label: String(localized: "How your accounts work"), end: .opens,
+                        action: { MoveMenu.pick(.receive, chrome) })
+            AccountSubhead(text: String(localized: "Public"))
+            if unread.isEmpty || reading {
+                AccountCopyRow(name: "Safe", line: AccountNetworks.on(Self.publicNetworks),
+                               copy: YourAccountDemo.isDemo(account) ? nil : {
+                                   DSPasteboard.copy(account)
+                                   chrome.flash(String(localized: "Address copied"), tone: .success)
+                               })
+            } else {
+                // A network that did not answer says so, with its fix (prd §1548).
+                row(title: "Safe", value: networksValue, tone: DS.attentionInk, short: networksShort,
+                    verb: (String(localized: "Try again"), { _ = Task { _ = await read() } }))
+            }
+            if let publicLines { publicLines }
+            if let privateLines {
+                AccountSubhead(text: String(localized: "Private"))
+                privateLines
+            }
+            if let following {
+                AccountSubhead(text: String(localized: "Following"))
+                following
+            }
+        }
+    }
+
+    /// The public networks the Safe is good on, A–Z (user, 2026-11-13).
+    static var publicNetworks: [String] {
+        Op.networks.filter { !$0.isTest }.map(\.name)
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
 
     /// A row (prd §1496): its name, then the fact in grey and, where there is
     /// something to do, the verb in the pick's ink — both when a fact stands

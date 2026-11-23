@@ -75012,3 +75012,14 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.
+
+## §1946 — Account leads with Your accounts: How your accounts work, Public, Private, Following, each account its name, where it is, and a copy glyph; the head is your face and name; Saving is its own plate (amends §1937 items 2–4, §1943 item 3 and §1945 item 6; Security, Saving's lines and App unchanged) (user, 2026-11-23, over the canvas "Account, true to the app": "security, saving, and app are good. do not change those", "public and private … look like errors", "it's also not clear that the items to its right are networks", "we have copy address under You but is user going to understand what that is", "the user will want to know what their accounts are", "they will also want to know and copy their addresses", "it belongs on the Your accounts section somehow", "say other accounts that are read-only", "you can put the icon that is for copy", "we need to be clear safe is public rest are private", "following is its own", "should we just say on aztec?", "it should probably be first", "for now you can build the accounts page") — BUILT
+
+1. **Your accounts is the first plate** (`MoveSecurity.accountsPlate`), in this order: **How your accounts work ›** (opens Receive until its own page is designed: "these accounts also send … we will have to define the info and then decide where it lives"); **Public**, the Safe ("On Base, Ethereum and Robinhood") and each Safe you hold a key to; **Private**, Privacy Pools ("On Base, Ethereum and Robinhood"), Railgun ("On Ethereum"), Aztec ("On Aztec", its whole line in its ink); **Following**, "Other accounts, read-only" with Follow, or the count with a chevron.
+2. **An account is a name, one line and the copy glyph** (`AccountCopyRow`, `AccountNetworks.on`): the glyph copies its address and ticks for a moment; Privacy Pools copies an address never used and says "Copied · new address each time"; Aztec's says "Copied · paid from Aztec only". The name and line take no tap. Public, Private and Following are white heads (`AccountSubhead`), never grey labels.
+3. **The head is your face and your name.** The address and its copy under the name are deleted: each account copies its own.
+4. **Saving is its own plate** after Security (Round-ups, Goal), the lines as they were. Money, its Networks head and the place lines that opened Receive are deleted.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass. **Open:** what How your accounts work shows (receiving and sending for each account) and where it lives.

@@ -1313,8 +1313,6 @@ extension FeedScreen {
 /// grid copies on a tap too.
 struct WalletYourAccountFigure: View {
     let address: String?
-    @Environment(ShellChrome.self) private var chrome
-    @State private var copied = false
     @State private var profileOpen = false
 
     var body: some View {
@@ -1340,43 +1338,15 @@ struct WalletYourAccountFigure: View {
                 .buttonStyle(RowPress())
                 .accessibilityHint(Text("Changes your name or photo"))
                 .profileEditing(isPresented: $profileOpen)
-                    // **THE TAIL AND ITS COPY (prd §1937, §1553):** the
-                    // address as every other place says it; where it works
-                    // is Money's Public line now.
-                    Button { copy(address) } label: {
-                        HStack(spacing: DS.Space.s1) {
-                            Text(verbatim: AddressTail.short(address))
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textSecondary)
-                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                                .dsSymbolSwap(copied)
-                                .dsGlyph(.caption)
-                                .foregroundStyle(copied ? DS.confirmInk : DS.textSecondary)
-                        }
-                        .padding(.vertical, DS.Space.s3)
-                        .contentShape(Rectangle())
-                        .padding(.vertical, -DS.Space.s3)
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityLabel(Text("Copy public address"))
+                // No address under the name (prd §1946, user: "is user going to
+                // understand what that is … why do we have that one instead
+                // of the others"): each account copies its own, in Your accounts.
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             DSFigureReading(number: String(localized: "No account yet"),
                             caption: String(localized: "Move makes one"))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    /// One buzz: the success flash carries its own (prd §1587); the Copy
-    /// word marks itself for 1.2s (§867).
-    private func copy(_ address: String) {
-        DSPasteboard.copy(address)
-        chrome.flash(String(localized: "Address copied"), tone: .success)
-        withAnimation(DS.Motion.standard) { copied = true }
-        Task {
-            try? await Task.sleep(for: .milliseconds(1200))
-            withAnimation(DS.Motion.standard) { copied = false }
         }
     }
 }

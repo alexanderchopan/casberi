@@ -1368,12 +1368,11 @@ use "Casberi/Casberi/Model/ReceiveWords.swift" 'var lines = [Fact(label: takes, 
 use "Casberi/Casberi/Model/ReceiveWords.swift" 'Fact(label: from, value: String(localized: "Another Aztec account only")),' "the Aztec address lost its rule on Receive (prd §1779, §1945)"
 # prd §1943: the Aztec account's own page is deleted; Receive holds its address and rule.
 ! grep -rq 'yourAccountShowsAztec' Casberi/Casberi || { echo "✗ the Aztec account's own page is back (prd §1943)"; exit 1; }
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: ReceivePools.networks, end: .opens, action: {' "Your account lost its private balance line (prd §1779, §1937)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: "Ethereum", end: .opens, action: {' "Railgun's line on Money is gone (prd §1937)"
-# prd §1943: every place on Money opens Receive, the Safe included.
-[[ $(grep -c 'MoveMenu.pick(.receive, chrome)' Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift) -eq 3 ]] \
-    || { echo "✗ a private place on Money no longer opens Receive (prd §1943)"; exit 1; }
-use "$SEC" 'AccountLine(label: "Safe", value: networksValue, short: networksShort, end: .opens,' "the Safe on Money no longer opens Receive (prd §1943)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountCopyRow(name: "Privacy Pools", line: AccountNetworks.on(ReceivePools.names), copy: {' "Your accounts lost Privacy Pools, or its networks (prd §1878, §1946)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountCopyRow(name: "Railgun", line: AccountNetworks.on(["Ethereum"]), copy: {' "Railgun's line in Your accounts is gone (prd §1946)"
+# prd §1946: How your accounts work leads Your accounts; the Safe copies its address.
+use "$SEC" 'AccountLine(label: String(localized: "How your accounts work"), end: .opens,' "Your accounts lost How your accounts work (prd §1946)"
+use "$SEC" 'AccountCopyRow(name: "Safe", line: AccountNetworks.on(Self.publicNetworks),' "the Safe in Your accounts no longer copies its address (prd §1946)"
 ! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
 # prd §1785: the three money rows left Home; Account opens on the Safe.
