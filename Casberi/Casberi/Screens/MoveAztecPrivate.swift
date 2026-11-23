@@ -730,11 +730,25 @@ final class AztecMove {
                     // without the word is done all the same.
                     steps.finishAway()
                     paidInTheOpen = (out?["paid"] as? String) == "own"
+                    // Its Activity row, now: nothing reads it back (prd §1953).
+                    if let tx = out?["tx"] as? String, !tx.isEmpty, let context = SharedStore.live?.mainContext {
+                        let total = every.reduce(Decimal(0)) { $0 + (Decimal(string: $1.units) ?? 0) }
+                        let figure = PrivateMoney.figure(NSDecimalNumber(decimal: total).stringValue, decimals: decimals, symbol: symbol)
+                        let who = every.count > 1 ? String(localized: "\(every.count) people") : AddressTail.short(recipient)
+                        PrivateActivity.landAztec(hash: tx, title: PrivateMoney.activityTitle(figure: figure, to: who), context: context)
+                    }
                     stage = .done(out?["tx"] as? String ?? "")
                 } else if toEthereum {
                     steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
                     let exit = try await ShieldBridge.exit(asset, units: units, to: recipient, usd: amountUSD)
+                    // Out to Ethereum, its row at once too (prd §1953).
+                    if !exit.transaction.isEmpty, let context = SharedStore.live?.mainContext {
+                        PrivateActivity.landAztec(hash: exit.transaction,
+                                                  title: PrivateMoney.activityTitle(figure: PrivateMoney.figure(units, decimals: decimals, symbol: symbol),
+                                                                                    to: AddressTail.short(recipient)),
+                                                  context: context)
+                    }
                     stage = .done(exit.transaction)
                 }
                 await AztecAccountStore.shared.refresh()

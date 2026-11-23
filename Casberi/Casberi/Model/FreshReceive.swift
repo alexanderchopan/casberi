@@ -859,4 +859,22 @@ enum PrivateActivity {
         try? context.save()
         NSLog("privateMove| landed | %@", title)
     }
+
+    /// **A SEND FROM AZTEC IS WRITTEN WHEN IT IS SENT (prd §1953, user: "it
+    /// doesn't show in my activity or on home").** Aztec is private, so
+    /// nothing reads it back later: the row is landed at the send, its door
+    /// Aztecscan's page for the transaction (`/tx-effects/<hash>`, the route
+    /// read from Aztecscan's own page code, 2026-11-23).
+    static func landAztec(hash: String, title: String, context: ModelContext) {
+        let ref = PrivateMoney.activityPrefix + hash.lowercased()
+        let existing = (try? context.fetchCount(FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref }))) ?? 0
+        guard existing == 0 else { return }
+        let thing = Thing(kind: .link, title: title, content: aztecscanTx(hash),
+                          source: "Wallet", capturedAt: .now, sourceRef: ref)
+        context.insert(thing)
+        try? context.save()
+        NSLog("privateMove| landed aztec | %@", title)
+    }
+
+    static func aztecscanTx(_ hash: String) -> String { "https://aztecscan.xyz/tx-effects/\(hash.lowercased())" }
 }

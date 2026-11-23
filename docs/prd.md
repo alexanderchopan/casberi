@@ -75098,3 +75098,17 @@ The retry itself worked: 12.98 USDC went into ppUSDC on Ethereum at 18:29 (depos
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds the five, the one transaction, the co-signer's reading, the Aztec-only gate and the kept payments' count; removing the count was caught. **Seen** on an iPhone 17 Pro simulator with `-moveToAztec send -aztecPaysSample YES`: three kept payments with their ×, "And · Choose", Aztec to Aztec only.
+
+## §1953 — A send from Aztec writes its Activity row when it is sent (amends §1700ac, which landed only what Shield carried in) (user, 2026-11-23, after the first pay many on mainnet, build 1067: "it sent!", "but it doesn't show in my activity or on home"; "Yes, add them") — BUILT
+
+**Why.** Only a move into Aztec landed a row (the deposit's, on Ethereum). A private send, one or several, and a send out through Shield landed nothing, and Aztec being private, nothing reads them back later.
+
+1. **At the send** (`PrivateActivity.landAztec`): a private send lands "<total> to <...tail>" or "<total> to N people"; a send out lands "<amount> to <...tail>". One row per transaction, keyed by its hash so it lands once, Home's Activity and the Wallet's alike.
+2. **Its door is Aztecscan's page for the transaction**, `https://aztecscan.xyz/tx-effects/<hash>`, the route read from Aztecscan's own page code (every path answers 200, so the route was read, not probed).
+3. Sends made before this build have no row: none is invented.
+
+**Also proven here: §1952's pay many, on mainnet with the user's money** (build 1067, 2026-11-23): several payments to the user's own Aztec account in one transaction, sent.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds both rows and the door; removing one was caught.

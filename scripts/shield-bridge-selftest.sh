@@ -118,6 +118,10 @@ grep -q '&& (move.pays.isEmpty || move.toAztec) && !DemoMode.isActive' "$MOVE" \
   || { echo "✗ several payments can go to an Ethereum address (prd §1952)"; exit 1; }
 grep -q 'want += paysUnits' "$MOVE" \
   || { echo "✗ the kept payments are no longer counted against what you hold (prd §1952)"; exit 1; }
+# A send from Aztec writes its Activity row when it is sent (prd §1953).
+(( $(grep -c 'PrivateActivity.landAztec(hash:' "$MOVE") == 2 )) \
+  && grep -q '"https://aztecscan.xyz/tx-effects/' Casberi/Casberi/Model/FreshReceive.swift \
+  || { echo "✗ a send from Aztec, or out of it, no longer lands an Activity row (prd §1953)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \
