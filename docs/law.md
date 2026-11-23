@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2143 of 2217 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2144 of 2218 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2126,7 +2126,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700o — A sign-in reads as a sign-in: the app's sentence, the account, the chain, until when and what else it reaches, the wh…
 - §1700p — Aztec's directory has one door, Library's tile; the Wallet's Home loses Apps on Aztec (amended by §1700s)
 - §1700q — Your private balance on Aztec takes any amount: typed, never picked from a list; the first real Shield deposit (amended by §1925)
-- §1700r — Sending from Aztec lists your addresses, reads ".5", exits by your co-signer's score and shows the last balance at once (amended by §1890)
+- §1700r — Sending from Aztec lists your addresses, reads ".5", exits by your co-signer's score and shows the last balance at once (amended by §1890, §1963)
 - §1700s — Aztec's directory tile stands for anyone with Your account on an iPhone, never waiting for the Aztec account to be used (amended by §1700t)
 - §1700t — Your Aztec account shows once you have it: on an iPhone, from the moment there is Your account, never waiting for fir…
 - §1700u — An app that turned your account down, with no co-signer to sign in with, says so and offers Add a co-signer
@@ -2371,7 +2371,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
-- §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945)
+- §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945, §1963)
 - §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
 - §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934)
@@ -2395,7 +2395,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1949 — Out of Aztec under $100 needs no score, measured; and an exit names its amount
 - §1950 — Out of Aztec, this iPhone first: your Shield key signs in for a send out up to $100 a day, the co-signer only past it
 - §1951 — Receive's Try again answers at once, and a move that worked clears the failure above it
-- §1952 — Pay many on Aztec: Add another, five payments in one private transaction
+- §1952 — Pay many on Aztec: Add another, five payments in one private transaction (amended by §1963)
 - §1953 — A send from Aztec writes its Activity row when it is sent
 - §1954 — Holdings is a ledger: one line a token, how many you hold beside its symbol, 40pt
 - §1955 — Home's rows are the ledger's too: 40pt
@@ -2406,6 +2406,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1960 — Private's earning rows say their rate as Public's do; every Holdings name is white
 - §1961 — Paid on Aztec: a payment in is told at once and lands in Activity (builds §1953 for money in)
 - §1962 — Human Passport's door wherever its score is named, one link watched nightly
+- §1963 — Aztec, tightened: Receive says about 20 seconds, pay many declares gas for its payments, and a send out ready to fini…
 
 ## Dead rulings → what replaced them (generated)
 

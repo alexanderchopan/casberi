@@ -75204,3 +75204,13 @@ Amends §1956 item 1's "ETH Privacy Pools".
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds the three doors, the refusal's mark and no spelled link; removing the guide's door was caught.
+
+## §1963 — Aztec, tightened: Receive says about 20 seconds, pay many declares gas for its payments, and a send out ready to finish is said (amends §1928's Aztec Ready, §1952's unmeasured limits, §1700r's Finish in Needs you) (user, 2026-11-23: "ok do 2, 3, 4") — BUILT
+
+1. **Receive's Aztec row says "In about 20 seconds"** (`ReceiveWords`), a send's own time on mainnet (24 s, 2026-11-10); "a few minutes" was Shield's wait, which is not this address's.
+2. **Pay many's gas** (`limitsFor` in `private-fees.js`): a send that could not be measured first declares the fixed limits plus, per payment past the first, twice a private transfer by Aztec v6's own constants, never past 6,000,000 L2 gas. By those constants the fixed limits already held five; this is the margin.
+3. **Ready to finish** (`AztecArrivals.tellReadyExits`, `.readyToFinish`): when the account warms, each send out whose proof has reached Ethereum is told once, while you are away: "Finish on Ethereum: 50 USDC to ...56AB". Needs you still carries the act.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds all three; `test/private-fees.test.mjs` holds the limits' growth and cap.

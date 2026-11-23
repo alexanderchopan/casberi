@@ -179,3 +179,16 @@ if (!process.env.SKIP_ADDRESS) {
 
 console.log(failures ? `private-fees: ${failures} failed` : 'private-fees: ok');
 process.exit(failures ? 1 : 0);
+
+// Pay many's limits (prd §1963): one payment is the fixed limits, each more
+// adds, five never pass a transaction's 6,000,000 L2 gas.
+import { limitsFor as _limitsFor, PRIVATE_FEES as _PF } from '../src/private-fees.js';
+import _test from 'node:test';
+import _assert from 'node:assert/strict';
+_test('limitsFor grows with payments and stays under the cap', () => {
+  _assert.deepEqual(_limitsFor(1), _PF.limits);
+  _assert.ok(_limitsFor(5).l2Gas > _limitsFor(2).l2Gas && _limitsFor(2).l2Gas > _PF.limits.l2Gas);
+  _assert.ok(_limitsFor(5).daGas > _PF.limits.daGas);
+  _assert.ok(_limitsFor(9).l2Gas <= 6_000_000);
+  _assert.deepEqual(_limitsFor(9), _limitsFor(5));
+});

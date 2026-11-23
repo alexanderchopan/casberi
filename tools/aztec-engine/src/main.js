@@ -44,7 +44,7 @@ import { FPCFeePaymentMethod, PrivateMintAndPayFeePaymentMethod } from '@alejoam
 import { estimateGasSettings, maxFeesPerGasFromBaseFees, maxGasCostFor } from '@alejoamiras/private-fee-juice/utils';
 import { WALLET_ICON } from './icon.js';
 import { watched, sendsReached } from './steps.js';
-import { PRIVATE_FEES, choose, sendPaying, inTurn, appFee, payingOptions } from './private-fees.js';
+import { PRIVATE_FEES, limitsFor, choose, sendPaying, inTurn, appFee, payingOptions } from './private-fees.js';
 import { mergeExecutionPayloads } from '@aztec-labs/stdlib/tx';
 import { SetPublicAuthwitContractInteraction, getMessageHashFromIntent } from '@aztec-labs/aztec.js/authorization';
 import { ContractFunctionInteraction } from '@aztec-labs/aztec.js/contracts';
@@ -252,12 +252,12 @@ async function privateGasBalance(fpc, me) {
 // How `interaction` pays (private-fees.js `choose`), with the options its
 // send takes. `gasJSON` is the app's list of private gas deposits nobody has
 // minted yet: [{ nonce, amount, leafIndex, messageHash }].
-async function feeFor(wallet, interaction, gasJSON) {
+async function feeFor(wallet, interaction, gasJSON, payments = 1) {
   const fpc = await privateFpc(wallet);
   if (!fpc) return { how: 'own' };
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const maxFeesPerGas = maxFeesPerGasFromBaseFees(await wallet.aztecNode.getCurrentMinFees());
-  const limits = Gas.from(PRIVATE_FEES.limits);
+  const limits = Gas.from(limitsFor(payments));
   const pending = [];
   for (const g of JSON.parse(gasJSON || '[]')) {
     const item = { nonce: String(g.nonce), amount: BigInt(g.amount), leafIndex: BigInt(g.leafIndex), messageHash: g.messageHash };
@@ -296,11 +296,11 @@ const ownTurn = inTurn();
 // Payments one Aztec transaction carries (prd §1952): Aztec's APP_MAX_CALLS.
 const MAX_PAYS = 5;
 
-function sendOwn(wallet, interaction, gasJSON, ownHolds) {
+function sendOwn(wallet, interaction, gasJSON, ownHolds, payments = 1) {
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const wait = { waitForStatus: 'proposed', timeout: 1800 };
   return ownTurn(() => sendPaying({
-    pay: () => feeFor(wallet, interaction, gasJSON),
+    pay: () => feeFor(wallet, interaction, gasJSON, payments),
     send: async options => (await interaction.send({ from: me, ...(options ?? {}), wait })).receipt,
     reached: sendsReached,
     ownHolds,
@@ -573,7 +573,7 @@ const own = {
     const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
     const sends = pays.map(p => token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(p.to), BigInt(p.units), 0n));
     const interaction = sends.length === 1 ? sends[0] : new BatchCall(wallet, sends);
-    const { receipt, paid, gasNonce } = await sendOwn(wallet, interaction, gasJSON);
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, interaction, gasJSON, undefined, pays.length);
     log('sentPrivatelyMany', { tx: receipt.txHash.toString(), status: receipt.status, paid, pays: pays.length });
     return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
   },

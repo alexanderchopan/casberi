@@ -98039,6 +98039,34 @@
         }
       }
     },
+    "Finish on Ethereum: %@ to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Termina en Ethereum: %1$@ a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumで完了: %1$@を%2$@へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 완료: %1$@을(를) %2$@(으)로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Ethereum 上完成：%1$@ 至 %2$@"
+          }
+        }
+      }
+    },
     "Finish setup" : {
       "localizations" : {
         "es" : {
@@ -109639,6 +109667,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "几分钟内"
+          }
+        }
+      }
+    },
+    "In about 20 seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En unos 20 segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約20秒で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 20초 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "大约 20 秒"
           }
         }
       }
@@ -167058,6 +167114,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已就绪,可执行"
+          }
+        }
+      }
+    },
+    "Ready to finish" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo para terminar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完了できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "완료 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以完成"
           }
         }
       }
@@ -262169,6 +262253,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "可以执行"
+          }
+        }
+      }
+    },
+    "ready to finish" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "listo para terminar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完了できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "완료 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以完成"
           }
         }
       }

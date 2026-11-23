@@ -136,6 +136,14 @@ grep -q 'if case .overDailyCap = problem { HumanPassportDoor { passport = true }
   && grep -q 'forScore: (o?\["reason"\] as? String) == "needs_passport")' "$APP" \
   && ! grep -rq '"https://app.passport.xyz"' "$MOVE" Casberi/Casberi/Screens/AccountsGuideTray.swift \
   || { echo "✗ a place that names the Passport score lost its door, or spells the link itself (prd §1962)"; exit 1; }
+# §1963: Receive says Aztec's real wait; pay many declares gas for its
+# payments; a send out ready to finish is said.
+grep -q 'Fact(label: ready, value: String(localized: "In about 20 seconds")),' Casberi/Casberi/Model/ReceiveWords.swift \
+  && grep -q 'sendOwn(wallet, interaction, gasJSON, undefined, pays.length)' "$ENGJS" \
+  && grep -q 'const limits = Gas.from(limitsFor(payments));' "$ENGJS" \
+  && grep -q 'await AztecArrivals.tellReadyExits()' "$STORE" \
+  && grep -q 'guard case .ready = await ShieldBridge.state(of: exit) else { continue }' Casberi/Casberi/Model/Aztec/AztecArrivals.swift \
+  || { echo "✗ Receive's Aztec wait, pay many's gas or the ready-to-finish notice is gone (prd §1963)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

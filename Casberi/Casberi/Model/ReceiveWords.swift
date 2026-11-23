@@ -21,7 +21,8 @@ import Foundation
 /// UNMEASURED, said here so it is not mistaken for measured: Railgun's
 /// "about an hour" is the screening wait Railgun shows for money shielded in
 /// (`OnItsWay.railgun`), assumed for a payment from another Railgun balance;
-/// Aztec's "a few minutes" is not measured on mainnet (14 s on its testnet);
+/// Aztec's "about 20 seconds" is a send's own time on mainnet (24 s, measured
+/// 2026-11-10, prd §1963), arrival also waits on your phone's next sync;
 /// Privacy Pools' "15 minutes to a few hours" is the user's range.
 enum ReceiveWords {
     enum Place: String, Identifiable {
@@ -145,7 +146,7 @@ enum ReceiveWords {
         case .aztec:
             return [Fact(label: takes, value: "USDC, WETH"),  // On Aztec it is WETH (prd §1943).
                     Fact(label: from, value: String(localized: "Another Aztec account only")),
-                    Fact(label: ready, value: String(localized: "In a few minutes")),
+                    Fact(label: ready, value: String(localized: "In about 20 seconds")),
                     Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]
         }
     }

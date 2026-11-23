@@ -441,6 +441,8 @@ final class AztecAccountStore {
             // A deposit Aztec has carried is claimed here, without Move
             // being opened for it (prd §1700ac).
             await AztecArrivals.settle()
+            // A send out that can now be finished is said (prd §1963).
+            await AztecArrivals.tellReadyExits()
         }
     }
 

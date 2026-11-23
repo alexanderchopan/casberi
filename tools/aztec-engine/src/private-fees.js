@@ -21,6 +21,19 @@ export const PRIVATE_FEES = {
   limits: { l2Gas: 2_000_000, daGas: 50_000 },
 };
 
+// PAY MANY'S LIMITS (prd §1963): each payment past the first adds what a
+// private transfer can cost by Aztec v6's own constants (2 note hashes at
+// 9,200, 2 nullifiers at 16,000, 3 logs at 2,500 L2 gas; their fields at 32
+// DA gas each, a log 16 fields), doubled, and never past a transaction's
+// 6,000,000 L2 gas. The contract charges what is declared, so no more.
+export function limitsFor(payments = 1) {
+  const extra = Math.max(0, Math.min(5, payments) - 1);
+  return {
+    l2Gas: Math.min(6_000_000, PRIVATE_FEES.limits.l2Gas + extra * 2 * (2 * 9_200 + 2 * 16_000 + 3 * 2_500)),
+    daGas: PRIVATE_FEES.limits.daGas + extra * 2 * 32 * (2 + 2 + 3 * 16),
+  };
+}
+
 // The one failure that says nothing about the payment: the send ran, and the
 // wallet handed back no gas figures to size it by.
 const UNMEASURED = /Gas usage metadata/;

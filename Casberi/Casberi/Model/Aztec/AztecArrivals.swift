@@ -35,4 +35,21 @@ enum AztecArrivals {
         await AztecGas.settle()
         await ShieldBridge.settle()
     }
+
+    /// **READY TO FINISH, SAID (prd §1963).** About an hour after a send out
+    /// of Aztec, Aztec's proof reaches Ethereum and Needs you offers Finish;
+    /// nothing said so. Each exit is told once, when it first reads ready.
+    static func tellReadyExits() async {
+        guard !DemoMode.isActive else { return }
+        let key = "aztec.exits.toldReady"
+        var told = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+        for exit in AztecAccountStore.shared.pendingExits where !told.contains(exit.transaction) {
+            guard case .ready = await ShieldBridge.state(of: exit) else { continue }
+            told.insert(exit.transaction)
+            UserDefaults.standard.set(Array(told), forKey: key)
+            let body = String(localized: "Finish on Ethereum: \(AztecAccountStore.figure(exit)) to \(AddressTail.short(exit.recipient))")
+            await Notifications.outcome(.readyToFinish, id: "aztec:exit:" + exit.transaction, place: "Aztec",
+                                        body: body, mark: "Aztec", awayOnly: true)
+        }
+    }
 }
