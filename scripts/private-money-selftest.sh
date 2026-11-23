@@ -1352,10 +1352,11 @@ use "$SENT" 'tapBlank(which == .destination && !networkPicked ? .network : which
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
 # Receive asks where (prd §1929): each private place a row that copies.
-use "$SENT" 'receiveRow(String(localized: "To Privacy Pools"),' "Receive lost To Privacy Pools (prd §1779, §1929)"
-use "$SENT" 'receiveRow(String(localized: "To Railgun"),' "Receive lost To Railgun (prd §1877, §1929)"
-use "$SENT" 'receiveRow(String(localized: "To Aztec"), nameInk: DS.aztecInk,' "Receive's Aztec row is hidden again or lost its ink (prd §1779, §1929)"
-use "$SENT" 'say(String(localized: "Copied · new address each time"))' "copying Privacy Pools' address no longer says it is new each time (prd §1892, §1929)"
+# prd §1945: Receive draws every place through ReceivePlace, in its order.
+use "$SENT" 'ReceivePoolsPlace(facts: receiveFacts(.pools), payGas:' "Receive lost Privacy Pools (prd §1779, §1945)"
+use "$SENT" 'ReceivePlace(name: ReceiveWords.name(.railgun), facts: receiveFacts(.railgun),' "Receive lost Railgun (prd §1877, §1945)"
+use "$SENT" 'ReceivePlace(name: ReceiveWords.name(.aztec), facts: receiveFacts(.aztec), ink: DS.aztecInk,' "Receive's Aztec place is hidden again or lost its ink (prd §1779, §1945)"
+use "Casberi/Casberi/Screens/ReceivePlace.swift" 'chrome.flash(String(localized: "Copied · new address each time"), tone: .success)' "copying Privacy Pools' address no longer says it is new each time (prd §1892, §1945)"
 use "$FRESHV" '} else if let payGas, waitsForGas(entry), !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779), or Pay the gas stands where no account can pay (prd §1823)"
 use "$FRESHV" 'case .failed: entry.symbol != nil && shortOfGas.contains(entry.id)' "a failed token move short of gas has no way on (prd §1823)"
 use "$FRESHV" 'ForEach(live) { entry in' "Receive no longer shows the addresses the money is at (prd §1823, §1945)"
