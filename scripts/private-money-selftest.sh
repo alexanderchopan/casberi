@@ -1365,7 +1365,7 @@ use "Casberi/Casberi/Model/FreshReceive.swift" 'failure = Self.words(error, step
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'if let mended = AddressSafety.pasted(text) {' "Send's To no longer mends an address read off a picture (prd §1823)"
 use "$FRESHV" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
 use "Casberi/Casberi/Model/ReceiveWords.swift" 'value: String(localized: "Send a little ETH with USDC or USDG")' "Privacy Pools no longer says a token needs ETH sent with it (prd §1779, §1946)"
-use "$FRESHV" 'if case .failed = entry.state, !shortOfGas.contains(entry.id) {' "a failed move on Receive has no Try again (prd §1945, §1946)"
+use "$FRESHV" 'if case .failed = entry.state, !shortOfGas.contains(entry.id), !retrying.contains(entry.id) {' "a failed move on Receive has no Try again (prd §1945, §1946; hidden only while it is trying, §1951)"
 use "Casberi/Casberi/Model/ReceiveWords.swift" 'var lines = [Fact(label: takes, value: "ETH, USDC, USDG")]' "Receive no longer says what Privacy Pools takes before it is copied (prd §1779, §1946)"
 use "Casberi/Casberi/Model/ReceiveWords.swift" 'Fact(label: from, value: String(localized: "Another Aztec account only")),' "the Aztec address lost its rule on Receive (prd §1779, §1946)"
 # prd §1944: the Aztec account's own page is deleted; Receive holds its address and rule.
