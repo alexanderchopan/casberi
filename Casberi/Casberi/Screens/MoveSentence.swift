@@ -5968,8 +5968,9 @@ struct MoveSentence: View {
             // and nothing public names either side or the amount.
             if RailgunPocket.available, RailgunSwap.isPrivateAddress(q) {
                 // A saved one is called by the name you gave it (prd §1965).
+                // Every row names its place (prd §1965a, as §1964b).
                 toRow(AddressBook.shared.name(for: q) ?? String(localized: "Their private balance"),
-                      sub: YourAccount.short(q), symbol: "eye.slash") {
+                      sub: "Railgun · " + AddressTail.short(q), symbol: "eye.slash") {
                     goRailgun(.takeBack, contract: nil, recipient: q)
                 }
             }
@@ -6054,7 +6055,7 @@ struct MoveSentence: View {
                 listHeader(String(localized: "Contacts"))
             }
             ForEach(Array(railgunSaved.prefix(8)), id: \.address) { e in
-                toRow(e.name, sub: String(localized: "Private balance · \(AddressTail.short(e.address))"), symbol: "eye.slash") {
+                toRow(e.name, sub: "Railgun · " + AddressTail.short(e.address), symbol: "eye.slash") {
                     goRailgun(.takeBack, contract: nil, recipient: e.address)
                 }
             }
@@ -6086,9 +6087,10 @@ struct MoveSentence: View {
                     && !recent.contains { WalletWatch.sameAddress($0, e.address) }
             }.prefix(20)), id: \.address) { e in
                 // A company in the book (Uniswap, Coinbase) wears its logo; a
-                // person, their face (prd §1534). Its tail under the name.
+                // person, their face (prd §1534). Its place and tail under the
+                // name: one Ana can be on Ethereum, Aztec and Railgun (§1965a).
                 let logo = AssetMark.hasAsset(e.name)
-                toRow(e.name, sub: YourAccount.short(e.address), mark: logo ? e.name : nil, face: logo ? nil : e.address) {
+                toRow(e.name, sub: "Ethereum · " + AddressTail.short(e.address), mark: logo ? e.name : nil, face: logo ? nil : e.address) {
                     to = e.name
                     resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
                     pick {}

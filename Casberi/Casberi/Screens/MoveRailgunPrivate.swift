@@ -1437,7 +1437,9 @@ struct MoveRailgunSentence<Head: View>: View {
         case .takeBack:
             out.append(MoveDeckStep(id: "from", word: String(localized: "From"), answered: true, value: "Railgun", glyph: "lock.fill") { leave(.switchOff) })
             // A Railgun address you saved is said by its name (prd §1965).
-            let to = move.toPrivate ? (AddressBook.shared.name(for: move.recipient ?? "") ?? YourAccount.short(move.recipient ?? ""))
+            // The name keeps the address's tail, to check by (prd §1965a, as §1964b).
+            let to = move.toPrivate ? (AddressBook.shared.name(for: move.recipient ?? "").map { "\($0) · \(AddressTail.short(move.recipient ?? ""))" }
+                                        ?? YourAccount.short(move.recipient ?? ""))
                 : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: to) { leave(.pickRecipient) })
         case .swap:

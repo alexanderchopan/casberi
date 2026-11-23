@@ -159671,34 +159671,6 @@
         }
       }
     },
-    "Private balance · %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Saldo privado · %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "非公開残高 · %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "비공개 잔액 · %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "私密余额 · %@"
-          }
-        }
-      }
-    },
     "Private balances" : {
       "localizations" : {
         "es" : {

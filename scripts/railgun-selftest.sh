@@ -357,5 +357,8 @@ use "$MOVEF" 'AddressBook.shared.setName(savingName, for: address, networks: ["r
 use "$MOVEF" 'out.append(MoveDeckStep(id: "name", word: String(localized: "Name")' "the receipt asks the name before the send leaves its sheet"
 use "Casberi/Casberi/Screens/MoveSentence.swift" "AddressBook.shared.railgunAccounts.filter" "Send's To lists your saved Railgun addresses"
 use "Casberi/Casberi/Screens/MoveSentence.swift" "goRailgun(.takeBack, contract: nil, recipient: e.address)" "a saved Railgun address is paid inside Railgun, never publicly"
+use "Casberi/Casberi/Screens/MoveSentence.swift" 'toRow(e.name, sub: "Railgun · " + AddressTail.short(e.address)' "a saved Railgun address names its place in To (§1965a)"
+use "Casberi/Casberi/Screens/MoveSentence.swift" 'sub: "Ethereum · " + AddressTail.short(e.address)' "a public contact names its place in To"
+use "$MOVEF" '"\($0) · \(AddressTail.short(move.recipient ?? ""))"' "the receipt's To keeps the tail beside a saved name"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"
