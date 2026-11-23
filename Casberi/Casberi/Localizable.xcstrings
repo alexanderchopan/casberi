@@ -57660,30 +57660,30 @@
         }
       }
     },
-    "Anyone with Railgun on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move tokens in from your public account: ETH and USDC go to Privacy Pools instead, where they earn. Anything else is private in about an hour, once Railgun checks it." : {
+    "Anyone on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move tokens in from your public account: ETH and USDC go to Privacy Pools instead, where they earn. Anything else is private in about an hour, once Railgun checks it." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cualquiera con Railgun en Ethereum puede pagar a tu dirección de Railgun, en cualquier token. Normalmente puedes usarlo en minutos. También puedes traer tokens desde tu cuenta pública: ETH y USDC van a Privacy Pools, donde rinden. Lo demás pasa a ser privado en una hora aproximadamente, cuando Railgun lo revisa."
+            "value" : "Cualquiera en Ethereum puede pagar a tu dirección de Railgun, en cualquier token. Normalmente puedes usarlo en minutos. También puedes traer tokens desde tu cuenta pública: ETH y USDC van a Privacy Pools, donde rinden. Lo demás pasa a ser privado en una hora aproximadamente, cuando Railgun lo revisa."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "EthereumでRailgunを使う人なら誰でも、あらゆるトークンであなたのRailgunアドレスに支払えます。通常は数分で使えます。公開アカウントからトークンを移すこともできます。ETHとUSDCは代わりにPrivacy Poolsへ入り、利息が付きます。それ以外はRailgunの確認後、約1時間でプライベートになります。"
+            "value" : "Ethereum上の誰でも、あらゆるトークンであなたのRailgunアドレスに支払えます。通常は数分で使えます。公開アカウントからトークンを移すこともできます。ETHとUSDCは代わりにPrivacy Poolsへ入り、利息が付きます。それ以外はRailgunの確認後、約1時間でプライベートになります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum에서 Railgun을 쓰는 사람은 누구나 어떤 토큰으로든 내 Railgun 주소로 보낼 수 있습니다. 보통 몇 분 안에 쓸 수 있습니다. 공개 계정에서 토큰을 옮겨올 수도 있습니다. ETH와 USDC는 대신 Privacy Pools로 가서 수익을 냅니다. 그 외는 Railgun이 확인하면 약 1시간 후 비공개가 됩니다."
+            "value" : "Ethereum의 누구나 어떤 토큰으로든 내 Railgun 주소로 보낼 수 있습니다. 보통 몇 분 안에 쓸 수 있습니다. 공개 계정에서 토큰을 옮겨올 수도 있습니다. ETH와 USDC는 대신 Privacy Pools로 가서 수익을 냅니다. 그 외는 Railgun이 확인하면 약 1시간 후 비공개가 됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "任何在 Ethereum 上使用 Railgun 的人都可以用任意代币向你的 Railgun 地址付款。通常几分钟内即可使用。你也可以从公开账户转入代币:ETH 和 USDC 会改为进入 Privacy Pools 赚取收益。其他代币在 Railgun 检查后约一小时变为私密。"
+            "value" : "Ethereum 上的任何人都可以用任意代币向你的 Railgun 地址付款。通常几分钟内即可使用。你也可以从公开账户转入代币:ETH 和 USDC 会改为进入 Privacy Pools 赚取收益。其他代币在 Railgun 检查后约一小时变为私密。"
           }
         }
       }

@@ -72,7 +72,7 @@ enum AccountsGuide {
             Account(id: "railgun", name: "Railgun", kind: .private,
                     parts: [
                         Part(title: receive,
-                             paragraphs: [String(localized: "Anyone with Railgun on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move tokens in from your public account: ETH and USDC go to Privacy Pools instead, where they earn. Anything else is private in about an hour, once Railgun checks it.")],
+                             paragraphs: [String(localized: "Anyone on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move tokens in from your public account: ETH and USDC go to Privacy Pools instead, where they earn. Anything else is private in about an hour, once Railgun checks it.")],
                              goodToKnow: String(localized: "moving in starts at $10 of a token Casberi can price. Railgun takes 0.25%.")),
                         Part(title: send,
                              paragraphs: [String(localized: "Send to anyone with Railgun, and it stays private: only they can see it. Or send to anyone on Ethereum: a Railgun broadcaster, or a one-time address of yours paying gas from your private ETH, sends it for you, so your public account never shows up. You see the cost before you send. You can also send back to your public account.")],
