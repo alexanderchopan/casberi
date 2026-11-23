@@ -96,7 +96,7 @@ struct OnItsWaySheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .frame(minHeight: 36)
+        .frame(minHeight: DSFeed.headHeight)
         .accessibilityElement(children: .combine)
     }
 }

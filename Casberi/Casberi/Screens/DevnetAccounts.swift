@@ -71,7 +71,7 @@ private struct ExplorerGround: ViewModifier {
     @ViewBuilder func body(content: Content) -> some View {
         if plain {
             content
-                .frame(minHeight: 56)
+                .frame(minHeight: DSFeed.headHeight)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
         } else {

@@ -62,8 +62,7 @@ struct PivotPage: View {
                                        tint: DS.textSecondary, opens: false) {
                             DSGlyphLead(glyph: "arrow.down", tint: DS.textSecondary)
                         }
-                        .padding(.vertical, DS.Space.s2)
-                        .frame(minHeight: DS.Hit.min)
+                        .frame(minHeight: DSFeed.headHeight)
                     }
                     .buttonStyle(RowPress())
                     .pivotRowInsets()

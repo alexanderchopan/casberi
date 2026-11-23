@@ -39,7 +39,7 @@ import SwiftUI
 enum WalletCardStyle {
     static let fill = 0.82
     static let pad = DS.Space.s4
-    /// **THE LEDGER'S HEAD (prd §1953).** Holdings and its Tokens list are
+    /// **THE LEDGER'S HEAD (prd §1954).** Holdings and its Tokens list are
     /// read down, to compare, so a one-line row there stands 32pt with the
     /// list's air above and below: a 40pt pitch, against the 52 of a row
     /// you read on its own. The 30pt mark still fits (§1071).
@@ -81,7 +81,7 @@ extension View {
             .padding(.vertical, FeedScreen.rowAir)
     }
 
-    /// A one-line ledger row's height inside a stack (prd §1953): 40pt.
+    /// A one-line ledger row's height inside a stack (prd §1954): 40pt.
     func walletLedgerPitch() -> some View {
         self.frame(minHeight: WalletCardStyle.ledgerHead)
             .padding(.vertical, FeedScreen.rowAir)

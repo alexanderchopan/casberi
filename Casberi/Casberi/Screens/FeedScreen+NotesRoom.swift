@@ -175,7 +175,7 @@ extension FeedScreen {
                         .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .contextMenu {
                     // Share leads (prd §1021): the folder as one card.
                     Button {
@@ -215,7 +215,7 @@ extension FeedScreen {
                         .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .noteFolderRowChrome()
             }
             // RECENTLY DELETED (prd §985), after the folders as in Apple
@@ -233,7 +233,7 @@ extension FeedScreen {
                         .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .noteFolderRowChrome()
             }
             // New folder LAST (prd §983), Apple Notes' place for it: the
@@ -250,7 +250,7 @@ extension FeedScreen {
                     .frame(width: DS.Face.seat, height: DS.Face.seat)
                     .accessibilityHidden(true)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .noteFolderRowChrome()
         }
     }

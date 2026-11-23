@@ -58,7 +58,7 @@ struct AztecWayInRows: View {
                 Text(verbatim: fact).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
             }
         }
-        .frame(minHeight: 36)
+        .frame(minHeight: DSFeed.headHeight)
         .accessibilityElement(children: .combine)
     }
 }

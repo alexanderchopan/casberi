@@ -83,7 +83,7 @@ struct PrivateStepRows: View {
                 Text(verbatim: time).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
             }
         }
-        .frame(minHeight: 32)
+        .frame(minHeight: DSFeed.headHeight)
         .accessibilityElement(children: .combine)
     }
 }

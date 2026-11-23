@@ -63,7 +63,7 @@ struct NoteTrashTray: View {
                     .dsText(.label12)
                     .foregroundStyle(DS.textTertiary)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

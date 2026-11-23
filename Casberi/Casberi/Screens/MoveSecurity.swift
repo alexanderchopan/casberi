@@ -905,7 +905,7 @@ struct MoveSecurity: View {
                             let (word, ink) = coSignerStepWord(s, on: on)
                             Text(verbatim: word).dsText(.body17).foregroundStyle(ink).lineLimit(1)
                         }
-                        .frame(minHeight: 44)
+                        .frame(minHeight: DSFeed.headHeight)
                     }
                 }
                 if approvals > 0, !finished {

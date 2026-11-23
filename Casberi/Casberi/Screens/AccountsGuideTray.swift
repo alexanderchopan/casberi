@@ -69,8 +69,7 @@ struct AccountsGuideTray: View {
                         .rotationEffect(.degrees(isOpen ? 180 : 0))
                         .accessibilityHidden(true)
                 }
-                .padding(.vertical, DS.Space.s3)
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())

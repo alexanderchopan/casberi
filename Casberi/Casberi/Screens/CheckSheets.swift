@@ -269,7 +269,7 @@ struct WalletbeatWalletSheet<Tiles: View>: View {
                                 .lineLimit(1)
                             Spacer(minLength: 0)
                         }
-                        .frame(minHeight: 36)
+                        .frame(minHeight: DSFeed.headHeight)
                     }
                 }
             }

@@ -2613,7 +2613,7 @@ struct ThingSheetView: View {
                         .dsGlyph(.tick, weight: .semibold)
                 }
                 .foregroundStyle(DS.textSecondary)
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .contentShape(Rectangle())
             }
             .accessibilityLabel(Text(current.map { String(localized: "Folder: \($0). Move the note") }
@@ -2692,7 +2692,7 @@ struct ThingSheetView: View {
                     .dsGlyph(.tick, weight: .semibold)
             }
             .foregroundStyle(DS.textSecondary)
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -4737,8 +4737,7 @@ struct ThingSheetView: View {
             act()
         } label: {
             DSPushRowLabel(title: Text(verbatim: title), subtitle: Text(verbatim: line)) { lead() }
-                .padding(.vertical, DS.Space.s2)
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
         }
         .buttonStyle(RowPress())
         .dsHover()

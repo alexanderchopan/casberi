@@ -53,7 +53,7 @@ struct ConnectWalletRow: View {
                         .background(DS.tintDim, in: RoundedRectangle(
                             cornerRadius: DS.Radius.appIcon(34), style: .continuous))
                 }
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // A row, not a card (prd §782): it stands in the page's
                 // column on nothing, and air separates it from its neighbours.

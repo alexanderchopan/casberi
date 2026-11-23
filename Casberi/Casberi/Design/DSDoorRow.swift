@@ -104,7 +104,7 @@ struct DSDoorRowLabel: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, DS.Space.s1)
-        .frame(minHeight: DS.Hit.min)
+        .frame(minHeight: DSFeed.headHeight)
         .contentShape(Rectangle())
     }
 }

@@ -41,7 +41,7 @@ struct WalletPortfolio: Equatable, Codable {
         var parts: [Part] = []
         var id: String { symbol }
 
-        /// **HOW MANY YOU HOLD (prd §1953)** — the parts' counts summed, and
+        /// **HOW MANY YOU HOLD (prd §1954)** — the parts' counts summed, and
         /// only when they are the whole: every part counted, and the parts'
         /// dollars the row's. A row with money no part carries (an exchange,
         /// validators, staked SOL, Private) has no count, never a short one.
@@ -70,7 +70,7 @@ struct WalletPortfolio: Equatable, Codable {
         let key: String
         let holder: String
         let usd: Double
-        /// How many tokens (prd §1953); nil where the read gave no count.
+        /// How many tokens (prd §1954); nil where the read gave no count.
         var amount: Double? = nil
     }
 
@@ -435,7 +435,7 @@ struct WalletPortfolio: Equatable, Codable {
                                 amount: demoAmount(symbol, usd: usd * $0.share)) }
     }
 
-    /// The demo's token count for a stake (prd §1953), at the demo's own
+    /// The demo's token count for a stake (prd §1954), at the demo's own
     /// round prices (`MainnetPrices.demoPrices`, spelled here so this file
     /// stays Foundation-only); nil for a symbol with none.
     static func demoAmount(_ symbol: String, usd: Double) -> Double? {

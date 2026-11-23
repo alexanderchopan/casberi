@@ -2224,7 +2224,7 @@ enum WalletIngest {
         /// contracts behind each symbol, so one can be hidden apart (prd
         /// §1591). Empty on a last-known group (a sample keeps symbols only).
         var partsBySymbol: [String: [String: Double]] = [:]
-        /// symbol → contract key → how many TOKENS (prd §1953), keyed as
+        /// symbol → contract key → how many TOKENS (prd §1954), keyed as
         /// `partsBySymbol`; a contract read without a count is absent. Empty
         /// on a last-known group, which keeps dollars only.
         var amountsBySymbol: [String: [String: Double]] = [:]
@@ -2830,7 +2830,7 @@ enum WalletIngest {
         // real symbol sums into the real one's row, so a hide must be able
         // to take the one contract and leave the rest.
         var parts: [String: [String: Double]] = [:]
-        // How many tokens each contract holds (prd §1953), beside its
+        // How many tokens each contract holds (prd §1954), beside its
         // dollars. A contract any read of which came without a count has
         // none: a partial count presented as the whole is §83's failure.
         var amounts: [String: [String: Double]] = [:]

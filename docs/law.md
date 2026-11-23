@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2134 of 2208 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2139 of 2213 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2387,6 +2387,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1941 — Move's receipt chip wears the ramp's row face, 30pt, never its own 28
 - §1942 — A deposit 0xBow has never seen is not "being checked"
 - §1943 — Into Aztec in ETH: Move wraps it, and ETH and WETH are two choices
+- §1943 — Earn's From rows show today's rate
 - §1944 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive… (amended by §1947)
 - §1945 — Privacy Pools' page is a receipt: its name, Takes · On · Status, the address on its plate; a failed move says Try aga…
 - §1946 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receiv… (amended by §1947)
@@ -2397,6 +2398,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1951 — Receive's Try again answers at once, and a move that worked clears the failure above it
 - §1952 — Pay many on Aztec: Add another, five payments in one private transaction
 - §1953 — A send from Aztec writes its Activity row when it is sent
+- §1954 — Holdings is a ledger: one line a token, how many you hold beside its symbol, 40pt
+- §1955 — Home's rows are the ledger's too: 40pt
+- §1956 — Private's rows are one line at 40pt too; Home's Account door reads Accounts
+- §1957 — Every row in the app is 40pt: one head, no hand-set heights
 
 ## Dead rulings → what replaced them (generated)
 

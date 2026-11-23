@@ -655,7 +655,7 @@ struct BandRow: View {
 
     /// The trailing thumbnail fills the row's head; the lead stays a mark's size.
     private var pictureSize: CGFloat {
-        groupedSource == nil ? DS.Mark.row : DSFeedRow<EmptyView, EmptyView, EmptyView>.headHeight
+        groupedSource == nil ? DS.Mark.row : DSFeed.pictureHead
     }
 
     private var leader: Leader {

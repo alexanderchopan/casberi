@@ -51,7 +51,7 @@ struct AssetRosterSlot<Mark: View>: View {
                     TokenDeltaPill(change: change, label: "", compact: true)
                 }
             }
-            .frame(minHeight: 52, alignment: .top)
+            .frame(minHeight: DSFeed.headHeight, alignment: .top)
         }
         .frame(width: Self.slotWidth)
         .contentShape(Rectangle())

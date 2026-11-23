@@ -702,7 +702,7 @@ struct WalkDoors: View {
                 }
                 // A door on no plate (prd §782): the chevron and the whole-width
                 // target say it opens; 44pt tall like every row.
-                .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
+                .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight)
                 .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())

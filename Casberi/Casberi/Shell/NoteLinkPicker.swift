@@ -66,7 +66,7 @@ struct NoteLinkPicker: View {
                                         .lineLimit(1)
                                     Spacer(minLength: 0)
                                 }
-                                .frame(minHeight: 44)
+                                .frame(minHeight: DSFeed.headHeight)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(RowPress())

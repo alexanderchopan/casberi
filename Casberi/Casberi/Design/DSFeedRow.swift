@@ -151,8 +151,8 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
             // pushed air between this app and the next. The app's name over
             // it and the icon beside it (§1157) keep the cell taller than a
             // finger.
-            // A title-only row is the ledger's (prd §1954): Home reads down.
-            .frame(minHeight: groupedSource == nil ? (titleOnly ? DSFeed.ledgerHead : Self.headHeight) : 0,
+            // A title-only row is the ledger's (prd §1955): Home reads down.
+            .frame(minHeight: groupedSource == nil ? Self.headHeight : 0,
                    alignment: groupedSource == nil ? .center : .top)
             below
                 .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : 0)
@@ -235,13 +235,23 @@ extension EnvironmentValues {
 enum DSFeed {
     /// The head every row shares (prd §902, §1071, §1482): 44pt, the tap
     /// minimum. Here, off the generic, so a row drawn by hand can name it.
-    static let headHeight: CGFloat = 44
-
-    /// **THE LEDGER'S HEAD (prd §1953, §1954).** A one-line row in a list
-    /// read down — Holdings, and Home's and Activity's title-only rows —
-    /// stands 32pt with the list's 4pt air above and below: a 40pt pitch.
+    ///
+    /// **32 SINCE prd §1957 (user, 2026-11-23: "we need to put contacts and
+    /// other places we have rows be in the same 40point … sweep the entire
+    /// app").** Every row in the app is the ledger's (§1954): a one-line row
+    /// stands 32pt with the list's 4pt air above and below, a 40pt pitch. It
+    /// is a MINIMUM: a row with a line under its name is already 44pt of
+    /// words (body17 25 + 2 + subhead12 17), so it keeps its 52 by itself.
     /// The 30pt mark still fits (§1071).
-    static let ledgerHead: CGFloat = 32
+    static let headHeight: CGFloat = 32
+
+    /// The same head, by its older name (prd §1954).
+    static let ledgerHead: CGFloat = headHeight
+
+    /// A picture standing in a row's head (the thumbnail under an app
+    /// header, §1103b): the two-line row's height, so a row with one is as
+    /// tall as its words were.
+    static let pictureHead: CGFloat = 44
 
     /// The line from whatever clauses a row has, joined the way every row
     /// joins them. Nil when there are none, so no row draws an empty line.

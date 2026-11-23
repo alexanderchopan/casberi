@@ -74,7 +74,7 @@ struct OwnNodeTray: View {
                     .foregroundStyle(DS.textSecondary)
                     .accessibilityHidden(true)
             }
-            .frame(minHeight: 48)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

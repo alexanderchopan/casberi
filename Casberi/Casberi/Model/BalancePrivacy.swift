@@ -166,7 +166,7 @@ enum WalletValue {
     }
 
     /// "1.42", "40K" — how many of a token you hold, no unit (the row's
-    /// symbol says it, prd §1953): compact from ten thousand so the row's
+    /// symbol says it, prd §1954): compact from ten thousand so the row's
     /// money columns never move. Gated, as every amount is.
     static func held(_ amount: Double) -> String {
         let words: String

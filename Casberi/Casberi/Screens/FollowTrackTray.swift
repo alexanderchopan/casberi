@@ -172,7 +172,7 @@ struct FollowTrackTray: View {
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text("Follow \(hit.displayName)"))
         }
-        .frame(minHeight: 60)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 

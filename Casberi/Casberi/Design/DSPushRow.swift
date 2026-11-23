@@ -69,9 +69,9 @@ struct DSPushRowLabel<Leading: View>: View {
         // (`DSFeed.headHeight`), so a row with no line stands as tall as
         // one with, and a list of both keeps one pitch.
         // Where rows are titles alone (Home, Activity) the pitch is the
-        // ledger's 40 (prd §1954, user: "make the rows on home be the same
+        // ledger's 40 (prd §1955, user: "make the rows on home be the same
         // height as those in holdings").
-        .frame(minHeight: titleOnly ? DSFeed.ledgerHead : DSFeed.headHeight)
+        .frame(minHeight: DSFeed.headHeight)
         .contentShape(Rectangle())
     }
 }

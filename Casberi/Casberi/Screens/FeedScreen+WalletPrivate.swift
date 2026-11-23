@@ -172,7 +172,7 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: DS.textSecondary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -234,12 +234,12 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                // The place alone (prd §1955); the network is the page's.
+                // The place alone (prd §1956); the network is the page's.
                 walletLedgerWords(h.symbol, fact: pending ? line : String(localized: "Railgun"))
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: pending ? DS.textSecondary : DS.textPrimary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -275,7 +275,7 @@ extension FeedScreen {
                 walletLedgerWords(name, fact: line)
                 Spacer(minLength: DS.Space.s2)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -313,7 +313,7 @@ extension FeedScreen {
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
                 }
-                .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
+                .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -349,7 +349,7 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(percent, tone: DS.textPrimary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: [String(localized: "Savings goal"), line, percent].compactMap { $0 }.joined(separator: ". ")))
             .walletListRow()
@@ -570,14 +570,14 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                // One line (prd §1955): the place alone, or a short state;
+                // One line (prd §1956): the place alone, or a short state;
                 // the whole line ("Ethereum · 1.5% on Aave · Privacy Pools",
                 // "since Nov 18") is the row's page's.
                 walletLedgerWords(row.title, fact: fact, factInk: stateInk)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1955)
+            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -742,7 +742,7 @@ extension WalletPortfolio {
 }
 
 extension FeedScreen {
-    /// **A LEDGER ROW'S WORDS (prd §1953, §1955):** the name, then one short
+    /// **A LEDGER ROW'S WORDS (prd §1954, §1956):** the name, then one short
     /// fact after it in grey on the same line. The name never gives way; the
     /// fact is cut at its tail.
     func walletLedgerWords(_ name: String, fact: String?, factInk: Color = DS.textTertiary,

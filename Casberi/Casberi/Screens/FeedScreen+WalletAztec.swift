@@ -239,7 +239,7 @@ extension FeedScreen {
         }
     }
 
-    /// `ledger`: Public's one line at 40pt (prd §1953), the line's words
+    /// `ledger`: Public's one line at 40pt (prd §1954), the line's words
     /// after the name; else the name over its line at 52.
     @ViewBuilder
     private func aztecRowLabel(title: String, line: String, figure: String, mark: String?, tone: Color,
@@ -262,7 +262,7 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: tone)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // its List row carries the air (prd §1953)
+            .frame(minHeight: WalletCardStyle.ledgerHead) // its List row carries the air (prd §1954)
         } else {
             aztecRowStacked(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
         }

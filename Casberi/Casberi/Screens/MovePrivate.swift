@@ -792,7 +792,7 @@ struct MovePrivateSwitch: View {
                 .accessibilityHidden(true)
             DSToggleRow(title: Text("Private"), isOn: $isOn)
         }
-        .frame(minHeight: 52)
+        .frame(minHeight: DSFeed.headHeight)
         .animation(DS.Motion.standard, value: isOn)
     }
 }

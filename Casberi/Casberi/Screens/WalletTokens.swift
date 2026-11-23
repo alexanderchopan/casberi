@@ -33,7 +33,7 @@ struct WalletTokenFold {
     var restUSD: Double { rest.reduce(0) { $0 + $1.usd } }
 }
 
-/// A token, as the all-tokens tray draws it — Holdings' row (prd §1953): its
+/// A token, as the all-tokens tray draws it — Holdings' row (prd §1954): its
 /// mark, its symbol and how many you hold on one line, then the day's move
 /// (or its share) beside the dollars, which pin to the edge. Where it sits is
 /// the token's page's; Ethereum disagreeing (§1825) still takes a line.
@@ -43,7 +43,7 @@ struct WalletTokenRowLabel: View {
     let move: Double?
 
     /// A row with a line under it keeps the Wallet's 52pt pitch; a one-line
-    /// row is the ledger's 40 (prd §1953).
+    /// row is the ledger's 40 (prd §1954).
     var twoLine: Bool { HoldingsCheckStore.shared.mismatched(position) }
 
     var body: some View {

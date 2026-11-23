@@ -78,7 +78,7 @@ struct DSSpecRow: View {
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
                 .gridColumnAlignment(.leading)
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 // THE VALUE STANDS AT THE TRAILING EDGE (prd §1740): packed
@@ -103,7 +103,7 @@ struct DSSpecRow: View {
                         .foregroundStyle(DS.textTertiary)
                 }
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
         }
         .modifier(DSSpecRowTap(action: action))
     }

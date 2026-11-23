@@ -97,7 +97,7 @@ struct NoteRemindTray: View {
                 }
             }
             .foregroundStyle(tinted ? DS.pickInk : DS.textPrimary)
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

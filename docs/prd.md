@@ -75112,3 +75112,53 @@ The retry itself worked: 12.98 USDC went into ppUSDC on Ethereum at 18:29 (depos
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds both rows and the door; removing one was caught.
+
+## §1954 — Holdings is a ledger: one line a token, how many you hold beside its symbol, 40pt (user, 2026-11-23: "the rows in holdings make the tokens seem far apart and harder to scan all your holdings at once … should we make our row spacing shorter on holdings? on both?"; of option B, "why not B w/ how much you hold also on that line? … people will want to see that number sometimes especially for eth"; "Yes, build B+") — BUILT
+
+Amends §1482 (one Wallet row pitch) and §1862 (a one-line preview row takes half the air) for Holdings only. Home keeps 52pt: it is a feed of different things read one at a time; Holdings is a table read down to compare.
+
+1. **A token is one line:** its mark, its symbol, how many you hold in grey (`fact15`, `DS.textTertiary`, no unit: "ETH 1.42"), then the day's move, then the dollars pinned to the edge, so the dollars read down one column and the day down the one beside it. The networks line (§1718) moves to the token's page, which already lists its places.
+2. **The pitch is 40pt:** a 32pt head (`WalletCardStyle.ledgerHead`) and the list's 4pt air above and below. The mark stays 30 (§1071). Every one-line preview row on Holdings takes it (Apps' rows too), and the Tokens list's rows (`WalletTokenRowLabel`, `walletLedgerPitch()`).
+3. **Public's other rows take the line too** (user, 2026-11-23: "should we put their info on a single line?" → "Yes, one line"): lent USDC reads "USDC 5.1% · Aave", Round-ups "$6.20 of $10 · Aave", Fee Juice "Aztec · Gas" in Aztec's ink, the fact in grey after the name. The network is the row's page's.
+4. **A row with a line under it keeps 52:** "Doesn't match Ethereum" (§1825) is never folded into the line.
+5. **How many is only ever the whole (§83):** `Position.amount` sums its parts' counts only when every part has one and the parts carry all of the row's dollars. An exchange's, the validators', staked SOL's or Private's money has no count, so such a row shows no amount, never a short one. The count comes from the holdings read (`HeldToken.amount` → `HoldingsGroup.amountsBySymbol` → `Part.amount`); a last-known group keeps dollars only.
+6. **Shortened from ten thousand** ("40K", `WalletValue.held`), whole from a hundred ("368"), two decimals at most from one ("1.42"), three significant digits under one; masked under Hide balances like every amount.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1955 — Home's rows are the ledger's too: 40pt (user, 2026-11-23: "i kind of think we should make the rows on home be the same height as those in holdings. more rows would show too which is a benefit"; "and the balances we show on home are already shorter") — BUILT
+
+Amends §1954's "Home keeps 52pt". Home's and Activity's rows are already one line, their title alone (§1497), so they take the ledger's pitch: a title-only row (`\.dsTitleOnly`) stands at `DSFeed.ledgerHead` (32pt) with the list's 4pt air, 40pt, in `DSFeedRow`, `DSPushRow` and `DSHomeFactRow` (Watchlist, Spending). A row with a line under it, anywhere, keeps the 44pt head. `WalletCardStyle.ledgerHead` is `DSFeed.ledgerHead`, one constant.
+
+A ledger row inside its own `List` row takes the air from the list's insets only, never also from `walletLedgerPitch()` (that is for a row in a stack): Holdings' lent, Round-ups and Fee Juice rows drew 48pt beside the tokens' 40 until this was caught by eye (user: "some of these look still not the same height").
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893), and the Feed's Mac rows are not title-only.
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Home's Day, Social and Work rows at one 40pt pitch; Holdings' six Public rows at one 40pt pitch. **Not seen:** Dynamic Type, iPad. **Left:** Holdings' Private rows keep two lines at 52pt.
+
+## §1956 — Private's rows are one line at 40pt too; Home's Account door reads Accounts (user, 2026-11-23: "yes put private holdings at 40 point"; "on home it says Account w/ a chevron, can you make that plural please") — BUILT
+
+1. **Every Private row is one line** at the ledger's pitch (§1954), the name then one short fact in grey (`walletLedgerWords`): Privacy Pools "ETH Privacy Pools", Railgun "DAI Railgun", Aztec "USDC Aztec" in Aztec's ink, a waiting deposit "Being checked", Railgun's hour "Private in about an hour", a fresh address's state in amber, the savings goal "$1K of $500", a mismatch "Doesn't match" in amber, a refused deposit "Not approved". The whole line (network · fact · place, §1718; "since Nov 18", §1938) is the row's page's. Aztec's rows are one line by default (`aztecRow(ledger:)`).
+2. **Accounts, plural:** `WalletSection.yourAccount.label` is "Accounts" (Home's door, its iPad card, the page's title, "Home · Accounts"): the page holds yours and the ones you follow (§1843). A row naming your one account (Needs you's ask, the NFT chooser) keeps "Account".
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Private's eight rows at one 40pt pitch. **Not seen:** the amber states (no demo money waits at a fresh address or mismatches), Dynamic Type.
+
+## §1943 — Earn's From rows show today's rate (user, 2026-11-23: "do you think our Earn page should show the rates of what you can earn … so user can decide"; "but we have more than one lending rate right now user can get"; of the mockup, "yes definitely build it") — BUILT
+
+1. **Each From row in Earn's Deposit carries Aave's rate today** after its network, on the row's grey line ("USDC Base · 4.8%"), through `MoveTokenChoice.rate`, the same live `AaveLend.rateOnly` the picked market's "Earns N% today" fact reads. A row with nothing to lend keeps its rate, dimmed; a market whose rate did not read shows none. Withdraw's rows draw no rate.
+2. **A fact, never advice:** no "best", no ordering by rate, no rate kept or promised. Safe and Privacy Pools are not Earn's places; the private balance's rate stays in Holdings (`PrivateYield`).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1957 — Every row in the app is 40pt: one head, no hand-set heights (user, 2026-11-23: "we need to put contacts and other places we have rows be in the same 40point. now when i go to send for example is a place."; "tbh we should sweep the entire app to make sure we aren't handrolling") — BUILT
+
+Amends §1482, §1071 and §902's 44pt head, and generalises §1954–§1956 from Holdings and Home to the app.
+
+1. **One head:** `DSFeed.headHeight` is 32pt (`ledgerHead` is the same constant). With the list's 4pt air a one-line row is 40pt; a row with a line under its name is 44pt of words and keeps 52 by itself, so no template asks how many lines it has. A picture in a row's head keeps 44 (`DSFeed.pictureHead`).
+2. **The templates carry it:** `DSFeedRow`, `DSPushRow`, `DSMoreRow`, `DSDoorRow`, `DSSpec`, `DSHomeFactRow`, `walletRowPitch()`, Contacts' `AddressesSection.rowPitch`, Apps' `LibrarySearch.resultHeight` and `AccountFactRow.height` all name it.
+3. **No hand-set row heights (`row-pitch-audit.py`):** a `minHeight` that is a bare number or `DS.Hit.min`, on a line that sizes no width, is a control's (a button, a field, a key), never a row's. The sites left are counted per file as a ratchet; a new one fails.
+4. **Tap height:** a one-line row's tap is its 32pt head (the air is the list's). Rows stand edge to edge, so a near miss lands on the next row, never on nothing; standalone buttons keep `DS.Hit.min`.
+
+**Mac half (§1402).** The Mac scales the same constant (`macScale`); its rows tighten in step.

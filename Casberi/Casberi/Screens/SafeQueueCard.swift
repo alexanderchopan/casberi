@@ -106,8 +106,7 @@ struct SafeQueueCard: View {
                             }
                         }
                 }
-                .padding(.vertical, DS.Space.s2)
-                .frame(minHeight: DS.Hit.min)
+                .frame(minHeight: DSFeed.headHeight)
             }
         }
     }

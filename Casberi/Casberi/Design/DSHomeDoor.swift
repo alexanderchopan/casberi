@@ -138,8 +138,8 @@ struct DSHomeFactRow: View {
         }
         .dsText(.fact15)
         .lineLimit(1)
-        // Home's rows are the ledger's (prd §1954).
-        .frame(maxWidth: .infinity, minHeight: titleOnly ? DSFeed.ledgerHead : DS.Hit.min, alignment: .leading)
+        // Home's rows are the ledger's (prd §1955).
+        .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight, alignment: .leading)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)

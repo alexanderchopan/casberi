@@ -357,7 +357,7 @@ struct SubscriptionAddTray: View {
                     .foregroundStyle(tracked ? DS.textTertiary : DS.pickInk)
                     .dsSymbolSwap(tracked)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -612,7 +612,7 @@ struct SubscriptionAddTray: View {
             Spacer(minLength: DS.Space.s2)
             trailing()
         }
-        .frame(minHeight: DS.Hit.min)
+        .frame(minHeight: DSFeed.headHeight)
     }
 
     private func cadenceChip(_ word: String, on: Bool, pick: @escaping () -> Void) -> some View {

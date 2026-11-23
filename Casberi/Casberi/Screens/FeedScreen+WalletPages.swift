@@ -741,7 +741,7 @@ extension FeedScreen {
                 // token's networks (prd §1718); an app's row has none.
                 VStack(alignment: .leading, spacing: 2) {
                     // How many you hold, after the name on its line, grey
-                    // (prd §1953): the row reads "ETH 1.42".
+                    // (prd §1954): the row reads "ETH 1.42".
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                         Text(verbatim: name)
                             .dsText(.body17)
@@ -769,7 +769,7 @@ extension FeedScreen {
                 let day = move.map { WatchlistRules.change($0 * 100) }
                 let moved = day.map { $0.tone == .up || $0.tone == .down } ?? false
                 if line == nil {
-                    // **ONE LINE, THE DAY BEFORE THE FIGURE (prd §1953):**
+                    // **ONE LINE, THE DAY BEFORE THE FIGURE (prd §1954):**
                     // the figure pins to the edge, so the dollars read down
                     // one column and the day down the one beside it.
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -799,7 +799,7 @@ extension FeedScreen {
                     }
                 }
             }
-            // **HOLDINGS IS A LEDGER (prd §1953, amending §1482 and §1862):**
+            // **HOLDINGS IS A LEDGER (prd §1954, amending §1482 and §1862):**
             // a one-line row stands at the ledger's 40pt pitch so the whole
             // list reads at once; a row with a line under it keeps the
             // Wallet's 52.
@@ -819,7 +819,7 @@ extension FeedScreen {
     func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
                             act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
         ForEach(tokens) { token in
-            // One line (prd §1953): the symbol, how many you hold, the day,
+            // One line (prd §1954): the symbol, how many you hold, the day,
             // the dollars. The networks are the token's page's (its places).
             // Ethereum disagreeing twice in a row (prd §1825) still takes a
             // line of its own in amber: a warning is never folded away.

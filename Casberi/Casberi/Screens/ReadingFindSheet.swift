@@ -106,7 +106,7 @@ struct ReadingFindSheet: View {
                             Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
                             Spacer(minLength: 0)
                         }
-                        .frame(minHeight: 48)
+                        .frame(minHeight: DSFeed.headHeight)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())

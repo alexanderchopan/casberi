@@ -594,7 +594,7 @@ struct SafeScreen: View {
             Spacer(minLength: DS.Space.s2)
             Text(verbatim: value).dsText(.body17).foregroundStyle(DS.textPrimary)
         }
-        .frame(minHeight: 44)
+        .frame(minHeight: DSFeed.headHeight)
     }
 
     #if DEBUG

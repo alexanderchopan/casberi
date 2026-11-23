@@ -31,7 +31,7 @@ struct DSMoreRow: View {
                 Spacer(minLength: 0)
             }
             .foregroundStyle(DS.textSecondary)
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
