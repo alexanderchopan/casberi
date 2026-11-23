@@ -106,10 +106,11 @@ struct MoveTrayPresenter: ViewModifier {
         // `-moveToAztec YES` raises Send onto your private account on Aztec,
         // as Holdings' Aztec placeholder does (prd §1718).
         .task {
-            guard UserDefaults.standard.bool(forKey: "moveToAztec") else { return }
+            // `-moveToAztec send` raises Send from Aztec instead (prd §1952).
+            guard let raw = UserDefaults.standard.string(forKey: "moveToAztec"), raw != "NO" else { return }
             try? await Task.sleep(for: .seconds(1))
-            NSLog("[Casberi] moveAztec: raised deposit")
-            chrome.moveAztec = .deposit
+            NSLog("[Casberi] moveAztec: raised %@", raw == "send" ? "send" : "deposit")
+            chrome.moveAztec = raw == "send" ? .send : .deposit
             chrome.moveTray = true
         }
         // `-moveLend lend|takeBack` raises Lend, as a lent row in Holdings

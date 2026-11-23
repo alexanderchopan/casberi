@@ -30208,6 +30208,34 @@
         }
       }
     },
+    "%lld people." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld personas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld人。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld명."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 人。"
+          }
+        }
+      }
+    },
     "%lld percent to the next milestone." : {
       "localizations" : {
         "es" : {
@@ -114299,6 +114327,34 @@
         }
       }
     },
+    "Keeps this payment in the transaction and starts the next one" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantiene este pago en la transacción y empieza el siguiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この支払いを取引に残し、次の支払いを始めます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 결제를 거래에 남기고 다음 결제를 시작합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将此付款保留在交易中并开始下一笔"
+          }
+        }
+      }
+    },
     "Kept %lld days, then gone." : {
       "localizations" : {
         "es" : {
@@ -184719,6 +184775,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每周几次"
+          }
+        }
+      }
+    },
+    "Several payments go to Aztec accounts only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Varios pagos van solo a cuentas de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "複数の支払いはAztecアカウントにのみ送れます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여러 결제는 Aztec 계정으로만 보낼 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "多笔付款只能发送到 Aztec 账户"
           }
         }
       }

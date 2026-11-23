@@ -75084,3 +75084,17 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 2. **One status:** `FreshReceive.failure` (the plate's first Status line) clears whenever an address's move starts, is sent or is made; USDC's move never cleared it, so the failure stood over "being checked".
 
 The retry itself worked: 12.98 USDC went into ppUSDC on Ethereum at 18:29 (depositExactShares), now waiting on 0xBow's approval.
+
+## §1952 — Pay many on Aztec: Add another, five payments in one private transaction (amends §1924's Send from Aztec, which paid one; applies §1931's Add another to Aztec) (user, 2026-11-23: "lets do the pay to multiple addresses on aztec"; "1 token, same or different amounts"; "re pay many we already have that for public account"; "Build it") — BUILT, UNPROVEN WITH MONEY
+
+1. **Add another, as Send's** (`AztecMove.pays`, `addAnother`, `removePay`): "+ Add another" stands beside back in the foot (`MoveReceiptDeck(lead:)`) once the line has an Aztec account and an amount that fits. Each kept payment is a To line, "...1a1a · 5 USDC", with its × (`MoveDeckStep.remove`); the line being written is "And". One token for all, each its own amount; the kept payments count against what you hold.
+2. **Five at most** (`AztecMove.maxPays`, the engine's `MAX_PAYS`): one Aztec transaction carries five app calls (`APP_MAX_CALLS`, 5 in v6.0.0, read from the engine's own library). Add another goes at five; the engine refuses more and never splits behind the person's back.
+3. **One transaction** (`sendPrivatelyMany`): every payment a private transfer inside one `BatchCall`, so one proof, one private gas payment, one Face ID. With Co-signer on, its approval lists every payment (`AztecCoSign`).
+4. **Aztec to Aztec only, said:** while paying several, the From line says "Aztec to Aztec only", Reaches says Aztec, the recipient list offers no Ethereum address, and an Ethereum address on the line stops the send with "Several payments go to Aztec accounts only".
+5. **The sentence says the total and "N people."**
+
+**Unmeasured:** proving five payments on the phone (one send is about 20–24 s), and the gas a five-payment transaction declares when it could not be measured first (`PRIVATE_FEES.limits`, sized for one).
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds the five, the one transaction, the co-signer's reading, the Aztec-only gate and the kept payments' count; removing the count was caught. **Seen** on an iPhone 17 Pro simulator with `-moveToAztec send -aztecPaysSample YES`: three kept payments with their ×, "And · Choose", Aztec to Aztec only.

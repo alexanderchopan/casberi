@@ -73,6 +73,9 @@ struct MoveDeckStep: Identifiable {
     var glyph: String? = nil
     /// A line of its own under this one, with no word: Aztec's rule (§1924).
     var note: String? = nil
+    /// An × at the line's end that takes it out: a payment Add another
+    /// kept (prd §1952).
+    var remove: (() -> Void)? = nil
     let act: () -> Void
 }
 
@@ -86,9 +89,26 @@ struct MoveReceiptSteps: View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
             ForEach(steps) { s in
                 MoveReceiptLine(label: s.word) {
-                    MoveChip(text: s.value ?? String(localized: "Choose"), mark: s.mark,
-                             tone: tone(s), caret: s.on && s.id == "amount", glyph: s.glyph,
-                             disabled: disabled, action: s.act)
+                    HStack(spacing: DS.Space.s2) {
+                        MoveChip(text: s.value ?? String(localized: "Choose"), mark: s.mark,
+                                 tone: tone(s), caret: s.on && s.id == "amount", glyph: s.glyph,
+                                 disabled: disabled, action: s.act)
+                        if let remove = s.remove {
+                            Spacer(minLength: 0)
+                            Button {
+                                remove()
+                                DSHaptic.selection()
+                            } label: {
+                                Image(systemName: "xmark").dsGlyph(.caption, weight: .semibold)
+                                    .foregroundStyle(DS.textSecondary)
+                                    .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .trailing)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PressSpring())
+                            .disabled(disabled)
+                            .accessibilityLabel(Text("Remove"))
+                        }
+                    }
                 }
                 if let note = s.note {
                     MoveReceiptLine(label: "") {
@@ -117,6 +137,8 @@ struct MoveReceiptDeck<Lines: View, Content: View, Word: View>: View {
     var inTray = false
     var backDisabled = false
     let back: () -> Void
+    /// A second word beside back: Add another (prd §1952, as Send's §1931).
+    var lead: AnyView? = nil
     @ViewBuilder let lines: () -> Lines
     @ViewBuilder let content: () -> Content
     @ViewBuilder let word: () -> Word
@@ -138,7 +160,7 @@ struct MoveReceiptDeck<Lines: View, Content: View, Word: View>: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .padding(.top, MoveReceipt.gap)
                     .deckUnderFoot()
-                MoveDeckFoot(backDisabled: backDisabled, back: back) { word() }
+                MoveDeckFoot(backDisabled: backDisabled, back: back, lead: lead) { word() }
             }
             .frame(maxHeight: .infinity)
         }

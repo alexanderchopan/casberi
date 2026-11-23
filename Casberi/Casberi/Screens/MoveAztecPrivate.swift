@@ -53,6 +53,20 @@ final class AztecMove {
     var symbol = "USDC"
     var amount = ""
     var recipient: String?
+    /// **PAY MANY ON AZTEC (prd §1952, user: "lets do the pay to multiple
+    /// addresses on aztec").** The payments Add another kept, in the order
+    /// kept; the line being written is `recipient` and `amount`. One token
+    /// for all; each its own amount, typed as typed, read in the token's
+    /// places when sent.
+    struct Pay: Identifiable, Equatable {
+        let id = UUID()
+        let recipient: String
+        let amount: String
+    }
+    private(set) var pays: [Pay] = []
+    /// One Aztec transaction carries five calls at most (Aztec's
+    /// `APP_MAX_CALLS`, 5 in v6.0.0): five payments, the line included.
+    static let maxPays = 5
     private(set) var holdings: [Holding] = []
     /// What the Safe holds on Ethereum, base units, by symbol.
     private(set) var safeHeld: [String: String] = [:]
@@ -352,8 +366,10 @@ final class AztecMove {
     var wraps: Bool { mode == .deposit && symbol == "ETH" }
     /// What was typed, in base units: a comma is a decimal point, a leading
     /// point reads as "0.", and a trailing point (mid-typing) is ignored.
-    var units: String? {
-        var typed = amount.replacingOccurrences(of: ",", with: ".")
+    var units: String? { units(of: amount) }
+    /// `typed` in base units, as `units` reads the line's amount.
+    func units(of typed: String) -> String? {
+        var typed = typed.replacingOccurrences(of: ",", with: ".")
         if typed.hasSuffix(".") { typed.removeLast() }
         // ".5" is half (prd §1700r, user: "the send button stays inactive").
         if typed.hasPrefix(".") { typed = "0" + typed }
@@ -375,8 +391,37 @@ final class AztecMove {
         /// Over Shield's screening tier, through your Shield key (prd §1920).
         case overDailyCap(Int)
     }
+    /// What the kept payments take, base units (prd §1952).
+    var paysUnits: Decimal {
+        pays.reduce(Decimal(0)) { $0 + (units(of: $1.amount).flatMap { Decimal(string: $0) } ?? 0) }
+    }
+    /// Every payment of the transaction, the line last: (to, base units).
+    var allPays: [(to: String, units: String)]? {
+        guard let recipient, let units else { return nil }
+        var out: [(to: String, units: String)] = []
+        for p in pays {
+            guard let u = self.units(of: p.amount) else { return nil }
+            out.append((p.recipient, u))
+        }
+        return out + [(recipient, units)]
+    }
+    /// Add another keeps the line and starts the next (prd §1952): an Aztec
+    /// account on the line, an amount that fits, room for one more.
+    var canAddAnother: Bool {
+        mode == .send && stage == .ready && toAztec && amountOK && pays.count < Self.maxPays - 1
+    }
+    func addAnother() {
+        guard canAddAnother, let recipient else { return }
+        pays.append(Pay(recipient: recipient, amount: amount))
+        self.recipient = nil
+        amount = ""
+    }
+    func removePay(_ id: UUID) { pays.removeAll { $0.id == id } }
+
     var amountProblem: AmountProblem? {
-        guard let units, let want = Decimal(string: units), want > 0 else { return nil }
+        guard let units, var want = Decimal(string: units), want > 0 else { return nil }
+        // What the kept payments take comes first (prd §1952).
+        want += paysUnits
         if let available, let have = Decimal(string: available), want > have {
             return .moreThanHeld(PrivateMoney.figure(available, decimals: decimals, symbol: symbol))
         }
@@ -454,6 +499,15 @@ final class AztecMove {
             gasPriceWei = 400_000_000
             // The steps' row counts a co-signer's asks (prd §1918); made up.
             if mode == .deposit { keyOption = "0x0000000000000000000000000000000000005e1d"; keyLeft = 100; maxUSD = 100 }
+            #if DEBUG
+            // `-aztecPaysSample YES`: two payments kept and a third on the
+            // line, made-up Aztec accounts (prd §1952).
+            if mode == .send, UserDefaults.standard.bool(forKey: "aztecPaysSample"), pays.isEmpty {
+                pays = [Pay(recipient: "0x" + String(repeating: "1a", count: 32), amount: "5"),
+                        Pay(recipient: "0x" + String(repeating: "2b", count: 32), amount: "3")]
+                recipient = "0x" + String(repeating: "3c", count: 32)
+            }
+            #endif
             stage = .ready
             return
         }
@@ -644,7 +698,11 @@ final class AztecMove {
                 guard let recipient else { return }
                 if toAztec {
                     try await PrivateRootKey.unlock(reason: String(localized: "Send privately on Aztec"))
-                    try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: decimals, symbol: symbol)) on Aztec to \(recipient)"))
+                    // Your co-signer reads every payment (prd §1952).
+                    let every = allPays ?? [(recipient, units)]
+                    try await AztecCoSign.approve(every.map {
+                        String(localized: "Send \(PrivateMoney.figure($0.units, decimals: decimals, symbol: symbol)) on Aztec to \($0.to)")
+                    }.joined(separator: "; "))
                     // The rows' clock starts at the tap, before a cold engine
                     // has said anything (prd §1700w).
                     steps.begin(.move, plan: .send(.aztec))
@@ -656,7 +714,17 @@ final class AztecMove {
                         Self.kept = self
                         onAway()
                     }
-                    let out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units, AztecGas.unminted]) as? [String: Any]
+                    // One transaction, every payment in it (prd §1952).
+                    let out: [String: Any]?
+                    if every.count > 1 {
+                        let list = every.map { ["to": $0.to.lowercased(), "units": $0.units] }
+                        guard let json = try? JSONSerialization.data(withJSONObject: list), let text = String(data: json, encoding: .utf8) else {
+                            throw AztecGas.Failure(message: String(localized: "This move could not be written"))
+                        }
+                        out = try await AztecEngine.shared.call("sendPrivatelyMany", [symbol, text, AztecGas.unminted]) as? [String: Any]
+                    } else {
+                        out = try await AztecEngine.shared.call("sendPrivately", [symbol, recipient.lowercased(), units, AztecGas.unminted]) as? [String: Any]
+                    }
                     AztecGas.spent(by: out)
                     // The engine says "done" itself; a send it handed back
                     // without the word is done all the same.
@@ -809,7 +877,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
         } else {
             // It reaches Aztec, or goes out to Ethereum (prd §1924).
-            out.append((String(localized: "Reaches"), String(localized: "Aztec, or out to Ethereum"), DS.aztecInk))
+            out.append((String(localized: "Reaches"), move.pays.isEmpty ? String(localized: "Aztec, or out to Ethereum") : "Aztec", DS.aztecInk))
             // Out to Ethereum: who signs in to Shield (prd §1950).
             if live, move.toEthereum {
                 out.append(move.outFitsKey
@@ -835,7 +903,25 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     }
 
     private var figure: String {
-        PrivateMoney.figure(move.units ?? "0", decimals: move.decimals, symbol: move.symbol)
+        // Several payments say their total (prd §1952).
+        let line = Decimal(string: move.units ?? "0") ?? 0
+        return PrivateMoney.figure(NSDecimalNumber(decimal: line + move.paysUnits).stringValue, decimals: move.decimals, symbol: move.symbol)
+    }
+
+    /// **ADD ANOTHER IN THE FOOT, BESIDE BACK (prd §1952, as Send's §1931).**
+    private var addAnotherWord: some View {
+        Button {
+            withAnimation(DS.Motion.standard) { move.addAnother(); open = .recipient }
+            DSHaptic.selection()
+        } label: {
+            Text("+ Add another")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textSecondary)
+                .frame(minHeight: DS.Hit.min)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Keeps this payment in the transaction and starts the next one"))
     }
 
     // MARK: - The sentence
@@ -906,7 +992,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         let live = move.stage == .ready
         Button { if live { toggle(.recipient) } } label: {
             Group {
-                if let to = move.recipient {
+                if !move.pays.isEmpty, move.recipient != nil {
+                    // Several payments: how many (prd §1952).
+                    MoveWord(String(localized: "\(move.pays.count + 1) people."), ink: MoveSentence.settledInk)
+                } else if let to = move.recipient {
                     MoveWord(AddressTail.short(to) + ".", ink: MoveSentence.settledInk)
                 } else {
                     MoveWord(String(localized: "address."), ink: open == .recipient ? DS.aztecInk : DS.textTertiary)
@@ -925,6 +1014,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             if stepsRun != nil {
                 // The steps stand in the foot; the sentence stands alone (prd §1700x).
                 EmptyView()
+            } else if move.stage == .ready, !move.pays.isEmpty, move.recipient != nil, !move.toAztec {
+                // Several payments are Aztec to Aztec only (prd §1952).
+                Text("Several payments go to Aztec accounts only").dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if move.stage == .ready, let problem = move.amountProblem {
                 Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1090,6 +1183,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         let q = typed.trimmingCharacters(in: .whitespaces).lowercased()
         let typingAnAddress = AztecAddressText.isAztec(q) || PrivateMoney.isAddress(q)
         guard !typingAnAddress else { return [] }
+        // Several payments go to Aztec accounts only (prd §1952): these are
+        // Ethereum addresses, so none is offered.
+        guard move.pays.isEmpty else { return [] }
         var out: [Suggestion] = []
         let mine = YourAccountKey.address
         let yours = String(localized: "Your account")
@@ -1121,7 +1217,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     // MARK: - The foot
 
     private var ready: Bool {
-        move.stage == .ready && move.amountOK && (move.mode == .deposit || move.toAztec || move.toEthereum) && !DemoMode.isActive
+        move.stage == .ready && move.amountOK && (move.mode == .deposit || move.toAztec || move.toEthereum)
+            // Several payments are Aztec to Aztec only (prd §1952).
+            && (move.pays.isEmpty || move.toAztec) && !DemoMode.isActive
     }
 
     /// This sentence's send, while it works, once it failed with its steps, and
@@ -1146,7 +1244,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 // Back is the menu, never the step before (prd §1911).
                 if costOpen { costOpen = false } else { open = nil; back?() }
             }
-        }, lines: {
+        }, lead: move.canAddAnother ? AnyView(addAnotherWord) : nil, lines: {
             if live {
                 MoveReceiptSteps(steps: steps, disabled: move.acting)
             }
@@ -1230,8 +1328,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         } else {
             out.append(MoveDeckStep(id: "from", word: String(localized: "From"), answered: true,
                                     value: "Aztec", aztec: true, glyph: "diamond",
-                                    note: MoveSentence.aztecSendRule) { leave(.switchOff) })
-            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), on: open == .recipient,
+                                    // Several payments stay on Aztec (prd §1952).
+                                    note: move.pays.isEmpty ? MoveSentence.aztecSendRule : MoveSentence.aztecRule) { leave(.switchOff) })
+            // The payments Add another kept, each with its × (prd §1952).
+            for pay in move.pays {
+                out.append(MoveDeckStep(id: "pay-\(pay.id.uuidString)", word: String(localized: "To"), answered: true,
+                                        value: "\(AddressTail.short(pay.recipient)) · \(pay.amount) \(move.symbol)",
+                                        remove: { withAnimation(DS.Motion.standard) { move.removePay(pay.id) } }) {})
+            }
+            out.append(MoveDeckStep(id: "to", word: move.pays.isEmpty ? String(localized: "To") : String(localized: "And"),
+                                    on: open == .recipient,
                                     answered: move.recipient != nil, value: move.recipient.map { AddressTail.short($0) }) { toggle(.recipient) })
         }
         let place = move.mode == .deposit ? "Ethereum" : "Aztec"

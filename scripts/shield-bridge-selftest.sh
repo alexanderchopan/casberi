@@ -78,8 +78,8 @@ grep -q 'let carried = AztecGas.carried(store.snapshot.gas ?? \[\])' Casberi/Cas
   && grep -q 'holding.gasUnits + AztecGas.carried(store.snapshot.gas ?? \[\])' Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift \
   || { echo "✗ the gas row says None, or leaves out gas Aztec has carried (prd §1886)"; exit 1; }
 MOVE="Casberi/Casberi/Screens/MoveAztecPrivate.swift"
-(( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.unminted\]) as? \[String: Any\]') == 3 )) \
-  || { echo "✗ one of the three sends (a claim, a private send, an exit) no longer offers the waiting gas deposits"; exit 1; }
+(( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.unminted\]) as? \[String: Any\]') == 4 )) \
+  || { echo "✗ one of the four sends (a claim, a private send, pay many, an exit) no longer offers the waiting gas deposits"; exit 1; }
 (( $(cat "$APP" "$MOVE" | grep -c 'AztecGas.spent(by: out)') == 3 )) \
   || { echo "✗ one of the three sends no longer records the gas deposit it minted"; exit 1; }
 grep -q 'where !deposit.claimed && !deposit.isPrivate {' "$GAS" \
@@ -104,6 +104,20 @@ grep -q '"amount": units, "tokenSymbol": asset.symbol, "tokenDecimals": asset.de
 grep -q 'if let key = await exitKey(usd: usd) {' "$APP" && grep -q 'if !byCoSigner, let usd { ShieldKey.noteMovedOut(usd) }' "$APP" \
   && grep -q 'usd <= max(0, mine.screeningUSD - ShieldKey.movedOutToday()) else { return nil }' "$APP" \
   || { echo "✗ a send out of Aztec under \$100 a day no longer goes through this iPhone's key (prd §1950)"; exit 1; }
+# Pay many on Aztec (prd §1952): five payments at most, all in one
+# transaction, every one read by your co-signer, Aztec to Aztec only.
+ENGJS="tools/aztec-engine/src/main.js"
+grep -q 'const MAX_PAYS = 5;' "$ENGJS" && grep -q 'pays.length > MAX_PAYS) throw' "$ENGJS" \
+  && grep -q 'new BatchCall(wallet, sends)' "$ENGJS" \
+  || { echo "✗ the engine no longer sends every payment in one transaction of five at most (prd §1952)"; exit 1; }
+grep -q 'static let maxPays = 5' "$MOVE" && grep -q 'pays.count < Self.maxPays - 1' "$MOVE" \
+  || { echo "✗ Add another no longer stops at five payments (prd §1952)"; exit 1; }
+grep -q 'let every = allPays ?? \[(recipient, units)\]' "$MOVE" && grep -q '}.joined(separator: "; "))' "$MOVE" \
+  || { echo "✗ your co-signer no longer reads every payment (prd §1952)"; exit 1; }
+grep -q '&& (move.pays.isEmpty || move.toAztec) && !DemoMode.isActive' "$MOVE" \
+  || { echo "✗ several payments can go to an Ethereum address (prd §1952)"; exit 1; }
+grep -q 'want += paysUnits' "$MOVE" \
+  || { echo "✗ the kept payments are no longer counted against what you hold (prd §1952)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

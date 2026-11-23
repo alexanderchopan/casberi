@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2132 of 2206 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2133 of 2207 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2367,7 +2367,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1921 — Receive's private account carries its Add money door (amended by §1928)
 - §1922 — Into Aztec, this iPhone first: the co-signer only past $100 a day
 - §1923 — Send's To is rows, the token's row, with Yours first (amended by §1931)
-- §1924 — "Aztec to Aztec only" is the address's rule, not the account's
+- §1924 — "Aztec to Aztec only" is the address's rule, not the account's (amended by §1952)
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
@@ -2395,6 +2395,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1949 — Out of Aztec under $100 needs no score, measured; and an exit names its amount
 - §1950 — Out of Aztec, this iPhone first: your Shield key signs in for a send out up to $100 a day, the co-signer only past it
 - §1951 — Receive's Try again answers at once, and a move that worked clears the failure above it
+- §1952 — Pay many on Aztec: Add another, five payments in one private transaction
 
 ## Dead rulings → what replaced them (generated)
 

@@ -17,7 +17,7 @@ import { connectGate } from './connect-gate.js';
 import { BrowserEmbeddedWallet } from '@aztec-labs/wallets/embedded';
 import { Fr, GrumpkinScalar } from '@aztec-labs/aztec.js/fields';
 import { WalletSchema } from '@aztec-labs/aztec.js/wallet';
-import { Contract } from '@aztec-labs/aztec.js/contracts';
+import { Contract, BatchCall } from '@aztec-labs/aztec.js/contracts';
 import { AztecAddress } from '@aztec-labs/aztec.js/addresses';
 import { getCanonicalFeeJuice } from '@aztec-labs/protocol-contracts/fee-juice/lazy';
 import { computeSecretHash } from '@aztec-labs/aztec.js/crypto';
@@ -65,7 +65,7 @@ const READS = new Set([
 ]);
 
 // Casberi's own calls that are sends: Move draws their steps (prd §1700w).
-const WATCHED_OWN = new Set(['sendPrivately', 'shieldExit']);
+const WATCHED_OWN = new Set(['sendPrivately', 'sendPrivatelyMany', 'shieldExit']);
 const native = (name, value) => window.webkit?.messageHandlers?.[name]?.postMessage(JSON.stringify(value));
 const t0 = performance.now();
 const ms = () => Math.round(performance.now() - t0);
@@ -293,6 +293,9 @@ async function feeFor(wallet, interaction, gasJSON) {
 // One of Casberi's own sends, paid privately when it can be, in its turn:
 // it chooses how to pay only once the send before it has landed.
 const ownTurn = inTurn();
+// Payments one Aztec transaction carries (prd §1952): Aztec's APP_MAX_CALLS.
+const MAX_PAYS = 5;
+
 function sendOwn(wallet, interaction, gasJSON, ownHolds) {
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const wait = { waitForStatus: 'proposed', timeout: 1800 };
@@ -553,6 +556,25 @@ const own = {
     const send = token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(to), BigInt(units), 0n);
     const { receipt, paid, gasNonce } = await sendOwn(wallet, send, gasJSON);
     log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status, paid });
+    return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
+  },
+  // PAY MANY (prd §1952): every payment one private transfer, all in ONE
+  // transaction, so one proof, one fee and one Face ID. Aztec's entrypoint
+  // carries five app calls at most (APP_MAX_CALLS, 5 in v6.0.0): more is
+  // refused here, never split behind the person's back.
+  async sendPrivatelyMany(symbol, paysJSON, gasJSON) {
+    const pays = JSON.parse(paysJSON);
+    if (!Array.isArray(pays) || pays.length < 1 || pays.length > MAX_PAYS) throw new Error(`one to ${MAX_PAYS} payments`);
+    const wallet = await getWallet();
+    await registerShield(wallet);
+    const asset = SHIELD.assets.find(a => a.symbol === symbol);
+    if (!asset) throw new Error(`no ${symbol} on Aztec`);
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
+    const sends = pays.map(p => token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(p.to), BigInt(p.units), 0n));
+    const interaction = sends.length === 1 ? sends[0] : new BatchCall(wallet, sends);
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, interaction, gasJSON);
+    log('sentPrivatelyMany', { tx: receipt.txHash.toString(), status: receipt.status, paid, pays: pays.length });
     return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
   },
   // SHIELD OUT OF AZTEC (prd §1700b, §1700d): read from Shield's own client.
