@@ -9608,6 +9608,34 @@
         }
       }
     },
+    "%@ needs a little private ETH to move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ necesita un poco de ETH privado para moverse"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を動かすには少しのプライベートETHが必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 을(를) 옮기려면 비공개 ETH가 조금 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 需要少量私密 ETH 才能转移"
+          }
+        }
+      }
+    },
     "%@ needs all %lld of its owners. Lose this phone and it can never be signed for again — or repaired, since that takes a signature too. Add one more owner." : {
       "localizations" : {
         "en" : {
@@ -9806,6 +9834,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 未获批准"
+          }
+        }
+      }
+    },
+    "%@ not moved" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ sin mover"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は未移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 이동 안 됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 未转移"
           }
         }
       }
@@ -10988,6 +11044,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅限 %@"
+          }
+        }
+      }
+    },
+    "%@ or %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ or %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ o %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ または %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 또는 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 或 %2$@"
           }
         }
       }
@@ -19890,6 +19980,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@，示例汇率"
+          }
+        }
+      }
+    },
+    "%@, after a %@%% fee" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, after a %2$@%% fee"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@, tras una comisión del %2$@%%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@(手数料%2$@%%差引後)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@, 수수료 %2$@%% 공제 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@,扣除 %2$@%% 费用后"
           }
         }
       }
@@ -42135,6 +42259,34 @@
         }
       }
     },
+    "15 min to a few hours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De 15 min a unas horas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15分〜数時間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15분~몇 시간"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "15 分钟到几小时"
+          }
+        }
+      }
+    },
     "1M" : {
       "localizations" : {
         "es" : {
@@ -56408,6 +56560,62 @@
         }
       }
     },
+    "Another Aztec account only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo otra cuenta de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のAztecアカウントのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 Aztec 계정만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限其他 Aztec 账户"
+          }
+        }
+      }
+    },
+    "Another Railgun balance only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo otro saldo de Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のRailgun残高のみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 Railgun 잔액만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅限其他 Railgun 余额"
+          }
+        }
+      }
+    },
     "Another address looks just like this one" : {
       "localizations" : {
         "es" : {
@@ -57228,6 +57436,62 @@
         }
       }
     },
+    "Any token, on Base, Ethereum or Robinhood, at your public address. Ready in seconds. Your account reads it over Tor." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier token, en Base, Ethereum o Robinhood, a tu dirección pública. Listo en segundos. Tu cuenta lo lee a través de Tor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood上のあらゆるトークンを公開アドレスで。数秒で使えます。アカウントはTor経由で読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum, Robinhood의 모든 토큰을 공개 주소로. 몇 초 만에 준비됩니다. 계정은 Tor를 통해 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum 或 Robinhood 上的任何代币,发送到你的公开地址。几秒内可用。你的账户通过 Tor 读取。"
+          }
+        }
+      }
+    },
+    "Any token, to any address on Base, Ethereum or Robinhood, over Tor. This iPhone signs; with Co-signer on, your co-signer signs too. Anyone can see it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier token, a cualquier dirección en Base, Ethereum o Robinhood, a través de Tor. Este iPhone firma; con Cofirmante activado, tu cofirmante también firma. Cualquiera puede verlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あらゆるトークンをBase、Ethereum、Robinhood上の任意のアドレスへ、Tor経由で。このiPhoneが署名し、共同署名者がオンなら共同署名者も署名します。誰でも見ることができます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 토큰을 Base, Ethereum, Robinhood의 어떤 주소로든 Tor를 통해 보냅니다. 이 iPhone이 서명하고, 공동 서명자가 켜져 있으면 공동 서명자도 서명합니다. 누구나 볼 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何代币,发送到 Base、Ethereum 或 Robinhood 上的任意地址,通过 Tor。由这台 iPhone 签名;开启共同签名人后,共同签名人也会签名。任何人都能看到。"
+          }
+        }
+      }
+    },
     "Anyone" : {
       "localizations" : {
         "es" : {
@@ -57336,6 +57600,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "任何人都能看到 · %@"
+          }
+        }
+      }
+    },
+    "Anyone can see what your public account holds and sends. Your private accounts keep that hidden, and each one does it differently." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquiera puede ver lo que tu cuenta pública tiene y envía. Tus cuentas privadas lo ocultan, y cada una lo hace de forma distinta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開アカウントの保有と送金は誰でも見られます。プライベートアカウントはそれを隠し、それぞれ方法が異なります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 계정이 보유하고 보내는 내역은 누구나 볼 수 있습니다. 비공개 계정은 이를 숨기며, 각각 방식이 다릅니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何人都能看到你的公开账户持有和发送了什么。你的私密账户会隐藏这些,且每个账户的方式不同。"
+          }
+        }
+      }
+    },
+    "Anyone with Railgun on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move tokens in from your public account: ETH and USDC go to Privacy Pools instead, where they earn. Anything else is private in about an hour, once Railgun checks it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquiera con Railgun en Ethereum puede pagar a tu dirección de Railgun, en cualquier token. Normalmente puedes usarlo en minutos. También puedes traer tokens desde tu cuenta pública: ETH y USDC van a Privacy Pools, donde rinden. Lo demás pasa a ser privado en una hora aproximadamente, cuando Railgun lo revisa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "EthereumでRailgunを使う人なら誰でも、あらゆるトークンであなたのRailgunアドレスに支払えます。通常は数分で使えます。公開アカウントからトークンを移すこともできます。ETHとUSDCは代わりにPrivacy Poolsへ入り、利息が付きます。それ以外はRailgunの確認後、約1時間でプライベートになります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에서 Railgun을 쓰는 사람은 누구나 어떤 토큰으로든 내 Railgun 주소로 보낼 수 있습니다. 보통 몇 분 안에 쓸 수 있습니다. 공개 계정에서 토큰을 옮겨올 수도 있습니다. ETH와 USDC는 대신 Privacy Pools로 가서 수익을 냅니다. 그 외는 Railgun이 확인하면 약 1시간 후 비공개가 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何在 Ethereum 上使用 Railgun 的人都可以用任意代币向你的 Railgun 地址付款。通常几分钟内即可使用。你也可以从公开账户转入代币:ETH 和 USDC 会改为进入 Privacy Pools 赚取收益。其他代币在 Railgun 检查后约一小时变为私密。"
           }
         }
       }
@@ -72910,6 +73230,34 @@
         }
       }
     },
+    "Closes how it works" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cierra cómo funciona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仕組みを閉じる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "작동 방식 닫기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收起运作方式"
+          }
+        }
+      }
+    },
     "Closes search" : {
       "localizations" : {
         "es" : {
@@ -76217,6 +76565,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已复制 · 仅限 %@"
+          }
+        }
+      }
+    },
+    "Copied · paid from Aztec only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiado · solo se paga desde Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コピーしました · Aztecからのみ支払い可"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복사됨 · Aztec에서만 받을 수 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已复制 · 仅可从 Aztec 付款"
           }
         }
       }
@@ -105196,6 +105572,34 @@
         }
       }
     },
+    "Good to know" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conviene saber"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "知っておきたいこと"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알아두면 좋은 점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "须知"
+          }
+        }
+      }
+    },
     "Google bills you directly." : {
       "localizations" : {
         "es" : {
@@ -107704,6 +108108,34 @@
         }
       }
     },
+    "How your accounts work" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cómo funcionan tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの仕組み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정의 작동 방식"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户如何运作"
+          }
+        }
+      }
+    },
     "How your money moves" : {
       "localizations" : {
         "es" : {
@@ -109155,6 +109587,62 @@
         }
       }
     },
+    "In a few minutes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En unos minutos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数分で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 분 안에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几分钟内"
+          }
+        }
+      }
+    },
+    "In about an hour" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En una hora aproximadamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約1時間で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 1시간 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约一小时内"
+          }
+        }
+      }
+    },
     "In from %@" : {
       "localizations" : {
         "es" : {
@@ -109431,6 +109919,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "审核中"
+          }
+        }
+      }
+    },
+    "In seconds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En segundos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数秒で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 초 안에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几秒内"
           }
         }
       }
@@ -110383,6 +110899,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "安装账户的代码，让下一步有代码可用于验证。仅在账户首次发送时进行。"
+          }
+        }
+      }
+    },
+    "Interest" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intereses"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利息"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利息"
           }
         }
       }
@@ -123054,6 +123598,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将零钱买入转入你的私密余额"
+          }
+        }
+      }
+    },
+    "Move USDC, ETH or WETH in from your public account on Ethereum; ETH is wrapped to WETH on the way. Shield, Aztec's bridge, carries it over in 5 to 15 minutes. Shield takes 0.5%, and Ethereum's gas comes from your public account. Your first move also turns a little of what you move into Aztec's gas. Another Aztec account can also pay your Aztec address in USDC or WETH. Only Aztec can pay that address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Trae USDC, ETH o WETH desde tu cuenta pública en Ethereum; el ETH se convierte en WETH por el camino. Shield, el puente de Aztec, lo lleva en 5 a 15 minutos. Shield cobra un 0,5 % y el gas de Ethereum sale de tu cuenta pública. Tu primer movimiento también convierte un poco de lo que mueves en gas de Aztec. Otra cuenta de Aztec también puede pagar a tu dirección de Aztec en USDC o WETH. Solo Aztec puede pagar a esa dirección."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum上の公開アカウントからUSDC、ETH、WETHを移します。ETHは途中でWETHに変換されます。Aztecのブリッジ「Shield」が5〜15分で運びます。Shieldの手数料は0.5%で、Ethereumのガスは公開アカウントから支払います。最初の移動では、移す分の一部がAztecのガスになります。別のAztecアカウントからUSDCまたはWETHであなたのAztecアドレスに支払うこともできます。そのアドレスに支払えるのはAztecだけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum의 공개 계정에서 USDC, ETH, WETH를 옮겨옵니다. ETH는 도중에 WETH로 바뀝니다. Aztec의 브리지인 Shield가 5~15분 안에 옮깁니다. Shield는 0.5%를 받고, Ethereum 가스는 공개 계정에서 냅니다. 첫 이동에서는 옮기는 금액의 일부가 Aztec 가스가 됩니다. 다른 Aztec 계정도 USDC 또는 WETH로 내 Aztec 주소에 보낼 수 있습니다. 그 주소로는 Aztec에서만 보낼 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Ethereum 上的公开账户转入 USDC、ETH 或 WETH;ETH 会在途中包装为 WETH。Aztec 的跨链桥 Shield 会在 5 到 15 分钟内转入。Shield 收取 0.5%,Ethereum 的 Gas 由你的公开账户支付。首次转入时,会把转入金额的一小部分换成 Aztec 的 Gas。其他 Aztec 账户也可以用 USDC 或 WETH 向你的 Aztec 地址付款。只有 Aztec 能向该地址付款。"
           }
         }
       }
@@ -140843,6 +141415,62 @@
         }
       }
     },
+    "Nothing until you lend it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada hasta que lo prestes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貸し出すまではなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "빌려주기 전까지는 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "借出前无收益"
+          }
+        }
+      }
+    },
+    "Nothing until you lend it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada hasta que lo prestes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "貸し出すまでは何も付きません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "빌려주기 전까지는 수익이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "借出前没有收益。"
+          }
+        }
+      }
+    },
     "Nothing waiting" : {
       "localizations" : {
         "es" : {
@@ -141623,6 +142251,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还没有可供 %@ 阅读的内容，所以没有提问。请先保存一些内容。"
+          }
+        }
+      }
+    },
+    "Nothing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "なし。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "없음."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无。"
           }
         }
       }
@@ -148459,6 +149115,34 @@
         }
       }
     },
+    "Opens how it works" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre cómo funciona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仕組みを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "작동 방식 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "展开运作方式"
+          }
+        }
+      }
+    },
     "Opens it in %@" : {
       "localizations" : {
         "es" : {
@@ -149967,6 +150651,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "其他"
+          }
+        }
+      }
+    },
+    "Other accounts, read-only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otras cuentas, solo lectura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "他のアカウント(閲覧のみ)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 계정, 읽기 전용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其他账户,只读"
           }
         }
       }
@@ -158309,6 +159021,34 @@
         }
       }
     },
+    "Privacy Pools checks each payment before you can send it, usually within 15 minutes, sometimes a few hours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools revisa cada pago antes de que puedas enviarlo, normalmente en 15 minutos, a veces unas horas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Poolsは送金できるようになる前に各入金を確認します。通常は15分以内、数時間かかることもあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools는 보낼 수 있기 전에 각 입금을 확인합니다. 보통 15분 이내, 때로는 몇 시간이 걸립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 会在你能发送之前检查每笔付款,通常在 15 分钟内,有时需要几小时。"
+          }
+        }
+      }
+    },
     "Privacy Pools cleared your %@ deposit — ready to withdraw privately" : {
       "localizations" : {
         "es" : {
@@ -158417,6 +159157,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Privacy Pools 已要求你提供证明。"
+          }
+        }
+      }
+    },
+    "Privacy Pools keeps %@%% of the interest." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools se queda con el %@%% de los intereses."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Poolsは利息の%@%%を受け取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools는 이자의 %@%%를 가져갑니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 收取利息的 %@%%。"
           }
         }
       }
@@ -160998,6 +161766,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Railgun 收取 %@"
+          }
+        }
+      }
+    },
+    "Railgun takes 0.25% when money leaves Railgun. Sending to another Railgun user doesn't leave it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun cobra un 0,25 % cuando el dinero sale de Railgun. Enviar a otro usuario de Railgun no lo saca."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgunはお金がRailgunから出るときに0.25%を受け取ります。別のRailgunユーザーへの送金は外に出ません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun은 돈이 Railgun을 떠날 때 0.25%를 받습니다. 다른 Railgun 사용자에게 보내는 것은 떠나는 것이 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "资金离开 Railgun 时,Railgun 收取 0.25%。发送给其他 Railgun 用户不算离开。"
           }
         }
       }
@@ -179557,6 +180353,62 @@
         }
       }
     },
+    "Send ETH or USDC on Ethereum or Base, or ETH or USDG on Robinhood, to your Privacy Pools address. It's a new address each time. Casberi moves it into your private balance on Ethereum, bringing it over from Base or Robinhood first. USDG arrives as USDC." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía ETH o USDC en Ethereum o Base, o ETH o USDG en Robinhood, a tu dirección de Privacy Pools. Es una dirección nueva cada vez. Casberi lo pasa a tu saldo privado en Ethereum, trayéndolo antes desde Base o Robinhood. El USDG llega como USDC."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "EthereumまたはBase上のETHかUSDC、またはRobinhood上のETHかUSDGを、Privacy Poolsアドレスに送ります。毎回新しいアドレスです。CasberiがBaseやRobinhoodから先に移してから、Ethereum上のプライベート残高に入れます。USDGはUSDCとして届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 또는 Base의 ETH나 USDC, 또는 Robinhood의 ETH나 USDG를 내 Privacy Pools 주소로 보내세요. 매번 새 주소입니다. Casberi가 Base나 Robinhood에서 먼저 옮겨온 뒤 Ethereum의 비공개 잔액으로 넣습니다. USDG는 USDC로 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将 Ethereum 或 Base 上的 ETH 或 USDC,或 Robinhood 上的 ETH 或 USDG,发送到你的 Privacy Pools 地址。每次都是新地址。Casberi 会先从 Base 或 Robinhood 转过来,再存入你在 Ethereum 上的私密余额。USDG 到账为 USDC。"
+          }
+        }
+      }
+    },
+    "Send ETH or USDC to anyone on Ethereum, Base or Robinhood. A relayer sends it for you, so your public account never appears, and it takes a small fee. To someone with their own Privacy Pools account, it stays private." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía ETH o USDC a cualquiera en Ethereum, Base o Robinhood. Un relayer lo envía por ti, así tu cuenta pública nunca aparece, y cobra una pequeña comisión. A alguien con su propia cuenta de Privacy Pools, se mantiene privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum、Base、Robinhood上の誰にでもETHやUSDCを送れます。リレイヤーが代わりに送るので公開アカウントは表に出ず、少額の手数料がかかります。相手が自分のPrivacy Poolsアカウントを持っていれば、プライベートのままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum, Base, Robinhood의 누구에게나 ETH나 USDC를 보낼 수 있습니다. 릴레이어가 대신 보내므로 공개 계정이 드러나지 않으며, 소액의 수수료가 듭니다. 상대가 Privacy Pools 계정을 갖고 있으면 비공개로 유지됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "向 Ethereum、Base 或 Robinhood 上的任何人发送 ETH 或 USDC。由中继者代你发送,你的公开账户不会出现,并收取少量费用。发给拥有自己 Privacy Pools 账户的人,则保持私密。"
+          }
+        }
+      }
+    },
     "Send a little ETH with USDC or USDG" : {
       "localizations" : {
         "es" : {
@@ -180253,6 +181105,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "请先发送到 Privacy Pools"
+          }
+        }
+      }
+    },
+    "Send to another Aztec account in about 20 seconds; who, what and how much stay private. Or send out to any Ethereum address, your public account included; it arrives as WETH. Shield takes 0.5%. About an hour later, Needs you offers Finish on Ethereum, one Face ID." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía a otra cuenta de Aztec en unos 20 segundos; quién, qué y cuánto se mantienen privados. O envía a cualquier dirección de Ethereum, incluida tu cuenta pública; llega como WETH. Shield cobra un 0,5 %. Una hora después, Te necesita ofrece Terminar en Ethereum, con un Face ID."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のAztecアカウントへ約20秒で送れます。誰に、何を、いくらかはプライベートのままです。または、公開アカウントを含む任意のEthereumアドレスへ送り出せます。WETHとして届きます。Shieldの手数料は0.5%。約1時間後、「対応が必要」にEthereumで完了が表示され、Face ID一回で済みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 Aztec 계정으로 약 20초 만에 보냅니다. 누구에게, 무엇을, 얼마나는 비공개로 유지됩니다. 또는 공개 계정을 포함한 모든 Ethereum 주소로 내보낼 수 있으며, WETH로 도착합니다. Shield는 0.5%를 받습니다. 약 1시간 후 확인 필요에 Ethereum에서 완료가 나타나며, Face ID 한 번이면 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "约 20 秒即可发送到另一个 Aztec 账户;发给谁、发什么、多少都保持私密。也可以发送到任意 Ethereum 地址,包括你的公开账户;到账为 WETH。Shield 收取 0.5%。约一小时后,“需要你处理”会提供在 Ethereum 上完成,只需一次 Face ID。"
+          }
+        }
+      }
+    },
+    "Send to anyone with Railgun, and it stays private: only they can see it. Or send to anyone on Ethereum: a Railgun broadcaster, or a one-time address of yours paying gas from your private ETH, sends it for you, so your public account never shows up. You see the cost before you send. You can also send back to your public account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía a cualquiera con Railgun y se mantiene privado: solo esa persona puede verlo. O envía a cualquiera en Ethereum: un broadcaster de Railgun, o una dirección de un solo uso tuya que paga el gas con tu ETH privado, lo envía por ti, así tu cuenta pública nunca aparece. Ves el coste antes de enviar. También puedes devolverlo a tu cuenta pública."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgunを使う人に送ればプライベートのままで、相手だけが見られます。またはEthereum上の誰にでも送れます。Railgunのブロードキャスター、またはプライベートETHでガスを払う使い捨てアドレスが代わりに送るので、公開アカウントは表に出ません。送る前に費用が表示されます。公開アカウントに戻すこともできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 사용자에게 보내면 비공개로 유지되어 상대만 볼 수 있습니다. 또는 Ethereum의 누구에게나 보낼 수 있습니다. Railgun 브로드캐스터나, 비공개 ETH로 가스를 내는 일회용 주소가 대신 보내므로 공개 계정이 드러나지 않습니다. 보내기 전에 비용을 확인할 수 있습니다. 공개 계정으로 되돌려 보낼 수도 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送给使用 Railgun 的人会保持私密:只有对方能看到。也可以发送给 Ethereum 上的任何人:由 Railgun 广播者,或用你的私密 ETH 支付 Gas 的一次性地址代你发送,你的公开账户不会出现。发送前你会看到费用。你也可以发回你的公开账户。"
           }
         }
       }
@@ -195546,6 +196454,34 @@
         }
       }
     },
+    "Swap your Railgun tokens for DAI, USDT, WBTC, WETH, LINK, UNI or AAVE without leaving your private balance." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia tus tokens de Railgun por DAI, USDT, WBTC, WETH, LINK, UNI o AAVE sin salir de tu saldo privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プライベート残高から出ずに、RailgunのトークンをDAI、USDT、WBTC、WETH、LINK、UNI、AAVEにスワップできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액을 벗어나지 않고 Railgun 토큰을 DAI, USDT, WBTC, WETH, LINK, UNI, AAVE로 스왑하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无需离开私密余额,即可将 Railgun 代币兑换为 DAI、USDT、WBTC、WETH、LINK、UNI 或 AAVE。"
+          }
+        }
+      }
+    },
     "Swap, send or receive money" : {
       "localizations" : {
         "es" : {
@@ -196731,6 +197667,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "耗时"
+          }
+        }
+      }
+    },
+    "Takes (accepts)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Takes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acepta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取れるもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 토큰"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "接受"
           }
         }
       }
@@ -214636,6 +215606,34 @@
         }
       }
     },
+    "USDC or a network's own token, from most other networks. Relay moves it to your public account. Relay doesn't accept Tor, so that request goes without it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o el token propio de una red, desde la mayoría de las demás redes. Relay lo mueve a tu cuenta pública. Relay no acepta Tor, así que esa solicitud va sin él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ほとんどの他のネットワークからUSDCまたはそのネットワーク自身のトークンを。Relayが公開アカウントへ移します。RelayはTorを受け付けないため、そのリクエストはTorを使いません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대부분의 다른 네트워크에서 USDC나 해당 네트워크의 자체 토큰을 받을 수 있습니다. Relay가 공개 계정으로 옮깁니다. Relay는 Tor를 받지 않으므로 그 요청은 Tor 없이 보내집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自大多数其他网络的 USDC 或该网络的原生代币。Relay 会将其转入你的公开账户。Relay 不接受 Tor,因此该请求不经过 Tor。"
+          }
+        }
+      }
+    },
     "USDC or its token · most EVM networks" : {
       "localizations" : {
         "es" : {
@@ -214660,6 +215658,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "USDC 或其原生代币 · 大多数 EVM 网络"
+          }
+        }
+      }
+    },
+    "USDC or its token, most EVM networks" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC o su token, la mayoría de las redes EVM"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDCまたはそのトークン、大半のEVMネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 또는 자체 토큰, 대부분의 EVM 네트워크"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC 或其原生代币,大多数 EVM 网络"
           }
         }
       }
@@ -232332,6 +233358,34 @@
         }
       }
     },
+    "You have one public account and three private ones." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tienes una cuenta pública y tres privadas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開アカウントが1つ、プライベートアカウントが3つあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 계정 1개와 비공개 계정 3개가 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你有一个公开账户和三个私密账户。"
+          }
+        }
+      }
+    },
     "You hold" : {
       "localizations" : {
         "es" : {
@@ -236986,6 +238040,34 @@
         }
       }
     },
+    "Your accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户"
+          }
+        }
+      }
+    },
     "Your accounts and balances land in your feed. Read-only — Acorns is never asked to move money." : {
       "localizations" : {
         "es" : {
@@ -237346,6 +238428,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的余额"
+          }
+        }
+      }
+    },
+    "Your balance earns interest in Aave from the moment it arrives, %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu saldo genera intereses en Aave desde que llega, %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高は届いた時点からAaveで利息が付きます(%@)。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액은 도착하는 순간부터 Aave에서 이자가 붙습니다, %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的余额从到账起就在 Aave 中赚取利息,%@。"
+          }
+        }
+      }
+    },
+    "Your balance earns interest in Aave from the moment it arrives." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu saldo genera intereses en Aave desde que llega."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高は届いた時点からAaveで利息が付きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액은 도착하는 순간부터 Aave에서 이자가 붙습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的余额从到账起就在 Aave 中赚取利息。"
           }
         }
       }
@@ -248668,6 +249806,96 @@
         }
       }
     },
+    "currently about %@ on ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ahora cerca del %@ en ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在、ETHで約%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 ETH 약 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前 ETH 约 %@"
+          }
+        }
+      }
+    },
+    "currently about %@ on USDC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ahora cerca del %@ en USDC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在、USDCで約%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 USDC 약 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前 USDC 约 %@"
+          }
+        }
+      }
+    },
+    "currently about %@ on USDC and %@ on ETH" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "currently about %1$@ on USDC and %2$@ on ETH"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ahora cerca del %1$@ en USDC y del %2$@ en ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在、USDCで約%1$@、ETHで約%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 USDC 약 %1$@, ETH 약 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前 USDC 约 %1$@,ETH 约 %2$@"
+          }
+        }
+      }
+    },
     "day" : {
       "localizations" : {
         "es" : {
@@ -249392,6 +250620,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "eSIM"
+          }
+        }
+      }
+    },
+    "each payment has a minimum, read from Privacy Pools. With USDC or USDG, include a little ETH for the network fee." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cada pago tiene un mínimo, leído de Privacy Pools. Con USDC o USDG, incluye un poco de ETH para la comisión de red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各入金には最低額があり、Privacy Poolsから読み取ります。USDCやUSDGの場合は、ネットワーク手数料用に少しのETHを含めてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 입금에는 Privacy Pools에서 읽어온 최소 금액이 있습니다. USDC나 USDG라면 네트워크 수수료용 ETH를 조금 함께 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每笔付款都有最低金额,从 Privacy Pools 读取。使用 USDC 或 USDG 时,请附带少量 ETH 作为网络费。"
           }
         }
       }
@@ -254506,6 +255762,34 @@
         }
       }
     },
+    "moving in starts at $10 of a token Casberi can price. Railgun takes 0.25%." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "mover hacia dentro empieza en 10 $ de un token al que Casberi pueda poner precio. Railgun cobra un 0,25 %."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移し入れは、Casberiが価格を付けられるトークンで$10から。Railgunの手数料は0.25%です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "옮겨오기는 Casberi가 가격을 매길 수 있는 토큰 $10부터 가능합니다. Railgun은 0.25%를 받습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转入起点为 Casberi 能定价的代币 $10。Railgun 收取 0.25%。"
+          }
+        }
+      }
+    },
     "moving this week" : {
       "localizations" : {
         "es" : {
@@ -254530,6 +255814,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本周运动时长"
+          }
+        }
+      }
+    },
+    "moving your own money between Base, Ethereum and Robinhood goes through Across, over Tor." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "mover tu propio dinero entre Base, Ethereum y Robinhood pasa por Across, a través de Tor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base、Ethereum、Robinhood間で自分のお金を移すときは、Tor経由でAcrossを使います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Base, Ethereum, Robinhood 사이에서 내 돈을 옮길 때는 Tor를 통해 Across를 거칩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Base、Ethereum 和 Robinhood 之间转移你自己的资金会通过 Across,经由 Tor。"
           }
         }
       }
@@ -262431,6 +263743,34 @@
         }
       }
     },
+    "send at least %@ each time. With USDC or USDG, include a little ETH for the network fee." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "envía al menos %@ cada vez. Con USDC o USDG, incluye un poco de ETH para la comisión de red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "毎回%@以上を送ってください。USDCやUSDGの場合は、ネットワーク手数料用に少しのETHを含めてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "매번 최소 %@ 이상 보내세요. USDC나 USDG라면 네트워크 수수료용 ETH를 조금 함께 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次至少发送 %@。使用 USDC 或 USDG 时,请附带少量 ETH 作为网络费。"
+          }
+        }
+      }
+    },
     "sending" : {
       "localizations" : {
         "es" : {
@@ -262455,6 +263795,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发送"
+          }
+        }
+      }
+    },
+    "sending out always needs a co-signer with a Human Passport score of 20 or more, whatever the amount. With Co-signer on, your co-signer approves every Aztec transaction: each send, each send out, and anything an Aztec app asks for. Moving money in is never asked." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "enviar hacia fuera siempre necesita un cofirmante con una puntuación de Human Passport de 20 o más, sea cual sea el importe. Con Cofirmante activado, tu cofirmante aprueba cada transacción de Aztec: cada envío, cada salida y todo lo que pida una app de Aztec. Mover dinero hacia dentro nunca se pide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送り出しには、金額にかかわらず、Human Passportスコア20以上の共同署名者が必要です。共同署名者がオンのときは、すべてのAztecトランザクション(各送金、各送り出し、Aztecアプリが求めるもの)を共同署名者が承認します。移し入れが求められることはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내보내기에는 금액과 관계없이 항상 Human Passport 점수 20 이상의 공동 서명자가 필요합니다. 공동 서명자가 켜져 있으면 모든 Aztec 거래(각 보내기, 각 내보내기, Aztec 앱이 요청하는 모든 것)를 공동 서명자가 승인합니다. 옮겨오기는 승인을 요청하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无论金额多少,转出始终需要 Human Passport 分数 20 或以上的共同签名人。开启共同签名人后,共同签名人会批准每笔 Aztec 交易:每次发送、每次转出,以及 Aztec 应用请求的任何操作。转入从不需要批准。"
           }
         }
       }
@@ -264257,6 +265625,34 @@
         }
       }
     },
+    "the tokens go out to Uniswap and back in, in one transaction, so Railgun takes 0.25% each way, 0.5% in all." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "los tokens salen a Uniswap y vuelven, en una sola transacción, así que Railgun cobra un 0,25 % en cada sentido, un 0,5 % en total."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "トークンは1回のトランザクションでUniswapへ出て戻るため、Railgunは往復それぞれ0.25%、合計0.5%を受け取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "토큰이 한 번의 거래로 Uniswap에 나갔다 들어오므로 Railgun은 각 방향 0.25%, 총 0.5%를 받습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代币在一笔交易中转出到 Uniswap 再转回,因此 Railgun 每个方向收取 0.25%,共 0.5%。"
+          }
+        }
+      }
+    },
     "the wallet disconnected" : {
       "localizations" : {
         "es" : {
@@ -264511,6 +265907,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今天晚上"
+          }
+        }
+      }
+    },
+    "this iPhone can move in up to $100 a day. More than that needs a co-signer with a Human Passport score of 20 or more. Shield then sets how much each move can be, by that score." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "este iPhone puede mover hacia dentro hasta 100 $ al día. Más que eso necesita un cofirmante con una puntuación de Human Passport de 20 o más. Shield fija entonces cuánto puede ser cada movimiento, según esa puntuación."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneで移し入れられるのは1日$100までです。それ以上はHuman Passportスコア20以上の共同署名者が必要です。その後、Shieldがスコアに応じて1回の移動額を決めます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone은 하루 최대 $100까지 옮겨올 수 있습니다. 그 이상은 Human Passport 점수 20 이상의 공동 서명자가 필요합니다. 그러면 Shield가 그 점수에 따라 한 번에 옮길 수 있는 금액을 정합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 iPhone 每天最多可转入 $100。超过需要 Human Passport 分数 20 或以上的共同签名人。之后 Shield 会按该分数设定每次可转入的金额。"
           }
         }
       }
@@ -267970,6 +269394,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你"
+          }
+        }
+      }
+    },
+    "you can send only what Privacy Pools has approved. You can't swap inside Privacy Pools." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "solo puedes enviar lo que Privacy Pools ha aprobado. No puedes hacer cambios dentro de Privacy Pools."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送れるのはPrivacy Poolsが承認したものだけです。Privacy Pools内ではスワップできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools가 승인한 것만 보낼 수 있습니다. Privacy Pools 안에서는 스왑할 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你只能发送 Privacy Pools 已批准的资金。不能在 Privacy Pools 内兑换。"
           }
         }
       }

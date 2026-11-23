@@ -118,7 +118,8 @@ enum ReceiveWords {
     static var elsewhereLine: String { String(localized: "USDC or its token, most EVM networks") }
 
     static func facts(_ place: Place, networks: String, poolsNetworks: String, pools: Pools) -> [Fact] {
-        let takes = String(localized: "Takes"), on = String(localized: "On"), from = String(localized: "From")
+        // "Takes" here is what a place accepts; Move uses the word for time (MovePrivate), so its own key.
+        let takes = String(localized: "Takes (accepts)", defaultValue: "Takes"), on = String(localized: "On"), from = String(localized: "From")
         let ready = String(localized: "Ready"), earns = String(localized: "Earns")
         switch place {
         case .public:
