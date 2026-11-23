@@ -430,7 +430,14 @@ final class FreshReceive {
             let fees = try await PrivateRPC.fees(network)
             guard let floor = await minimumBudget(pool, on: network) else { throw FreshFailure.terms }
             guard let have = Decimal(string: held), let least = Decimal(string: floor), have >= least else {
-                if case .waiting = entry.state { set(entry.id, .tooLittle(amount: held), symbol: symbol) }
+                // Under the pool's least is too little, whatever the address
+                // said before: a failed or gas-waiting line whose money has
+                // since moved leaves dust, and drew "Not moved yet · $0"
+                // on Holdings (2026-11-23).
+                switch entry.state {
+                case .waiting, .failed, .needsGas: set(entry.id, .tooLittle(amount: held), symbol: symbol)
+                default: break
+                }
                 return
             }
             guard let gas = FreshAddress.tokenGas(ethHeld: eth, maxFee: String(fees.maxFee)) else { return }

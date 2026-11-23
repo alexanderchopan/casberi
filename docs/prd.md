@@ -75165,3 +75165,8 @@ Amends §1482, §1071 and §902's 44pt head, and generalises §1954–§1956 fro
 4. **Tap height:** a one-line row's tap is its 32pt head (the air is the list's). Rows stand edge to edge, so a near miss lands on the next row, never on nothing; standalone buttons keep `DS.Hit.min`.
 
 **Mac half (§1402).** The Mac scales the same constant (`macScale`); its rows tighten in step.
+
+## §1959 — Dust a move leaves is not money waiting (user, 2026-11-23, over Holdings' "USDC · Not moved yet · $0" after the 12.98 USDC went in: "if it is 0 usdc that should be gone shouldn't it?") — BUILT
+
+1. **Holdings lists no dust:** a fresh address under a cent of a dollar, or 0.00001 of anything else at its own places, draws no "Not moved yet" or "Needs a little private ETH" row (`FreshAddress.isDust`).
+2. **Under the pool's least is too little, whatever came before:** a USDC look under ppUSDC's minimum turns a failed or gas-waiting address into `.tooLittle`, not only a waiting one, so the old failure does not stand over what is left.

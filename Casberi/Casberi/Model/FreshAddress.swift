@@ -152,11 +152,25 @@ enum FreshAddress {
     /// and has not moved in, and will not by itself: a token short of gas, or
     /// a move that failed. The newest first. Money that is moving, moved or
     /// too little to move is not here: it has its own row, or none.
+    /// **DUST IS NOT MONEY WAITING (2026-11-23).** Under a cent of USDC
+    /// (or of the 6-place dollar) or 0.00001 ETH is what a move leaves
+    /// behind, never a row asking you to act ("USDC · Not moved yet · $0").
+    static func isDust(_ amount: String, symbol: String) -> Bool {
+        guard let units = Decimal(string: amount) else { return false }
+        let dollar = ["USDC", "USDG", "USDT", "DAI"].contains(symbol.uppercased())
+        let decimals = FreshTx.railgunToken(symbol: symbol)?.decimals ?? (["USDC", "USDG", "USDT"].contains(symbol.uppercased()) ? 6 : 18)
+        // A cent of a dollar; 0.00001 of anything else, at its own places.
+        let places = max(decimals - (dollar ? 2 : 5), 0)
+        var floor = Decimal(1)
+        for _ in 0..<places { floor *= 10 }
+        return units < floor
+    }
+
     static func waiting(_ entries: [Entry], on chainId: Int) -> [Entry] {
         entries.filter { entry in
             guard entry.network == chainId else { return false }
             switch entry.state {
-            case .needsGas, .failed: return true
+            case .needsGas(let amount), .failed(let amount): return !isDust(amount, symbol: entry.token)
             default: return false
             }
         }
