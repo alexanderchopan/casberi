@@ -122,6 +122,9 @@ struct ReceivePoolsPlace: View {
     @Environment(ShellChrome.self) private var chrome
     private var book: FreshReceive { .shared }
 
+    /// How many addresses' Status lines Receive shows, newest first.
+    static let statusMax = 3
+
     /// The addresses with something to say, newest first, three at most.
     private var live: [FreshAddress.Entry] {
         let chain = book.network?.chainId
@@ -136,7 +139,7 @@ struct ReceivePoolsPlace: View {
                 }
             }
             .sorted { ($0.made, $0.index) > ($1.made, $1.index) }
-            .prefix(3)
+            .prefix(Self.statusMax)
             .map { $0 }
     }
 

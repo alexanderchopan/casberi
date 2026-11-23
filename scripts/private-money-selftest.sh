@@ -136,8 +136,9 @@ use "$SENT" 'MoveTokenPlace(id: "pools", title: "Privacy Pools", choices: privat
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
 use "$MSCREEN" 'privately: chrome.movePrivately,' "Move no longer opens Send privately when asked"
 use "$MSCREEN" 'chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil;' "a closed Move keeps opening privately"
-grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q '                walletOpenPrivate(.send)' "$HOLD" \
-    || { echo "✗ Holdings' header no longer sends to your private balance, or a row no longer sends from it"; exit 1; }
+# A row's send moved onto the holding's own page (prd §1939).
+grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q 'walletOpenPrivate(.send)' Casberi/Casberi/Screens/WalletHoldingSheet.swift \
+    || { echo "✗ Holdings' header no longer sends to your private balance, or a holding's page no longer sends from it (prd §1939)"; exit 1; }
 # The savings goal's sheet is the section's own (prd §1667); any other sheet
 # would be a private flow outside Move.
 # On its way's steps (prd §1779) are a read: the sheet moves nothing, and its
@@ -258,8 +259,7 @@ FRESHV="Casberi/Casberi/Screens/ReceivePlace.swift"
 # No Private switch in Receive (prd §1719): your private balance is a place
 # in Receive's "on" list, and picking it opens the fresh address.
 ! grep -q 'MovePrivateSwitch' "$SENT" || { echo "✗ a Private switch came back to Move (prd §1719)"; exit 1; }
-use "$SENT" 'let receivesPools = PrivateMove.freshAvailable' "your private balance is no longer offered where Receive lands"
-use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
+use "$SENT" 'let poolsRow = PrivateMove.freshAvailable || DemoMode.isActive' "your private balance is no longer offered where Receive lands (prd §1945)"
 # The sentence names the place; the plate holds the whole address (prd §1928).
 # prd §1945: no Privacy Pools page and no Aztec receive page; Receive is every place.
 for gone in MoveFreshReceive MoveAztecReceive; do
