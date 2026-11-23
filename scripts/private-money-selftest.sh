@@ -105,7 +105,7 @@ use "Casberi/Casberi/Shell/RootShell.swift" 'PrivateWatchTask.schedule()' "the w
 use "Casberi/Casberi/Shell/ProbeHooks.swift" 'Hook(key: "backgroundRefreshProbe")' "the watch has no probe"
 use "$SEC" 'if backupOff || privateBackup == .deviceOnly { return (String(localized: "Not backed up"), DS.attentionInk) }' "Backup no longer says Not backed up, in amber, when private money sits on this phone alone (prd §1562, §1803)"
 use "$SEC" 'if privateBackup == .deviceOnly { return (String(localized: "Back up"), backUpPrivate) }' "Backup has no fix beside Not backed up (prd §1562, §1803)"
-use "$SEC" 'row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone, verb: backupVerb)' "Keys has no Backup row (prd §1803)"
+use "$SEC" 'row(title: Self.backupTitle, value: backupValue.text, tone: backupValue.tone,' "Keys has no Backup row (prd §1803)"
 echo "  ok   one root in iCloud Keychain: the seed, the owner and the fresh addresses from it, found again, the watch through Tor"
 
 # Private is Send's, never a verb (prd §1554): "Your private balance" leads
@@ -134,8 +134,8 @@ use "$SENT" 'MoveTokenPlace(id: "pools", title: "Privacy Pools", choices: privat
 # No switch in the private sentence either (prd §1700f item 11): "from your
 # private balance" opens Send's networks.
 use "$MPRIV" 'action: { if move.stage == .ready { leave(.switchOff) } },' "the private send's \"from\" no longer opens Send's networks (prd §1700f item 11)"
-use "$MSCREEN" 'privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,' "Move no longer opens Send privately when asked"
-use "$MSCREEN" 'chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false;' "a closed Move keeps opening privately"
+use "$MSCREEN" 'privately: chrome.movePrivately,' "Move no longer opens Send privately when asked"
+use "$MSCREEN" 'chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil;' "a closed Move keeps opening privately"
 # A private row opens its holding's page, and Send is on the page (prd §1939).
 grep -q 'Button { walletOpenPrivate(.deposit) } label:' "$HOLD" && grep -q '                walletOpenHolding(holding)' "$HOLD" \
   && grep -q '            walletOpenPrivate(.send)' "Casberi/Casberi/Screens/WalletHoldingSheet.swift" \
@@ -256,19 +256,19 @@ echo "  ok   private is Send's: a recipient and a switch, opened from Holdings, 
 # DEBUG-only and device-only; Holdings looks too.
 FRESHM="Casberi/Casberi/Model/FreshReceive.swift"
 FRESHK="Casberi/Casberi/Model/FreshAddressKey.swift"
-FRESHV="Casberi/Casberi/Screens/MoveFreshReceive.swift"
+FRESHV="Casberi/Casberi/Screens/ReceivePlace.swift"
 # No Private switch in Receive (prd §1719): your private balance is a place
 # in Receive's "on" list, and picking it opens the fresh address.
 ! grep -q 'MovePrivateSwitch' "$SENT" || { echo "✗ a Private switch came back to Move (prd §1719)"; exit 1; }
-use "$SENT" 'let receivesPools = PrivateMove.freshAvailable' "your private balance is no longer offered where Receive lands"
-use "$SENT" 'freshReceive = false' "a verb no longer leaves the fresh address"
+use "$SENT" 'let poolsRow = PrivateMove.freshAvailable || DemoMode.isActive' "your private balance is no longer offered where Receive lands (prd §1946)"
 # The sentence names the place; the plate holds the whole address (prd §1928).
-use "$FRESHV" 'Button { copy(entry.address) } label: { AddressGroups(address: entry.address) }' "the fresh address is no longer shown whole on its plate (prd §1929)"
+# prd §1946: no Privacy Pools page and no Aztec receive page; Receive is every place.
+for gone in MoveFreshReceive MoveAztecReceive; do
+    [[ ! -f "Casberi/Casberi/Screens/$gone.swift" ]] || { echo "✗ $gone.swift is back: Receive is the one page (prd §1946)"; exit 1; }
+done
+! grep -q 'receiveInfo' "$SENT" || { echo "✗ Receive's ⓘ is back (prd §1946)"; exit 1; }
+use "$FRESHV" 'guard let entry = book.unusedCurrent() else {' "Privacy Pools' Copy no longer copies an address never used (prd §1946)"
 use "$SENT" ': try? await RailgunPocket.privateAddress()' "To Railgun no longer copies your 0zk address (prd §1877, §1929)"
-use "$FRESHV" 'Button { copy(address) } label: { AddressLine(address: address) }' "the fresh address is no longer drawn whole, one quiet line (prd §1719: no QR; §1884)"
-use "$FRESHV" 'MoveVerbRowLabel(title: String(localized: "New address"), glyph: "arrow.clockwise")' "New address is not a row over the foot (prd §1803)"
-use "$FRESHV" 'MoveShareDisc(item: shown)' "Share no longer shares the whole address beside the copy (prd §1928)"
-use "$FRESHV" 'MoveDeckFoot(backDisabled: moving, back: leave)' "the fresh page's back no longer returns to Receive's addresses (prd §1803, §1928)"
 ! grep -qE 'prefix\([0-9]+\)' "$FRESHV" || { echo "✗ the fresh sentence draws an address's head"; exit 1; }
 use "$FRESHM" 'return try await PrivacyEngine.shared.prepareDeposit(tokenId: PrivateMove.eth, value: value)' "a fresh move is no longer an ordinary deposit for your own account"
 ! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
@@ -323,7 +323,7 @@ grep -q 'try await PrivateOnEthereum.open(account, reason: nil)' "$TMPF" || { ec
 use "$FRESHM" 'guard interactive, spendable >= cost else {' "a USDC payment's gas is paid from private ETH in the background, or beyond what it holds"
 use "$FRESHM" 'reason: String(localized: "Move \(symbol) to private"))' "paying a USDC payment's gas from private money does not ask for you"
 use "$FRESHM" 'set(entry.id, .needsGas(amount: held), symbol: symbol)' "USDC with no gas and too little private ETH says nothing"
-use "$FRESHV" 'arrived; needs a little private ETH to move' "the line no longer says a USDC payment needs private ETH"
+use "$FRESHV" 'needs a little private ETH to move' "the line no longer says a USDC payment needs private ETH"
 ! grep -qi 'depositFor' "$FRESHM" || { echo "✗ a fresh move deposits for someone (depositFor)"; exit 1; }
 # USDC in Move's sentence; balance to balance; round-ups riding a Face ID
 # operation, simulated whole before signing; the watch in every build; the
@@ -1291,7 +1291,7 @@ awk '/FreshAddress.tokenGoesFirst\(eth: balance, token: usdc, tokenMinimum: leas
     || { echo "✗ with ETH and a token at one address the ETH still moves first (prd §1778)"; exit 1; }
 use "$HOLD" 'walletFreshWaitingRows(mask: mask, prices: store.shownPrices)' "Holdings no longer shows money waiting at a one-time address (prd §1778)"
 use "$HOLD" 'return FreshAddress.waiting(FreshReceive.shared.entries, on: network.chainId)' "Holdings lists waiting money by another rule than the model's (prd §1778)"
-use "$HOLD" 'chrome.moveFreshReceive = true' "a waiting row no longer opens Receive, where the move is made (prd §1778)"
+use "$HOLD" 'MoveMenu.pick(.receive, chrome)' "a waiting row no longer opens Receive, where the move is made (prd §1778, §1946)"
 echo "  ok   a one-time address: the token first while its own ETH pays, what waits shown in Holdings"
 # prd §1779: the redesign's wiring, by reading.
 # prd §1781: the menu whole and A–Z, no Make private; the sentence no control.
@@ -1303,12 +1303,8 @@ use "$TMP/blank" 'MoveSentenceBlanksKey.self' "a word of the sentence no longer 
 use "$SENT" '.onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }' "the rows no longer read the sentence on screen (prd §1781)"
 use "$SENT" 'for b in sentenceBlanks {' "the rows are listed by hand again: a sentence can hold a choice with no row (prd §1781)"
 # Earn draws no sentence since §1931: its receipt lines are the page.
-for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate MoveFreshReceive MoveAztecReceive; do
+for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
     use "Casberi/Casberi/Screens/$f.swift" '.allowsHitTesting(false)' "$f's sentence takes a touch again (prd §1781)"
-done
-# The two Receive pages go back to Receive's three addresses (prd §1803).
-for f in MoveFreshReceive MoveAztecReceive; do
-    use "Casberi/Casberi/Screens/$f.swift" 'back: leave' "$f has no way back to Receive's addresses (prd §1803)"
 done
 # Earn and the three private sentences stand on the Deck (prd §1901, §1927):
 # the foot's chevron is the way back, closing an open step first, then the
@@ -1357,37 +1353,36 @@ use "$SENT" 'tapBlank(which == .destination && !networkPicked ? .network : which
 use "$SENT" 'guard filled else { return nil }' "an untouched sentence is kept again: Move reopens inside a verb (prd §1779)"
 use "$SENT" 'if let d = chrome.moveDraft, Date().timeIntervalSince(d.at) < 5 * 60, !d.kept { return }' "a sentence Move kept hides the menu again (prd §1779)"
 # Receive asks where (prd §1929): each private place a row that copies.
-use "$SENT" 'receiveRow(String(localized: "To Privacy Pools"),' "Receive lost To Privacy Pools (prd §1779, §1929)"
-use "$SENT" 'receiveRow(String(localized: "To Railgun"),' "Receive lost To Railgun (prd §1877, §1929)"
-use "$SENT" 'receiveRow(String(localized: "To Aztec"), nameInk: DS.aztecInk,' "Receive's Aztec row is hidden again or lost its ink (prd §1779, §1929)"
-use "$SENT" 'say(String(localized: "Copied · new address each time"))' "copying Privacy Pools' address no longer says it is new each time (prd §1892, §1929)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let payGas, waitsForGas(entry), !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779), or Pay the gas stands where no account can pay (prd §1823)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'case .failed: entry.symbol != nil && shortOfGas' "a failed token move short of gas has no way on (prd §1823)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'if let pinned = chrome.moveFreshEntry, let held = book.entries.first(where: { $0.id == pinned }) { return held }' "Receive no longer opens on the address the money is at (prd §1823)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift" 'chrome.moveFreshEntry = entry.id' "a waiting row opens Receive on the newest address, not its own (prd §1823)"
-use "Casberi/Casberi/Screens/MoveScreen.swift" 'chrome.moveFreshReceive = false; chrome.moveFreshEntry = nil;' "a closed Move keeps the pinned fresh address (prd §1823)"
+# prd §1946: Receive draws every place through ReceivePlace, in its order.
+use "$SENT" 'ReceivePoolsPlace(facts: receiveFacts(.pools), payGas:' "Receive lost Privacy Pools (prd §1779, §1946)"
+use "$SENT" 'ReceivePlace(name: ReceiveWords.name(.railgun), facts: receiveFacts(.railgun),' "Receive lost Railgun (prd §1877, §1946)"
+use "$SENT" 'ReceivePlace(name: ReceiveWords.name(.aztec), facts: receiveFacts(.aztec), ink: DS.aztecInk,' "Receive's Aztec place is hidden again or lost its ink (prd §1779, §1946)"
+use "Casberi/Casberi/Screens/ReceivePlace.swift" 'chrome.flash(String(localized: "Copied · new address each time"), tone: .success)' "copying Privacy Pools' address no longer says it is new each time (prd §1892, §1946)"
+use "$FRESHV" '} else if let payGas, waitsForGas(entry), !DemoMode.isActive {' "a token waiting for gas is a dead end again (prd §1779), or Pay the gas stands where no account can pay (prd §1823)"
+use "$FRESHV" 'case .failed: entry.symbol != nil && shortOfGas.contains(entry.id)' "a failed token move short of gas has no way on (prd §1823)"
+use "$FRESHV" 'ForEach(live) { entry in' "Receive no longer shows the addresses the money is at (prd §1823, §1946)"
 use "Casberi/Casberi/Model/FreshReceive.swift" 'failure = Self.words(error, step: .gas, network: network)' "a token's gas failure no longer names its step (prd §1823)"
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'if let mended = AddressSafety.pasted(text) {' "Send's To no longer mends an address read off a picture (prd §1823)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
-use "Casberi/Casberi/Screens/MoveFreshReceive.swift" 'Text("Send a little ETH with USDC or USDG")' "the private address no longer says a token needs ETH sent with it (prd §1779, §1929)"
-# The row names the tokens and the ⓘ the networks (ReceiveWords, ddecf1062).
-use "Casberi/Casberi/Model/ReceiveWords.swift" 'pools.atLeast.map { String(localized: "ETH, USDC, USDG · \($0)") } ?? String(localized: "ETH, USDC, USDG")' "Receive no longer says what Privacy Pools takes before it is copied (prd §1779, §1929)"
-use "Casberi/Casberi/Model/ReceiveWords.swift" 'var what = String(localized: "ETH, USDC or USDG, on Base, Ethereum or Robinhood, at a new address each time.")' "Receive's ⓘ no longer says where Privacy Pools takes money (prd §1779, §1929)"
-use "Casberi/Casberi/Screens/MoveAztecReceive.swift" 'Text(verbatim: MoveSentence.aztecRule).dsText(.body17).foregroundStyle(DS.aztecInk)' "the Aztec address lost its rule on Receive (prd §1779, §1928)"
-use "$PAGES" 'Text("Aztec to Aztec only.")' "the Aztec address lost its rule under Account (prd §1779)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Privacy Pools", value: "Ethereum", action: {' "Your account lost its private balance line (prd §1779, §1937)"
-use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountLine(label: "Railgun", value: "Ethereum", action: {' "Railgun's line on Money is gone (prd §1937)"
-! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift Casberi/Casberi/Screens/MoveAztecReceive.swift \
+use "$FRESHV" 'DSFootnote("From your account, in the open. It links this address to you.")' "Pay the gas no longer says what it costs in privacy (prd §1779)"
+use "Casberi/Casberi/Model/ReceiveWords.swift" 'value: String(localized: "Send a little ETH with USDC or USDG")' "Privacy Pools no longer says a token needs ETH sent with it (prd §1779, §1946)"
+use "$FRESHV" 'if case .failed = entry.state, !shortOfGas.contains(entry.id) {' "a failed move on Receive has no Try again (prd §1945, §1946)"
+use "Casberi/Casberi/Model/ReceiveWords.swift" 'var lines = [Fact(label: takes, value: "ETH, USDC, USDG")]' "Receive no longer says what Privacy Pools takes before it is copied (prd §1779, §1946)"
+use "Casberi/Casberi/Model/ReceiveWords.swift" 'Fact(label: from, value: String(localized: "Another Aztec account only")),' "the Aztec address lost its rule on Receive (prd §1779, §1946)"
+# prd §1944: the Aztec account's own page is deleted; Receive holds its address and rule.
+! grep -rq 'yourAccountShowsAztec' Casberi/Casberi || { echo "✗ the Aztec account's own page is back (prd §1944)"; exit 1; }
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountCopyRow(name: "Privacy Pools", line: AccountNetworks.on(ReceivePools.names), copy: {' "Your accounts lost Privacy Pools, or its networks (prd §1878, §1947)"
+use "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift" 'AccountCopyRow(name: "Railgun", line: AccountNetworks.on(["Ethereum"]), copy: {' "Railgun's line in Your accounts is gone (prd §1947)"
+# prd §1947: How your accounts work leads Your accounts; the Safe copies its address.
+use "$SEC" 'AccountLine(label: String(localized: "How your accounts work"), end: .opens,' "Your accounts lost How your accounts work (prd §1947)"
+use "$SEC" 'AccountCopyRow(name: "Safe", line: AccountNetworks.on(Self.publicNetworks),' "the Safe in Your accounts no longer copies its address (prd §1947)"
+! grep -q 'DS.pickInk' Casberi/Casberi/Screens/MoveAztecPrivate.swift \
     || { echo "✗ an Aztec screen wears the pick's pink: Aztec is its own colour (prd §1779)"; exit 1; }
 # prd §1785: the three money rows left Home; Account opens on the Safe.
 ! grep -rq 'walletPlaceRows' Casberi/Casberi/Screens || { echo "✗ Home's three money rows are back (prd §1785)"; exit 1; }
-use "$PAGES" 'if section == .yourAccount { chrome.yourAccountShowsAztec = false }' "Account can open on the Aztec address by leftover (prd §1785)"
 # prd §1786: the private places are doors; Aztec's address has its own page.
 AZT="Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift"
 use "$AZT" 'func walletPrivatePlaces() -> some View {' "Account lost its private doors (prd §1786)"
-use "$AZT" 'title: String(localized: "Send from Aztec to Aztec"),' "the private account's send no longer names both ends (prd §1786)"
 ! grep -q 'mark: "safe", title: String(localized: "Safe")' "$AZT" || { echo "✗ the Safe is a row under its own box again (prd §1786)"; exit 1; }
-use "Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift" 'if walletOnPrivateAccount {' "the private account's page draws the public account's rows (prd §1786)"
 use "$PAGES" 'WalletUnsignedSection(part: .unsigned,' "Without a signature left Permissions (prd §1786)"
 # prd §1787: On its way left Home; Holdings' waiting rows open its steps.
 ! grep -rq 'walletOnItsWaySection' Casberi/Casberi/Screens || { echo "✗ On its way is on Home again (prd §1787)"; exit 1; }

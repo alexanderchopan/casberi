@@ -494,27 +494,6 @@ struct MoveListBack: View {
     }
 }
 
-/// **A VERB IS A ROW (prd §1802, §1803):** white, its glyph at the trailing
-/// edge, at a choice row's height. Lend's "Take back", a one-time address's
-/// "New address", "Share".
-struct MoveVerbRowLabel: View {
-    let title: String
-    let glyph: String
-    var ink: Color = DS.textPrimary
-
-    var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            Text(verbatim: title).dsText(.body17).foregroundStyle(ink)
-            Spacer(minLength: DS.Space.s2)
-            Image(systemName: glyph).dsGlyph(.caption, weight: .semibold)
-                .foregroundStyle(ink)
-                .accessibilityHidden(true)
-        }
-        .frame(minHeight: MoveChoiceRowLabel.height)
-        .contentShape(Rectangle())
-    }
-}
-
 /// **A ROW THAT OPENS A SCREEN (prd §1824).** Its words, and the door's grey
 /// chevron at the trailing edge (§1385: a door is grey with its chevron), so
 /// it reads as tappable beside a pink verb ("Copy") that acts at once.

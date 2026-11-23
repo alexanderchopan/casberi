@@ -74988,3 +74988,65 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Checks.** `shield-bridge-selftest.sh` holds the wrap in both ways in, WETH's `deposit()`, and the three choices; a removed wrap was caught.
 
 **Seen** on an iPhone 17 Pro simulator with `-moveToAztec YES -aztecWayInSample key`: USDC, ETH and WETH listed on Ethereum; ETH picked reads "ETH · Ethereum".
+
+## §1944 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive; the Aztec account's own page is deleted (amends §1937 items 1, 2 and 6, §1940, §1815 item 1 for Account, §1786; retires §1937's "How your money moves" and the Networks row) (user, 2026-11-23: "we need to improve the design of the account screen. you can't tell which things are tappable and which aren't. it's ugly. doesn't feel like rest of the app"; of the chevron question, "this is bigger than Chevron's or no Chevron's. The addresses are inconsistent. You can tap on privacy pools in Aztec, but you can't tap on the safe one") — BUILT
+
+**Why.** Account drew four kinds of line alike: a line that opened a tray (Round-ups, Goal, Theme), a fact (Tor, the Safe's networks), a fact with a pink verb at its end (Backup, Export), and a switch. Pink stood in the value column on two lines (Goal's "Set", "Follow an account") and at the end on others. Money's four places did four things: the Safe nothing, Privacy Pools its one-time address, Railgun Privacy Pools' one-time address too, Aztec a page of its own.
+
+1. **A line is the app's row** (`AccountLine`): the name white at the left edge, the value grey at the trailing edge (a state keeps its ink: amber, Tor's green, Aztec's), 44pt (`AccountLines.pitch = DS.Hit.min`, was 32). The 118pt word column is gone from Account (Money's plate rows keep it).
+2. **A line's end says what a tap does, one of four** (`AccountLineEnd`): **opens** (a page, a sheet or a tray) wears the grey chevron, sheets included on this page; **leaves** the app wears the arrow; **acts** is the verb in the pick's ink and the whole line is the verb ("Setting up…" grey, no tap, while it runs); a **switch** is two words on one track (`AccountSwitch`: Off | On, Dark | Light for Theme, Home | Activity for Open on). A line with none of these is a fact and takes no tap. A value never wears pink: Goal unset is "Set" at the end, no Following is "Follow" at the end, iCloud Keychain off is Backup's "Turn on" (the second line under it is deleted).
+3. **Every place on Money opens Receive** (`MoveMenu.pick(.receive)`): the Safe, Privacy Pools, Railgun and Aztec, where each place's address, Copy and ⓘ stand (§1929). A Safe you hold a key to keeps opening that Safe. "How your money moves" is deleted: every place is that door now. "Networks" stands over the values' edge on Public's head.
+4. **The Aztec account's own page is deleted** (§1786): its one door was Aztec's line. `yourAccountShowsAztec`, `walletPrivateAccountRows`, `walletOnPrivateAccount(Page)`, the head's Aztec address and "Copy for Aztec" go with it. Add money from Ethereum and Send from Aztec stay Move's and Holdings'.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.
+
+## §1945 — Privacy Pools' page is a receipt: its name, Takes · On · Status, the address on its plate; a failed move says Try again; a dollar at cents (amends §1928, §1929 for this page; §1931's receipt reaches it) (user, 2026-11-23, over a screenshot of the page holding 12.978123 USDC "arrived, not moved yet": "also, this looks like shit") — BUILT
+
+**Why.** The page kept the 52pt sentence §1931 retired from every other Move page, four lines of it with grey glue words; two amber lines, one a state and one a standing rule; a six-place dollar figure; "New address each time" over a New address row; and a failed move with nothing to do about it.
+
+1. **The name, then the receipt** (`MoveFreshSentence`): "Privacy Pools" at `heading34`; `MoveReceiptFact` lines Takes (ETH, USDC, USDG) and On (its networks); a Status line when something has arrived, in its state's ink.
+2. **A failed move says Try again** at the Status line's end: `FreshReceive.check(force: true)`, the same look the page makes on opening.
+3. **The rule is grey, once:** "A token needs a little ETH sent with it." under the address, `fact15`; amber is for a state. "New address each time" is deleted: the New address row says it.
+4. **A dollar at cents, a coin at four places** in the page's figures ("12.98 USDC").
+5. The plate's address, New address, Pay the gas and the foot (back, Share, Copy address) are unchanged.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass. **Not answered:** why that 12.98 USDC has not moved (§1942); Try again runs the same move that failed.
+
+## §1946 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receive pages are deleted, and Privacy Pools carries its Status lines on Receive (amends §1929's ⓘ and rows, §1945, §1928's two pages, §1823's pinned address, §1719's Aztec receive page) (user, 2026-11-23: "I'm not sure why we need those little eyes for more information … all the information should be on the main page because it's not really clear otherwise", "we have been failing to make these screens clear and cohesive", "I don't even understand the point of that privacy pools page … if we already have the receive page, why do we need another privacy pools page", "there is also the aztec and railgun pages … on the account that page"; mock "Receive" shown in the session) — BUILT
+
+1. **One shape for every place** (`ReceivePlace`, `ReceiveWords.facts`): its name at `heading17`, Copy at the end (pink; Aztec's lime; "Copied" green for a moment), then labelled lines in Move's receipt column (78pt): Takes, At least, On or From, Ready, Earns, Gas, each only where the place has it. Your public account, Privacy Pools, Railgun and Aztec read alike; From another network stays a door with its one line and chevron.
+2. **No ⓘ:** its trays are deleted; what they said that a person needs is a line.
+3. **No page of its own for any place.** `MoveFreshSentence` (Privacy Pools' one-time address page) and `MoveAztecReceive` are deleted, with `chrome.moveFreshReceive`, `moveFreshEntry`, Receive's Private rows in its network list and `MoveVerbRowLabel`. Privacy Pools' Copy copies an address never used (`FreshReceive.unusedCurrent`), so New address is gone with the page.
+4. **Privacy Pools carries what arrived** (`ReceivePoolsPlace`): one Status line per one-time address money reached and has not finished (three newest), in its state's ink, with Try again on a failed move and Pay the gas where it waits for ETH (and its privacy line, §1779); every address is looked at on opening and every 15 s while Receive shows. A waiting row in Holdings and On its way's address open Receive.
+5. **With no account,** Receive is Privacy Pools alone (`ReceiveWithoutAccount`).
+6. Account's four places open Receive (§1944), so Account's Railgun and Aztec lines no longer open a page of their own.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.
+
+## §1947 — Account leads with Your accounts: How your accounts work, Public, Private, Following, each account its name, where it is, and a copy glyph; the head is your face and name; Saving is its own plate (amends §1937 items 2–4, §1944 item 3 and §1946 item 6; Security, Saving's lines and App unchanged) (user, 2026-11-23, over the canvas "Account, true to the app": "security, saving, and app are good. do not change those", "public and private … look like errors", "it's also not clear that the items to its right are networks", "we have copy address under You but is user going to understand what that is", "the user will want to know what their accounts are", "they will also want to know and copy their addresses", "it belongs on the Your accounts section somehow", "say other accounts that are read-only", "you can put the icon that is for copy", "we need to be clear safe is public rest are private", "following is its own", "should we just say on aztec?", "it should probably be first", "for now you can build the accounts page") — BUILT
+
+1. **Your accounts is the first plate** (`MoveSecurity.accountsPlate`), in this order: **How your accounts work ›** (opens Receive until its own page is designed: "these accounts also send … we will have to define the info and then decide where it lives"); **Public**, the Safe ("On Base, Ethereum and Robinhood") and each Safe you hold a key to; **Private**, Privacy Pools ("On Base, Ethereum and Robinhood"), Railgun ("On Ethereum"), Aztec ("On Aztec", its whole line in its ink); **Following**, "Other accounts, read-only" with Follow, or the count with a chevron.
+2. **An account is a name, one line and the copy glyph** (`AccountCopyRow`, `AccountNetworks.on`): the glyph copies its address and ticks for a moment; Privacy Pools copies an address never used and says "Copied · new address each time"; Aztec's says "Copied · paid from Aztec only". The name and line take no tap. Public, Private and Following are white heads (`AccountSubhead`), never grey labels.
+3. **The head is your face and your name.** The address and its copy under the name are deleted: each account copies its own.
+4. **Saving is its own plate** after Security (Round-ups, Goal), the lines as they were. Money, its Networks head and the place lines that opened Receive are deleted.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass. **Open:** what How your accounts work shows (receiving and sending for each account) and where it lives.
+
+## §1948 — How your accounts work is its own page: an intro, then each account closed to a line, opening to Receive, Send (Swap for Railgun) and Earns with their Good to know; Send and Receive carry only what changes the move in hand (amends §1947 item 1's door to Receive) (user, 2026-11-23: "we want the info that is on the receive screen today … but we need to add send. we also need an intro", line by line through the Safe, Privacy Pools and Railgun text, "keep railgun term", the Aztec text corrected by the Aztec session, "what if they are collapsible", "yes closed", "ok build it") — BUILT
+
+1. **Account's "How your accounts work" opens this tray** (`AccountsGuideTray`, `MoveSecurity.guideOpen`), never Receive.
+2. **The page:** "You have one public account and three private ones." at `heading24`, the lede in grey; then Safe (Public), Privacy Pools, Railgun and Aztec (Private), each on Account's plate fill, **closed** to its name, Public or Private and a chevron, no line under it (user: "the closed short lines … are kind of misleading. we wrap eth so eth can go into aztec and privacy pools we accept on base ethereum and robinhood", "perhaps they should have no subtext"); a tap opens it in place, more than one at a time. Open, Receive, Send, Swap (Railgun alone) and Earns, each its paragraphs and a grey note under its label ("Good to know", Safe's "From another network").
+3. **The words are `AccountsGuide`'s**, as settled with the user; Privacy Pools' minimum, rates and fee are read live (`ReceiveWords.Pools.current`), and unread, the line says so without a number (§83). "Relayer" for Privacy Pools, "Railgun broadcaster" for Railgun.
+4. **Send and Receive carry only what changes the move in hand** (user, "how should we think about it"): a rule shows where it can stop or change this move, when it applies; a list of tokens shows only where it rules something out. Receive's lines follow in its own pass.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.

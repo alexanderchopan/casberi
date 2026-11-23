@@ -355,31 +355,42 @@ extension FeedScreen {
     func walletPrivatePlaces() -> some View {
         let store = AztecAccountStore.shared
         let aztec = store.isShown ? store.shown.address : nil
-        // **THE THREE PRIVATE PLACES, BY NAME (prd §1937, user: "Private is
-        // the other three"):** each a line on Money's plate, in Money's one
-        // formula: the place and the network it holds your money on (user,
-        // 2026-11-22, "we need to standardize this too"). Privacy Pools'
-        // way in is an address made new each time; Railgun's is your one
-        // 0zk address; both are Receive privately's two doors (§1928).
+        // **YOUR PRIVATE ACCOUNTS (prd §1947):** each its name, where it is,
+        // and the copy glyph for its address. Privacy Pools' address is made
+        // new each time; Railgun's is your one 0zk address; Aztec's is paid
+        // from Aztec only, which the copy says (prd §1779).
         if PrivateMove.freshAvailable {
-            AccountLine(label: "Privacy Pools", value: "Ethereum", action: {
-                chrome.moveFreshReceive = true
-                chrome.moveTray = true
+            // Watched on Base, Ethereum and Robinhood (prd §1878).
+            AccountCopyRow(name: "Privacy Pools", line: AccountNetworks.on(ReceivePools.names), copy: {
+                guard !DemoMode.isActive else { chrome.flash(YourAccountDemo.actsLater); return }
+                guard let entry = FreshReceive.shared.unusedCurrent() else {
+                    chrome.flash(FreshReceive.shared.failure ?? String(localized: "No new address could be made"), tone: .failure)
+                    return
+                }
+                DSPasteboard.copy(entry.address)
+                chrome.flash(String(localized: "Copied · new address each time"), tone: .success)
             })
         }
         if RailgunPocket.available, PrivateMove.freshAvailable {
-            AccountLine(label: "Railgun", value: "Ethereum", action: {
-                chrome.moveFreshReceive = true
-                chrome.moveTray = true
+            AccountCopyRow(name: "Railgun", line: AccountNetworks.on(["Ethereum"]), copy: {
+                Task { @MainActor in
+                    let address = DemoMode.isActive ? ReceiveDemo.privateAddress
+                        : try? await RailgunPocket.privateAddress()
+                    guard let address else { chrome.flash(String(localized: "Railgun did not answer"), tone: .failure); return }
+                    DSPasteboard.copy(address)
+                    chrome.flash(String(localized: "Address copied"), tone: .success)
+                }
             })
         }
         // The account is yours from the start (prd §1700t): its line stands
-        // from the first frame, and never waits on the address it does not show.
+        // from the first frame; its copy waits on the address it reads.
         if store.isShown {
-            // Where it moves, never only who pays it (prd §1924).
-            AccountLine(label: "Aztec", value: "Aztec", ink: DS.aztecInk, action: {
-                withAnimation(DS.Motion.standard) { chrome.yourAccountShowsAztec = true }
-            })
+            AccountCopyRow(name: "Aztec", line: AccountNetworks.on(["Aztec"]), ink: DS.aztecInk,
+                           copy: aztec.map { address -> () -> Void in {
+                               if DemoMode.isActive { chrome.flash(YourAccountDemo.actsLater); return }
+                               DSPasteboard.copy(address)
+                               chrome.flash(String(localized: "Copied · paid from Aztec only"), tone: .success)
+                           } })
         }
         if store.isShown, aztec == nil, !DemoMode.isActive, AztecProver.isAvailable {
             // Its address comes from the engine: read it once, here, and keep it.
@@ -390,72 +401,5 @@ extension FeedScreen {
     /// Whether Account has a private place to list.
     var walletHasPrivatePlaces: Bool {
         PrivateMove.freshAvailable || AztecAccountStore.shared.isShown
-    }
-
-    /// **THE PRIVATE ACCOUNT'S OWN PAGE (prd §1786).** Its box is Aztec's
-    /// address in Aztec's ink (`WalletYourAccountFigure`); under it, the two
-    /// ways its money moves, each named for both ends, and the way back.
-    @ViewBuilder
-    func walletPrivateAccountRows() -> some View {
-        // No line under either (user, 2026-11-13): the rule stands once, over
-        // the address, and each name already says both ends.
-        accountListRow(glyph: "plus", title: String(localized: "Add money from Ethereum"), glyphInk: DS.aztecInk) {
-            chrome.moveAztec = .deposit
-            chrome.moveTray = true
-        }
-        accountListRow(glyph: "arrow.up", title: String(localized: "Send from Aztec to Aztec"),
-                       glyphInk: DS.aztecInk) {
-            chrome.moveAztec = .send
-            chrome.moveTray = true
-        }
-    }
-
-    /// Whether the private account's page is the one showing.
-    var walletOnPrivateAccount: Bool {
-        chrome.yourAccountShowsAztec && AztecAccountStore.shared.isShown && AztecAccountStore.shared.shown.address != nil
-    }
-
-    /// The Holdings row's anatomy: the mark, the name over its line, a
-    /// chevron because it opens.
-    private func accountListRow(mark: String = "", glyph: String? = nil, title: String, line: String = "",
-                                lineInk: Color = DS.textSecondary, glyphInk: Color = DS.textSecondary,
-                                pick: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { pick() }
-        } label: {
-        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-            Group {
-                if let glyph {
-                    Image(systemName: glyph).dsGlyph(.body).foregroundStyle(glyphInk)
-                } else {
-                    ProtocolInlineMark(mark: mark)
-                }
-            }
-                .frame(width: DSRoomChassis.headGlyph)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                if !line.isEmpty {
-                    Text(verbatim: line)
-                        .dsText(.subhead12)
-                        .foregroundStyle(lineInk)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right").dsGlyph(.subhead, weight: .semibold)
-                .foregroundStyle(DS.textSecondary)
-                .accessibilityHidden(true)
-        }
-        .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .walletRowPitch()
-        .accessibilityElement(children: .combine)
-        .walletStackRow()
     }
 }

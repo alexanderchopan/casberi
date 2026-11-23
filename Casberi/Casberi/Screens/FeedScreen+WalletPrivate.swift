@@ -158,10 +158,9 @@ extension FeedScreen {
         let figure = mask ?? usd.map(WalletValue.money) ?? PrivateMoney.figure(amount, decimals: decimals, symbol: symbol)
         return Button {
             DSHaptic.selection()
-            // On its own address, never the newest (prd §1823).
-            chrome.moveFreshEntry = entry.id
-            chrome.moveFreshReceive = true
-            chrome.moveTray = true
+            // Receive, where every address money reached has its Status line
+            // (prd §1946; §1823's pinned address is every live one now).
+            MoveMenu.pick(.receive, chrome)
         } label: {
             HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
                 Image(systemName: "clock")

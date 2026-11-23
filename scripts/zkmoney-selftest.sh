@@ -711,11 +711,11 @@ awk '/to: ZkMoneyWire.ensRegistry/{e=NR} /resolver = named/{n=NR} /to: resolver,
 # claims a zk.money link — Casberi cannot tell a link that pays to Ethereum
 # from one that only signs you up.
 awk '/private var receiveFromRows: some View \{/,/^    }/' "$SEND" > "$TMP/from.txt"
-grep -q 'receiveDoor(String(localized: "From another network")' "$TMP/from.txt" \
+grep -q 'receiveDoor(ReceiveWords.name(.elsewhere)' "$TMP/from.txt" \
   && ! grep -q 'zk.money' "$TMP/from.txt" \
   || { echo "✗ Receive's ways in changed, or a zk.money claim came back without reading the link's voucher"; exit 1; }
 awk '/@ViewBuilder private var receiveAddresses: some View \{/,/^    }/' "$SEND" \
-  | awk '!p && /String\(localized: "To your public account"\)/{p=NR} /receiveFromRows/{f=NR} /"To Privacy Pools"/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
+  | awk '!p && /ReceiveWords.name\(.public\)/{p=NR} /receiveFromRows/{f=NR} /ReceivePoolsPlace\(/{b=NR} END{exit !(p && f && b && p<f && f<b)}' \
   || { echo "✗ the ways in no longer stand under the public account, before the private places"; exit 1; }
 
 # Paying a tag from your private balance (prd §1874): the tag goes to the

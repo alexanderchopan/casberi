@@ -268,13 +268,6 @@ final class ShellChrome {
     /// Move opens on Lend (prd §1674): a lent row in Holdings takes it back.
     /// Cleared when the tray closes.
     var moveLend: LendMove.Mode?
-    /// Move opens on Receive with its Private switch on: a fresh address
-    /// (prd §1560). Cleared when the tray closes.
-    var moveFreshReceive = false
-    /// The fresh address Receive opens on (its `FreshAddress.Entry.id`):
-    /// a waiting row's own, never the newest (prd §1823). Nil draws the
-    /// newest. Cleared when the tray closes and by New address.
-    var moveFreshEntry: String?
     /// The sentence Move was holding when the tray closed (prd §1586): a
     /// swipe down is not a cancel, so the next open picks it up. Memory
     /// only, and only for a few minutes.
@@ -1458,9 +1451,6 @@ final class ShellChrome {
     /// card under §1436): the recovery and Signer nudges land on its keys.
     /// The section's card reads `walletScrollRequest` as it appears.
     var walletScrollRequest: String?
-    /// Your Account's header shows the Aztec account's address, picked by
-    /// its row under Your account (prd §1700f item 2); else the Safe's.
-    var yourAccountShowsAztec = false
     /// Settings' card on the Account page, as a scroll request.
     static let settingsAnchor = "account.settings"
 
