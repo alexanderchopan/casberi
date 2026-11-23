@@ -75241,3 +75241,7 @@ An unsaved Aztec account on the line gets a **Name · Save** line under To, befo
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `railgun-selftest.sh`: the list, the save, the receipt's Name line, To's rows and that they send inside Railgun.
+
+## §1964b — Which Ana: every row names its place, the chip keeps the tail (amends §1964 items 2 and 3) (user, 2026-11-23: "if it is lets say Ana, it says Ana railgun? i mean what if user thinks they enter the wrong ana", "yes do the fix") — BUILT
+
+Each saved address is its own contact, so one person can be an Ethereum, an Aztec and a Railgun "Ana". In Send from Aztec's list every row now names its place ("Aztec · ...4d4d", "Ethereum · ...56ab"): an Ethereum Ana is a send out through Shield, in the open, never to be mistaken for the Aztec one. To's chip reads "Ana · ...4d4d", so the account can be checked before the hold. Railgun's Send is the Railgun session's, asked to do the same.

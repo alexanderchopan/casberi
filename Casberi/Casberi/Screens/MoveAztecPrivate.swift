@@ -1268,7 +1268,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         for e in AddressBook.shared.all where ENS.isHexAddress(e.address)
             && !(mine.map { WalletWatch.sameAddress($0, e.address) } ?? false)
             && (q.isEmpty || e.name.lowercased().contains(q) || e.address.lowercased().hasPrefix(q)) {
-            out.append(Suggestion(name: e.name, line: AddressTail.short(e.address), address: EIP55.checksum(e.address)))
+            // Every row names its place (prd §1964b): an Ethereum Ana is a
+            // send out, never mistaken for an Aztec one.
+            out.append(Suggestion(name: e.name, line: "Ethereum · " + AddressTail.short(e.address), address: EIP55.checksum(e.address)))
             if out.count >= 20 { break }
         }
         return out
@@ -1413,7 +1415,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             out.append(MoveDeckStep(id: "to", word: move.pays.isEmpty ? String(localized: "To") : String(localized: "And"),
                                     on: open == .recipient,
                                     answered: move.recipient != nil,
-                                    value: move.recipient.map { AddressBook.shared.entry(for: $0)?.name ?? AddressTail.short($0) }) { toggle(.recipient) })
+                                    // The name keeps the address's tail, to check by (prd §1964b).
+                                    value: move.recipient.map { to in
+                                        AddressBook.shared.entry(for: to).map { "\($0.name) · \(AddressTail.short(to))" } ?? AddressTail.short(to)
+                                    }) { toggle(.recipient) })
             // **NAME IT BEFORE IT GOES (prd §1964, from the Railgun session's
             // §1965):** the sheet goes behind once Face ID answers, so the
             // done state's Save is seldom seen. An unsaved Aztec account on
