@@ -74999,3 +74999,16 @@ The ASP answers `unknown` for a label it has never seen, and the app read that a
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass. **Not answered:** why that 12.98 USDC has not moved (§1942); Try again runs the same move that failed.
+
+## §1945 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receive pages are deleted, and Privacy Pools carries its Status lines on Receive (amends §1929's ⓘ and rows, §1944, §1928's two pages, §1823's pinned address, §1719's Aztec receive page) (user, 2026-11-23: "I'm not sure why we need those little eyes for more information … all the information should be on the main page because it's not really clear otherwise", "we have been failing to make these screens clear and cohesive", "I don't even understand the point of that privacy pools page … if we already have the receive page, why do we need another privacy pools page", "there is also the aztec and railgun pages … on the account that page"; mock "Receive" shown in the session) — BUILT
+
+1. **One shape for every place** (`ReceivePlace`, `ReceiveWords.facts`): its name at `heading17`, Copy at the end (pink; Aztec's lime; "Copied" green for a moment), then labelled lines in Move's receipt column (78pt): Takes, At least, On or From, Ready, Earns, Gas, each only where the place has it. Your public account, Privacy Pools, Railgun and Aztec read alike; From another network stays a door with its one line and chevron.
+2. **No ⓘ:** its trays are deleted; what they said that a person needs is a line.
+3. **No page of its own for any place.** `MoveFreshSentence` (Privacy Pools' one-time address page) and `MoveAztecReceive` are deleted, with `chrome.moveFreshReceive`, `moveFreshEntry`, Receive's Private rows in its network list and `MoveVerbRowLabel`. Privacy Pools' Copy copies an address never used (`FreshReceive.unusedCurrent`), so New address is gone with the page.
+4. **Privacy Pools carries what arrived** (`ReceivePoolsPlace`): one Status line per one-time address money reached and has not finished (three newest), in its state's ink, with Try again on a failed move and Pay the gas where it waits for ETH (and its privacy line, §1779); every address is looked at on opening and every 15 s while Receive shows. A waiting row in Holdings and On its way's address open Receive.
+5. **With no account,** Receive is Privacy Pools alone (`ReceiveWithoutAccount`).
+6. Account's four places open Receive (§1943), so Account's Railgun and Aztec lines no longer open a page of their own.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Not seen:** written in a Linux container with no Swift toolchain; not compiled, no simulator pass.

@@ -59,7 +59,7 @@ struct MoveTrayPresenter: ViewModifier {
                               YourAccountFirstOpen.walked(yours)
                               chrome.walkClosed += 1
                           }
-                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveFreshReceive = false; chrome.moveFreshEntry = nil; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false; chrome.moveAsk = nil }) {
+                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false; chrome.moveAsk = nil }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -121,14 +121,13 @@ struct MoveTrayPresenter: ViewModifier {
             chrome.moveLend = raw == "takeBack" ? .takeBack : .lend
             chrome.moveTray = true
         }
-        // `-moveFreshReceive YES` raises Receive with its Private switch on: a
-        // fresh address (prd §1560).
+        // `-moveFreshReceive YES` raises Receive, where Privacy Pools' one-time
+        // address and what reached it stand (prd §1560, §1945).
         .task {
             guard UserDefaults.standard.bool(forKey: "moveFreshReceive") else { return }
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] moveFreshReceive: raised")
-            chrome.moveFreshReceive = true
-            chrome.moveTray = true
+            MoveMenu.pick(.receive, chrome)
         }
         #endif
     }
@@ -233,7 +232,7 @@ struct MoveScreen: View {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
-                             privately: chrome.movePrivately, receivePrivately: chrome.moveFreshReceive,
+                             privately: chrome.movePrivately,
                              lending: chrome.moveLend, aztecPrivately: chrome.moveAztec,
                              railgunPrivately: chrome.moveRailgun)
                     .transition(.opacity)
@@ -249,12 +248,10 @@ struct MoveScreen: View {
                     MoveWord(String(localized: "Send"), ink: DS.textPrimary)
                 }
                 .onAppear { privateMove.mode = mode }
-            } else if chrome.moveFreshReceive, PrivateMove.freshAvailable {
-                // No account yet: Receive's fresh address under its one
-                // word (prd §1560). It never needs your account.
-                MoveFreshSentence(inTray: inTray, leave: { chrome.moveFreshReceive = false }) {
-                    MoveWord(String(localized: "Receive"), ink: DS.textPrimary)
-                }
+            } else if chrome.moveAsk == MoveMenu.Verb.receive.rawValue, PrivateMove.freshAvailable {
+                // No account yet: Receive is Privacy Pools alone, which never
+                // needs your account (prd §1560, §1945).
+                ReceiveWithoutAccount(inTray: inTray)
             } else {
                 before
                     .onAppear { chrome.moveTall = true }

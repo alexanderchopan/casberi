@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2125 of 2199 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2126 of 2200 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2372,7 +2372,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1944)
-- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1944)
+- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1944, §1945)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
 - §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934)
 - §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933)
@@ -2388,6 +2388,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1942 — A deposit 0xBow has never seen is not "being checked"
 - §1943 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive…
 - §1944 — Privacy Pools' page is a receipt: its name, Takes · On · Status, the address on its plate; a failed move says Try aga…
+- §1945 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receiv…
 
 ## Dead rulings → what replaced them (generated)
 
