@@ -534,7 +534,8 @@ extension FeedScreen {
         }
         let fact: String = switch row.kind {
         case .held where PrivateMoneyStore.shared.mismatched: String(localized: "Doesn't match")
-        case .held: String(localized: "Privacy Pools")
+        // Its rate then its place, as a lent row's "5.1% · Aave" (prd §1960).
+        case .held: PrivateMoneyStore.shared.heldFact(row)
         case .waiting: String(localized: "Being checked")
         case .refused: state
         }
@@ -746,7 +747,7 @@ extension FeedScreen {
     /// fact after it in grey on the same line. The name never gives way; the
     /// fact is cut at its tail.
     func walletLedgerWords(_ name: String, fact: String?, factInk: Color = DS.textTertiary,
-                           nameInk: Color = DS.textSecondary) -> some View {
+                           nameInk: Color = DS.textPrimary) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(verbatim: name)
                 .dsText(.body17)

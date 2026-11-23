@@ -75145,9 +75145,6 @@ A ledger row inside its own `List` row takes the air from the list's insets only
 
 **Seen** on an iPhone 17 Pro simulator over the demo: Private's eight rows at one 40pt pitch. **Not seen:** the amber states (no demo money waits at a fresh address or mismatches), Dynamic Type.
 
-## §1943 — Earn's From rows show today's rate (user, 2026-11-23: "do you think our Earn page should show the rates of what you can earn … so user can decide"; "but we have more than one lending rate right now user can get"; of the mockup, "yes definitely build it") — BUILT
-**Seen** on an iPhone 17 Pro simulator over the demo: Private's eight rows at one 40pt pitch. **Not seen:** the amber states (no demo money waits at a fresh address or mismatches), Dynamic Type.
-
 ## §1958 — Earn's From rows show today's rate (user, 2026-11-23: "do you think our Earn page should show the rates of what you can earn … so user can decide"; "but we have more than one lending rate right now user can get"; of the mockup, "yes definitely build it") — BUILT
 
 1. **Each From row in Earn's Deposit carries Aave's rate today** after its network, on the row's grey line ("USDC Base · 4.8%"), through `MoveTokenChoice.rate`, the same live `AaveLend.rateOnly` the picked market's "Earns N% today" fact reads. A row with nothing to lend keeps its rate, dimmed; a market whose rate did not read shows none. Withdraw's rows draw no rate.
@@ -75170,3 +75167,14 @@ Amends §1482, §1071 and §902's 44pt head, and generalises §1954–§1956 fro
 
 1. **Holdings lists no dust:** a fresh address under a cent of a dollar, or 0.00001 of anything else at its own places, draws no "Not moved yet" or "Needs a little private ETH" row (`FreshAddress.isDust`).
 2. **Under the pool's least is too little, whatever came before:** a USDC look under ppUSDC's minimum turns a failed or gas-waiting address into `.tooLittle`, not only a waiting one, so the old failure does not stand over what is left.
+
+## §1960 — Private's earning rows say their rate as Public's do; every Holdings name is white (user, 2026-11-23: "we have earn rates show in holdings for pur public tokens but not on our private tokens. can we make them cohesive please"; "it should still read aave shouldn't it? even thought it says privacy pools … it should say both"; "some of our holdings are in white some are in gray why is that") — BUILT
+
+Amends §1956 item 1's "ETH Privacy Pools".
+
+1. **A Privacy Pools row that earns reads rate · Aave · place** on its one line: "ETH 1.5% · Aave · Privacy Pools", as lent USDC reads "USDC 4.7% · Aave" (`PrivateMoneyStore.heldFact`, the rate through `AaveLend.rateOnly`, the same live read as the page's line). The rate unread, "Aave · Privacy Pools"; a token with no yield pool, the place alone. Railgun and Aztec earn nothing and keep their place.
+2. **Every Holdings row's name is white** (`DS.textPrimary`), the token rows' ink: Round-ups, lent rows, Fee Juice, Aztec's rows and every Private row (`walletLedgerWords`' default) had kept the grey of the two-line rows they were folded from (§1954, §1956). Grey is the fact's; a state's ink is unchanged, and a waiting row's figure stays grey.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Public's six names and Private's in white, "ETH 1.5% · Aave · Privacy Pools", "USDC 3.8% · Aave · Privacy Po…" (the fact is cut at its tail, §1956). **Not seen:** a live rate read (the demo's rates are fixed), Dynamic Type.

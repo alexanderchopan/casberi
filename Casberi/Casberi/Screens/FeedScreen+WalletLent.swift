@@ -91,7 +91,7 @@ extension FeedScreen {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text("Round-ups")
                     .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                     .layoutPriority(1)
                 // The words carry the place (prd §1718): no small mark
@@ -146,7 +146,7 @@ extension FeedScreen {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(verbatim: title)
                         .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         .layoutPriority(1)
                     // The words carry the place (prd §1718, amending §1685's

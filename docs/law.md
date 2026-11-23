@@ -2387,7 +2387,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1941 — Move's receipt chip wears the ramp's row face, 30pt, never its own 28
 - §1942 — A deposit 0xBow has never seen is not "being checked"
 - §1943 — Into Aztec in ETH: Move wraps it, and ETH and WETH are two choices
-- §1943 — Earn's From rows show today's rate
 - §1944 — Account's lines say what a tap does: four ends, values at the trailing edge, 44pt; every place on Money opens Receive… (amended by §1947)
 - §1945 — Privacy Pools' page is a receipt: its name, Takes · On · Status, the address on its plate; a failed move says Try aga…
 - §1946 — Receive is one page: every place its name, Copy and the same labelled lines; no ⓘ; the Privacy Pools and Aztec receiv… (amended by §1947)
@@ -2404,6 +2403,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1957 — Every row in the app is 40pt: one head, no hand-set heights
 - §1958 — Earn's From rows show today's rate
 - §1959 — Dust a move leaves is not money waiting
+- §1960 — Private's earning rows say their rate as Public's do; every Holdings name is white
 
 ## Dead rulings → what replaced them (generated)
 

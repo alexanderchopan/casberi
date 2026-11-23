@@ -250,7 +250,7 @@ extension FeedScreen {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     Text(verbatim: title)
                         .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                         .layoutPriority(1)
                     // Aztec's own ink (prd §1779).
@@ -299,7 +299,7 @@ extension FeedScreen {
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title)
                     .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
                 // The line's word carries the place (prd §1718): no small
                 // mark beside it.

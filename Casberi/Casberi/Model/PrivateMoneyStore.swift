@@ -142,9 +142,24 @@ final class PrivateMoneyStore {
         guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else {
             return [network, place].joined(separator: " · ")
         }
-        // The demo reads nothing: its rates are Lend's demo rates on Ethereum.
-        let apy = DemoMode.isActive ? (row.symbol == "ETH" ? 0.0145 : 0.0379) : apys[pool.share.lowercased()]
+        let apy = heldAPY(row, pool: pool)
         return [network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), place].joined(separator: " · ")
+    }
+
+    /// A held row's one-line fact on Holdings (prd §1960), worded as a lent
+    /// row's ("5.1% · Aave"): "1.5% · Aave · Privacy Pools" where it earns and the
+    /// rate was read, else the place alone.
+    func heldFact(_ row: PrivateMoney.Row) -> String {
+        let place = PrivacyPoolsBridge.sourceName
+        guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else {
+            return place
+        }
+        return [AaveLend.rateOnly(heldAPY(row, pool: pool)), "Aave", place].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// The demo reads nothing: its rates are Lend's demo rates on Ethereum.
+    private func heldAPY(_ row: PrivateMoney.Row, pool: PrivacyNetwork.YieldPool) -> Double? {
+        DemoMode.isActive ? (row.symbol == "ETH" ? 0.0145 : 0.0379) : apys[pool.share.lowercased()]
     }
 
     /// Ethereum's ETH rate, for Move's line: "1.0% on Aave", or nil.
