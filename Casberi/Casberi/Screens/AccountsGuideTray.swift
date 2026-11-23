@@ -7,6 +7,8 @@ import SwiftUI
 /// closed (user: "yes closed"); more than one may be open.
 struct AccountsGuideTray: View {
     @State private var open: Set<String> = []
+    /// Human Passport's page, from Aztec's foot (prd §1962).
+    @State private var passport = false
 
     var body: some View {
         DSTray(title: AccountsGuide.title, height: 720, detents: [.large]) {
@@ -33,6 +35,10 @@ struct AccountsGuideTray: View {
             .padding(.vertical, DS.Space.s3)
             }
             .scrollIndicators(.hidden)
+        }
+        .sheet(isPresented: $passport) {
+            AztecBrowserView(url: HumanPassport.site, aztec: false, ethereum: true, above: nil)
+                .presentationDragIndicator(.visible)
         }
         .task {
             // Privacy Pools' minimum, rates and fee, as Receive reads them.
@@ -80,6 +86,9 @@ struct AccountsGuideTray: View {
                     ForEach(account.parts) { part in
                         partView(part)
                     }
+                    // Once, at the bottom of Aztec (prd §1962, user: "just put
+                    // human passport once at the bottom").
+                    if account.aztec { HumanPassportDoor { passport = true } }
                 }
                 .padding(.bottom, DS.Space.s4)
                 .transition(.opacity)

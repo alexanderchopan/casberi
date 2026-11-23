@@ -129,6 +129,13 @@ grep -q 'AztecAccountStore.shared.expect(symbol: d.symbol, units: d.amountUnits)
   && grep -q 'if let before { noticeIncoming(before: before, after: snapshot.holdings) }' "$STORE" \
   && grep -q 'awayOnly: false' "$STORE" \
   || { echo "✗ a payment in on Aztec is no longer told, or your own claim is told as one (prd §1961)"; exit 1; }
+# Human Passport's door wherever its score is named (prd §1962).
+grep -q 'if case .overDailyCap = problem { HumanPassportDoor { passport = true } }' "$MOVE" \
+  && grep -q 'if move.failedForScore { HumanPassportDoor { passport = true } }' "$MOVE" \
+  && grep -q 'if account.aztec { HumanPassportDoor { passport = true } }' Casberi/Casberi/Screens/AccountsGuideTray.swift \
+  && grep -q 'forScore: (o?\["reason"\] as? String) == "needs_passport")' "$APP" \
+  && ! grep -rq '"https://app.passport.xyz"' "$MOVE" Casberi/Casberi/Screens/AccountsGuideTray.swift \
+  || { echo "✗ a place that names the Passport score lost its door, or spells the link itself (prd §1962)"; exit 1; }
 grep -q 'static let wrapSelector = "0xd0e30db0"' "$APP" \
   || { echo "✗ the wrap is not WETH's deposit()"; exit 1; }
 grep -q '\["USDC", "ETH", "WETH"\].compactMap' "$MOVE" && grep -q 'var wraps: Bool { mode == .deposit && symbol == "ETH" }' "$MOVE" \

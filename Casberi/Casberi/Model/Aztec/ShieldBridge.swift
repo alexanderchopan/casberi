@@ -94,7 +94,9 @@ extension ShieldBridge {
         guard status == 200, let o, direction == .intoAztec ? l1 != nil : (l2?.count == 64 && l2!.allSatisfy { (0...255).contains($0) }) else {
             if status == 401 { session = nil }
             let why = ((json as? [String: Any])?["message"] as? String) ?? ((json as? [String: Any])?["error"] as? String)
-            throw Failure(message: why ?? String(localized: "Shield did not give a limit for this move"))
+            // Shield's own "needs_passport" refusal names the score (prd §1962).
+            throw Failure(message: why ?? String(localized: "Shield did not give a limit for this move"),
+                          forScore: (o?["reason"] as? String) == "needs_passport")
         }
         return Limit(maxAmount: string(o["maxAmount"]), nonce: string(o["nonce"]), deadline: string(o["deadline"]),
                      signature: l1 ?? "", aztecSignature: l2)
@@ -421,7 +423,8 @@ extension ShieldBridge {
             let found = try? await YourAccountChain.knownSigners(YourAccountOp.ethereum, account).first
             let theirs: Eligibility? = if let found { await eligibility(found) } else { nil }
             guard let coSigner = found, let theirs, theirs.eligible, !theirs.sanctioned else {
-                throw Failure(message: String(localized: "Over $100 a day, Shield needs a Human Passport score of \(Int(theirs?.threshold ?? standing.threshold)) on your co-signer; it has \(Int(theirs?.score ?? 0))"))
+                throw Failure(message: String(localized: "Your co-signer has a Human Passport score of \(Int(theirs?.score ?? 0)). Over $100 a day, Shield needs \(Int(theirs?.threshold ?? standing.threshold))."),
+                              forScore: true)
             }
             signer = coSigner
             byCoSigner = true

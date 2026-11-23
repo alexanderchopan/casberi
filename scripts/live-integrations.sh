@@ -122,6 +122,15 @@ http_ping "Dexscreener"    "https://api.dexscreener.com/latest/dex/tokens/0x912C
 http_ping "GeckoTerminal"  "https://api.geckoterminal.com/api/v2/networks/eth/trending_pools"
 http_ping "Jupiter"        "https://lite-api.jup.ag/tokens/v2/search?query=SOL"
 http_ping "Bluesky public" "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=bsky.app"
+# Human Passport (prd §1962): every "Human Passport ›" door opens this one
+# page (`HumanPassport.site`). A move shows as a redirect to another host.
+hp=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time "$TIMEOUT" -H 'User-Agent: Casberi-heartbeat' "https://app.passport.xyz" 2>/dev/null)
+case "$hp" in
+  2*) pass "Human Passport (${hp%% *})" ;;
+  3*) [[ "${hp#* }" == https://app.passport.xyz* ]] && pass "Human Passport (${hp%% *}, same host)" \
+        || warn "Human Passport moved: ${hp#* } — change HumanPassport.site and NetworkReach" ;;
+  *) warn "Human Passport (${hp:-unreachable}) — the doors open a dead page" ;;
+esac
 
 # YouTube (FeedFollowBridges) — the bridge whose every read is a SCRAPE or an
 # undocumented feed, i.e. the one with no contract behind it at all. Three

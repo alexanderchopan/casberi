@@ -89,7 +89,7 @@ enum AccountsGuide {
                              goodToKnow: String(localized: "this iPhone can move in up to $100 a day. More than that needs a co-signer with a Human Passport score of 20 or more. Shield then sets how much each move can be, by that score.")),
                         Part(title: send,
                              paragraphs: [String(localized: "Send to another Aztec account in about 20 seconds; who, what and how much stay private. Or send out to any Ethereum address, your public account included; it arrives as WETH. Shield takes 0.5%. About an hour later, Needs you offers Finish on Ethereum, one Face ID.")],
-                             goodToKnow: String(localized: "sending out always needs a co-signer with a Human Passport score of 20 or more, whatever the amount. With Co-signer on, your co-signer approves every Aztec transaction: each send, each send out, and anything an Aztec app asks for. Moving money in is never asked.")),
+                             goodToKnow: String(localized: "this iPhone can send out up to $100 a day. More than that needs a co-signer with a Human Passport score of 20 or more. With Co-signer on, your co-signer approves every Aztec transaction: each send, each send out, and anything an Aztec app asks for. Moving money in is never asked.")),
                         Part(title: earns, paragraphs: [String(localized: "Nothing.")]),
                     ],
                     aztec: true),

@@ -42,6 +42,8 @@ enum ShieldBridge {
 
     struct Failure: LocalizedError {
         let message: String
+        /// Shield asked for a Human Passport score: its door is drawn (prd §1962).
+        var forScore = false
         var errorDescription: String? { message }
     }
 

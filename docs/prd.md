@@ -75192,3 +75192,15 @@ Amends §1956 item 1's "ETH Privacy Pools".
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `shield-bridge-selftest.sh` holds the claim's expectation, the comparison, the first reading's silence and the notice; removing the expectation was caught.
+
+## §1962 — Human Passport's door wherever its score is named, one link watched nightly (amends §1820's "Raise your score", which stood only where Shield refused outright; §1950's refusal; the accounts guide's Aztec notes) (user, 2026-11-23: "telling a user they need a passport score without giving them the link seems bad"; of the canvas "Passport link where the limit is": "put these on the same together not a break", "in the how your account works just put human passport once at the bottom") — BUILT
+
+**Why.** Since §1922 the screen that carried "Raise your score" almost never shows: the iPhone moves up to $100 a day itself. Where people meet the limit (the amber line over the day, a send out refused) and the guide named the score with no way to it. A score of 20 is rarely quick (its weighty stamps are another exchange's KYC, biometrics, a stake or long history), so the door says only "Human Passport".
+
+1. **One door** (`HumanPassportDoor`, "Human Passport ›" in Aztec's ink) under the line that names the score: into Aztec over the day ("Up to $N more today without a co-signer. More needs a co-signer with a Human Passport score of 20.", one paragraph), and a refusal Shield or Casberi words as the score's (`ShieldBridge.Failure.forScore`: the co-signer short of it, or Shield's own `needs_passport`), on the rows or the line. Each opens Human Passport in Casberi's browser, as before.
+2. **The guide:** once, at the bottom of Aztec's section; the Send note says this iPhone sends out up to $100 a day (§1950), no longer "always needs a co-signer".
+3. **One link** (`HumanPassport.site`), asked nightly by `live-integrations.sh`: a redirect to another host warns "Human Passport moved".
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `shield-bridge-selftest.sh` holds the three doors, the refusal's mark and no spelled link; removing the guide's door was caught.

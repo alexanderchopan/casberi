@@ -418,6 +418,9 @@ final class AztecMove {
     }
     func removePay(_ id: UUID) { pays.removeAll { $0.id == id } }
 
+    /// The last failure was Shield asking for a Human Passport score (prd §1962).
+    private(set) var failedForScore = false
+
     var amountProblem: AmountProblem? {
         guard let units, var want = Decimal(string: units), want > 0 else { return nil }
         // What the kept payments take comes first (prd §1952).
@@ -760,6 +763,7 @@ final class AztecMove {
             // in the sheet or behind it (prd §1777).
             let words = AztecEngine.words(error)
             if Self.kept === self, steps.away != nil { steps.failAway(words) } else { steps.fail(words) }
+            failedForScore = (error as? ShieldBridge.Failure)?.forScore ?? false
             stage = .failed(words)
             if Self.kept === self { DSHaptic.failure() }
         }
@@ -846,7 +850,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         // Back from Human Passport, Shield is asked again. While the page is
         // open the co-signer's score is read under it (prd §1820).
         .sheet(isPresented: $passport, onDismiss: { Task { await move.read() } }) {
-            AztecBrowserView(url: URL(string: "https://app.passport.xyz")!, aztec: false, ethereum: true,
+            AztecBrowserView(url: HumanPassport.site, aztec: false, ethereum: true,
                              above: move.coSigner.map { address in
                                  AnyView(PassportScoreBand(address: address, threshold: shieldThreshold) { passport = false })
                              })
@@ -1033,8 +1037,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 Text("Several payments go to Aztec accounts only").dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             } else if move.stage == .ready, let problem = move.amountProblem {
-                Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text(verbatim: problemLine(problem)).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                    // Where the score is named, its door (prd §1962).
+                    if case .overDailyCap = problem { HumanPassportDoor { passport = true } }
+                }
             } else if move.stage == .ready {
                 // The amount in dollars and two choices (prd §1700y, as
                 // Railgun's §1728 item 1); what it costs is the foot's.
@@ -1063,9 +1071,13 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
         case .failed(let words):
             // A failure the rows carry is said once, on its step.
-            if stepsRun == nil {
-                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if stepsRun == nil {
+                    Text(verbatim: words).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // Shield's score named, on the rows or here: its door (prd §1962).
+                if move.failedForScore { HumanPassportDoor { passport = true } }
             }
         case .done:
             Text(verbatim: doneLine).dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1099,7 +1111,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .moreThanHeld(let have): String(localized: "You have \(have).")
         case .leavesNoGas(let most): String(localized: "Up to \(most): a little buys gas for Aztec.")
         case .overShieldCap(let cap): String(localized: "Shield moves up to $\(cap) at a time for your score.")
-        case .overDailyCap(let cap): String(localized: "Up to $\(cap) more today without a co-signer.")
+        case .overDailyCap(let cap): String(localized: "Up to $\(cap) more today without a co-signer. More needs a co-signer with a Human Passport score of 20.")
         }
     }
 

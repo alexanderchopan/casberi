@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2142 of 2216 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2143 of 2217 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931)
@@ -2262,7 +2262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1817 — Risks reads privacy, then permissions, then threats (amends §1809)
 - §1818 — Activity and Home, polished: a state is said once, one size at a row's right, one line, the tile's name over its mone…
 - §1819 — Quiet privacy: Wallet rows stay out of system search, the Wallet tile hides on a locked phone, a kept link loses its…
-- §1820 — The way into Aztec is three steps, the act always the next: Add a co-signer, Reach a score of 20, Send through Shield…
+- §1820 — The way into Aztec is three steps, the act always the next: Add a co-signer, Reach a score of 20, Send through Shield… (amended by §1962)
 - §1821 — Aztec's directory is deleted: Library's Wallet folder keeps only the Aztec apps you have connected (retires §1700i, §…
 - §1822 — A zk.money payment link is claimed to your account: zk.money's own claim page opens in Casberi's browser with your ac… (amended by §1824)
 - §1823 — Money stuck at a one-time address has a way on: its row opens Receive on its own address, Pay the gas stands under a…
@@ -2405,6 +2405,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1959 — Dust a move leaves is not money waiting
 - §1960 — Private's earning rows say their rate as Public's do; every Holdings name is white
 - §1961 — Paid on Aztec: a payment in is told at once and lands in Activity (builds §1953 for money in)
+- §1962 — Human Passport's door wherever its score is named, one link watched nightly
 
 ## Dead rulings → what replaced them (generated)
 

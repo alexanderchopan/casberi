@@ -149059,6 +149059,34 @@
         }
       }
     },
+    "Opens Human Passport" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre Human Passport"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Human Passportを開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Human Passport를 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 Human Passport"
+          }
+        }
+      }
+    },
     "Opens a new note in Casberi." : {
       "localizations" : {
         "es" : {
@@ -217764,6 +217792,34 @@
         }
       }
     },
+    "Up to $%lld more today without a co-signer. More needs a co-signer with a Human Passport score of 20." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta $%lld más hoy sin cofirmante. Más requiere un cofirmante con una puntuación de Human Passport de 20."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者なしで今日はあと$%lldまで。それ以上はHuman Passportスコア20の共同署名者が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 없이 오늘 $%lld까지 더 가능합니다. 그 이상은 Human Passport 점수 20의 공동 서명자가 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今天无需共同签名人最多还可 $%lld。更多需要 Human Passport 分数 20 的共同签名人。"
+          }
+        }
+      }
+    },
     "Up to %@" : {
       "localizations" : {
         "es" : {
@@ -239224,6 +239280,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人未签名"
+          }
+        }
+      }
+    },
+    "Your co-signer has a Human Passport score of %lld. Over $100 a day, Shield needs %lld." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante tiene una puntuación de Human Passport de %lld. Por encima de $100 al día, Shield necesita %lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者のHuman Passportスコアは%lldです。1日$100を超えると、Shieldには%lldが必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자의 Human Passport 점수는 %lld입니다. 하루 $100를 넘으면 Shield는 %lld이 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人 Human Passport 分数为 %lld。每天超过 $100 时，Shield 需要 %lld。"
           }
         }
       }
@@ -266131,6 +266215,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这台 iPhone 每天最多可转入 $100。超过需要 Human Passport 分数 20 或以上的共同签名人。之后 Shield 会按该分数设定每次可转入的金额。"
+          }
+        }
+      }
+    },
+    "this iPhone can send out up to $100 a day. More than that needs a co-signer with a Human Passport score of 20 or more. With Co-signer on, your co-signer approves every Aztec transaction: each send, each send out, and anything an Aztec app asks for. Moving money in is never asked." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "este iPhone puede enviar hasta $100 al día. Más requiere un cofirmante con una puntuación de Human Passport de 20 o más. Con Cofirmante activado, tu cofirmante aprueba cada transacción de Aztec: cada envío, cada salida y lo que pida una app de Aztec. Mover dinero hacia dentro nunca se pide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneは1日$100まで送り出せます。それ以上はHuman Passportスコア20以上の共同署名者が必要です。共同署名者がオンのとき、共同署名者はAztecのすべての取引を承認します。送金、送り出し、Aztecアプリの依頼すべてです。資金を入れるときは求められません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone은 하루 $100까지 내보낼 수 있습니다. 그 이상은 Human Passport 점수 20 이상의 공동 서명자가 필요합니다. 공동 서명자가 켜져 있으면 공동 서명자가 모든 Aztec 거래를 승인합니다: 각 송금, 각 내보내기, Aztec 앱의 모든 요청. 자금을 넣을 때는 요청하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 iPhone 每天最多可转出 $100。超过需要 Human Passport 分数 20 或以上的共同签名人。开启共同签名人后，共同签名人会批准每笔 Aztec 交易：每次发送、每次转出，以及 Aztec 应用的任何请求。转入资金时从不询问。"
           }
         }
       }
