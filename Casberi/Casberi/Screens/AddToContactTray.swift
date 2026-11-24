@@ -116,6 +116,15 @@ enum AddToContact {
             .sorted { ($0.lastActedAt ?? .distantPast, $1.name) > ($1.lastActedAt ?? .distantPast, $0.name) }
     }
 
+    /// Whether the tray has anyone to offer (prd §1964): with nobody to pick
+    /// it would be one row, New name, so the door names directly instead.
+    /// An index not built yet answers yes; the tray builds it.
+    @MainActor
+    static func asks(for address: String) -> Bool {
+        let built = ContactIndexSources.contacts
+        return built.isEmpty || !candidates(built.filter(ContactIndexSources.isListed), for: address).isEmpty
+    }
+
     /// By name or anything they go by; an empty query keeps them all.
     static func matching(_ contacts: [Contact], query: String) -> [Contact] {
         guard !query.isEmpty else { return contacts }

@@ -276,6 +276,8 @@ enum ContactIndexSources {
             for identity in contact.identities { byKey[identity.key] = i }
         }
         snapshot = (built, byKey)
+        // An address a card holds wears the card's photo (prd §1964).
+        HolderPhotos.shared.update(from: built, context: context)
         return built
     }
 

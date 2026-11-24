@@ -50,6 +50,9 @@ struct AddressesSection: View {
     /// The wallet the naming alert is naming — a `Not named yet` row's own
     /// `Name`, or the resolver's bare address.
     @State private var namingAddress: String?
+    /// A `Name` that asks who it is first (prd §1964): someone you have,
+    /// or the naming alert.
+    @State private var askingWho: WhoIs?
     /// What the search RESOLVED (2026-09-25): an address, a name or a handle
     /// typed or pasted that matches nobody here, asked of web3.bio and drawn
     /// as one row with its doors and the corpus's own history under it.
@@ -156,6 +159,14 @@ struct AddressesSection: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("It rides every future transfer with this address. Blank clears it.")
+        }
+        .dsOneSheet(item: $askingWho, pushes: { _ in inSheetStack }) { who in
+            AddToContactTray(address: who.address) { naming = true }
+                .environment(chrome)
+                .onDisappear {
+                    resolved = nil
+                    Task { await refresh() }
+                }
         }
         .dsOneSheet(item: $opened, pushes: { _ in inSheetStack }) { contact in
             ContactSheet(contact: contact) { Task { await refresh() } }
@@ -446,13 +457,20 @@ struct AddressesSection: View {
         Task { await refresh() }
     }
 
+    /// Name a wallet: who is it, when there is anyone to pick (§1775's tray,
+    /// prd §1964), else the naming alert at once.
+    private func name(_ address: String) {
+        namingAddress = address; draft = ""
+        if AddToContact.asks(for: address) { askingWho = WhoIs(address: address) } else { naming = true }
+    }
+
     /// Add to Addresses (spec section 2.6): a named address lands in the
     /// wallet book under its name; a bare address asks for one; a handle
     /// with no address is saved by hand (`ContactBook`).
     private func add(_ hit: Resolved) {
         if let address = hit.address {
             guard hit.isNamed else {
-                namingAddress = address; draft = ""; naming = true
+                name(address)
                 return
             }
             AddressBook.shared.setName(hit.name, for: address, kind: .wallet)
@@ -746,7 +764,7 @@ struct AddressesSection: View {
                     // shape): every unnamed wallet carries its own `Name`, so
                     // the group is the nudge and no row above the list is.
                     Button {
-                        namingAddress = address; draft = ""; naming = true
+                        name(address)
                     } label: {
                         Text("Name")
                             .dsText(.body17)
@@ -1802,4 +1820,10 @@ struct ContactSheet: View {
         case .biller:    return "Apple Wallet"
         }
     }
+}
+
+/// The address a `Name` asks about (prd §1964), as a sheet's item.
+struct WhoIs: Identifiable, Hashable {
+    let address: String
+    var id: String { address }
 }

@@ -1769,6 +1769,24 @@
     "Screens/ThingSheetView.swift:faceTarget#addTo"
    ],
    "why": "Save draws only for a counterparty the book does not hold, and the book holds every demo counterparty; it was walked by hand after -addressBook clear (2026-11-13, prd §1775), which the sweep cannot use: it empties the book for every entry after it"
+  },
+  {
+   "covers": [
+    "Screens/AddressBookViews.swift:askingWho"
+   ],
+   "why": "the address card's Name this address pushes `AddToContactTray`, the view faceTarget#addTo raises, only for an address still wearing an auto name when Contacts has someone who could take it (prd §1964); the sweep opens no card on an unnamed address, and it was not walked by hand"
+  },
+  {
+   "covers": [
+    "Screens/AddressesScreen.swift:askingWho"
+   ],
+   "why": "Contacts' Name on a Not named yet row (or Add on a bare address the search resolved) raises `AddToContactTray`, the view faceTarget#addTo raises, only when someone could take the address (prd §1964); the demo's search found no unnamed wallet row (2026-11-23), and it was not walked by hand"
+  },
+  {
+   "covers": [
+    "Screens/AccountsGuideTray.swift:passport"
+   ],
+   "why": "Human Passport's page from How your accounts work's Aztec plate (prd §1962): the same `AztecBrowserView` over `HumanPassport.site` that Screens/MoveAztecPrivate.swift:passport raises; it landed with §1962 without a sweep row, and whether the sweep's demo launch can reach the guide's door is not measured"
   }
  ]
 }

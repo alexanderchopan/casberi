@@ -25,7 +25,7 @@ struct HumanPassportDoor: View {
                     .foregroundStyle(DS.aztecInk)
                     .accessibilityHidden(true)
             }
-            .frame(minHeight: DS.Hit.min)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

@@ -58,8 +58,10 @@ struct WalletFace: View {
     /// The face says WHO, not just which: yours, or a picture someone set
     /// (§1552). A row leads with a counterparty only when this holds, so a
     /// stranger's tinted mark never displaces your own wallet's face.
+    @MainActor
     static func hasPicture(_ address: String) -> Bool {
         YourAccountDemo.isYours(address) || avatar(for: address) != nil
+            || HolderPhotos.shared.photo(for: address) != nil
     }
 
     /// **YOUR OWN ACCOUNT WEARS YOUR FACE (prd §1487, user: "shouldn't we
@@ -77,6 +79,39 @@ struct WalletFace: View {
 
     private var addressFace: some View {
         identicon
+            .overlay {
+                // The card's photo of whoever holds this address (prd §1964)
+                // leads: a picture you keep of them over one they published.
+                if let held = HolderPhotos.shared.photo(for: address) {
+                    Image(uiImage: held).resizable().scaledToFill()
+                        .transition(.opacity)
+                } else {
+                    published
+                }
+            }
+            .animation(DS.Motion.standard, value: HolderPhotos.shared.photo(for: address) != nil)
+            .frame(width: size, height: size)
+            .clipShape(circular
+                       ? AnyShape(Circle())
+                       : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size),
+                                                   style: .continuous)))
+            // Hidden, not labelled (prd §299's split). A face carries no
+            // quantity — the datum is the ADDRESS, and every one of this
+            // view's ~15 call sites already names it in the text beside the
+            // face or in the label on the slot that holds it. Speaking here
+            // would announce the same identity twice per row.
+            //
+            // Declared on the view rather than left to the caller because a
+            // face that says nothing and claims nothing is indistinguishable
+            // from one whose caller forgot, and the next call site is the one
+            // that forgets (`ChartEntrance`'s own reasoning for making its
+            // Reduce Motion parameter non-defaulted).
+            .accessibilityHidden(true)
+    }
+
+    /// The picture the address set for itself, else nothing over the identicon.
+    @ViewBuilder private var published: some View {
+        Color.clear
             .overlay {
                 // The demo's bundled faces (2026-08-12). An ENS avatar is a
                 // real remote URL, and `AsyncImage` cannot resolve the
@@ -116,23 +151,6 @@ struct WalletFace: View {
                 }
                 #endif
             }
-            .frame(width: size, height: size)
-            .clipShape(circular
-                       ? AnyShape(Circle())
-                       : AnyShape(RoundedRectangle(cornerRadius: DS.Radius.appIcon(size),
-                                                   style: .continuous)))
-            // Hidden, not labelled (prd §299's split). A face carries no
-            // quantity — the datum is the ADDRESS, and every one of this
-            // view's ~15 call sites already names it in the text beside the
-            // face or in the label on the slot that holds it. Speaking here
-            // would announce the same identity twice per row.
-            //
-            // Declared on the view rather than left to the caller because a
-            // face that says nothing and claims nothing is indistinguishable
-            // from one whose caller forgot, and the next call site is the one
-            // that forgets (`ChartEntrance`'s own reasoning for making its
-            // Reduce Motion parameter non-defaulted).
-            .accessibilityHidden(true)
     }
 
     // MARK: - Identicon

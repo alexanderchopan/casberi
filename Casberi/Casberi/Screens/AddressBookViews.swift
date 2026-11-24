@@ -623,6 +623,8 @@ struct AddressCard: View {
     private var book = AddressBook.shared
     /// Naming happens IN PLACE now (prd §444) — see `nameField`.
     @State private var editingName = false
+    /// The bar's Name asks who this is first (prd §1964, §1775's tray).
+    @State private var askingWho = false
     @FocusState private var nameFocused: Bool
     @State private var nameDraft = ""
     /// The note field's draft (2026-08-27, the address-book unification) —
@@ -775,6 +777,12 @@ struct AddressCard: View {
             }
             .dsSheetDismiss { dismiss() }
             .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+            // Someone you have, or a new name; the card stands in a stack,
+            // so the tray pushes inside it (prd §1238).
+            .dsOneSheet(isPresented: $askingWho, pushes: true) {
+                AddToContactTray(address: entry.address) { beginRename() }
+                    .environment(chrome)
+            }
             .task { await AddressKind.detect(entry.address) }
             // A READ BOUGHT BY AN INTENT (the `AddressNames` rule): opening
             // this card is what asks World Chain, and a row scrolling past
@@ -2439,7 +2447,9 @@ struct AddressCard: View {
     private var bottomBar: some View {
         if bottomBarShown {
             DSSlabButton(title: "Name this address") {
-                beginRename()
+                // Who is this: someone you have, else the name in place
+                // (prd §1964). The pencil still names directly.
+                if canRename, AddToContact.asks(for: entry.address) { askingWho = true } else { beginRename() }
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)

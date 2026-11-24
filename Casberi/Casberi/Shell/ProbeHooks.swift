@@ -5194,6 +5194,27 @@ enum ProbeHooks {
                 NSLog("tagSave: %@ | %@", tag, ContactBook.shared.name(for: Identity.key(.zkMoney, tag)) ?? "-")
             }
         },
+        // `-contactJoin "<address>:<contact name>"` — put an address on a
+        // contact as the Who is tray's pick does (prd §1775), then log
+        // whether the address now wears a card photo (prd §1964). Runs after
+        // the first index build, which the Contacts sweep makes.
+        Hook(key: "contactJoin") { spec, context in
+            let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else { NSLog("contactJoin| refused | want <address>:<name>"); return }
+            let address = parts[0], name = parts[1]
+            Task { @MainActor in
+                let built = ContactIndexSources.contacts.isEmpty
+                    ? ContactIndexSources.rebuild(context: context) : ContactIndexSources.contacts
+                guard let person = AddToContact.candidates(built.filter(ContactIndexSources.isListed), for: address)
+                    .first(where: { $0.name == name }) else {
+                    NSLog("contactJoin| no candidate | %@", name); return
+                }
+                AddToContact.join(address, to: person, context: context)
+                try? await Task.sleep(for: .seconds(2))
+                NSLog("contactJoin| %@ | %@ | photo=%@", AddressTail.short(address), person.name,
+                      HolderPhotos.shared.photo(for: address) == nil ? "no" : "yes")
+            }
+        },
         Hook(key: "tagPaid") { spec, _ in
             let pairs = spec.split(separator: ",").compactMap { pair -> (address: String, tag: String)? in
                 let parts = pair.split(separator: ":", maxSplits: 1).map(String.init)

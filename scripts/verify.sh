@@ -1184,6 +1184,16 @@ python3 "$ROOT/scripts/wallet-row-audit.py" \
   || fail "a Wallet row stands off the one pitch — use walletListRow() / walletStackRow() / walletRowPitch() (prd §1482)"
 print -P "%F{green}✓ wallet row audit%f"
 
+# Every row in the app is one pitch (prd §1957): a hand-set `minHeight` on a
+# row drifts from `DSFeed.headHeight` one file at a time, and a 48pt row
+# beside 40pt ones is caught by eye only. A per-file ratchet of the controls.
+step "Row pitch audit"
+python3 "$ROOT/scripts/row-pitch-audit.py" --self-test >/dev/null \
+  || fail "the row pitch audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/row-pitch-audit.py" \
+  || fail "a row sets its own height — name DSFeed.headHeight (prd §1957)"
+print -P "%F{green}✓ row pitch audit%f"
+
 # The Wallet's waits stay cut (prd §1732, docs/specs/wallet-perf-spec.md). Static,
 # no build. It fails the balance history decoded per read, a second holdings
 # read per wallet in a pass, the total's extras or the filters' reads waiting
