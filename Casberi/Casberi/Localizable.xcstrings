@@ -1795,6 +1795,34 @@
         }
       }
     },
+    "%@ ETH in the pool" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ETH en el fondo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "プールに%@ ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "풀에 %@ ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "池中有 %@ ETH"
+          }
+        }
+      }
+    },
     "%@ ETH in your account" : {
       "localizations" : {
         "es" : {
@@ -16912,6 +16940,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ · 全部为 %@ 步骤"
+          }
+        }
+      }
+    },
+    "%@ · arriving" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · en camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 到着中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 도착 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 正在到账"
           }
         }
       }
@@ -35655,6 +35711,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "稳定币 %lld%%"
+          }
+        }
+      }
+    },
+    "%lld%% yours" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld%% tuyo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld%%があなたの分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld%%가 내 몫"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld%% 是你的"
           }
         }
       }
@@ -56734,6 +56818,34 @@
         }
       }
     },
+    "Another Tacit account · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otra cuenta de Tacit · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のTacitアカウント · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 Tacit 계정 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另一个 Tacit 账户 · %@"
+          }
+        }
+      }
+    },
     "Another address looks just like this one" : {
       "localizations" : {
         "es" : {
@@ -57606,6 +57718,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "任何代币,发送到 Base、Ethereum 或 Robinhood 上的任意地址,通过 Tor。由这台 iPhone 签名;开启共同签名人后,共同签名人也会签名。任何人都能看到。"
+          }
+        }
+      }
+    },
+    "Any wallet or exchange · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier billetera o exchange · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任意のウォレットや取引所 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 지갑 또는 거래소 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何钱包或交易所 · %@"
           }
         }
       }
@@ -61054,6 +61194,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在询问种子…"
+          }
+        }
+      }
+    },
+    "Asking your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pidiendo a tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者に依頼中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자에게 요청 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在请求你的共同签名人"
           }
         }
       }
@@ -69688,6 +69856,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅限 Casberi — 你的设备语言保持不变。"
+          }
+        }
+      }
+    },
+    "Casberi reads a Tacit account you already have. It cannot move its money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi lee una cuenta de Tacit que ya tienes. No puede mover su dinero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiはすでにお持ちのTacitアカウントを読み取ります。その資金を動かすことはできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi는 이미 가지고 있는 Tacit 계정을 읽습니다. 그 돈을 옮길 수는 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 读取你已有的 Tacit 账户，无法动用其中的资金。"
           }
         }
       }
@@ -110601,6 +110797,34 @@
         }
       }
     },
+    "In your Wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En tu Wallet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレット内"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 지갑에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的钱包中"
+          }
+        }
+      }
+    },
     "In your account" : {
       "localizations" : {
         "es" : {
@@ -130273,6 +130497,34 @@
         }
       }
     },
+    "No co-signer yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者はまだいません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 공동 서명자 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚无共同签名人"
+          }
+        }
+      }
+    },
     "No collectibles" : {
       "localizations" : {
         "es" : {
@@ -135825,6 +136077,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "尚未添加"
+          }
+        }
+      }
+    },
+    "Not open" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin abrir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未開封"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "열리지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未打开"
           }
         }
       }
@@ -147877,6 +148157,34 @@
         }
       }
     },
+    "Open Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 Tacit"
+          }
+        }
+      }
+    },
     "Open Telegram Desktop on a computer" : {
       "localizations" : {
         "es" : {
@@ -149201,6 +149509,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Hyperliquid%@ 上开仓 %@ %@ — %lldx，入场价 $%@"
+          }
+        }
+      }
+    },
+    "Opened by" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abierta por"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "開いたウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开者"
           }
         }
       }
@@ -150713,6 +151049,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开你对这个地址的了解"
+          }
+        }
+      }
+    },
+    "Opens with your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se abre con tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者で開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자로 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由你的共同签名人打开"
           }
         }
       }
@@ -163568,6 +163932,34 @@
         }
       }
     },
+    "Read only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo lectura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り専用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽기 전용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只读"
+          }
+        }
+      }
+    },
     "Read the request" : {
       "localizations" : {
         "es" : {
@@ -164832,6 +165224,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取 Stripe…"
+          }
+        }
+      }
+    },
+    "Reading Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitを読み取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 읽는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取 Tacit"
           }
         }
       }
@@ -198405,6 +198825,62 @@
         }
       }
     },
+    "Tacit address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dirección de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 地址"
+          }
+        }
+      }
+    },
+    "Tacit could not be read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitを読み取れませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit을 읽을 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法读取 Tacit"
+          }
+        }
+      }
+    },
     "Take back" : {
       "localizations" : {
         "es" : {
@@ -201522,6 +201998,34 @@
         }
       }
     },
+    "That wallet did not answer with a signature" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa billetera no respondió con una firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットは署名を返しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑이 서명으로 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包没有返回签名"
+          }
+        }
+      }
+    },
     "That wallet is a contract, not one whose key you hold" : {
       "localizations" : {
         "es" : {
@@ -201578,6 +202082,34 @@
         }
       }
     },
+    "That wallet is not your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa billetera no es tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットは共同署名者ではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑은 공동 서명자가 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包不是你的共同签名人"
+          }
+        }
+      }
+    },
     "That wallet is not your co-signer, so nothing was sent" : {
       "localizations" : {
         "es" : {
@@ -201630,6 +202162,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "该钱包不是你的共同签名人，因此未签署任何内容"
+          }
+        }
+      }
+    },
+    "That wallet's signature cannot open a Tacit account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La firma de esa billetera no puede abrir una cuenta de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットの署名ではTacitアカウントを開けません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑의 서명으로는 Tacit 계정을 열 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包的签名无法打开 Tacit 账户"
           }
         }
       }
@@ -202550,6 +203110,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Safe 给出的这笔交易哈希与 Casberi 算出的不一致。在弄清原因之前，不要在任何地方签名。"
+          }
+        }
+      }
+    },
+    "The Tacit account your co-signer opens: what it holds on each network, and where it can be paid." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La cuenta de Tacit que abre tu cofirmante: lo que tiene en cada red y dónde se le puede pagar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者が開くTacitアカウント：各ネットワークでの保有額と、支払いを受け取れる場所。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 여는 Tacit 계정: 네트워크별 보유액과 받을 수 있는 곳."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由你的共同签名人打开的 Tacit 账户：各网络上的持有量，以及可以向它付款的地址。"
           }
         }
       }
@@ -214192,6 +214780,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tor"
+          }
+        }
+      }
+    },
+    "Tor could not connect" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor no pudo conectarse"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Torに接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tor 无法连接"
           }
         }
       }
@@ -238298,6 +238914,34 @@
         }
       }
     },
+    "Your Tacit account, read only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Tacit, solo lectura"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのTacitアカウント（読み取り専用）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 Tacit 계정, 읽기 전용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Tacit 账户，只读"
+          }
+        }
+      }
+    },
     "Your USDC has not reached Base yet. Spend again once it has" : {
       "localizations" : {
         "es" : {
@@ -239050,6 +239694,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你账户的密钥、上限和凑整"
+          }
+        }
+      }
+    },
+    "Your account's second key opens Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La segunda llave de tu cuenta abre Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの2つ目の鍵でTacitを開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정의 두 번째 키로 Tacit을 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你账户的第二把密钥用于打开 Tacit"
           }
         }
       }
@@ -239928,6 +240600,34 @@
         }
       }
     },
+    "Your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 공동 서명자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人"
+          }
+        }
+      }
+    },
     "Your co-signer (%@) holds %@ ETH. This needs %@ ETH and its fee." : {
       "localizations" : {
         "en" : {
@@ -240014,6 +240714,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "需要你的联合签名者批准，但尚未设置"
+          }
+        }
+      }
+    },
+    "Your co-signer could not be reached" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo contactar a tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者に接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接到你的共同签名人"
+          }
+        }
+      }
+    },
+    "Your co-signer declined" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante rechazó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者が拒否しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 거절했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人已拒绝"
+          }
+        }
+      }
+    },
+    "Your co-signer did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者から応答がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人没有回应"
           }
         }
       }
@@ -240186,6 +240970,34 @@
         }
       }
     },
+    "Your co-signer opens your Tacit account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante abre tu cuenta de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者がTacitアカウントを開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 Tacit 계정을 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人打开你的 Tacit 账户"
+          }
+        }
+      }
+    },
     "Your co-signer sends" : {
       "localizations" : {
         "es" : {
@@ -240266,6 +241078,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人签名"
+          }
+        }
+      }
+    },
+    "Your co-signer signs Tacit's own message. Casberi reads the account and cannot move its money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante firma el mensaje propio de Tacit. Casberi lee la cuenta y no puede mover su dinero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者がTacit所定のメッセージに署名します。Casberiはアカウントを読み取るだけで、資金を動かすことはできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자가 Tacit의 메시지에 서명합니다. Casberi는 계정을 읽을 뿐 돈을 옮길 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的共同签名人签署 Tacit 自己的消息。Casberi 只读取该账户，无法动用其中的资金。"
           }
         }
       }
