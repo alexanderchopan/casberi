@@ -22,6 +22,9 @@ struct TokenRowLabel: View {
     /// one line where the chips start, the figure trailing, at the
     /// receipt's one pitch.
     var grid = false
+    /// The network's mark on the token's face, for a list whose line says
+    /// something other than the network (Earn's place, prd §1972).
+    var badge: String?
     /// The key this row's mark shares with the chip it flies into (prd §1933).
     var flightKey: String?
     @Environment(\.moveFlight) private var flight
@@ -32,7 +35,7 @@ struct TokenRowLabel: View {
 
     private var gridBody: some View {
         HStack(alignment: .center, spacing: 0) {
-            AssetMark(name: symbol, size: DS.Mark.row)
+            MoveRowMark(token: symbol, network: badge, size: DS.Mark.row)
                 .moveFlight(flightKey, in: flight)
                 .frame(width: MoveReceipt.labelWidth, alignment: .leading)
                 .accessibilityHidden(true)

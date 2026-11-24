@@ -422,7 +422,8 @@ struct MoveLendSentence<Head: View>: View {
             return MoveTokenChoice(id: LendMove.key(m), symbol: m.symbol, network: name, badge: MoveSentence.networkMark(chainId: m.chainId),
                                    sub: worth.map { MoveSentence.money($0, whole: true) } ?? PrivateMoney.figure(move.available(m) ?? "0", decimals: m.decimals, symbol: ""),
                                    // Today's rate on every choice, a dimmed one too (prd §1958).
-                                   rate: move.mode == .lend ? AaveLend.rateOnly(move.rates[LendMove.key(m)]) : nil,
+                                   // Withdrawing, the rate is what it still earns (prd §1972).
+                                   rate: AaveLend.rateOnly(move.rates[LendMove.key(m)]), place: m.placeName,
                                    picked: m.chainId == move.chainId && m.symbol == move.symbol, dim: have <= 0) {
                 withAnimation(DS.Motion.standard) {
                     move.chainId = m.chainId

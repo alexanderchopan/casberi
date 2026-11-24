@@ -75349,3 +75349,13 @@ Olla is liquid staking for the AZTEC token on Ethereum: AZTEC into its vault, st
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
 
 **Checks.** `tacit-engine-selftest.sh` (Tacit's message and its EIP-191 digest pinned against ethers, its test wallet's signature making its key, a high-s and a malformed signature refused, the scalar rule, wei; seven mutations; guards that the wallet opens with no provider and calls nothing that moves, the page reaches no host, a host is checked before a send, no Keychain, the vendored file is the pinned one, the bundle reproduces). `-tacitEngineProbe all` on a simulator through Tor: the identity check passed; a random account opened and both networks read with nothing sent (18.5 s Ethereum, 13.3 s Robinhood; about 2 s direct). `-tacitSample open|closed` drew the page. UNSEEN: a co-signer's wallet signing the message, a real balance, the Home place and the Holdings row on a real account, a phone.
+
+## §1972 — Earn's From list names the rate and the place, and the network moves to the badge (amends §1917 for Earn alone; extends §1958's rate to Withdraw; follows §1970) (user, 2026-11-24, after a real Olla deposit and withdrawal: "in earn when you select what you are depsoting or withdrawing from it shows your balances but not their rates or sources. should they?", then "build") — BUILT
+
+1. **Rate · place on every choice.** Earn's From list reads "USDC 5.1% · Aave $248", "AZTEC 31% · Olla $124", Holdings' own words (§1718). The place is where the money goes, the rate why you would pick one row over another.
+2. **Withdraw shows the rate too.** There it is what each position is still earning; §1958 drew it on Deposit only.
+3. **The network is the badge.** The network word leaves the line for the small network mark on the token's face (`MoveTokenChoice.place`, `TokenRowLabel.badge` through `MoveRowMark`), so token, rate, place and balance fit one line and no balance is cut (user, of §1970's first try: "we can't have balances not on the screen"). §1917's network-as-a-word stands for every other Move list; only a choice that names a place takes the badge.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** Seen on the demo (`-ollaSample YES -ollaOpen lend`): Deposit lists five rows with Base and Ethereum badges, rates and places, every balance whole; Withdraw lists the same with the rates, the empty ones dimmed at $0.00.

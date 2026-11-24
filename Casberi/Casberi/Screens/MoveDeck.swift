@@ -719,6 +719,10 @@ struct MoveTokenChoice: Identifiable {
     /// What it earns today ("4.8%"), after the network on its line (prd
     /// §1958): Earn's rows differ by rate, so the rate is on the choice.
     var rate: String?
+    /// **WHERE IT GOES, NOT WHICH NETWORK (prd §1972):** Earn names the
+    /// place ("Aave", "Olla") after the rate, and the network moves to the
+    /// badge on the mark, so token, rate, place and balance fit one line.
+    var place: String?
     var picked = false
     var dim = false
     let act: () -> Void
@@ -777,7 +781,7 @@ struct MoveTokenGrid: View {
                     .disabled(c.dim)
                     .opacity(c.dim ? 0.4 : 1)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text(verbatim: [String(localized: "\(c.symbol) on \(c.network)"), c.sub, c.rate.map { String(localized: "Earns \($0) today") }].compactMap { $0 }.joined(separator: ". ")))
+                    .accessibilityLabel(Text(verbatim: [String(localized: "\(c.symbol) on \(c.network)"), c.sub, c.rate.map { String(localized: "Earns \($0) today") }, c.place].compactMap { $0 }.joined(separator: ". ")))
                     .accessibilityAddTraits(c.picked ? [.isButton, .isSelected] : .isButton)
                 }
             }
@@ -793,11 +797,12 @@ struct MoveTokenGrid: View {
     static func row(_ c: MoveTokenChoice) -> TokenRowLabel {
         let sub = c.sub ?? ""
         let figure = sub.first.map { $0 == "$" || $0.isNumber } ?? false
-        let line = [figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)", c.rate].compactMap { $0 }.joined(separator: " · ")
+        let line = c.place != nil ? [c.rate, c.place].compactMap { $0 }.joined(separator: " · ")
+            : [figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)", c.rate].compactMap { $0 }.joined(separator: " · ")
         return TokenRowLabel(symbol: c.symbol, line: line,
                              lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
                              figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,
-                             picked: c.picked, grid: true,
+                             picked: c.picked, grid: true, badge: c.place != nil ? c.badge : nil,
                              flightKey: MoveFlight.key(symbol: c.symbol, network: c.network))
     }
 }

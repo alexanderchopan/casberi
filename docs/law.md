@@ -262,7 +262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2155 of 2229 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2156 of 2230 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2360,7 +2360,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1914 — The receipt is the deck at ready, Swap's steps are Token ⇄ Token, and the deck is taller (amended by §1916)
 - §1915 — Swap's flip is a pick, never a button
 - §1916 — Move's deck on three sizes and one rhythm: segmented steps, one token grid, the amount's line over its keys, a receip… (amended by §1923, §1928, §1931)
-- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track (amended by §1931, §1933)
+- §1917 — Move in Home's language: a hero figure, Home's token rows, what changes, two inks, stages on the track (amended by §1931, §1933, §1972)
 - §1918 — Putting money into Aztec: the co-signer's asks counted before the hold; the rest waits on the Move round (amended by §1922)
 - §1918a — No co-signer, up to $100: Shield's sign-in and limit MEASURED for a fresh key
 - §1919 — Risks: a seen finding is stamped and leaves, three a kind, the findings' own head ("N new", "All seen"), and Without…
@@ -2402,7 +2402,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1955 — Home's rows are the ledger's too: 40pt
 - §1956 — Private's rows are one line at 40pt too; Home's Account door reads Accounts
 - §1957 — Every row in the app is 40pt: one head, no hand-set heights
-- §1958 — Earn's From rows show today's rate
+- §1958 — Earn's From rows show today's rate (amended by §1972)
 - §1959 — Dust a move leaves is not money waiting
 - §1960 — Private's earning rows say their rate as Public's do; every Holdings name is white
 - §1961 — Paid on Aztec: a payment in is told at once and lands in Activity (builds §1953 for money in)
@@ -2419,6 +2419,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 - §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
 - §1971 — Tacit is an app: an account you already have, opened by your co-signer and read
+- §1972 — Earn's From list names the rate and the place, and the network moves to the badge
 
 ## Dead rulings → what replaced them (generated)
 
