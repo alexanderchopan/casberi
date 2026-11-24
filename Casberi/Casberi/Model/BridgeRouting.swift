@@ -170,6 +170,8 @@ enum BridgeRouter {
         /// Splits checks the key's SCOPES before keeping it (a Write key is
         /// refused), so the save is more than the generic paste — Wise's reason.
         case splits
+        /// Tacit adds with one tap and opens with your co-signer's signature.
+        case tacit
         /// SimpleFIN CLAIMS the pasted token for an Access URL and checks it
         /// with one read before keeping it — Wise's reason (prd §1663).
         case simplefin
@@ -274,6 +276,8 @@ enum BridgeRouter {
                  // 2026-07-31 — so a verified key left the raised sheet sitting
                  // there, alone among the agent seats (audit, 2026-07-31).
                  .venice, .bankr, .appleIntelligence, .openRouter, .grok, .nearAI, .muse, .ownModel,
+                 // Tacit's Add is one tap and lands on its Wallet page.
+                 .tacit,
                  .chatgpt, .claude, .claudeCode, .gemini,
                  .kindle, .dayOne, .appleJournal, .bookmarks:
                 true
@@ -320,6 +324,7 @@ enum BridgeRouter {
             case .venice:         "venice"
             case .bankr:          "bankr"
             case .appleIntelligence: "appleintelligence"
+            case .tacit:          TacitAccount.seatID
             case .openRouter:     "openrouter"
             case .grok:           "grok"
             case .nearAI:         "nearai"
@@ -483,6 +488,7 @@ enum BridgeRouter {
         Row(offer: "AWS", id: "aws", destination: .aws),
         Row(offer: "Wise", id: "wise", destination: .wise),
         Row(offer: "Splits", id: "splits", destination: .splits),
+        Row(offer: TacitAccount.name, id: TacitAccount.seatID, destination: .tacit),
         Row(offer: "SimpleFIN", id: "simplefin", destination: .simplefin),
         Row(offer: "npm",  id: "npm",  destination: .packages(.npm)),
         Row(offer: "PyPI", id: "pypi", destination: .packages(.pypi)),
@@ -672,6 +678,7 @@ struct BridgeDestinationView: View {
         case .aws:             AWSScreen()
         case .wise:            WiseScreen()
         case .splits:          SplitsScreen()
+        case .tacit:           TacitScreen()
         case .simplefin:       SimpleFINScreen()
         case .packages(let r): PackageWatchScreen(registry: r)
         case .walletHistory(let scope): WalletHistoryScreen(scope: scope)

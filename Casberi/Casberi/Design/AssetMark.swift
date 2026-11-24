@@ -198,6 +198,10 @@ enum BrandMark {
         // "ether.fi Cash" where the roster names it "ether.fi".
         "hype": "hyperliquid", "aave-token": "aave",
         "etherfi-cash": "etherfi", "etherfi-liquid": "etherfi",
+        // A network named whole wears its own mark: Ethereum's is ETH's, and
+        // Robinhood's is the one the Wallet's network rows already draw
+        // (`MoveSentence.networkMark`). Tacit's map tiles are networks.
+        "ethereum": "eth", "robinhood": "l2b-robinhood",
     ]
 
     static func slug(for name: String) -> String {

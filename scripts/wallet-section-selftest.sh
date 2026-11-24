@@ -79,8 +79,10 @@ check(WalletSection.spending.label == "Spending", "the tile reads Spending — H
 // row, and a watched token is its page (prd §1632).
 // A wallet you follow is a page behind Following (prd §1969).
 let watchlistPages: [WalletSection] = [.watchlist, .watchedToken, .followedWallet]
+// An app's own page, reached from its Apps tile: your Tacit account.
+let appPages: [WalletSection] = [.tacit]
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
-    + WalletSection.yourAccountDoors + watchlistPages
+    + WalletSection.yourAccountDoors + watchlistPages + appPages
 check(Set(WalletSection.order).union(homePages).union(doors) == Set(WalletSection.allCases)
       && WalletSection.order.count + homePages.count + doors.count == WalletSection.allCases.count,
       "Home, its pages and the doors list every case once (prd §1480, §1807)")

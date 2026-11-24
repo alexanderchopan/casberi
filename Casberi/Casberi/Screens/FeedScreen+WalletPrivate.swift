@@ -39,6 +39,8 @@ extension FeedScreen {
                 let aztec = (selectedSeat == nil && aztecStore.isShown
                     ? aztecStore.privateHeld.compactMap { aztecStore.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0)
                     + railgunRows.compactMap { railgun.usd($0, units: $0.amount) }.reduce(0, +)
+                    // Your Tacit account's last reading (`walletTacitRow`), as Home counts it.
+                    + (selectedSeat == nil ? walletTacitUSD : 0)
                 walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices, plus: aztec))
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
@@ -85,6 +87,7 @@ extension FeedScreen {
                 // yet to list.
                 if selectedSeat == nil {
                     walletRailgunRows(mask: mask)
+                    walletTacitRow(mask: mask)
                 }
                 // What arrived at a one-time address and has not moved in
                 // (prd §1778): never invisible.
@@ -199,6 +202,42 @@ extension FeedScreen {
         }
         ForEach(store.pendingShown) { h in
             walletRailgunRow(h, units: h.pending, line: String(localized: "Private in about an hour"), pending: true, mask: mask)
+        }
+    }
+
+    /// What your Tacit account held at its last reading, in dollars; 0 with
+    /// no reading or no price.
+    var walletTacitUSD: Double {
+        TacitAccount.shared.countedUSD ?? 0
+    }
+
+    /// Your Tacit account's ETH, one row: the place, and the door to its page.
+    @ViewBuilder
+    func walletTacitRow(mask: String?) -> some View {
+        let tacit = TacitAccount.shared
+        if let reading = tacit.reading, reading.eth > 0, tacit.countedUSD != nil {
+            let figure = mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH")
+            Button {
+                DSHaptic.selection()
+                chrome.landWallet(on: .tacit)
+            } label: {
+                HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                    AssetMark(name: "ETH", size: DS.Mark.row)
+                        .frame(width: DSRoomChassis.headGlyph)
+                        .accessibilityHidden(true)
+                    walletLedgerWords("ETH", fact: TacitAccount.name)
+                    Spacer(minLength: DS.Space.s2)
+                    walletRowFigure(figure)
+                }
+                .frame(minHeight: WalletCardStyle.ledgerHead)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .dsHover()
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(Text(verbatim: ["ETH", TacitAccount.name, figure].joined(separator: ". ")))
+            .walletListRow()
         }
     }
 

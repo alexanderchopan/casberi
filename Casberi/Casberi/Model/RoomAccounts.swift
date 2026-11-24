@@ -40,6 +40,8 @@ enum RoomAccounts {
             case privateHoldings
             /// Your account, where its keys and signers are: Safe.
             case yourAccount
+            /// Its own Wallet page: Tacit.
+            case tacit
         }
 
         /// Whether the room's menu lists it and a scope may name it.
@@ -326,6 +328,8 @@ enum RoomAccounts {
              holder: nil, group: trades, mark: "Privacy Pools", landing: .privateHoldings),
         Seat(name: "Railgun", source: RailgunBridge.sourceName,
              holder: nil, group: trades, mark: "Railgun", landing: .privateHoldings),
+        Seat(name: TacitAccount.name, source: nil,
+             holder: nil, group: trades, mark: TacitAccount.name, landing: .tacit),
         Seat(name: "ENS", source: ENSWatch.source,
              holder: nil, group: names, mark: "ENS"),
         Seat(name: "Splits", source: SplitsShape.source,

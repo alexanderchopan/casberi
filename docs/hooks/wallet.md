@@ -485,3 +485,11 @@ Starts the engine headless and logs `aztecEngine| probe | <step> | <ms> | <detai
 ## The watchlist hooks (moved from the hooks index, 2026-11-18)
 
 - `-watchlistAdd "<id>|<SYMBOL>|<Name>[,…]"|clear` `-watchlistProbe YES` `-watchToken YES` `-watchlistSearch "<words>"` `-watchedToken <id>` — the Wallet's watchlist (prd §1632): a Home door trailing the day's biggest mover, its page, the Watch a token tray, a token's page (`-openSection watchlist|watchedToken`); keyless DeFiLlama + CoinGecko search, never Zerion (`watchlist-selftest.sh`); its box draws the first five side by side in % (§1634); `-watchHeldSample "SYM|<network>:<contract>|<usd>"` puts a holding in the tray on the sim
+
+## Tacit, read only (prd §1971, 2026-11-24)
+
+`-tacitEngineProbe identity|load|open|read|all` drives the Tacit engine headless and NSLogs `tacitEngine| <step> | <ms> | <detail>`. `identity` runs Tacit's own test wallet through `TacitIdentity` (the message recovers its address, its signature makes Tacit's key, a high-s signature is refused). `open` waits for Tor first: a cold launch takes about a minute to connect and the funnel gives a routed request 45 s, so an early read is an outage, not a dead node. It opens a RANDOM key's account (an empty one) unless `-tacitEngineKey <0x…64 hex>` names one, on Ethereum and Robinhood. `read` finds the notes and reads each pool's size. Nothing is sent: the wallet has no provider.
+
+Measured 2026-11-24 on a simulator through Tor: open 3.8 s, read 18.5 s Ethereum (2,528 entries) and 13.3 s Robinhood (2,364); in Node, direct, about 2 s and 0.9 MB each with Tacit's history feed. Without the feed a first read is unusable (Robinhood: 2,613 requests in four minutes, unfinished; Ethereum's public node refuses old logs). Base is not read: 274,062 entries, 190 s and 120 MB.
+
+`-tacitSample open|closed|clear` puts a sample reading on the page (`-openRoom Wallet -openSection tacit`), because no co-signer's wallet can sign on a simulator. The wallet file is Tacit's `dapp/evm-pool/tacit-evm-pool-wallet.js`, pinned by commit and SHA-256 in `tools/tacit-engine/upstream.json`; Tacit rebuilds it often (it changed between 2026-11-20 and 11-24), so a bump is a new pin and a re-run of the probe.

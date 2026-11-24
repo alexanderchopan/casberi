@@ -227,6 +227,8 @@ enum BridgeGlyph {
         case "splits":    return "circle.hexagongrid"
         // A bank: what SimpleFIN reads is your banks, not a brand's mark.
         case "simplefin": return "building.columns"
+        // Tacit: money kept out of sight, its page's own glyph (`ScopeTileGlyph.tacit`).
+        case "tacit":     return "eye.slash.circle"
         // The three finance seats of §780b/§780c. Acorns invests spare change,
         // Rocket Money watches what repeats, NerdWallet is reading — so the
         // glyphs say growth, recurrence and an article, not three wallets.

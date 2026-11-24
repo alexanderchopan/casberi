@@ -245,6 +245,11 @@ enum BridgeCatalog {
         // balances into the Wallet's total, shop charges into Spending.
         Offer(name: "SimpleFIN",   tagline: "Your banks and cards", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 11, 2)),
+        // Tacit: an account you ALREADY have on Tacit, opened by your
+        // co-signer's wallet and read, never moved (`TacitAccount`). No key
+        // is pasted and nothing is kept that can spend.
+        Offer(name: "Tacit",       tagline: "Your Tacit account, read only", group: "Wallet", connectable: true,
+              needsSetup: true, added: day(2026, 11, 24)),
         // Wallet group by ruling (user, 2026-07-21): the balances MERGE into
         // the combined portfolio, so an exchange belongs beside the wallets
         // whose total it joins — not in Markets, which was where things you
@@ -1085,5 +1090,8 @@ enum BridgeSetupMode {
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence",
         // An address, and a key only if the server asks (prd §1478).
-        "Your own model"]
+        "Your own model",
+        // Your co-signer's wallet signs each time it is opened; nothing is
+        // pasted and no key is kept.
+        "Tacit"]
 }

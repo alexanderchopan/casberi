@@ -262,7 +262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2154 of 2228 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2155 of 2229 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -1685,7 +1685,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6)
 - §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1… (amended by §1446)
 - §1280 — The face goes to the Feed; the bar is the tray's door (amends §930, §1207 item 4 and §1209a on the phone)
-- §1281 — zFi and Tacit in the Wallet: their moves named, zFi's orders in Positions
+- §1281 — zFi and Tacit in the Wallet: their moves named, zFi's orders in Positions (amended by §1971)
 - §1282 — zFi's waiting escrow leads Needs you; the Safe sign block reads zFi, Tacit and CoW (amends §1281, §834)
 - §1283 — The sign block reads exact-output swaps and NFT bids: Casberi's one ERC-7730 extension, `when` (amends §1282, §834)
 - §1284 — An open order's escrow stays out of the Wallet's total
@@ -2418,6 +2418,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1968 — A watched token's page swaps for it
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 - §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
+- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read
 
 ## Dead rulings → what replaced them (generated)
 

@@ -487,6 +487,9 @@ KNOWN_LANDS_NOTHING = {
     # `Model/EthValidatorWatch.swift` contain zero `Thing(` between them.
     "ExchangeSetupScreen.swift": "holdings fold into the Wallet balance; lands no rows",
     "EthValidatorScreen.swift": "balances fold into the Wallet balance; lands no rows",
+    # Tacit is an account read in place, on its own Wallet page: `TacitAccount`
+    # keeps a reading, never a `Thing`.
+    "TacitScreen.swift": "an account read on its own Wallet page; lands no rows",
 }
 
 # STATED CEILING: this is per FILE, so a file holding several screens is judged

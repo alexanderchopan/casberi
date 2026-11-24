@@ -152,6 +152,7 @@ DEMO_FILES = {
     # network verbs under check B.
     "WalletWarnings": CASBERI / "Model/WalletWarnings.swift",
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
+    "TacitAccount": CASBERI / "Model/TacitAccount.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -535,6 +536,8 @@ PROVIDER_ROW_SEAT = {"Venice", "Bankr", "OpenRouter", "Grok", "NEAR AI", "Muse",
 
 KNOWN_ROWLESS_SEAT = {
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",
+    # Tacit lands no row: its page reads `TacitAccount.demoReading`.
+    "Tacit",
     # (Hegotá Frames was rowless by ruling and furnished by a fixture account
     # until the seat was deleted, prd §1206.)
 }
@@ -563,6 +566,9 @@ ROWLESS_SEAT_FIXTURE = {
     "Kraken":          ("ExchangeBridge:demoBalances", r'\.kraken\)'),
     "Binance":         ("ExchangeBridge:demoBalances", r'\.binance\)'),
     "Gemini Exchange": ("ExchangeBridge:demoBalances", r'\.geminiExchange\)'),
+    # The page's `reading` answers with this in the demo, so both halves are
+    # held: the fixture, and the property that hands it to the page.
+    "Tacit":           ("TacitAccount", r'var reading: Reading\? \{ DemoMode\.isActive \? Self\.demoReading'),
 }
 
 

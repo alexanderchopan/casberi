@@ -5561,6 +5561,7 @@ enum DemoSeedAll {
         ("Splits", "Northwind Labs · 2 accounts", "Reads your team's accounts and payments."),
         // SimpleFIN (prd §1663): the banks `SimpleFINWatch` names.
         ("SimpleFIN", "Chase", "Reads your banks' balances and transactions."),
+        ("Tacit", "Read only", "Reads your Tacit account when your co-signer opens it."),
         // Privy (prd §803g) — how many apps made a wallet and how many are
         // funded, what `PrivyScreen.signedInLine` composes.
         ("Privy", "6 apps · 2 funded", "Reads which apps made you an account."),

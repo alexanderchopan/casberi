@@ -4175,6 +4175,17 @@ enum ProbeHooks {
         // Railgun engine on Ethereum (prd §1713), a random wallet, nothing
         // sent; logs `railgunEngine|` lines (`Shell/RailgunEngineProbe.swift`).
         Hook(key: "railgunEngineProbe") { raw, _ in RailgunEngineProbe.run(raw) },
+        // `-tacitEngineProbe identity|load|open|read|all` — the Tacit engine, a
+        // Tacit account read-only on Ethereum and Robinhood, a random key
+        // (`-tacitEngineKey <0x…>`: that key's account), nothing sent; logs
+        // `tacitEngine|` lines (`Shell/TacitEngineProbe.swift`).
+        Hook(key: "tacitEngineProbe") { raw, _ in TacitEngineProbe.run(raw) },
+        // `-tacitSample open|closed|clear` — a sample Tacit reading on the
+        // account's page (`-openRoom Wallet -openSection tacit`), for a
+        // simulator, where no co-signer's wallet can sign; reads nothing.
+        Hook(key: "tacitSample") { raw, _ in
+            Task { @MainActor in TacitAccount.shared.sample(raw); NSLog("tacitSample: %@", raw) }
+        },
         // `-railgunPocket status|shield:<DAI>|send:<DAI|all>[:<0x…>]` — YOUR
         // Railgun wallet through your account, REAL MONEY, Face ID (prd §1713).
         Hook(key: "railgunPocket") { raw, _ in RailgunPocketProbe.run(raw) },

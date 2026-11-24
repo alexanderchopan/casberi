@@ -213,6 +213,16 @@ The app's Railgun engine (railgun-engine.js, poseidon_hash_wasm_bg.wasm, curve25
 
 The licence notices of each are kept at the end of railgun-engine.js. Its exact sources and build are in tools/railgun-engine in Casberi's source.
 
+# Tacit engine
+
+The app's Tacit engine (tacit-engine.js) bundles, unmodified:
+
+- Tacit's standalone private-ETH wallet (tacit-evm-pool-wallet.js, from github.com/z0r0z/tacit at commit 8738946f). Copyright (c) 2026 ross. MIT License.
+- noble-secp256k1 and noble-hashes, by Paul Miller, and poseidon-lite, carried inside it. MIT License.
+- snarkjs 0.7.6, by iden3, with the libraries it bundles, carried inside it for a prove worker the app never starts. GNU General Public License, version 3.
+
+The licence notices the wallet file carries are kept at the end of tacit-engine.js. Its exact source and build are in tools/tacit-engine in Casberi's source.
+
 # Aztec engine
 
 The app's Aztec engine (the page in AztecEngine, and Aztec's prover) bundles, unmodified:

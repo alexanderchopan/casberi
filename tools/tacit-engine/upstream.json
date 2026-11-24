@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/z0r0z/tacit",
+  "commit": "8738946f0b52428fa8973ac63e9d29c48ac3ee82",
+  "license": "MIT",
+  "files": {
+    "vendor/tacit-evm-pool-wallet.js": {
+      "from": "dapp/evm-pool/tacit-evm-pool-wallet.js",
+      "sha256": "72ce234e09a81298f08731b9376845569da54243acad4b060bc27f1cbc8e22f4"
+    }
+  },
+  "note": "Tacit builds this one file from dapp/evm-pool-wallet.js with build/build-evm-pool-wallet.mjs; it carries Poseidon and snarkjs 0.7.6 (in its prove worker, which the read-only engine never starts). build.mjs refuses a vendor file whose hash is not the one above."
+}

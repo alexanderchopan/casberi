@@ -66,6 +66,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// Your own node per network (prd §1509 item 5, §1517).
     case nodes
 
+    // ── An app's own page ────────────────────────────────────────────────────
+    /// Your Tacit account, opened by your co-signer and read (`TacitAccount`).
+    case tacit
+
     // ── Holdings' doors ──────────────────────────────────────────────────────
     /// Each wallet you follow, and its balance (prd §1503).
     case holdingAccounts
@@ -167,6 +171,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .roundUps:        return String(localized: "Round-ups")
         case .recoveryKey:     return String(localized: "Recovery key")
         case .nodes:           return String(localized: "Nodes")
+        case .tacit:           return "Tacit"
         }
     }
 
@@ -195,6 +200,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .roundUps:        return String(localized: "What your round-ups bought")
         case .recoveryKey:     return String(localized: "Whether your recovery key still works")
         case .nodes:           return String(localized: "Where your account reads each network")
+        case .tacit:           return String(localized: "Your Tacit account, read only")
         }
     }
 
@@ -231,6 +237,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .roundUps:        return String(localized: "No round-ups")
         case .recoveryKey:     return String(localized: "Not checked yet")
         case .nodes:           return OwnNode.publicWord
+        case .tacit:           return String(localized: "Not open")
         }
     }
 
@@ -284,6 +291,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "Your recovery key, checked once a month with Face ID: no fee, nothing sent.")
         case .nodes:
             return String(localized: "Each network read from its public nodes through Tor, or from a node of your own.")
+        case .tacit:
+            return String(localized: "The Tacit account your co-signer opens: what it holds on each network, and where it can be paid.")
         }
     }
 

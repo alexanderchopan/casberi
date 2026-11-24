@@ -1,0 +1,14 @@
+{
+  "name": "casberi-tacit-engine",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tacit's standalone private-ETH wallet (MIT, github.com/z0r0z/tacit), bundled into one script for the app's hidden web view. Read-only: opens an account, finds its notes, reports its balance. Sends nothing.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

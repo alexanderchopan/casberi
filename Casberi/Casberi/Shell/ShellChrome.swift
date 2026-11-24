@@ -465,6 +465,10 @@ final class ShellChrome {
             // whose Needs you holds a watched Safe's queue.
             landWallet(on: YourAccountDemo.shownAddress == nil ? .home : .yourAccount)
             return
+        case .tacit:
+            walletScope = nil
+            landWallet(on: .tacit)
+            return
         }
         let id = RoomAccounts.scopeID(seat)
         if room == CategoryFold.walletRoom {

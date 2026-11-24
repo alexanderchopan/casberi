@@ -64,6 +64,9 @@ extension FeedScreen {
         // A wallet you follow draws its money in its first rows (prd §1969).
         case .followedWallet:
             EmptyView()
+        // Tacit draws its map in its first row, as a followed wallet does.
+        case .tacit:
+            EmptyView()
         // Spending's pages keep Spending's box: the window and its total.
         case .places, .fees, .roundUps:
             walletSpendingFigure
@@ -205,7 +208,7 @@ extension FeedScreen {
                 // first rows.
                 boxless: active == .threats || active == .permissions
                     || active == .following || active == .followedWallet || active == .recoveryKey
-                    || active == .needsYou || active == .nodes,
+                    || active == .needsYou || active == .nodes || active == .tacit,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.
@@ -583,7 +586,7 @@ extension FeedScreen {
         // (prd §1480), an empty one included.
         case .home, .subscriptions, .spending, .places, .fees, .roundUps,
              .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes,
-             .watchlist, .watchedToken, .followedWallet:
+             .watchlist, .watchedToken, .followedWallet, .tacit:
             return false
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
             return blockStream.els.isEmpty

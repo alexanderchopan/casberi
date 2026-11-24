@@ -25,6 +25,8 @@ enum ScopeTileGlyph {
     static let yourAccount = "person.badge.shield.checkmark"
     /// The recovery key's check (prd §1515).
     static let recoveryKey = "key.horizontal"
+    /// Your Tacit account's page (`WalletSection.tacit`): money kept out of sight.
+    static let tacit = "eye.slash.circle"
     /// Approvals and delegations: who can spend from you (prd §1480). The key
     /// the user reserved for Permissions (2026-09-18) is its own again.
     static let permissions = "key"
@@ -252,6 +254,7 @@ extension WalletSection: DSTileScope {
         case .recoveryKey:     return ScopeTileGlyph.recoveryKey
         // Your own node (prd §1517) wears the node's own glyph.
         case .nodes:           return ScopeTileGlyph.node
+        case .tacit:           return ScopeTileGlyph.tacit
         }
     }
 }

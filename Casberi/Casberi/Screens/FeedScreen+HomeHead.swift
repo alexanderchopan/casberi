@@ -378,6 +378,8 @@ extension FeedScreen {
     }
 
     /// One place on Home: a network or a private place, with all it holds.
+    static let homeTacitPlace = "tacit"
+
     struct HomePlace: Identifiable {
         let id: String
         let name: String
@@ -481,6 +483,14 @@ extension FeedScreen {
         if AztecProver.isAvailable, aztecStore.isShown {
             out.append(HomePlace(id: "aztec", name: "Aztec", usd: sum(aztecUSD), ink: DS.aztecInk))
         }
+        // Your Tacit account, once your co-signer has opened it: its last
+        // reading counts, open or closed, as a wallet that could not be
+        // reached stands on its last (prd §825). Nothing before a reading.
+        // Three days and no longer, and only while its co-signer is still
+        // this account's (`TacitAccount.countedUSD`).
+        if let usd = TacitAccount.shared.countedUSD {
+            out.append(HomePlace(id: Self.homeTacitPlace, name: TacitAccount.name, usd: usd))
+        }
         return out
     }
 
@@ -491,7 +501,8 @@ extension FeedScreen {
         let empty = (place.usd ?? 0) < 0.01
         return Button {
             DSHaptic.selection()
-            homeOpen(.holdings)
+            // Tacit's money is on its own page; every other place's is in Holdings.
+            homeOpen(place.id == Self.homeTacitPlace ? .tacit : .holdings)
         } label: {
             // **NO MARK (prd §1929, user: "i don't think we can show these
             // icons … b/c they are also tokens"):** Ethereum's, Railgun's and

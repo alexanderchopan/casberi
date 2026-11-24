@@ -23,6 +23,7 @@ enum Licenses {
         "Privacy Pools engine": "MIT and GPL 3 · 0xbow, iden3, wevm",
         "QRCode": "MIT · Darren Ford",
         "Railgun engine": "MIT and GPL 3 · Railgun community, iden3, Richard Moore",
+        "Tacit engine": "MIT and GPL 3 · ross, Paul Miller, iden3",
         "Reown Swift SDK": "WalletConnect Community License · Reown",
         "swift-qrcode-generator": "MIT · Project Nayuki, fwcd",
         "SwiftImageReadWrite": "MIT · Darren Ford",

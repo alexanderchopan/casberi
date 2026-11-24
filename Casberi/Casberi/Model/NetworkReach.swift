@@ -560,6 +560,20 @@ enum NetworkReach {
                  hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"],
                  throughTor: true,
                  refusesTor: ["gateway.tenderly.co"]),
+        // The Tacit engine: Tacit's own private-ETH wallet in a hidden web
+        // view, opened read-only, on the Privacy Pools engine's pattern. The
+        // page can reach no host itself; every request is handed to
+        // `TacitEngine`, which sends it only to a host listed HERE. Keyless
+        // (§1163). The history feeds serve the whole pool, the same bytes to
+        // every wallet; the nodes are asked what your receive address holds,
+        // so the reads go through Tor.
+        Endpoint(service: "Tacit engine",
+                 reach: .whenConnected(bridge: "Tacit"),
+                 purpose: "Reads Tacit's private pool on Ethereum and Robinhood for your Tacit account: the pool's history from Tacit's public feeds, checked against the pool itself before any of it is kept, and the pool's state and what your receive address holds from MEV Blocker's public node and Robinhood's own. Carries your receive address, never a key or a note's secret. Sends nothing.",
+                 hosts: ["tacit-evm-pool-keeper.onrender.com", "tacit-evm-pool-keeper-robinhood.onrender.com",
+                         "rpc.mevblocker.io", "rpc.mainnet.chain.robinhood.com"],
+                 credentialed: false,
+                 throughTor: true),
         // The Railgun engine (prd §1713; in every build since §1721):
         // Railgun's open wallet SDK in a hidden web view, the Privacy Pools
         // engine's pattern. The page can reach no
