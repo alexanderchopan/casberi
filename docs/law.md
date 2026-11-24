@@ -261,7 +261,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2149 of 2223 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2152 of 2226 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -1938,7 +1938,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675, §1754)
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
-- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678, §1963)
+- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678, §1966)
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
@@ -1948,7 +1948,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1549 — A read that failed is not a fact: Security's keys wait for every network, and Move names Tor when Tor is why (amends… (amended by §1597)
 - §1550 — A move between your own accounts fits its row: the accounts are the name, the amount stands on the right (applies §14…
 - §1551 — A Wallet row wears its wallet's own face: yours, its ENS picture, or its mark; the blockie is deleted (applies §1487;… (amended by §1552)
-- §1552 — A Wallet row leads with who you dealt with, when they have a face (amended by §1964)
+- §1552 — A Wallet row leads with who you dealt with, when they have a face (amended by §1967)
 - §1553 — A shortened address is its tail: `...xxxx`, three ASCII dots and the last four, never cut at both ends
 - §1554 — Send, privately, on Sepolia: "Your private balance" is a recipient, Private is a switch, never a verb; private money… (amended by §1590, §1695, §1698, §1700f)
 - §1555 — Swap reaches another network through Across: the phone writes the deposit, Across is asked only its fee, ETH arrives… (amended by §1556, §1586, §1675)
@@ -2031,7 +2031,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1629 — ENS names resolve on chain through ENS's own Universal Resolver; web3.bio keeps gateway names, reverse names and avatars
 - §1630 — The composer's close stays top-left; a long pushed page scrolls under the back control at rest (amends §752, reads §829)
 - §1631 — Your account's "Without a signature" row says None; the spend limit is gone from it, the model under it and the demo… (amended by §1919)
-- §1632 — The Wallet keeps a watchlist: tokens you watch, one door on Home trailing the day's biggest mover, apart from Followi… (amended by §1634, §1652, §1965)
+- §1632 — The Wallet keeps a watchlist: tokens you watch, one door on Home trailing the day's biggest mover, apart from Followi… (amended by §1634, §1652, §1968)
 - §1633 — Permissions' box leads with the worst permission and a strip of what each app reaches; Threats' box is this month aga…
 - §1634 — The Watchlist's box draws every watched token side by side: each window as the percent from where it began, one line… (amended by §1652)
 - §1635 — A chat's sheet keeps when each message was sent: a day and time over a new day or a pause, one sender's run joined, "…
@@ -2216,8 +2216,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1771 — A contact with one wallet is someone to send to: Send leads the contact's dial (extends §1767's Pay, which only a zk.… (amended by §1772)
 - §1772 — The address card's tiles are Send · Copy · Explorer · More: the Note tile is deleted
 - §1773 — Send's To reads your contacts, and lists no contract or key (extends §1752's To list, which read the address book alone)
-- §1774 — A transfer's face opens the person, when Contacts knows more of them than the address (amended by §1964)
-- §1775 — Save on a transfer asks who the address is: someone you have, or a new name (amended by §1964)
+- §1774 — A transfer's face opens the person, when Contacts knows more of them than the address (amended by §1967)
+- §1775 — Save on a transfer asks who the address is: someone you have, or a new name (amended by §1967)
 - §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 - §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar…
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
@@ -2412,6 +2412,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1964b — Which Ana: every row names its place, the chip keeps the tail
 - §1965 — Railgun addresses by name: saved from the send's receipt or after it, offered in Send's To, said by name (amended by §1965a)
 - §1965a — Which Ana, on Send: every To row names its place and a saved name keeps its tail
+- §1966 — Swap's shown quote is priced again while the sentence stands
+- §1967 — Every Name asks who it is, and an address wears its holder's photo
+- §1968 — A watched token's page swaps for it
 
 ## Dead rulings → what replaced them (generated)
 

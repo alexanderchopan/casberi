@@ -80,7 +80,7 @@ struct WalletFace: View {
     private var addressFace: some View {
         identicon
             .overlay {
-                // The card's photo of whoever holds this address (prd §1964)
+                // The card's photo of whoever holds this address (prd §1967)
                 // leads: a picture you keep of them over one they published.
                 if let held = HolderPhotos.shared.photo(for: address) {
                     Image(uiImage: held).resizable().scaledToFill()

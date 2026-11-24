@@ -1774,13 +1774,13 @@
    "covers": [
     "Screens/AddressBookViews.swift:askingWho"
    ],
-   "why": "the address card's Name this address pushes `AddToContactTray`, the view faceTarget#addTo raises, only for an address still wearing an auto name when Contacts has someone who could take it (prd §1964); the sweep opens no card on an unnamed address, and it was not walked by hand"
+   "why": "the address card's Name this address pushes `AddToContactTray`, the view faceTarget#addTo raises, only for an address still wearing an auto name when Contacts has someone who could take it (prd §1967); the sweep opens no card on an unnamed address, and it was not walked by hand"
   },
   {
    "covers": [
     "Screens/AddressesScreen.swift:askingWho"
    ],
-   "why": "Contacts' Name on a Not named yet row (or Add on a bare address the search resolved) raises `AddToContactTray`, the view faceTarget#addTo raises, only when someone could take the address (prd §1964); the demo's search found no unnamed wallet row (2026-11-23), and it was not walked by hand"
+   "why": "Contacts' Name on a Not named yet row (or Add on a bare address the search resolved) raises `AddToContactTray`, the view faceTarget#addTo raises, only when someone could take the address (prd §1967); the demo's search found no unnamed wallet row (2026-11-23), and it was not walked by hand"
   },
   {
    "covers": [

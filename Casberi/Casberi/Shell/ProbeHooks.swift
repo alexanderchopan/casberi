@@ -5196,7 +5196,7 @@ enum ProbeHooks {
         },
         // `-contactJoin "<address>:<contact name>"` — put an address on a
         // contact as the Who is tray's pick does (prd §1775), then log
-        // whether the address now wears a card photo (prd §1964). Runs after
+        // whether the address now wears a card photo (prd §1967). Runs after
         // the first index build, which the Contacts sweep makes.
         Hook(key: "contactJoin") { spec, context in
             let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)

@@ -623,7 +623,7 @@ struct AddressCard: View {
     private var book = AddressBook.shared
     /// Naming happens IN PLACE now (prd §444) — see `nameField`.
     @State private var editingName = false
-    /// The bar's Name asks who this is first (prd §1964, §1775's tray).
+    /// The bar's Name asks who this is first (prd §1967, §1775's tray).
     @State private var askingWho = false
     @FocusState private var nameFocused: Bool
     @State private var nameDraft = ""
@@ -2448,7 +2448,7 @@ struct AddressCard: View {
         if bottomBarShown {
             DSSlabButton(title: "Name this address") {
                 // Who is this: someone you have, else the name in place
-                // (prd §1964). The pencil still names directly.
+                // (prd §1967). The pencil still names directly.
                 if canRename, AddToContact.asks(for: entry.address) { askingWho = true } else { beginRename() }
             }
             .padding(.horizontal, DS.Space.s4)

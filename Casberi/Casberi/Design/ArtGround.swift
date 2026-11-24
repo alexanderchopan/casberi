@@ -117,7 +117,7 @@ enum FaceArt {
     /// `WalletFace`'s picture: the avatar the address set, never yours.
     static func address(_ address: String) async -> UIImage? {
         guard !YourAccountDemo.isYours(address) else { return nil }
-        // The holder's card photo leads, as on the face (prd §1964).
+        // The holder's card photo leads, as on the face (prd §1967).
         if let held = await HolderPhotos.shared.photo(for: address) { return held }
         guard let url = WalletFace.avatar(for: address) else { return nil }
         return await picture(url)

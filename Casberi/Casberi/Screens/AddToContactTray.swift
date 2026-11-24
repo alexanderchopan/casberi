@@ -116,7 +116,7 @@ enum AddToContact {
             .sorted { ($0.lastActedAt ?? .distantPast, $1.name) > ($1.lastActedAt ?? .distantPast, $0.name) }
     }
 
-    /// Whether the tray has anyone to offer (prd §1964): with nobody to pick
+    /// Whether the tray has anyone to offer (prd §1967): with nobody to pick
     /// it would be one row, New name, so the door names directly instead.
     /// An index not built yet answers yes; the tray builds it.
     @MainActor

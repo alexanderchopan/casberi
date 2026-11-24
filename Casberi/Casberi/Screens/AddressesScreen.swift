@@ -50,7 +50,7 @@ struct AddressesSection: View {
     /// The wallet the naming alert is naming — a `Not named yet` row's own
     /// `Name`, or the resolver's bare address.
     @State private var namingAddress: String?
-    /// A `Name` that asks who it is first (prd §1964): someone you have,
+    /// A `Name` that asks who it is first (prd §1967): someone you have,
     /// or the naming alert.
     @State private var askingWho: WhoIs?
     /// What the search RESOLVED (2026-09-25): an address, a name or a handle
@@ -458,7 +458,7 @@ struct AddressesSection: View {
     }
 
     /// Name a wallet: who is it, when there is anyone to pick (§1775's tray,
-    /// prd §1964), else the naming alert at once.
+    /// prd §1967), else the naming alert at once.
     private func name(_ address: String) {
         namingAddress = address; draft = ""
         if AddToContact.asks(for: address) { askingWho = WhoIs(address: address) } else { naming = true }
@@ -1822,7 +1822,7 @@ struct ContactSheet: View {
     }
 }
 
-/// The address a `Name` asks about (prd §1964), as a sheet's item.
+/// The address a `Name` asks about (prd §1967), as a sheet's item.
 struct WhoIs: Identifiable, Hashable {
     let address: String
     var id: String { address }

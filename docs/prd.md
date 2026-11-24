@@ -75253,7 +75253,7 @@ An unsaved Aztec account on the line gets a **Name · Save** line under To, befo
 
 Each saved address is its own contact, so one person can be an Ethereum, an Aztec and a Railgun "Ana". In Send from Aztec's list every row now names its place ("Aztec · ...4d4d", "Ethereum · ...56ab"): an Ethereum Ana is a send out through Shield, in the open, never to be mistaken for the Aztec one. To's chip reads "Ana · ...4d4d", so the account can be checked before the hold. Railgun's Send is the Railgun session's, asked to do the same.
 
-## §1963 — Swap's shown quote is priced again while the sentence stands (amends §1542) (user, 2026-11-23, of "how would you improve our swap experience": "Yes, fix quotes") — BUILT
+## §1966 — Swap's shown quote is priced again while the sentence stands (amends §1542) (user, 2026-11-23, of "how would you improve our swap experience": "Yes, fix quotes") — BUILT
 
 **Why.** Swap asked the pools once, when what it sells or buys changed, and drew that figure until the sentence changed again. Signing was never stale (preview and signing quote afresh, a kept quote lives `quoteLife`, 20 seconds, and the preview is asked again every 40), but a Swap left open, or opened again from the app switcher, showed a price minutes old beside a Swap button that would sign a different one.
 
@@ -75266,7 +75266,7 @@ Each saved address is its own contact, so one person can be an Ethereum, an Azte
 
 **Checks.** `moveSwapReprice|` logs each re-price (`-openMove YES -liveChains YES -moveHoldings "8453:ETH:0.01" -moveSwapDraft "0.005|ETH|USDC" -moveSimulateETH <wei>`).
 
-## §1964 — Every Name asks who it is, and an address wears its holder's photo (amends §1775's "Not built" and §1774 item 3; extends §1552's faces) (user, 2026-11-23, of "how would you improve our address book experience": "Yes, build both") — BUILT
+## §1967 — Every Name asks who it is, and an address wears its holder's photo (amends §1775's "Not built" and §1774 item 3; extends §1552's faces) (user, 2026-11-23, of "how would you improve our address book experience": "Yes, build both") — BUILT
 
 **Why.** §1775 gave a transfer's Save the "Who is …xxxx" tray, but the address card's Name this address and Contacts' Not named yet rows still raised a bare name field, the path that made a second "Jesse". And a wallet joined to a contact card still wore its tinted mark everywhere money is drawn, so Activity read as addresses, not people.
 
@@ -75281,7 +75281,7 @@ Each saved address is its own contact, so one person can be an Ethereum, an Azte
 
 **Hook.** `-contactJoin "<address>:<contact name>"` joins as the tray's pick does and logs `contactJoin| …xxxx | <name> | photo=yes|no`.
 
-## §1965 — A watched token's page swaps for it (amends §1632's "no Swap yet") (user, 2026-11-23: "add swap to the watchlist token page") — BUILT
+## §1968 — A watched token's page swaps for it (amends §1632's "no Swap yet") (user, 2026-11-23: "add swap to the watchlist token page") — BUILT
 
 **Why.** The watchlist is where you decide to buy, and its token page had no way to. Swap stood on a holding's sheet and long press only, both selling what you hold.
 

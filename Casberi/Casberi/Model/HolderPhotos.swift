@@ -1,7 +1,7 @@
 import SwiftData
 import UIKit
 
-/// **AN ADDRESS WEARS THE FACE OF WHOEVER HOLDS IT (prd §1964).** When
+/// **AN ADDRESS WEARS THE FACE OF WHOEVER HOLDS IT (prd §1967).** When
 /// Contacts has joined a wallet to a contact card that carries a photo, every
 /// face drawn for that address (Send's To rows, a transfer's head, an
 /// Activity row) shows the card's photo, so money reads as people. It sits

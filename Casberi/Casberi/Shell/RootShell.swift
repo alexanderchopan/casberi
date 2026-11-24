@@ -610,7 +610,7 @@ struct RootShell: View {
                 // the unwatched queue, and every detected Safe no follow
                 // reaches any more, with its rows and its tracked queue.
                 FollowPrune.sweepUnfollowed(context: modelContext)
-                // The faces of the people who hold an address (prd §1964),
+                // The faces of the people who hold an address (prd §1967),
                 // from the map the last index build kept: a fetch per card.
                 HolderPhotos.shared.warm(context: modelContext)
                 // A zk.money claim secret whose row is gone leaves this

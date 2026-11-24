@@ -829,7 +829,7 @@ struct MoveSentence: View {
         return nil
     }
 
-    /// **A WATCHED TOKEN, BOUGHT (prd §1965).** Swap with the watched token
+    /// **A WATCHED TOKEN, BOUGHT (prd §1968).** Swap with the watched token
     /// as what it buys, on the network it lives on, the token paid with
     /// left open (the token is never chosen for you, §1782). A contract
     /// (`base:0x…`) is that network's entry; a coin (a CoinGecko id) is the
@@ -1828,7 +1828,7 @@ struct MoveSentence: View {
         .task(id: quoteKey) {
             await requote()
             // The figure shown is priced again while the sentence stands
-            // (prd §1963): signing always asks afresh, the sentence did not.
+            // (prd §1966): signing always asks afresh, the sentence did not.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(Chain.quoteLife))
                 await reprice()
@@ -9439,7 +9439,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// **THE SHOWN QUOTE IS NEVER OLDER THAN A QUOTE LIVES (prd §1963).**
+    /// **THE SHOWN QUOTE IS NEVER OLDER THAN A QUOTE LIVES (prd §1966).**
     /// The same question `requote` asks, quietly: the figure stays drawn
     /// while it is asked, a new answer replaces it with no tick, and a
     /// failed ask keeps the last figure (signing asks the pools again and

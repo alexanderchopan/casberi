@@ -232,7 +232,7 @@ extension FeedScreen {
     }
 }
 
-/// **SWAP FOR A WATCHED TOKEN (prd §1965).** The token's page buys it:
+/// **SWAP FOR A WATCHED TOKEN (prd §1968).** The token's page buys it:
 /// Swap opens with it as what you get, on its network, the token you pay
 /// with open to pick. Drawn only once Move can name the token there and
 /// you have an account (§83: no dead control); a coin Move swaps nowhere,

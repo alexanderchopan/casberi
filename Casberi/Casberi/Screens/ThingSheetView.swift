@@ -3612,7 +3612,7 @@ struct ThingSheetView: View {
                 guard nameCounterpartyAction != nil else { return nil }
                 // Save asks who it is (prd §1775): someone you have, or a new name.
                 return VerbDial.Keep(label: String(localized: "Save"), glyph: "person.crop.circle.badge.plus") {
-                    // With nobody to pick, the name field at once (prd §1964).
+                    // With nobody to pick, the name field at once (prd §1967).
                     if AddToContact.asks(for: cp) { faceTarget = .addTo(cp) } else { nameCounterpartyAction?() }
                 }
             }
