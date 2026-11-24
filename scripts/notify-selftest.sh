@@ -571,10 +571,12 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
 // still speaks, two categories folded into one, or a second delivery in a day
 // the settings footnote promised would not come.
 // prd §1881 retires the price alert with Markets and adds your own moves
-// ending: each is its own news, never folded into an app's batch.
+// ending: each is its own news, never folded into an app's batch. Aztec's
+// "ready to finish" (prd §1963 as committed) is one of them.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
    [.disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded,
-    .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .orderFilled, .orderEnded, .moneyInPrivately],
+    .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .readyToFinish,
+    .orderFilled, .orderEnded, .moneyInPrivately],
    "exactly these kinds stand alone; everything else goes one per app (prd §1872, §1881)")
 // Work's Needs you is asked of you, but it is an app's news: one per app.
 ok(!NotifyKind.needsYou.standsAlone && NotifyKind.needsYou.cls == .alarm,
