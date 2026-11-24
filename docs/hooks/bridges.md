@@ -146,3 +146,7 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 ## Logos sends (prd §1084)
 
 - **Logos names token moves, holds a Holdings tile, and sends (prd §1084): `token` is a built-in program (`SHA256("/LEE-BuiltinProgram/v1/AccountId" ‖ name)`), a holding is a shard on the holder's account, Create · Send sign BIP-340 with one device-only key (`LogosKey`, `casberi-logos-signer`) and `sendTransaction` lives in `LogosSend.swift` alone; no faucet exists on v0.3; a reset and a stopped node notify (`nodeDown`), test coins never do** → prd §1084
+
+## Apple receipts (a measurement)
+
+- `-appleReceiptProbe YES|fetch[:<mailbox>]` `-appleReceiptShape <n>` — can Apple's receipt mails name the app behind an "Apple" charge? A MEASUREMENT: `Model/AppleReceipts.swift` is UNMEASURED, fails closed, and is called from the probe only (`apple-receipts-selftest.sh`); `fetch` searches the connected inbox read-only and lands nothing; the charge match needs the phone (FinanceKit)

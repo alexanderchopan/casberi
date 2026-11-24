@@ -109,7 +109,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-viProbe` — run the Visual Intelligence label→corpus matcher headlessly (VisualCorpusMatch → docs/hooks/system.md
 - `-feedRowTarget <n>` `-feedWindowSteps <n>` — shrink a page's row window (30) or open it n steps, so "Show older" can be reached on a few demo rows; the tap adds rows with no crossfade (2026-11-23)
 - `-awayGap <hours>` — fake the away window (`Model/AppVisit.swift`) the All feed's "new since you were away" marks against ("While I was away?" went with the ask, 2026-10-01).
-- `-appleReceiptProbe YES|fetch[:<mailbox>]` `-appleReceiptShape <n>` — can Apple's receipt mails name the app behind an "Apple" charge? A MEASUREMENT: `Model/AppleReceipts.swift` is UNMEASURED, fails closed, and is called from the probe only (`apple-receipts-selftest.sh`); `fetch` searches the connected inbox read-only and lands nothing; the charge match needs the phone (FinanceKit)
+- `-appleReceiptProbe YES|fetch[:<mailbox>]` `-appleReceiptShape <n>` — can Apple's receipt mails name an "Apple" charge's app? An unmeasured, probe-only measurement → docs/hooks/bridges.md
 - `-mailBridge "<icloud|gmail>:<address>:<app password>"` — connect a mail account headlessly (redacted in `probeArgs:`)
 - `-secretScanProbe` — run the credential tripwire (prd §277, Model/SecretScan.swift) and NSLog what it found: the KINDS plus → docs/hooks/system.md · prd §277
 - `-keychainProbe YES` — NSLog the vault's storage-policy census, force `TokenVault.migrateToDeviceOnly`, then census again (counts only, never a value; prd §277).

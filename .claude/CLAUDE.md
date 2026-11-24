@@ -233,8 +233,8 @@ deliberately does not check are in `docs/verify.md`.
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
 - Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. The bar is Move alone (prd §1809; the Mac's rail keeps its places, §1402) → docs/hooks/design.md
 - No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
-- **Every text rung is named for the size it draws, and a glyph takes a `DSGlyph` rung, never a number (prd §762).**
-- **One section rung (prd §1496, §1814): every section name and Wallet door is `heading24`, no glyph, at the left edge; a door has no line, its state is the figure's ink or one amber word; Your account is Keys and Spending in one-word rows; the second key is the Co-signer; `heading28` is the lede's alone** → prd §1496 → docs/hooks/design.md · prd §762
+- **Every text rung is named for the size it draws, and a glyph takes a `DSGlyph` rung, never a number (prd §762).** → docs/hooks/design.md · prd §762
+- **One section rung (prd §1496, §1814): every section name and Wallet door is `heading24`, no glyph, at the left edge; a door has no line, its state is the figure's ink or one amber word; Your account is Keys and Spending in one-word rows; the second key is the Co-signer; `heading28` is the lede's alone** → prd §1496 · §1814
 - **Every row in every room is one anatomy (prd §764, amended by §902)** Weight carries a fact (the next event, a state word), never a row's title. → docs/hooks/design.md · prd §764
 - No hairlines — zero exceptions; nothing draws a line. Widget/tile radius = `DS.Radius.widget`. **The catalog is rows (what you could add) and the sources tray is tiles (what you have); keep that split** → docs/hooks/design.md · prd §518
 - **White words, pink glyphs (prd §1252): the day divider takes `DS.headInk`; `DS.brandInk` is a glyph's.** → docs/hooks/design.md · prd §1252 · §740
