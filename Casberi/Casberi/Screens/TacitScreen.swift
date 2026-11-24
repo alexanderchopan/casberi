@@ -17,7 +17,7 @@ struct TacitScreen: View {
             name: "Tacit", seatID: "tacit", source: "Tacit",
             state: AccountPageState.of(name: "Tacit", seatID: "tacit",
                                        connected: added, store: store),
-            mode: .noAccount,
+            mode: .signIn,
             lands: false,
             teardown: { TacitAccount.shared.forget() },
             sheet: $sheet,
@@ -27,6 +27,14 @@ struct TacitScreen: View {
         )
     }
 
+    /// Your account's co-signer: the wallet that signs in to Tacit.
+    private var coSigner: String? { YourAccountFacts.coSigners.first }
+
+    /// One tile, Connect, the word Tacit's own site uses (user: "their website
+    /// is connect", "not sign in"). Here connecting is your co-signer's wallet signing Tacit's own message, so
+    /// connecting and opening the account are one step (user, 2026-11-24, of
+    /// a "Turn on" tile: "it's connect isn't it?", "shouldn't its connect
+    /// screen look like however any other connect screen may look?").
     @ViewBuilder private var actBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if added {
@@ -37,18 +45,24 @@ struct TacitScreen: View {
                     chrome.sourceRequest = TacitAccount.name
                 }
             } else {
-                DSSlabButton(tile: .turnOn, title: String(localized: "Add"),
-                             detail: String(localized: "Opens with your co-signer"),
-                             systemImage: "plus", action: add)
+                DSSlabButton(tile: .connect, title: String(localized: "Connect with your co-signer"),
+                             detail: coSigner.map { AddressTail.short($0) } ?? String(localized: "Your account needs a co-signer first"),
+                             systemImage: "link",
+                             enabled: coSigner != nil || DemoMode.isActive, action: signIn)
             }
             DSFootnote("Casberi reads a Tacit account you already have. It cannot move its money.")
         }
     }
 
-    private func add() {
+    /// Adds the app, lands on its Wallet page and asks your co-signer to
+    /// open the account there, where the asking and the reading are shown.
+    private func signIn() {
         DSHaptic.success()
         store.registerConnected(id: TacitAccount.seatID, name: TacitAccount.name,
                                 proof: String(localized: "Read only"))
         chrome.sourceRequest = TacitAccount.name
+        if let coSigner, !DemoMode.isActive {
+            Task { await TacitAccount.shared.open(coSigner: coSigner) }
+        }
     }
 }

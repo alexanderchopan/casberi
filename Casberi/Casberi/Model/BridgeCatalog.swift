@@ -1055,7 +1055,10 @@ enum BridgeSetupMode {
         // ChatGPT on chatgpt.com (§1623), Claude on claude.ai (§1624), Grok
         // on grok.com (§1626) and Gemini on gemini.google.com (§1627): no key,
         // no export.
-        "Muse", "ChatGPT", "Claude", "Grok", "Gemini"]
+        "Muse", "ChatGPT", "Claude", "Grok", "Gemini",
+        // Tacit's sign-in is your co-signer's wallet signing Tacit's own
+        // message, each time the account is opened; no key is kept.
+        "Tacit"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed
@@ -1090,8 +1093,5 @@ enum BridgeSetupMode {
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence",
         // An address, and a key only if the server asks (prd §1478).
-        "Your own model",
-        // Your co-signer's wallet signs each time it is opened; nothing is
-        // pasted and no key is kept.
-        "Tacit"]
+        "Your own model"]
 }

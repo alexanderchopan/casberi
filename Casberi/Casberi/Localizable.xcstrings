@@ -16770,6 +16770,62 @@
         }
       }
     },
+    "%@ · Private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · プライベート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 私密"
+          }
+        }
+      }
+    },
+    "%@ · Public" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 公开"
+          }
+        }
+      }
+    },
     "%@ · Renews %@" : {
       "localizations" : {
         "es" : {
@@ -16940,34 +16996,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ · 全部为 %@ 步骤"
-          }
-        }
-      }
-    },
-    "%@ · arriving" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ · en camino"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ · 到着中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ · 도착 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ · 正在到账"
           }
         }
       }
@@ -56818,34 +56846,6 @@
         }
       }
     },
-    "Another Tacit account · %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Otra cuenta de Tacit · %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "別のTacitアカウント · %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "다른 Tacit 계정 · %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "另一个 Tacit 账户 · %@"
-          }
-        }
-      }
-    },
     "Another address looks just like this one" : {
       "localizations" : {
         "es" : {
@@ -57718,34 +57718,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "任何代币,发送到 Base、Ethereum 或 Robinhood 上的任意地址,通过 Tor。由这台 iPhone 签名;开启共同签名人后,共同签名人也会签名。任何人都能看到。"
-          }
-        }
-      }
-    },
-    "Any wallet or exchange · %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Cualquier billetera o exchange · %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "任意のウォレットや取引所 · %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "모든 지갑 또는 거래소 · %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "任何钱包或交易所 · %@"
           }
         }
       }
@@ -75389,6 +75361,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "连接资金所在的钱包，然后批准。"
+          }
+        }
+      }
+    },
+    "Connect with your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectar con tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者で接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자로 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用你的共同签名者连接"
           }
         }
       }
@@ -102959,6 +102959,34 @@
         }
       }
     },
+    "From a Tacit account · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desde una cuenta de Tacit · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitアカウントから · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 계정에서 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自 Tacit 账户 · %@"
+          }
+        }
+      }
+    },
     "From a zk.money link" : {
       "localizations" : {
         "es" : {
@@ -103123,6 +103151,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自任意钱包"
+          }
+        }
+      }
+    },
+    "From any wallet or exchange · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desde cualquier billetera o exchange · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意のウォレットや取引所から · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 지갑 또는 거래소에서 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自任何钱包或交易所 · %@"
           }
         }
       }
@@ -160433,6 +160489,34 @@
         }
       }
     },
+    "Private address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dirección privada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライベートアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비공개 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私密地址"
+          }
+        }
+      }
+    },
     "Private balance" : {
       "localizations" : {
         "es" : {
@@ -198821,34 +198905,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "TLS 证书"
-          }
-        }
-      }
-    },
-    "Tacit address" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Dirección de Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacitアドレス"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 주소"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 地址"
           }
         }
       }
@@ -239386,6 +239442,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的账户已就绪"
+          }
+        }
+      }
+    },
+    "Your account needs a co-signer first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu cuenta necesita primero un cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まずアカウントに共同署名者が必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼저 계정에 공동 서명자가 필요합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的账户需要先有共同签名者"
           }
         }
       }

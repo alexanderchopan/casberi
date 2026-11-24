@@ -178,6 +178,7 @@ struct SlabTile: Equatable {
     static let photos  = SlabTile(label: String(localized: "Photos"), glyph: "photo.on.rectangle")
     static let importFile = SlabTile(label: String(localized: "Import"), glyph: "square.and.arrow.down")
     static let follow  = SlabTile(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch)
+    static let connect = SlabTile(label: String(localized: "Connect"), glyph: "link")
     static let reconnect = SlabTile(label: String(localized: "Reconnect"), glyph: "arrow.clockwise")
     static let turnOn  = SlabTile(label: String(localized: "Turn on"), glyph: "power")
     static let ask     = SlabTile(label: String(localized: "Ask"), glyph: "sparkles")

@@ -75344,6 +75344,8 @@ Olla is liquid staking for the AZTEC token on Ethereum: AZTEC into its vault, st
 10. **It counts** (user: "yes show it while open and connected"). The last reading is a place under Home's Private, and a row and a term in Holdings' Private total, open or closed, as a wallet that could not be reached stands on its last reading (§825). Only the figure and the two addresses are kept (`tacit.reading.v1`).
 11. **A network named whole wears its mark:** `BrandMark` reads "Ethereum" as ETH's and "Robinhood" as its network mark, so the map's tiles carry logos (user, of the "ET" letters: "need the logo here").
 
+12. **Its connect is Connect, and Balance and Receive say Private and Public** (user, 2026-11-24, of the "Turn on" tile item 1 shipped: "it's connect isn't it?", "their website is connect", "not sign in"; of the page: "tacit has a public and private balance, and i don't see that on ours", "isn't address same as tacit address"). The tile is `SlabTile.connect`, "Connect with your co-signer", dimmed with "Your account needs a co-signer first" when there is none; one tap adds the app, lands on its page and asks the co-signer there. The seat is a `signInSeats` one, replacing item 1's `noAccountSeats` and "Add". Balance draws two lines a network, Private (your notes in the pool) and Public (at your public address, not yet in the pool; was "arriving", drawn only above zero); Receive's rows are "Private address · From a Tacit account" and "Public address · From any wallet or exchange".
+
 **Not built.** Making money private, sending, taking out; Base; tokens other than ETH; Tacit Chain and TAC; the larger DeFi pool; staying open between launches.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).

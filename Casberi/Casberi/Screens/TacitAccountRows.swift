@@ -101,18 +101,17 @@ struct TacitAccountRows: View {
                  figure: account.usd.map(WalletValue.exactMoney) ?? WalletValue.token(reading.eth, "ETH"))
                 .walletListRow()
             ForEach(reading.held) { held in
-                line("ETH", fact: "\(held.network) · \(TacitAccount.name)",
+                line("ETH", fact: String(localized: "\(held.network) · Private"),
                      figure: account.usd(held).map(WalletValue.exactMoney) ?? WalletValue.token(held.eth, "ETH"),
                      figureInk: held.reached ? DS.textPrimary : DS.textSecondary)
                     .walletListRow()
-                if held.waiting > 0 {
-                    line("ETH", fact: String(localized: "\(held.network) · arriving"),
-                         factInk: DS.attentionInk,
+                // Public: at your public address, not yet in the pool. Always
+                // drawn, as Tacit draws both (user, 2026-11-24).
+                line("ETH", fact: String(localized: "\(held.network) · Public"),
                          figure: account.ethPrice.map { WalletValue.exactMoney(held.waiting * $0) }
                             ?? WalletValue.token(held.waiting, "ETH"),
                          figureInk: DS.textSecondary)
-                        .walletListRow()
-                }
+                    .walletListRow()
             }
         }
     }
@@ -120,13 +119,13 @@ struct TacitAccountRows: View {
     @ViewBuilder private func receive(_ reading: TacitAccount.Reading) -> some View {
         Section {
             head(String(localized: "Receive"), figure: nil).walletListRow()
-            copyRow(String(localized: "Tacit address"),
-                    fact: String(localized: "Another Tacit account · \(AddressTail.short(reading.address))"),
+            copyRow(String(localized: "Private address"),
+                    fact: String(localized: "From a Tacit account · \(AddressTail.short(reading.address))"),
                     value: reading.address)
                 .walletListRow()
             if !reading.receive.isEmpty {
-                copyRow(String(localized: "Address"),
-                        fact: String(localized: "Any wallet or exchange · \(AddressTail.short(reading.receive))"),
+                copyRow(String(localized: "Public address"),
+                        fact: String(localized: "From any wallet or exchange · \(AddressTail.short(reading.receive))"),
                         value: reading.receive)
                     .walletListRow()
             }
