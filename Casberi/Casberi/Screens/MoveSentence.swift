@@ -1788,6 +1788,7 @@ struct MoveSentence: View {
             // balances, so nothing competes with it; back from the Signer's
             // wallet the page reads as before.
             if now == .active { Task { await readClipboard() } }
+            if now == .active, stage == nil { Task { await reprice() } }
             if now == .active, stage != .preparing, stage != .signing, !heldBy.isEmpty {
                 Task { await readHoldings() }
                 if !YourAccountDemo.isDemo(account) { Task { [account, network] in await Chain.readAhead(account, on: network) } }
@@ -1797,7 +1798,15 @@ struct MoveSentence: View {
         .onChange(of: TorStatus.shared.state) { _, now in
             if case .ready = now, !unread.isEmpty { Task { await readHoldings() } }
         }
-        .task(id: quoteKey) { await requote() }
+        .task(id: quoteKey) {
+            await requote()
+            // The figure shown is priced again while the sentence stands
+            // (prd §1963): signing always asks afresh, the sentence did not.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Chain.quoteLife))
+                await reprice()
+            }
+        }
         .task(id: tagSwapKey) { await requoteTag() }
         .task(id: limitKey) { await readLimitPrices() }
         .task(id: orderShown?.uid) { await followOrder() }
@@ -9401,6 +9410,32 @@ struct MoveSentence: View {
         } catch {
             if !Task.isCancelled { staleBack = nil }
         }
+    }
+
+    /// **THE SHOWN QUOTE IS NEVER OLDER THAN A QUOTE LIVES (prd §1963).**
+    /// The same question `requote` asks, quietly: the figure stays drawn
+    /// while it is asked, a new answer replaces it with no tick, and a
+    /// failed ask keeps the last figure (signing asks the pools again and
+    /// simulates whatever it signs). Never while preparing or signing, never
+    /// in the background.
+    private func reprice() async {
+        guard quote != nil, stage == nil, receipt == nil, scenePhase == .active,
+              verb == .swap, let with, let buy, let units else { return }
+        let key = quoteKey
+        let q: YourAccountSwap.Quote
+        do {
+            if let on = crossTo, let arrives = crossBuy {
+                q = try await Chain.crossQuote(network, to: on, sell: with.token, buy: arrives, amount: units, account: account)
+            } else {
+                q = try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
+            }
+        } catch { return }
+        guard !Task.isCancelled, key == quoteKey, stage == nil, quote != nil else { return }
+        withAnimation(DS.Motion.standard) { quote = q }
+        #if DEBUG
+        NSLog("moveSwapReprice| %@ %@ %@→%@ | out=%@ min=%@", network.name, units, with.token.symbol, buy.token.symbol,
+              q.buyAmount, q.minimumBuy)
+        #endif
     }
 
     /// The list's matches as you type, after a pause, on every network the

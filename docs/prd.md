@@ -75252,3 +75252,31 @@ An unsaved Aztec account on the line gets a **Name · Save** line under To, befo
 ## §1964b — Which Ana: every row names its place, the chip keeps the tail (amends §1964 items 2 and 3) (user, 2026-11-23: "if it is lets say Ana, it says Ana railgun? i mean what if user thinks they enter the wrong ana", "yes do the fix") — BUILT
 
 Each saved address is its own contact, so one person can be an Ethereum, an Aztec and a Railgun "Ana". In Send from Aztec's list every row now names its place ("Aztec · ...4d4d", "Ethereum · ...56ab"): an Ethereum Ana is a send out through Shield, in the open, never to be mistaken for the Aztec one. To's chip reads "Ana · ...4d4d", so the account can be checked before the hold. Railgun's Send is the Railgun session's, asked to do the same.
+
+## §1963 — Swap's shown quote is priced again while the sentence stands (amends §1542) (user, 2026-11-23, of "how would you improve our swap experience": "Yes, fix quotes") — BUILT
+
+**Why.** Swap asked the pools once, when what it sells or buys changed, and drew that figure until the sentence changed again. Signing was never stale (preview and signing quote afresh, a kept quote lives `quoteLife`, 20 seconds, and the preview is asked again every 40), but a Swap left open, or opened again from the app switcher, showed a price minutes old beside a Swap button that would sign a different one.
+
+1. **Every `quoteLife` while it stands** the line being filled is quoted again (`reprice`): the figure stays drawn while it is asked, a new answer replaces it with no tick, a failed ask keeps the last figure.
+2. **On return to the app** it is asked at once.
+3. **Never** while preparing or signing, in the background, or after the receipt. The demo re-prices too, off its own prices, so the loop can be seen on a simulator.
+4. **Unchanged:** the router call's deadline (30 minutes) — it only bounds time in the mempool, since the bytes are built at the tap — and lines already kept in the sentence, whose quotes signing asks again.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `moveSwapReprice|` logs each re-price (`-openMove YES -liveChains YES -moveHoldings "8453:ETH:0.01" -moveSwapDraft "0.005|ETH|USDC" -moveSimulateETH <wei>`).
+
+## §1964 — Every Name asks who it is, and an address wears its holder's photo (amends §1775's "Not built" and §1774 item 3; extends §1552's faces) (user, 2026-11-23, of "how would you improve our address book experience": "Yes, build both") — BUILT
+
+**Why.** §1775 gave a transfer's Save the "Who is …xxxx" tray, but the address card's Name this address and Contacts' Not named yet rows still raised a bare name field, the path that made a second "Jesse". And a wallet joined to a contact card still wore its tinted mark everywhere money is drawn, so Activity read as addresses, not people.
+
+1. **Every Name asks first.** The address card's pinned Name this address and Contacts' Name (a Not named yet row, and Add on a bare address the search resolved) raise the same tray: the people you have, New name first. On the card the tray pushes inside its stack and New name opens the name in place; in Contacts it opens the naming alert. The pencil and Rename still name directly, as §1775 item 5 kept the Who row's.
+2. **No tray with nobody in it** (`AddToContact.asks`): when nobody could take the address, every door (Save included) goes straight to the name field. An index not built yet asks, and the tray builds it.
+3. **An address wears its holder's photo** (`HolderPhotos`, filled after each index build): a listed contact that carries a contact card with a photo and one or more wallets lends the photo to every `WalletFace` of those wallets: Send's To rows, a transfer's head, an Activity row, the address card. It leads the address's own published picture (a picture you keep of them over one they set), and counts as a picture for §1552's rule, so an Activity row with them leads with their face. You and the wallets you follow as your own are not listed (§1392) and keep yours.
+4. **Nothing in a body.** The map is a lookup; each photo is the card's own thumbnail, read once per card and decoded off main; a card whose photo lands later is asked again on the next build.
+
+**Not built:** a photo from a social avatar (only the card's), "Sent before" on Send's To rows, Add address for a contact with none.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893); Contacts' Name is the same view there.
+
+**Hook.** `-contactJoin "<address>:<contact name>"` joins as the tray's pick does and logs `contactJoin| …xxxx | <name> | photo=yes|no`.

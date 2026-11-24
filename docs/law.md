@@ -1938,7 +1938,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675, §1754)
 - §1540 — Private money goes through 0xBow's Privacy Pools v2, on its open TypeScript SDK: Move to private, Send privately, Wai… (amended by §1541)
 - §1541 — Version 1 of private money also receives at a fresh address and earns on what is private
-- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678)
+- §1542 — §1539 built: Swap and Sweep quote every pool on the phone and write the swap themselves; Uniswap's open list replaces… (amended by §1596, §1665, §1673, §1678, §1963)
 - §1543 — An empty sweep says "Nothing to sweep on <network>.", and the $1 line moves under it (amends §1537)
 - §1544 — §1540 step 1 built: the Privacy Pools engine runs on the phone — 0xBow's open TypeScript SDK in a hidden web view, Se…
 - §1545 — A round-up on the send's own network buys on the exchanges, only with Face ID; the spend limit's key never buys; pool…
