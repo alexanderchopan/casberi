@@ -9,7 +9,7 @@
 // view and resumes them when they return — so off-screen clips don't burn
 // CPU/battery, and only what you're looking at is running.
 (function lazyVideos() {
-  var vids = Array.prototype.slice.call(document.querySelectorAll('video'));
+  var vids = Array.prototype.slice.call(document.querySelectorAll('video:not([controls])'));   // a clip with controls is the visitor's to start
   if (!vids.length || !('IntersectionObserver' in window)) return;
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
