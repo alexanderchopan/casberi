@@ -605,6 +605,8 @@ extension FeedScreen {
                         if let lent { walletLentRow(m, lend: lent.lend, mask: mask, prices: lent.lend.prices) }
                     case .roundUps(let units):
                         walletRoundUpsRow(units, mask: mask)
+                    case .ollaBack(let units, let ready):
+                        if let lent { walletOllaBackRow(units, ready: ready, lend: lent.lend, mask: mask) }
                     }
                 }
                 // What your Aztec account holds in the open: its gas, first

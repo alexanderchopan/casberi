@@ -180,7 +180,8 @@ use "Casberi/Casberi/Model/WalletIngest.swift" 'let (candidates, reached) = awai
 use "Casberi/Casberi/Model/WalletIngest.swift" 'return (read.candidates.filter { !AaveLend.isReceipt($0.contract) }, read.reached)' "an aToken counts in Tokens beside Lent (prd §1695)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" 'let lentUSD = lent.flatMap { $0.lend.standing(account: $0.account)?.usd } ?? 0' "Public's head does not count the lent standing the total counts (prd §1695, §1697, §1718)"
 ! grep -q 'walletLentHead' Casberi/Casberi/Screens/FeedScreen+WalletLent.swift || { echo "✗ Lent is a section again (prd §1718: Public · Private, lent is a fact on the row)"; exit 1; }
-use "Casberi/Casberi/Model/LendMove.swift" 'lentAnswered = found.count == AaveLend.markets.count && found.allSatisfy { $0.lent != nil }' "a partial Aave read is taken for nothing lent (prd §1697)"
+use "Casberi/Casberi/Model/LendMove.swift" 'lentAnswered = found.count == AaveLend.markets.filter({ $0.place == .aave }).count && found.allSatisfy { $0.lent != nil }' "a partial Aave read is taken for nothing lent (prd §1697)"
+use "Casberi/Casberi/Model/LendMove.swift" '            && ollaAnswered' "a partial Olla read is taken for nothing staked (prd §1970)"
 use "Casberi/Casberi/Model/LendMove.swift" 'guard let last = Self.lastReading(for: account) else { return nil }' "Lent does not stand on its last reading when Aave is not reached (prd §1697)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'if let lentAsOf { portfolio.asOf = min(portfolio.asOf ?? lentAsOf, lentAsOf) }' "a last Lent reading is presented as current (prd §1697)"
 use "Casberi/Casberi/Model/WalletPortfolio.swift" '|| holderID == privateHolderID || holderID == lentHolderID' "Lent is drawn as a wallet or an app (prd §1695)"

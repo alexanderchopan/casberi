@@ -56,6 +56,45 @@ final class LendMove {
     /// Each network's gas price, wei, for the cost line (prd §1700z).
     private(set) var gasPriceWei: [Int: Decimal] = [:]
 
+    // MARK: - Olla (prd §1970)
+
+    /// stAZTEC held, base units.
+    private(set) var ollaShares = "0"
+    /// What one stAZTEC is worth in AZTEC, base units: `convertToAssets(1e18)`.
+    private(set) var ollaRate: String?
+    /// Requests filed and not yet claimed: waiting, or ready to claim.
+    private(set) var ollaRequests: [OllaStake.Request] = []
+    /// Anything at Olla: staked, or on its way back.
+    var anyOlla: Bool { (Decimal(string: ollaShares) ?? 0) > 0 || !ollaRequests.isEmpty }
+    var ollaReady: [OllaStake.Request] { ollaRequests.filter(\.ready) }
+    var ollaWaiting: [OllaStake.Request] { ollaRequests.filter { !$0.ready } }
+
+    /// The AZTEC asked back, ready or still waiting, base units.
+    func ollaBack(ready: Bool) -> String {
+        let sum = ollaRequests.filter { $0.ready == ready }.reduce(Decimal(0)) { $0 + (Decimal(string: $1.assets) ?? 0) }
+        return Self.digits(sum)
+    }
+
+    /// **CLAIM IS THE ACT** while Withdraw stands on Olla with a request
+    /// ready: the deck claims it before anything else is asked back.
+    var claims: Bool { mode == .takeBack && market?.place == .olla && !ollaReady.isEmpty }
+
+    /// stAZTEC a withdrawal of the picked amount burns: every share for all,
+    /// else the amount at today's price, never more than is held.
+    var ollaSharesAsked: String? {
+        guard let units else { return nil }
+        if all { return ollaShares }
+        guard let rate = ollaRate, let s = OllaStake.shares(forAssets: units, rate: rate),
+              let d = Decimal(string: s), let held = Decimal(string: ollaShares) else { return nil }
+        return Self.digits(min(d, held))
+    }
+
+    /// Below Olla's least request (100 stAZTEC): said, and nothing is signed.
+    var ollaUnderMinimum: Bool {
+        guard mode == .takeBack, !claims, market?.place == .olla, let s = ollaSharesAsked.flatMap({ Decimal(string: $0) }) else { return false }
+        return s < OllaStake.minimumShares
+    }
+
     /// Opened from a lent row (`opens`): its market, once.
     init(mode: Mode = .lend, opens: Bool = false) {
         self.mode = mode
@@ -83,7 +122,9 @@ final class LendMove {
     func lentUSD() -> Double? {
         var usd = RoundUpsPot.dollars(roundUps)
         for m in AaveLend.markets {
-            guard let units = Decimal(string: lent[Self.key(m)] ?? "0"), units > 0 else { continue }
+            // What Olla owes back counts with what it stakes: it is yours.
+            let back = m.place == .olla ? (Decimal(string: ollaBack(ready: true)) ?? 0) + (Decimal(string: ollaBack(ready: false)) ?? 0) : 0
+            guard let units = Decimal(string: lent[Self.key(m)] ?? "0").map({ $0 + back }), units > 0 else { continue }
             guard let price = prices[m.symbol.lowercased()] else { return nil }
             usd += NSDecimalNumber(decimal: units / pow(10, m.decimals)).doubleValue * price
         }
@@ -159,6 +200,8 @@ final class LendMove {
             let left = (Decimal(string: have) ?? 0) - keep
             return left > 0 ? Self.digits(left) : "0"
         case .takeBack:
+            // Claiming takes every ready request, whatever was typed.
+            if m.place == .olla, claims { return ollaBack(ready: true) }
             return lent[Self.key(m)]
         }
     }
@@ -166,6 +209,7 @@ final class LendMove {
     /// The amount in base units: what was picked, or all of what is available.
     var units: String? {
         guard let m = market else { return nil }
+        if claims { return available(m).flatMap { $0 == "0" ? nil : $0 } }
         if all { return available(m).flatMap { $0 == "0" ? nil : $0 } }
         return amount.flatMap { PrivateMoney.baseUnits($0, decimals: m.decimals) }
     }
@@ -232,7 +276,7 @@ final class LendMove {
 
     /// Any market where something is lent: Holdings' rows, and whether Take
     /// back has anything to say.
-    var anyLent: Bool { lent.values.contains { (Decimal(string: $0) ?? 0) > 0 } }
+    var anyLent: Bool { lent.values.contains { (Decimal(string: $0) ?? 0) > 0 } || !ollaRequests.isEmpty }
 
     // MARK: - Reading
 
@@ -271,8 +315,9 @@ final class LendMove {
             lent[Self.key(m)] = m.chainId == 8453 && !m.native ? "150000000" : "0"
         }
         roundUps = RoundUpsPot.demoPot
+        readOllaDemo()
         lentAnswered = true
-        rates = ["8453|USDC": 0.0508, "8453|ETH": 0.0143, "1|USDC": 0.0379, "1|ETH": 0.0145]
+        rates = ["8453|USDC": 0.0508, "8453|ETH": 0.0143, "1|USDC": 0.0379, "1|ETH": 0.0145, "1|AZTEC": 0.31]
         reserve = [8453: "100000000000000", 1: "1000000000000000"]
         gasPriceWei = [8453: 6_000_000, 1: 400_000_000]
     }
@@ -280,7 +325,7 @@ final class LendMove {
     private func readChain(account: String) async {
         typealias Read = (key: String, held: String?, lent: String?, rate: Double?, aToken: String?)
         let found: [Read] = await withTaskGroup(of: Read.self) { group in
-            for m in AaveLend.markets {
+            for m in AaveLend.markets where m.place == .aave {
                 guard let net = YourAccountOp.networks.first(where: { $0.chainId == m.chainId }) else { continue }
                 group.addTask {
                     let token = m.native ? YourAccountOp.eth : YourAccountOp.Token(symbol: m.symbol, decimals: m.decimals, contract: m.asset)
@@ -297,7 +342,9 @@ final class LendMove {
             return out
         }
         // Every market's aToken balance heard, or the reading is partial.
-        lentAnswered = found.count == AaveLend.markets.count && found.allSatisfy { $0.lent != nil }
+        let ollaAnswered = await readOlla(account: account)
+        lentAnswered = found.count == AaveLend.markets.filter({ $0.place == .aave }).count && found.allSatisfy { $0.lent != nil }
+            && ollaAnswered
         for r in found {
             guard let m = AaveLend.markets.first(where: { Self.key($0) == r.key }) else { continue }
             // A reserve that names another aToken is not the market this was
@@ -349,17 +396,31 @@ final class LendMove {
             stage = .failed(String(localized: "Aave's \(m.symbol) on \(m.network) is not the market Casberi knows, so nothing was signed"))
             return
         }
-        let calls: [AaveLend.Call]? = switch mode {
-        case .lend: AaveLend.lend(units, in: m, account: account)
+        if ollaUnderMinimum {
+            stage = .failed(String(localized: "Olla takes back 100 stAZTEC or more"))
+            return
+        }
+        let calls: [AaveLend.Call]? = if m.place == .olla {
+            ollaCalls(units, account: account)
+        } else {
+            switch mode {
+            case .lend: AaveLend.lend(units, in: m, account: account)
         // All of what you lent, never Round-ups beside it: Aave's `max` only
         // where Round-ups holds nothing in this market (prd §1690).
-        case .takeBack: AaveLend.takeBack(units, all: all && !(RoundUpsPot.market == m && roundUps != "0"), in: m, account: account)
+            case .takeBack: AaveLend.takeBack(units, all: all && !(RoundUpsPot.market == m && roundUps != "0"), in: m, account: account)
+            }
         }
         guard let calls, AaveLend.checked(calls, in: m, account: account) else {
             stage = .failed(String(localized: "This could not be written"))
             return
         }
-        let reason = mode == .lend ? String(localized: "Lend \(figure) on Aave") : String(localized: "Take back \(figure) from Aave")
+        let reason = switch (m.place, mode) {
+        case (.olla, _) where claims: String(localized: "Claim \(figure) from Olla")
+        case (.olla, .lend): String(localized: "Deposit \(figure) on Olla")
+        case (.olla, .takeBack): String(localized: "Withdraw \(figure) from Olla")
+        case (.aave, .lend): String(localized: "Lend \(figure) on Aave")
+        case (.aave, .takeBack): String(localized: "Take back \(figure) from Aave")
+        }
         // The rows in the foot, as every Move sentence has (prd §1700z).
         let steps = PrivateSendSteps.shared
         steps.begin(.move, plan: plan)
@@ -388,6 +449,100 @@ final class LendMove {
             steps.fail(error.localizedDescription)
             stage = .failed(error.localizedDescription)
         }
+    }
+
+    // MARK: - Olla's reads and calls (prd §1970)
+
+    /// Olla's calls for this move: claim what is ready, deposit at no less
+    /// than 0.5% under today's price, or ask the shares back.
+    private func ollaCalls(_ units: String, account: String) -> [AaveLend.Call]? {
+        if claims { return OllaStake.claim(ollaReady.map(\.id)) }
+        switch mode {
+        case .lend:
+            guard let rate = ollaRate, let least = OllaStake.minShares(forAssets: units, rate: rate) else { return nil }
+            return OllaStake.deposit(units, minShares: least, account: account)
+        case .takeBack:
+            return ollaSharesAsked.flatMap { OllaStake.requestBack($0, account: account) }
+        }
+    }
+
+    /// AZTEC held, stAZTEC and its worth, the price now and 30 days ago, and
+    /// every request not yet claimed. True when the stake and the requests
+    /// were both heard: only then is "nothing at Olla" a fact.
+    private func readOlla(account: String) async -> Bool {
+        guard let m = AaveLend.olla, let net = YourAccountOp.networks.first(where: { $0.chainId == m.chainId }) else { return true }
+        let token = YourAccountOp.Token(symbol: m.symbol, decimals: m.decimals, contract: m.asset)
+        async let have = YourAccountChain.balance(net, token, of: account)
+        async let shares = Self.call(net, to: m.aToken, data: OllaStake.balanceCall(account: account))
+        async let rate = Self.call(net, to: m.pool, data: OllaStake.assetsCall(shares: OllaStake.oneShare))
+        async let ids = Self.call(net, to: m.pool, data: OllaStake.activeRequestsCall(account: account))
+        async let then = Self.rateBack(net, vault: m.pool)
+        let key = Self.key(m)
+        if let h = await have { held[key] = h }
+        let now = await rate.flatMap(OllaStake.amount)
+        if let now { ollaRate = now }
+        if let now, let old = await then, let apy = OllaStake.apy(now: now, then: old) { rates[key] = apy }
+        let heardShares = await shares.flatMap(OllaStake.amount)
+        if let s = heardShares {
+            ollaShares = s
+            if let r = ollaRate { lent[key] = OllaStake.assets(forShares: s, rate: r) ?? lent[key] }
+        }
+        guard let list = await ids.flatMap(OllaStake.ids) else { return false }
+        var found: [OllaStake.Request] = []
+        for id in list {
+            guard let answer = await Self.call(net, to: m.pool, data: OllaStake.requestCall(id: id)),
+                  let r = OllaStake.request(id: id, answer) else { return false }
+            found.append(r)
+        }
+        ollaRequests = found
+        await tellOllaReady(m)
+        return heardShares != nil && ollaRate != nil
+    }
+
+    /// The share price 30 days back, off an archive read: nil where the node
+    /// keeps no history, and then no rate is said.
+    private nonisolated static func rateBack(_ net: YourAccountOp.Network, vault: String) async -> String? {
+        guard let headHex = try? await YourAccountChain.rpc(net, "eth_blockNumber", []) as? String,
+              let head = Int(AaveLend.decimal(hex: headHex)), head > OllaStake.windowBlocks,
+              let data = OllaStake.assetsCall(shares: OllaStake.oneShare) else { return nil }
+        let at = "0x" + String(head - OllaStake.windowBlocks, radix: 16)
+        guard let answer = try? await YourAccountChain.rpc(net, "eth_call", [["to": vault, "data": data], at]) as? String else { return nil }
+        return OllaStake.amount(answer)
+    }
+
+    /// **READY TO CLAIM, SAID ONCE (prd §1970):** a request Olla finalized is
+    /// told while you are away, once per request.
+    private func tellOllaReady(_ m: Market) async {
+        guard !DemoMode.isActive else { return }
+        let key = "olla.toldReady"
+        var told = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+        for r in ollaReady where !told.contains(r.id) {
+            told.insert(r.id)
+            UserDefaults.standard.set(Array(told), forKey: key)
+            let figure = PrivateMoney.figure(r.assets, decimals: m.decimals, symbol: m.symbol)
+            await Notifications.outcome(.readyToClaim, id: "olla:" + r.id, place: "Olla",
+                                        body: String(localized: "Claim \(figure) from Olla"), mark: "AZTEC", awayOnly: true)
+        }
+    }
+
+    /// The demo's Olla, and `-ollaSample` on a simulator: AZTEC held, some
+    /// staked, and a request waiting or ready (DEBUG).
+    private func readOllaDemo() {
+        guard let m = AaveLend.olla else { return }
+        let key = Self.key(m)
+        held[key] = "0"; lent[key] = "0"; ollaShares = "0"; ollaRequests = []
+        ollaRate = "1091078987799669200"
+        #if DEBUG
+        let sample = UserDefaults.standard.string(forKey: "ollaSample") ?? ""
+        guard !sample.isEmpty else { return }
+        held[key] = "12400000000000000000000"
+        ollaShares = "4593580000000000000000"
+        lent[key] = OllaStake.assets(forShares: ollaShares, rate: ollaRate ?? "0") ?? "0"
+        if sample == "waiting" || sample == "ready" {
+            ollaRequests = [OllaStake.Request(id: "17", ready: sample == "ready", shares: "1000000000000000000000",
+                                              assets: "1091078987799669200000")]
+        }
+        #endif
     }
 
     private static func digits(_ d: Decimal) -> String {

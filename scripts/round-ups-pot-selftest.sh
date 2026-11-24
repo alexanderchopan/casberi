@@ -108,7 +108,7 @@ check(P.calls(from: 8453, input: input, budget: "700000", fees: fees, message: [
       "Base carries its own change through Across")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -Onone -o "$TMP/run" "$M/RoundUpsPot.swift" "$M/RoundUpsPot+Across.swift" "$M/AaveLend.swift" "$M/PrivateBridge.swift" \
+xcrun swiftc -Onone -o "$TMP/run" "$M/RoundUpsPot.swift" "$M/RoundUpsPot+Across.swift" "$M/AaveLend.swift" "$M/OllaStake.swift" "$M/PrivateBridge.swift" \
   "$M/YourAccountAcross.swift" "Casberi/Shared/AddressTail.swift" "$M/YourAccountSwap.swift" "$M/YourAccount.swift" "$M/YourAccountOp.swift" \
   "$M/YourAccount7579.swift" "$M/SafeTransaction.swift" "$M/Keccak256.swift" "$M/ClearSign.swift" "$M/SafeWebAuthnSignature.swift" \
   "$M/SafeTypedData.swift" "$M/RoundUps.swift" "$TMP/stub.swift" "$TMP/main.swift" 2>"$TMP/err" \

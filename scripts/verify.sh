@@ -2731,6 +2731,9 @@ harness "Savings goal" "savings goal" "scripts/savings-goal-selftest.sh" "the sa
 # Lend (prd §1674): the Aave calls byte for byte as simulated, nothing signed
 # that goes anywhere but the market's asset or Pool, the rate read and compounded.
 harness "Aave lend" "aave lend" "scripts/aave-lend-selftest.sh" "the Aave lend self-test failed — run scripts/aave-lend-selftest.sh"
+# Olla in Earn (prd §1970): AZTEC staked through Olla's vault, the calls byte for
+# byte as simulated, nothing signed that is not checked, the queue and the rate read.
+harness "Olla stake" "olla stake" "scripts/olla-stake-selftest.sh" "the Olla stake self-test failed — run scripts/olla-stake-selftest.sh"
 # The Wallet's watchlist (prd §1632): its order, the price window, the day's
 # change, the keyless answers, and that it never reads Zerion or a sweep.
 harness "Watchlist" "watchlist" "scripts/watchlist-selftest.sh" "the watchlist self-test failed — run scripts/watchlist-selftest.sh"

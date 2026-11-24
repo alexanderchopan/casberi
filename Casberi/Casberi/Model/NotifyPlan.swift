@@ -143,6 +143,8 @@ enum NotifyKind: String, Sendable, CaseIterable {
     case readyToUse
     /// A send out of Aztec can be finished on Ethereum (prd §1963).
     case readyToFinish
+    /// AZTEC asked back from Olla can be claimed (prd §1970).
+    case readyToClaim
     /// A limit order filled.
     case orderFilled
     /// A limit order ended unfilled: expired or cancelled.
@@ -163,7 +165,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
              .moveFailed, .moveReturned, .orderEnded, .needsYou:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest,
-             .moveSent, .moveSwapped, .moveArrived, .readyToUse, .readyToFinish, .orderFilled, .moneyInPrivately:
+             .moveSent, .moveSwapped, .moveArrived, .readyToUse, .readyToFinish, .readyToClaim, .orderFilled, .moneyInPrivately:
             return .arrival
         }
     }
@@ -269,7 +271,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded:
             return true
         // Each of your own moves is its own news, said on its own (§1881).
-        case .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .readyToFinish,
+        case .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .readyToFinish, .readyToClaim,
              .orderFilled, .orderEnded, .moneyInPrivately:
             return true
         default:
@@ -331,6 +333,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .moveReturned:     return String(localized: "Came back")
         case .readyToUse:       return String(localized: "Ready to use")
         case .readyToFinish:    return String(localized: "Ready to finish")
+        case .readyToClaim:     return String(localized: "Ready to claim")
         case .orderFilled:      return String(localized: "Your order filled")
         case .orderEnded:       return String(localized: "Your order ended")
         case .moneyInPrivately: return String(localized: "Money arrived privately")
@@ -373,6 +376,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .moveReturned:        return String(localized: "came back")
         case .readyToUse:          return String(localized: "ready to use")
         case .readyToFinish:       return String(localized: "ready to finish")
+        case .readyToClaim:        return String(localized: "ready to claim")
         case .orderFilled:         return String(localized: "order filled")
         case .orderEnded:          return String(localized: "order ended")
         case .moneyInPrivately:    return String(localized: "money arrived privately")
@@ -388,7 +392,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     var digestRank: Int {
         if severity > 0 { return severity }
         switch self {
-        case .moneyIn, .payoutPaid, .moneyInPrivately, .moveArrived, .readyToUse, .readyToFinish, .orderFilled, .moveSent, .moveSwapped: return 15
+        case .moneyIn, .payoutPaid, .moneyInPrivately, .moveArrived, .readyToUse, .readyToFinish, .readyToClaim, .orderFilled, .moveSent, .moveSwapped: return 15
         case .appWalletMade:        return 10
         case .repliesReceived:      return 8
         case .followersGained:      return 5
@@ -434,6 +438,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .moveReturned:        (one, many) = (String(localized: "move came back"), String(localized: "moves came back"))
         case .readyToUse:          (one, many) = (String(localized: "ready to use"), String(localized: "ready to use"))
         case .readyToFinish:       (one, many) = (String(localized: "ready to finish"), String(localized: "ready to finish"))
+        case .readyToClaim:        (one, many) = (String(localized: "ready to claim"), String(localized: "ready to claim"))
         case .orderFilled:         (one, many) = (String(localized: "order filled"), String(localized: "orders filled"))
         case .orderEnded:          (one, many) = (String(localized: "order ended"), String(localized: "orders ended"))
         case .moneyInPrivately:    (one, many) = (String(localized: "private arrival"), String(localized: "private arrivals"))

@@ -33,11 +33,14 @@ extension FeedScreen {
         case token(WalletPortfolio.Position)
         case lent(AaveLend.Market)
         case roundUps(String)
+        /// AZTEC asked back from Olla (prd §1970): waiting, or ready to claim.
+        case ollaBack(units: String, ready: Bool)
         var id: String {
             switch self {
             case .token(let p): "token:" + p.id
             case .lent(let m): "lent:" + m.aToken
             case .roundUps: "roundups"
+            case .ollaBack(_, let ready): ready ? "olla:ready" : "olla:waiting"
             }
         }
     }
@@ -48,6 +51,13 @@ extension FeedScreen {
         if let lent {
             for m in lent.rows { rows.append((walletLentUSD(m, lend: lent.lend, prices: lent.lend.prices) ?? 0, .lent(m))) }
             if let units = lent.roundUps { rows.append((RoundUpsPot.dollars(units), .roundUps(units))) }
+            if let m = AaveLend.olla {
+                for ready in [true, false] {
+                    let units = lent.lend.ollaBack(ready: ready)
+                    guard (Decimal(string: units) ?? 0) > 0 else { continue }
+                    rows.append((lent.lend.dollars(units, in: m) ?? 0, .ollaBack(units: units, ready: ready)))
+                }
+            }
         }
         return rows.sorted { $0.usd > $1.usd }.map(\.row)
     }
@@ -108,6 +118,45 @@ extension FeedScreen {
         .contentShape(Rectangle())
     }
 
+    /// **AZTEC ON ITS WAY BACK FROM OLLA (prd §1970):** "AZTEC" over "On its
+    /// way · Olla" while the queue holds it, "Ready to claim · Olla" in the
+    /// attention ink once it can be claimed; a tap opens Withdraw on Olla,
+    /// which claims what is ready.
+    func walletOllaBackRow(_ units: String, ready: Bool, lend: LendMove, mask: String?) -> some View {
+        let m = AaveLend.olla
+        let usd = m.flatMap { lend.dollars(units, in: $0) }
+        let figure = mask ?? usd.map(WalletValue.money) ?? PrivateMoney.figure(units, decimals: 18, symbol: "AZTEC")
+        let word = ready ? String(localized: "Ready to claim") : String(localized: "On its way")
+        return Button { walletOpenLend(.takeBack, m) } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                AssetMark(name: "AZTEC", size: DS.Mark.row)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(verbatim: "AZTEC")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                    (Text(verbatim: word).foregroundStyle(ready ? DS.attentionInk : DS.textTertiary)
+                     + Text(verbatim: " · Olla").foregroundStyle(DS.textTertiary))
+                        .dsText(.fact15)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(figure, tone: DS.textPrimary)
+            }
+            .frame(minHeight: WalletCardStyle.ledgerHead)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: ["AZTEC", word, "Olla", figure].joined(separator: ". ")))
+        .walletListRow()
+    }
+
     func walletLentUSD(_ m: AaveLend.Market, lend: LendMove, prices: [String: Double]) -> Double? {
         guard let price = prices[m.symbol.lowercased()], let units = Decimal(string: lend.lent[LendMove.key(m)] ?? "") else { return nil }
         return NSDecimalNumber(decimal: units / pow(10, m.decimals)).doubleValue * price
@@ -129,9 +178,9 @@ extension FeedScreen {
         let title = m.symbol
         // Network · fact · place (prd §1718): "Base · 5.1% · Aave"; the rate
         // unread, "Base · Aave".
-        let state = [m.network, AaveLend.rateOnly(lend.rates[LendMove.key(m)]), "Aave"].compactMap { $0 }.joined(separator: " · ")
+        let state = [m.network, AaveLend.rateOnly(lend.rates[LendMove.key(m)]), m.placeName].compactMap { $0 }.joined(separator: " · ")
         // Holdings' one line drops the network to the page (prd §1954): "5.1% · Aave".
-        let fact = [AaveLend.rateOnly(lend.rates[LendMove.key(m)]), "Aave"].compactMap { $0 }.joined(separator: " · ")
+        let fact = [AaveLend.rateOnly(lend.rates[LendMove.key(m)]), m.placeName].compactMap { $0 }.joined(separator: " · ")
         // Its page, Withdraw and Deposit on it (user, 2026-11-21): a tap
         // never jumps straight into Move.
         let holding = WalletHolding(id: "lent:" + m.aToken, symbol: m.symbol, figure: figure,

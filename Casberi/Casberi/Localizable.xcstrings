@@ -72726,6 +72726,62 @@
         }
       }
     },
+    "Claim %@ from Olla" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reclamar %@ de Olla"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ollaから%@を受け取る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Olla에서 %@ 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Olla 领取 %@"
+          }
+        }
+      }
+    },
+    "Claim it here, we'll tell you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reclámalo aquí, te avisaremos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここで受け取れます。お知らせします"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 받으세요. 알려 드릴게요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在这里领取，我们会通知你"
+          }
+        }
+      }
+    },
     "Claim to your account" : {
       "localizations" : {
         "es" : {
@@ -85788,6 +85844,34 @@
         }
       }
     },
+    "Deposit %@ on Olla" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Depositar %@ en Olla"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ollaに%@を預け入れ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Olla에 %@ 예치"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Olla 存入 %@"
+          }
+        }
+      }
+    },
     "Deposit in your co-signer's wallet" : {
       "localizations" : {
         "es" : {
@@ -89852,6 +89936,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "赚取收益："
+          }
+        }
+      }
+    },
+    "Earned" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ganó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "実績"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수익"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已赚取"
           }
         }
       }
@@ -107598,6 +107710,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按住以购买"
+          }
+        }
+      }
+    },
+    "Hold to claim" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantén para reclamar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長押しで受け取る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "길게 눌러 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按住领取"
           }
         }
       }
@@ -143577,6 +143717,34 @@
         }
       }
     },
+    "Olla takes back 100 stAZTEC or more" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Olla devuelve 100 stAZTEC o más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ollaの引き出しは100 stAZTEC以上です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Olla는 100 stAZTEC 이상부터 돌려받을 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Olla 最少取回 100 stAZTEC"
+          }
+        }
+      }
+    },
     "On" : {
       "localizations" : {
         "es" : {
@@ -167344,6 +167512,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在 Ethereum 上就绪 · "
+          }
+        }
+      }
+    },
+    "Ready to claim" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo para reclamar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取れます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받을 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以领取"
           }
         }
       }
@@ -207239,6 +207435,34 @@
         }
       }
     },
+    "Then" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Después"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "その後"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그다음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "然后"
+          }
+        }
+      }
+    },
     "Then %@, %@." : {
       "localizations" : {
         "en" : {
@@ -231096,6 +231320,34 @@
         }
       }
     },
+    "Withdraw %@ from Olla" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar %@ de Olla"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ollaから%@を引き出す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Olla에서 %@ 인출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从 Olla 提取 %@"
+          }
+        }
+      }
+    },
     "Withdrawing" : {
       "localizations" : {
         "es" : {
@@ -231120,6 +231372,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "提取中"
+          }
+        }
+      }
+    },
+    "Withdrawing takes about a day. Olla's latest contract change isn't covered by its audit." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirar tarda aproximadamente un día. El último cambio del contrato de Olla no está cubierto por su auditoría."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "引き出しには約1日かかります。Ollaの最新のコントラクト変更は監査の対象外です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인출에는 약 하루가 걸립니다. Olla의 최근 컨트랙트 변경은 감사 범위에 포함되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提取大约需要一天。Olla 最近的合约变更不在其审计范围内。"
           }
         }
       }
@@ -246722,6 +247002,34 @@
         }
       }
     },
+    "about %@ a year, last 30 days" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "unos %@ al año, últimos 30 días"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "年約%@（過去30日）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연 약 %@, 최근 30일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "年化约 %@，近 30 天"
+          }
+        }
+      }
+    },
     "about %@ days" : {
       "localizations" : {
         "es" : {
@@ -254056,6 +254364,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 1 个协议中"
+          }
+        }
+      }
+    },
+    "in about a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en aproximadamente un día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "約1日で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "약 하루 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "大约一天"
           }
         }
       }
@@ -262679,6 +263015,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取其签名者地址…"
+          }
+        }
+      }
+    },
+    "ready to claim" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "listo para reclamar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取れます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받을 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以领取"
           }
         }
       }

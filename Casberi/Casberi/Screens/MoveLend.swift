@@ -56,6 +56,15 @@ struct MoveLendSentence<Head: View>: View {
     }
 
     private var market: AaveLend.Market? { move.market }
+    /// "4,583 stAZTEC": what a deposit to Olla mints at today's price.
+    private var ollaYouGet: String? {
+        guard market?.place == .olla, move.mode == .lend, let units = move.units, let rate = move.ollaRate,
+              let shares = OllaStake.shares(forAssets: units, rate: rate).flatMap({ Decimal(string: $0) }) else { return nil }
+        // Whole stAZTEC: a quote, never six places of false precision.
+        var whole = shares / pow(10, 18), rounded = Decimal()
+        NSDecimalRound(&rounded, &whole, 0, .plain)
+        return "\(rounded.formatted(.number.precision(.fractionLength(0)))) stAZTEC"
+    }
     /// Whether this market has anything to move: the empty line, else the facts.
     private var hasAny: Bool { (move.market.flatMap { move.available($0) }.flatMap { Decimal(string: $0) } ?? 0) > 0 }
     private var live: Bool { move.stage == .ready }
@@ -120,6 +129,13 @@ struct MoveLendSentence<Head: View>: View {
                         Text(move.mode == .lend ? String(localized: "No \(market.symbol) on \(market.network) to earn with")
                              : String(localized: "Nothing earning on \(market.network)"))
                             .dsText(.body17).foregroundStyle(DS.textTertiary)
+                    } else if move.ollaUnderMinimum {
+                        Text("Olla takes back 100 stAZTEC or more")
+                            .dsText(.body17).foregroundStyle(DS.attentionInk)
+                    } else if market.place == .olla, move.mode == .lend {
+                        // **THE AUDIT GAP, SAID ONCE (prd §1970):** Olla's own docs
+                        // say its live StakingManager carries an unaudited change.
+                        DSFootnote("Withdrawing takes about a day. Olla's latest contract change isn't covered by its audit.")
                     }
                 }
             }
@@ -148,11 +164,19 @@ struct MoveLendSentence<Head: View>: View {
 
     /// What lending earns today, or where taking back lands: a fact (prd §1896).
     private var rateFact: (name: String, value: String)? {
+        let olla = market?.place == .olla
         switch move.mode {
+        // **OLLA'S RATE IS WHAT IT EARNED (prd §1970):** the share price over
+        // the last 30 days, a year's worth, never a promise.
+        case .lend where olla:
+            return market.flatMap { AaveLend.rateOnly(move.rates[LendMove.key($0)]) }
+                .map { (String(localized: "Earned"), String(localized: "about \($0) a year, last 30 days")) }
         case .lend:
-            market.flatMap { AaveLend.rateOnly(move.rates[LendMove.key($0)]) }
+            return market.flatMap { AaveLend.rateOnly(move.rates[LendMove.key($0)]) }
                 .map { (String(localized: "Earns"), String(localized: "\($0) today")) }
-        case .takeBack: (String(localized: "Arrives"), String(localized: "in your account at once"))
+        case .takeBack where olla && move.claims: return (String(localized: "Status"), String(localized: "Ready to claim"))
+        case .takeBack where olla: return (String(localized: "Arrives"), String(localized: "in about a day"))
+        case .takeBack: return (String(localized: "Arrives"), String(localized: "in your account at once"))
         }
     }
 
@@ -176,7 +200,7 @@ struct MoveLendSentence<Head: View>: View {
     // MARK: - The blanks' choices
 
     private func toggle(_ blank: Blank) {
-        guard live else { return }
+        guard live, !(blank == .amount && move.claims) else { return }
         withAnimation(DS.Motion.standard) { open = open == blank ? nil : blank }
         DSHaptic.selection()
     }
@@ -295,6 +319,15 @@ struct MoveLendSentence<Head: View>: View {
                     MoveChip(text: String(localized: "Choose"), tone: .empty, disabled: !live) { toggle(.network) }
                 }
             }
+            // **FROM AND TO (prd §1970; user: "maybe its just in the from and
+            // to"):** the place is the token's, so To says it, Aave or Olla;
+            // taking back, it says your account. Nothing to pick.
+            if let m = market {
+                MoveReceiptLine(label: String(localized: "To")) {
+                    MoveChip(text: move.mode == .lend ? m.placeName : String(localized: "Your account"),
+                             tone: .answered, disabled: true) {}
+                }
+            }
             MoveReceiptLine(label: String(localized: "Amount")) {
                 MoveChip(text: move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
                          caret: open == .amount, disabled: !live) { toggle(.amount) }
@@ -329,14 +362,24 @@ struct MoveLendSentence<Head: View>: View {
             // another way ("under $0.01" over "about $0.00"), told nothing.
             if live, stepsRun == nil {
                 VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-                    if hasAny, let have = move.haveFigure {
+                    // Claiming is not earning: the figure is the Amount's own.
+                    if hasAny, !move.claims, let have = move.haveFigure {
                         MoveReceiptFact(label: move.mode == .lend ? String(localized: "You have") : String(localized: "Earning"),
                                         value: have)
+                    }
+                    if let get = ollaYouGet {
+                        MoveReceiptFact(label: String(localized: "You get"), value: get)
                     }
                     if hasAny, let fact = rateFact {
                         MoveReceiptFact(label: fact.name, value: fact.value)
                     }
-                    MoveReceiptFact(label: String(localized: "Through"), value: "Aave")
+                    if market?.place == .olla, move.mode == .takeBack, !move.claims, hasAny {
+                        MoveReceiptFact(label: String(localized: "Then"), value: String(localized: "Claim it here, we'll tell you"))
+                    }
+                    if market?.place == .olla, move.mode == .takeBack, !move.ollaWaiting.isEmpty, let m = market {
+                        MoveReceiptFact(label: String(localized: "On its way"),
+                                        value: PrivateMoney.figure(move.ollaBack(ready: false), decimals: m.decimals, symbol: m.symbol))
+                    }
                     if move.units != nil, let cost = move.cost {
                         MoveReceiptFact(label: String(localized: "Fee"), value: cost.amount)
                     }
@@ -367,7 +410,11 @@ struct MoveLendSentence<Head: View>: View {
     /// From rows; one with nothing is dimmed, never hidden. Move's one token
     /// list (`MoveTokenGrid`, prd §1910): each network under its title.
     private var fromRows: some View {
-        let markets = AaveLend.markets.filter { !move.refused.contains(LendMove.key($0)) }
+        // Olla is offered only to someone with AZTEC there (prd §1970).
+        let markets = AaveLend.markets.filter { m in
+            !move.refused.contains(LendMove.key(m))
+                && (m.place != .olla || (Decimal(string: move.available(m) ?? "0") ?? 0) > 0 || move.anyOlla)
+        }
         return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: markets.map { m in
             let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? ""
             let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
@@ -419,8 +466,9 @@ struct MoveLendSentence<Head: View>: View {
             MoveFootWord(word: footVerb, ink: DS.textSecondary,
                          glyph: signing ? "faceid" : nil)
         default:
-            MoveHoldWord(word: move.mode == .lend ? String(localized: "Hold to deposit") : String(localized: "Hold to withdraw"),
-                         enabled: live && move.units != nil) {
+            MoveHoldWord(word: move.claims ? String(localized: "Hold to claim")
+                         : move.mode == .lend ? String(localized: "Hold to deposit") : String(localized: "Hold to withdraw"),
+                         enabled: live && move.units != nil && !move.ollaUnderMinimum) {
                 open = nil
                 Task { await move.run(account: account) }
             }
@@ -436,7 +484,7 @@ struct MoveLendSentence<Head: View>: View {
         case .working(.signing): String(localized: "Confirm with Face ID")
         case .working(.cosigning): String(localized: "Waiting for your Signer…")
         case .working: String(localized: "Sending…")
-        default: move.mode == .lend ? String(localized: "Deposit") : String(localized: "Withdraw")
+        default: move.claims ? String(localized: "Claim") : move.mode == .lend ? String(localized: "Deposit") : String(localized: "Withdraw")
         }
     }
 

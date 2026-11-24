@@ -575,7 +575,7 @@ ok(NotifyRules.datelinePhrase(occurredAt: utc(5, 9, 0), deliveredAt: utc(5, 8, 0
 // "ready to finish" (prd §1963 as committed) is one of them.
 ok(Set(NotifyKind.allCases.filter(\.standsAlone)) ==
    [.disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .safeSignatureNeeded,
-    .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .readyToFinish,
+    .moveSent, .moveSwapped, .moveFailed, .moveArrived, .moveReturned, .readyToUse, .readyToFinish, .readyToClaim,
     .orderFilled, .orderEnded, .moneyInPrivately],
    "exactly these kinds stand alone; everything else goes one per app (prd §1872, §1881)")
 // Work's Needs you is asked of you, but it is an app's news: one per app.

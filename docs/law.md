@@ -262,7 +262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2153 of 2227 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2154 of 2228 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2078,7 +2078,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1673b — §1673 built: Swap ends "when", a price is a CoW order this phone builds and pre-signs, "Powered by CoW Swap" (builds…
 - §1673c — Until is a word: a day, a week, a month (builds §1673 item 5; closes §1673b item 7's expiry)
 - §1673d — "When" stands at rest, before the tokens are picked (closes the gap between §1673 item 2 and §1673b item 1)
-- §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows… (amended by §1695)
+- §1674 — Lend is Move's verb for Aave: "Lend 500 USDC on Aave on Base.", Take back the same sentence, lent money its own rows… (amended by §1695, §1970)
 - §1675 — A swap's credit wears its exchanges' marks: each line of the foot leads with the mark of the service it names, Uniswa… (amended by §1754)
 - §1676 — A Tacit withdrawal on Robinhood Chain lands, read off the pool's own event (closes §1281's known gap)
 - §1677 — Permissions' box packs the delegates and modules too, and an empty pack draws the pack's skeleton with "No permission… (amended by §1710)
@@ -2375,7 +2375,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945, §1963)
 - §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
-- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934)
+- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934, §1970)
 - §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933)
 - §1933 — Move's delight: every address wears its face and a lookalike says who it is not, the pick flies into its chip, too mu…
 - §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other g…
@@ -2417,6 +2417,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1967 — Every Name asks who it is, and an address wears its holder's photo
 - §1968 — A watched token's page swaps for it
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
+- §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
 
 ## Dead rulings → what replaced them (generated)
 

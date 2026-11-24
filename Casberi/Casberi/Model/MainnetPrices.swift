@@ -31,6 +31,8 @@ enum MainnetPrices {
         "link": "chainlink", "uni": "uniswap", "aave": "aave", "ens": "ethereum-name-service",
         "matic": "matic-network", "pol": "matic-network", "op": "optimism",
         "arb": "arbitrum", "wld": "worldcoin-wld", "sol": "solana",
+        // AZTEC on Ethereum, what Olla stakes (prd §1970).
+        "aztec": "aztec",
     ]
 
     /// The mainnet symbol a devnet symbol mirrors, or nil. "vUSDC" → "usdc",
@@ -77,6 +79,7 @@ extension MainnetPrices {
         "pepe": 0.000_01, "shiba-inu": 0.000_02, "dogecoin": 0.12,
         "chainlink": 14, "uniswap": 8, "aave": 160, "ethereum-name-service": 20,
         "matic-network": 0.4, "optimism": 1.6, "arbitrum": 0.6, "worldcoin-wld": 1.2, "solana": 150,
+        "aztec": 0.01,
     ]
 }
 

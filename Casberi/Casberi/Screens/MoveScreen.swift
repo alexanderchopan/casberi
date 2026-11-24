@@ -76,6 +76,16 @@ struct MoveTrayPresenter: ViewModifier {
             NSLog("[Casberi] openMove: raised")
             chrome.moveTray = true
         }
+        // `-ollaOpen lend|back` raises Earn on Olla's AZTEC, Deposit or
+        // Withdraw (prd §1970); pair with `-ollaSample YES|waiting|ready`.
+        .task {
+            guard let raw = UserDefaults.standard.string(forKey: "ollaOpen") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] ollaOpen: %@", raw)
+            LendMove.opening = (1, "AZTEC")
+            chrome.moveLend = raw == "back" ? .takeBack : .lend
+            chrome.moveTray = true
+        }
         // `-moveToPrivate YES` raises Send to your private balance, as
         // Holdings' Private header does; `-movePrivateSend YES` raises Send
         // with the Private switch on, as a private row does (prd §1554).

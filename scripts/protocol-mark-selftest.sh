@@ -136,7 +136,7 @@ guard "Move's mark door falls back to the rule" \
 # the place, last — "Base · 5.1% · Aave", "Ethereum · 1.5% on Aave · Privacy Pools".
 guard_absent "a Lent row's line wears a small mark again (prd §1718)" "$LENT" 'ProtocolInlineMark\('
 guard_absent "a private row's line wears a small mark again (prd §1718)" "$HELD" 'ProtocolInlineMark\('
-guard "a Lent row's line ends on its place" "$LENT" '"Aave"\]\.compactMap'
+guard "a Lent row's line ends on its place (Aave or Olla, prd §1970)" "$LENT" 'm\.placeName\]\.compactMap'
 guard "a private row's line ends on its place" "Casberi/Casberi/Model/PrivateMoneyStore.swift" 'let place = PrivacyPoolsBridge\.sourceName'
 guard_absent "the rule never reads a title (§363)" "$MARK" '\.title'
 

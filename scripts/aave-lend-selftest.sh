@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 SRC="Casberi/Casberi/Model/AaveLend.swift"
 MOVE="Casberi/Casberi/Model/LendMove.swift"
 CHAIN="Casberi/Casberi/Model/YourAccountChain.swift"
+OLLA="Casberi/Casberi/Model/OllaStake.swift"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 fail() { print -u2 "✗ $1"; exit 1; }
@@ -22,8 +23,9 @@ typealias L = AaveLend
 let me = "0x2222222222222222222222222222222222222222"
 let baseUSDC = L.market(chainId: 8453, symbol: "USDC")!, ethETH = L.market(chainId: 1, symbol: "ETH")!
 
-// The four markets, as read off each Pool's getReserveData on 2026-11-02.
-check(L.markets.count == 4 && L.chainIds == [8453, 1], "the markets are not Base's and Ethereum's USDC and ETH")
+// The four Aave markets, as read off each Pool's getReserveData on 2026-11-02,
+// and Olla's one beside them (prd §1970), which Aave's calls never build.
+check(L.markets.filter { $0.place == .aave }.count == 4 && L.markets.count == 5 && L.chainIds == [8453, 1], "the markets are not Base's and Ethereum's USDC and ETH")
 check(baseUSDC.pool == "0xa238dd80c259a72e81d7e4664a9801593f98d1c5" && ethETH.pool == "0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2",
       "a Pool is not Aave v3's")
 check(baseUSDC.aToken == "0x4e65fe4dba92790696d040ac24aa414708f5c0ab" && ethETH.aToken == "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8",
@@ -89,7 +91,7 @@ if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   the markets, the simulated calls byte for byte, what is refused, the rate")
 SWIFT
 
-xcrun swiftc -O "$SRC" "$work/main.swift" -o "$work/t" 2>&1 | grep -v "^$" || true
+xcrun swiftc -O "$SRC" "$OLLA" "$work/main.swift" -o "$work/t" 2>&1 | grep -v "^$" || true
 [[ -x "$work/t" ]] || fail "the shipped source did not compile"
 "$work/t" || fail "assertions failed against the shipped source"
 
@@ -107,7 +109,7 @@ mutate() {
   cp "$SRC" "$work/m.swift"
   perl -0pi -e "$expr" "$work/m.swift"
   cmp -s "$SRC" "$work/m.swift" && fail "mutation matched nothing: $why"
-  xcrun swiftc -O "$work/m.swift" "$work/main.swift" -o "$work/m" >/dev/null 2>&1 || fail "mutation did not compile: $why"
+  xcrun swiftc -O "$work/m.swift" "$OLLA" "$work/main.swift" -o "$work/m" >/dev/null 2>&1 || fail "mutation did not compile: $why"
   if "$work/m" >/dev/null 2>&1; then fail "mutation SURVIVED — $why"; fi
   print "  ok   catches  $why"
 }

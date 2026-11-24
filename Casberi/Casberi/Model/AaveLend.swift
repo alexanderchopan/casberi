@@ -38,8 +38,15 @@ enum AaveLend {
         /// The receipt token that grows: `getReserveData(asset)`'s ninth word.
         let aToken: String
         let decimals: Int
+        /// Who holds it (prd §1970): Aave, or Olla for AZTEC. For Olla,
+        /// `pool` is its vault and `aToken` is stAZTEC.
+        var place: Place = .aave
         var native: Bool { symbol == "ETH" }
+        /// "Aave", "Olla": the word on every line that names the place.
+        var placeName: String { place == .olla ? "Olla" : "Aave" }
     }
+
+    enum Place: Equatable, Sendable { case aave, olla }
 
     /// Read off each Pool's `getReserveData` on 2026-11-02 (the aToken is
     /// its ninth word; symbols aBasUSDC, aBasWETH, aEthUSDC, aEthWETH), every
@@ -57,7 +64,14 @@ enum AaveLend {
         Market(chainId: 1, network: "Ethereum", pool: "0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2",
                symbol: "ETH", asset: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
                aToken: "0x4d5f47fa6a74757f35c14fd3a6ef8e3c9bc514e8", decimals: 18),
+        // **OLLA (prd §1970):** AZTEC staked through Olla's vault, stAZTEC
+        // back (`OllaStake`, measured there).
+        Market(chainId: 1, network: "Ethereum", pool: OllaStake.vault, symbol: "AZTEC", asset: OllaStake.aztec,
+               aToken: OllaStake.stAztec, decimals: 18, place: .olla),
     ]
+
+    /// Olla's one market.
+    static var olla: Market? { markets.first { $0.place == .olla } }
 
     /// The networks Lend offers, in the account's order: Aave has no market
     /// on Robinhood Chain.
@@ -87,7 +101,7 @@ enum AaveLend {
 
     /// Lend `amount` (base units, decimal) of the market's token.
     static func lend(_ amount: String, in m: Market, account: String) -> [Call]? {
-        guard let a = word(amount), isAddress(account), positive(amount) else { return nil }
+        guard m.place == .aave, let a = word(amount), isAddress(account), positive(amount) else { return nil }
         let approve = Call(to: m.asset, data: "0x095ea7b3" + word(address: m.pool) + a, value: "0")
         let supply = Call(to: m.pool, data: "0x617ba037" + word(address: m.asset) + a + word(address: account) + zero, value: "0")
         if m.native {
@@ -100,7 +114,7 @@ enum AaveLend {
     /// balance is withdrawn (`max`) and `amount` is what was read of it, the
     /// ETH unwrapped; without, exactly `amount`.
     static func takeBack(_ amount: String, all: Bool, in m: Market, account: String) -> [Call]? {
-        guard let a = word(amount), isAddress(account), positive(amount) else { return nil }
+        guard m.place == .aave, let a = word(amount), isAddress(account), positive(amount) else { return nil }
         let withdraw = Call(to: m.pool, data: "0x69328dec" + word(address: m.asset) + (all ? max : a) + word(address: account),
                             value: "0")
         if m.native {
@@ -114,6 +128,7 @@ enum AaveLend {
     /// supply is on behalf of the account, a withdrawal pays the account, and
     /// ETH rides only the wrap. Anything else, and the list is refused.
     static func checked(_ calls: [Call], in m: Market, account: String) -> Bool {
+        if m.place == .olla { return OllaStake.checked(calls, account: account) }
         guard !calls.isEmpty, isAddress(account) else { return false }
         let me = word(address: account), pool = word(address: m.pool), asset = word(address: m.asset)
         var approved: String?

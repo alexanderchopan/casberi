@@ -45,6 +45,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-tagSave "<tag>[:<name>]"|clear` `-tagPaid "<address>:<tag>"` `-contactsQuery "<words>"` — zk.money tags as people → docs/hooks/wallet.md · prd §1767
 - **Move's menu (prd §1852): five verbs (Buy, Earn, Receive, Send, Swap) rise over the page above the phone's Move button (`Shell/MoveMenu.swift`); Buy and Swap pick their kind on their page**
 - **Home's head is type (prd §1851): `price84` balance, one row of facts, Holdings a row, Watchlist in the Wallet section; no map**
+- `-ollaSample YES|waiting|ready` `-ollaOpen lend|back` — Olla in Earn on the demo: AZTEC held and staked, a request waiting or ready, and Earn raised on Olla's Deposit or Withdraw → prd §1970
 - `-moveWhenDraft open|now|<price>|<n>%` — with `-moveSwapDraft`, answer Swap's "when" (limit orders on CoW) → prd §1673
 - **Move is ONE size, always (prd §1501, retiring §1479's fit): every Move sentence and the create flow at `MoveSentence.rung` (`heading52`); a clause wider than a line wraps inside itself (`MoveClauseLayout`, `FlowLayout(fitsWide:)`), a word wider shrinks; verbs `heading24`, Add and the foot's acts `heading34` (§1616); "Robinhood", never "Robinhood Chain"** → prd §1501 · §1479
 - `-openTray YES` — open Apps with its field focused, no tap (`Shell/LibrarySearch.swift`; NSLogs `openTray:`), prd §1008 · §1715.
