@@ -829,6 +829,33 @@ struct MoveSentence: View {
         return nil
     }
 
+    /// **A WATCHED TOKEN, BOUGHT (prd §1965).** Swap with the watched token
+    /// as what it buys, on the network it lives on, the token paid with
+    /// left open (the token is never chosen for you, §1782). A contract
+    /// (`base:0x…`) is that network's entry; a coin (a CoinGecko id) is the
+    /// first network, in Move's order, whose open list carries its symbol.
+    /// nil with no account, or where Move swaps none of it: no door then.
+    static func watchedDraft(id: String, symbol: String) async -> Draft? {
+        guard YourAccountDemo.shownAddress != nil else { return nil }
+        // A contract is `<chain>:0x…`, its chain a `WatchlistRules.chains`
+        // key; anything else (`coingecko:<id>`) is a coin, found by symbol.
+        let tail = id.split(separator: ":", maxSplits: 1).last.map(String.init) ?? ""
+        let chain = WatchlistRules.network(of: id)
+        let contract = chain != nil && WatchlistRules.isEVMAddress(tail) ? tail.lowercased() : nil
+        if chain != nil, contract == nil { return nil }
+        let nets: [Op.Network] = Op.networks.filter { !$0.isTest && (chain == nil || $0.name == chain) }
+        for net in nets where YourAccountSwap.supported(net) {
+            let list = await Tokens.list(net, term: contract ?? symbol)
+            let match = contract.map { c in list.first { $0.token.contract?.lowercased() == c } }
+                ?? list.first { $0.onList && $0.token.symbol.uppercased() == symbol.uppercased() }
+            if let match {
+                return Draft(verb: .swap, network: net, networkPicked: true, amount: "", inDollars: true,
+                             withID: nil, buy: match, buyOn: nil, to: "", at: Date(), opens: .with)
+            }
+        }
+        return nil
+    }
+
     /// The network a wallet row moved on, read off its explorer link; nil
     /// when the row names none Move sends on, so the sentence asks.
     static func network(of thing: Thing) -> Op.Network? {

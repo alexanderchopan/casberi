@@ -107,13 +107,15 @@ extension FeedScreen {
                 .walletListRow()
             }
             Section {
-                DSPushRow(title: Text("Stop watching"), tint: DS.pickInk, opens: false) {
-                    DSHaptic.selection()
-                    stopWatching(token)
-                } leading: {
-                    walletDoorLead("minus")
+                WatchedTokenVerbs(token: token) {
+                    DSPushRow(title: Text("Stop watching"), tint: DS.pickInk, opens: false) {
+                        DSHaptic.selection()
+                        stopWatching(token)
+                    } leading: {
+                        walletDoorLead("minus")
+                    }
+                    .walletListRow()
                 }
-                .walletListRow()
             }
         } else {
             walletSkeletonRowsSection
@@ -227,5 +229,48 @@ extension FeedScreen {
     /// (`watchlist-selftest.sh`).
     func walletWatchlistRefresh(_ tokens: [WatchedToken]) async {
         await WatchlistPrices.shared.refreshIfStale(tokens)
+    }
+}
+
+/// **SWAP FOR A WATCHED TOKEN (prd §1965).** The token's page buys it:
+/// Swap opens with it as what you get, on its network, the token you pay
+/// with open to pick. Drawn only once Move can name the token there and
+/// you have an account (§83: no dead control); a coin Move swaps nowhere,
+/// or a contract on a network Move does not reach, has no row. The read
+/// rides Stop watching, the row that is always drawn: a `.task` on an
+/// empty view inside a `List` never runs.
+private struct WatchedTokenVerbs<Stop: View>: View {
+    let token: WatchedToken
+    @ViewBuilder let stop: () -> Stop
+    @Environment(ShellChrome.self) private var chrome
+    @State private var draft: MoveSentence.Draft?
+
+    var body: some View {
+            if let draft {
+                DSPushRow(title: Text("Swap for \(token.symbol)"), tint: DS.pickInk, opens: false) {
+                    DSHaptic.selection()
+                    chrome.moveDraft = MoveSentence.Draft(
+                        verb: draft.verb, network: draft.network, networkPicked: true, amount: "", inDollars: true,
+                        withID: nil, buy: draft.buy, buyOn: nil, to: "", at: Date(), opens: draft.opens)
+                    chrome.moveTray = true
+                } leading: {
+                    ZStack {
+                        Color.clear.frame(width: DS.Face.row, height: DS.Face.row)
+                        Image(systemName: "arrow.left.arrow.right")
+                            .accessibilityHidden(true)
+                            .dsGlyph(.body, weight: .semibold)
+                            .foregroundStyle(DS.brandInk)
+                    }
+                }
+                .walletListRow()
+            }
+            stop()
+                .task(id: token.id) {
+                    draft = await MoveSentence.watchedDraft(id: token.id, symbol: token.symbol)
+                    #if DEBUG
+                    NSLog("watchedSwap| %@ | %@", token.symbol,
+                          draft.map { "\($0.buy?.token.symbol ?? "-") on \($0.network.name)" } ?? "none")
+                    #endif
+                }
     }
 }

@@ -75280,3 +75280,15 @@ Each saved address is its own contact, so one person can be an Ethereum, an Azte
 **Mac half (§1402).** None: the Mac carries no wallet (§1893); Contacts' Name is the same view there.
 
 **Hook.** `-contactJoin "<address>:<contact name>"` joins as the tray's pick does and logs `contactJoin| …xxxx | <name> | photo=yes|no`.
+
+## §1965 — A watched token's page swaps for it (amends §1632's "no Swap yet") (user, 2026-11-23: "add swap to the watchlist token page") — BUILT
+
+**Why.** The watchlist is where you decide to buy, and its token page had no way to. Swap stood on a holding's sheet and long press only, both selling what you hold.
+
+1. **Swap for <token>** stands over Stop watching, a pink verb row (`WatchedTokenVerbs`). It opens Swap with the token as what you get, on its network, and the list of what you pay with open; nothing is chosen for you (§1782).
+2. **Which token.** A contract (`base:0x…`) is that network's entry on Move's list; a coin (`coingecko:<id>`) is the first network in Move's order (Base, Ethereum, Robinhood) whose list carries its symbol on Uniswap's list (`MoveSentence.watchedDraft`).
+3. **No row** without your account, or where Move swaps none of it (Solana, Arbitrum, a coin no list carries): §83, no dead control.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `watchedSwap| <SYMBOL> | <token> on <network>|none` logs the lookup. Seen on the demo: ETH's page draws Swap for ETH, which opens Swap with ETH · Base and the pay-with list open.
