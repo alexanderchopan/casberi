@@ -20,6 +20,20 @@
   vids.forEach(function (v) { io.observe(v); });
 })();
 
+// The story phone starts muted (browsers only autoplay silent video); the
+// speaker turns its score on and off.
+(function storySound() {
+  var btn = document.querySelector('.story-sound');
+  var v = document.querySelector('.story-phone video');
+  if (!btn || !v) return;
+  btn.addEventListener('click', function () {
+    v.muted = !v.muted;
+    if (!v.muted) { v.play().catch(function () {}); }
+    btn.setAttribute('aria-pressed', v.muted ? 'false' : 'true');
+    btn.setAttribute('aria-label', v.muted ? 'Turn sound on' : 'Turn sound off');
+  });
+})();
+
 (function hero() {
   var rain = document.querySelector('.rain');
   var target = document.querySelector('.rain-target .ai-casberi');
