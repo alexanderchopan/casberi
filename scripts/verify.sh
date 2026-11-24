@@ -2780,6 +2780,11 @@ harness "Needs-you words self-test" "needs-you words" "scripts/needs-you-words-s
 # "deposit e t h"). Four mutations.
 harness "Wallet-row words self-test" "wallet-row words" "scripts/wallet-row-words-selftest.sh" "the wallet-row words self-test failed — run scripts/wallet-row-words-selftest.sh"
 
+# What a wallet you follow did since you last looked (prd §1969): one phrase a
+# move, newest first, three then "N more", a money figure kept; and the rule
+# the screens keep: All is your money, no switch. Six mutations.
+harness "Followed-since self-test" "followed-since" "scripts/followed-since-selftest.sh" "the followed-since self-test failed — run scripts/followed-since-selftest.sh"
+
 # Subscriptions by category, the tile's map (prd §1112): which category each
 # subscription's monthly cost lands in, and what a pressed tile reads. Every
 # failure is an ordinary-looking map: a "Wallet" tile for merchants the

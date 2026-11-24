@@ -19,7 +19,7 @@ struct HumanPassportDoor: View {
             act()
         } label: {
             HStack(spacing: DS.Space.s2) {
-                Text(verbatim: "Human Passport").dsText(.heading17).fontWeight(.semibold).foregroundStyle(DS.aztecInk)
+                Text(verbatim: "Human Passport").dsText(.heading17).foregroundStyle(DS.aztecInk)
                 Spacer(minLength: DS.Space.s2)
                 Image(systemName: "chevron.right").dsGlyph(.caption, weight: .semibold)
                     .foregroundStyle(DS.aztecInk)

@@ -40,6 +40,23 @@ extension FeedScreen {
 
     var walletFollowingOnly: [String]? { walletOnFollowing ? WalletWhoseSwitch.followed : nil }
 
+    /// **ALL IS YOUR MONEY (prd §1969):** with nothing picked, the wallets
+    /// you follow are left out — your account's line, never theirs. Nil
+    /// while you follow nobody (nothing to leave out).
+    var walletOwnOnly: [String]? {
+        guard walletOnAll else { return nil }
+        let followed = FollowedNews.followed
+        guard !followed.isEmpty else { return nil }
+        return wallet.addresses.map(\.address).filter { a in !followed.contains { WalletWatch.sameAddress($0, a) } }
+    }
+
+    /// The wallets All leaves out: every one you follow (prd §1969).
+    var walletExcluded: [String]? {
+        guard walletOnAll else { return nil }
+        let followed = FollowedNews.followed
+        return followed.isEmpty ? nil : followed
+    }
+
     /// All: no account, app or group picked.
     var walletOnAll: Bool { chrome.walletScope == nil }
 
@@ -227,7 +244,7 @@ extension FeedScreen {
         // draws that line.
         let samples = selectedSeat.map(seatValueSamples)
             ?? selectedWallet.map { wallet.valueSamples(forAddress: $0) }
-                ?? wallet.combinedValueSamples(only: walletFollowingOnly)
+                ?? wallet.combinedValueSamples(only: walletFollowingOnly ?? walletOwnOnly)
         // Whether the record draws a LINE at all — the gates below ask only
         // that. The window over it is `WalletWindowed`'s, around the headline
         // (prd §1716): every offered window holds two samples or more, so the

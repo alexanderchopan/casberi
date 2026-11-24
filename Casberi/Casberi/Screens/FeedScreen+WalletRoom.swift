@@ -61,6 +61,9 @@ extension FeedScreen {
         // The watchlist's count, and a token's price and chart (prd §1632).
         case .watchlist, .watchedToken:
             walletWatchlistFigure(section)
+        // A wallet you follow draws its money in its first rows (prd §1969).
+        case .followedWallet:
+            EmptyView()
         // Spending's pages keep Spending's box: the window and its total.
         case .places, .fees, .roundUps:
             walletSpendingFigure
@@ -195,7 +198,14 @@ extension FeedScreen {
                 // **RISKS HAS NO BOX (prd §1809, user: "Risks shouldn't have
                 // a box remember we got rid of it").** The disc never worked
                 // and the trend said little; the page is its rows.
-                boxless: active == .threats || active == .permissions,
+                // Following, a followed wallet, the recovery check, Needs you
+                // and Nodes draw no box either (prd §1969, user: "what is this
+                // empty space", "are there any other pages that have empty
+                // boxes?"): their lists start at the top, a figure in their
+                // first rows.
+                boxless: active == .threats || active == .permissions
+                    || active == .following || active == .followedWallet || active == .recoveryKey
+                    || active == .needsYou || active == .nodes,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.
@@ -573,7 +583,7 @@ extension FeedScreen {
         // (prd §1480), an empty one included.
         case .home, .subscriptions, .spending, .places, .fees, .roundUps,
              .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes,
-             .watchlist, .watchedToken:
+             .watchlist, .watchedToken, .followedWallet:
             return false
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
             return blockStream.els.isEmpty

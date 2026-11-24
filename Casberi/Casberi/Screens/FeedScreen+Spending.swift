@@ -70,6 +70,15 @@ extension FeedScreen {
             }
             return .wallet(forms)
         }
+        // All is your money (prd §1969): never a wallet you follow.
+        if let followed = walletExcluded {
+            var forms: Set<String> = []
+            for address in followed {
+                forms.insert(address.lowercased())
+                if let hex = wallet.resolvedForm(of: address) { forms.insert(hex.lowercased()) }
+            }
+            return .allBut(forms)
+        }
         return .all
     }
 

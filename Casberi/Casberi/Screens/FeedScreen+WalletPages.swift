@@ -145,21 +145,6 @@ extension FeedScreen {
         }
     }
 
-    /// "3 wallets · 2 apps": what Following holds, by kind — the Following
-    /// page's caption (its door carries no line, §1496).
-    func followingLine(_ slots: [DSAccountSlot]) -> String {
-        let apps = slots.filter { RoomAccounts.isSeat($0.id) }.count
-        let wallets = slots.count - apps
-        var parts: [String] = []
-        if wallets > 0 {
-            parts.append(wallets == 1 ? String(localized: "1 wallet") : String(localized: "\(wallets) wallets"))
-        }
-        if apps > 0 {
-            parts.append(apps == 1 ? String(localized: "1 app") : String(localized: "\(apps) apps"))
-        }
-        return parts.joined(separator: " · ")
-    }
-
     /// A card's ask (prd §1480 item 8): an amount due, or an offer ending
     /// within a week. Nil when the card asks nothing.
     static func cardAsk(_ card: WalletCardRoll.Card, now: Date = .now) -> String? {
@@ -942,8 +927,16 @@ extension FeedScreen {
         case .yourAccount:
             walletAccountSection
         case .recoveryKey:
+            // Its verdict leads the page: no box (prd §1969).
+            Section {
+                RecoveryCheckFigure().walletListRow()
+            }
             RecoveryCheckRows()
         case .nodes:
+            // How many networks read from your node leads the page: no box (prd §1969).
+            Section {
+                OwnNodeFigure().walletListRow()
+            }
             OwnNodeRows()
         case .following:
             walletFollowingPage
@@ -1028,6 +1021,8 @@ extension FeedScreen {
             walletWatchlistPage
         case .watchedToken:
             walletWatchedTokenPage
+        case .followedWallet:
+            walletFollowedPage(all: all, nextEventID: nextEventID)
         default:
             EmptyView()
         }
@@ -1037,35 +1032,7 @@ extension FeedScreen {
         walletSecurityCounts[keyPath: key]
     }
 
-    /// Following's page: every account you follow and every app folded in,
-    /// your own account apart (it is Your account's), then the ways in.
-    @ViewBuilder
-    var walletFollowingPage: some View {
-        let slots = walletFollowingSlots
-        if slots.isEmpty { walletSkeletonRowsSection }
-        walletCard(WalletSection.following.label, glyph: WalletSection.following.glyph) {
-            ForEach(slots) { slot in walletAccountRow(slot) }
-        }
-        .alert(String(localized: "Name this account"),
-               isPresented: Binding(get: { walletNaming != nil }, set: { if !$0 { walletNaming = nil } })) {
-            TextField(String(localized: "Name"), text: $walletNameDraft)
-            Button(String(localized: "Save")) { saveWalletName() }
-            Button(String(localized: "Cancel"), role: .cancel) { walletNaming = nil }
-        } message: {
-            Text(String(localized: "Blank shows the address instead."))
-        }
-        Section {
-            ForEach(walletAccountAdds.filter { $0.label != String(localized: "Create an account") }, id: \.label) { add in
-                DSPushRow(title: Text(verbatim: add.label), tint: DS.pickInk, opens: false) {
-                    DSHaptic.selection()
-                    add.act()
-                } leading: {
-                    walletDoorLead(add.glyph ?? ScopeTileGlyph.new)
-                }
-                .walletListRow()
-            }
-        }
-    }
+    // Following's page and a followed wallet's are `FeedScreen+Followed.swift` (prd §1969).
 
     /// Needs you's page: a Safe signature waiting first (power over your
     /// money, §947), then the key nudges, the undated asks, the cards that
@@ -1214,13 +1181,12 @@ extension FeedScreen {
         case .yourAccount:
             WalletYourAccountFigure(address: YourAccountDemo.shownAddress)
         case .recoveryKey:
-            RecoveryCheckFigure()
+            EmptyView()
         case .nodes:
-            OwnNodeFigure()
+            EmptyView()
+        // Following has no box (prd §1969): its limit is its list's footnote.
         case .following:
-            let slots = walletFollowingSlots
-            DSFigureReading(number: "\(slots.count)",
-                            caption: slots.isEmpty ? String(localized: "Nothing followed") : followingLine(slots))
+            EmptyView()
         // **YOUR BALANCE, REACHED (prd §1710)**: the disc is what the
         // wallets hold, the delegates and modules the Delegations list holds
         // (§1677) reach their accounts', the grants sit inside at their dollars.

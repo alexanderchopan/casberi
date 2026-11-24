@@ -170,7 +170,8 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Account's settings hold Nodes ("Public" or "N of yours"), A–Z; Connection keeps Networks and Tor. Name and photo are one row whose tap asks which. Holdings states the savings goal under Private, a fact, before Add money; it is set on Account (§1835).
 - The holdings map wears the day: a tile that moved is filled in its direction's hue, by its move against the board's biggest; flat, unread, dollars and Other stay grey; the corner glyph stays (§1837, retiring §1389's unpainted map).
 - Home's balance, its day line and Public · Private are Holdings' door, a grey chevron after the figure; Holdings has no card on Home (§1838).
-- On the phone Home is one scroll (§1843): your money on one card (the balance at Move's rung as Holdings' door, the day, Public · Private, the map as a band of marks filled by the day), Yours · Following · All as one word, the watchlist as a line, Account and Copy public address as chips, a row of chips that jump to each section, then what is new (§1831, §1839). Home draws no name; every other page reads "Home · X"; Risks found are a Needs you row and the page is a row on Account. The iPad and the Mac keep the Wallet's Home and Activity.
+- On the phone Home is one scroll (§1843): your money on one card (the balance at Move's rung as Holdings' door, the day, Public · Private, the map as a band of marks filled by the day), no whose word (§1969), the watchlist as a line, Account and Copy public address as chips, a row of chips that jump to each section, then what is new (§1831, §1839). Home draws no name; every other page reads "Home · X"; Risks found are a Needs you row and the page is a row on Account. The iPad and the Mac keep the Wallet's Home and Activity.
+- A wallet you follow is never your money (§1969): All is your Casberi account and the apps, exchanges and banks you connect; no Yours · Following · All switch. Following is a row under Activity on Home ("2 new"), its page lists each wallet with what it did since you looked, and a wallet opens on its own page (balance, news, holdings, moves, Send to, Copy address, Bluesky).
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
@@ -261,7 +262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2152 of 2226 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2153 of 2227 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -1900,7 +1901,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518, §1679, §1872, §1888)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1525, §1530)
-- §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
+- §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in (amended by §1969)
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there (amended by §1824; part superseded by §1929)
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
@@ -1922,7 +1923,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1523 — Round-ups is Spending's fourth door: what the change bought, kept out of the total, and the buy is never spending (bu…
 - §1524 — An account picked in the search tray reads its own Spending; All stays every account added up (amended by §1526)
 - §1525 — Holdings' doors show their top three (amended by §1530)
-- §1526 — Yours · Everything: one switch in the Wallet's boxes (amended by §1587, §1590, §1591)
+- §1526 — Yours · Everything: one switch in the Wallet's boxes (amended by §1587, §1590, §1591, §1969)
 - §1527 — Markets is the Wallet's last tile, and Markets' empty line stands in its header's column
 - §1528 — Logos, the record to 2026-10-25: a chat nobody is known in can be named, and the Observer becomes a Basecamp module (…
 - §1529 — Markets is deleted (reverses §1000, §1081, §1082, §1167, §1250, §1467, §1498, §1519, §1527 item 1's Markets; amends §… (amended by §1881)
@@ -1932,7 +1933,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1533 — Search takes the paste, and every stablecoin wears its mark (amends §1532, §1440)
 - §1534 — Every row in Move wears a mark, and the first list opens itself (amends §1438c, §1440, §1442b, §1486) (amended by §1905, §1913)
 - §1535 — The Wallet page's box follows a scope switch (amends §1403)
-- §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530) (amended by §1590)
+- §1536 — Yours · Following · All is the Wallet's one whose-control (amends §1526, §1480 item 2, §1503, §1520, §1525, §1530) (amended by §1590, §1969)
 - §1537 — Sweep is Move's fifth verb: every token under $1 (or $5) on one network, swapped for ETH in one transaction (amends §… (amended by §1547, §1558)
 - §1538 — Private money is CROPS: a private pocket on Aztec, our own open-source account, the engine on the phone, no gatekeeper (amended by §1700d)
 - §1539 — Swaps go straight to the exchanges: Uniswap and Aerodrome on Base, Uniswap on Ethereum; Relay is kept only for Receiv… (amended by §1673, §1675, §1754)
@@ -1988,7 +1989,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1587 — The Wallet, smoothed: no dead taps, a reading state while it reads, back lands where you were, threats can be seen, a… (amended by §1593, §1752, §1919)
 - §1588 — Library, smoothed: what you add shows at once and lands its list, every place has a way in, a tap never leaves, and t…
 - §1589 — The tray, quicker: it opens on your room and grows from Search, a pull closes it, an app's exact name leads and Retur…
-- §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591)
+- §1590 — Your private balance is Yours: Yours counts it as All does, the Private section stands on Yours and All only, and wit… (amended by §1591, §1969)
 - §1591 — Hide one contract, not a name; Hide on Holdings' own rows; the switch never waits on the line (amended by §1609)
 - §1592 — Your account is found at once, and a failed read never looks like an empty wallet: a locked launch reads the wallets…
 - §1593 — The Wallet opens on a number: Tor starts with the foreground, and each scope draws its last reading at once, stamped,… (amended by §1722)
@@ -2415,6 +2416,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1966 — Swap's shown quote is priced again while the sentence stands
 - §1967 — Every Name asks who it is, and an address wears its holder's photo
 - §1968 — A watched token's page swaps for it
+- §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 
 ## Dead rulings → what replaced them (generated)
 

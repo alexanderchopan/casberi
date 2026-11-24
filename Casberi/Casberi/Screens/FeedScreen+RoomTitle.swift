@@ -250,6 +250,14 @@ extension FeedScreen {
                 withAnimation(DS.Motion.standard) { chrome.walletGoBack() }
             }
         }
+        // A wallet you follow is a page, not a pick (prd §1969): back goes
+        // to the list that opened it, and lets the pick go there.
+        if source == CategoryFold.walletRoom, chrome.walletSection == .followedWallet {
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { chrome.walletGoBack() }
+            }
+        }
         if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,
            rail.slots.contains(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
@@ -375,6 +383,11 @@ extension FeedScreen {
             // A token's page is named by the token (prd §1632 item 5).
             if section == .watchedToken, let token = Watchlist.shared.token(chrome.watchedTokenID) {
                 return token.symbol
+            }
+            // A wallet you follow is named by its own name (prd §1969).
+            if section == .followedWallet, let address = selectedWallet {
+                return walletFollowingSlots.first { WalletWatch.sameAddress($0.id, address) }?.name
+                    ?? WalletStore.shortAddress(address)
             }
             return section.label
         }

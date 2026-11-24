@@ -244,7 +244,7 @@ enum DayBrief {
     /// delta while its item list below correctly spanned the real four
     /// days — two clocks on one screen, disagreeing about the same window.
     static func walletMove(now: Date = .now, since: Date? = nil) -> WalletMove? {
-        let samples = WalletStore.shared.combinedValueSamples()
+        let samples = WalletStore.shared.yourValueSamples()
         let anchor = since ?? now.addingTimeInterval(-dayScale)
         guard let latest = samples.last, latest.usd > 0,
               let base = samples.last(where: { $0.at <= anchor }),

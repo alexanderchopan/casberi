@@ -67,6 +67,9 @@ ALIASES = {
     # The Wallet's Following (prd §1480) is Home's Accounts list renamed —
     # the accounts you follow — so it wears the Accounts glyph it wore.
     ("WalletSection", "following"): "accounts",
+    # A wallet you follow is a page behind Following (prd §1969): the same
+    # people glyph, never a meaning of its own.
+    ("WalletSection", "followedWallet"): "accounts",
     # Your own node's page (prd §1517) is the node a Logos room means.
     ("WalletSection", "nodes"): "node",
     # The Wallet's Needs you (prd §1480) is Home's Needs you list as a page:
@@ -263,6 +266,7 @@ extension WalletSection: DSTileScope {
         // The two §1480 aliases, so the clean fixture holds the cases the
         // real `ALIASES` table names (check C flags an alias with no case).
         case .following: return ScopeTileGlyph.accounts
+        case .followedWallet: return ScopeTileGlyph.accounts
         case .needsYou:  return ScopeTileGlyph.alerts
         // §1517's alias: Nodes wears the node's glyph.
         case .nodes:     return ScopeTileGlyph.node

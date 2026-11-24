@@ -391,7 +391,11 @@ extension FeedScreen {
         let seat = selectedSeat
         let scopeKey = chrome.walletScope
         let only = walletFollowingOnly
+        // All is your money (prd §1969): the wallets you follow are left out,
+        // and the remembered reading is keyed on what was read.
+        let excluding = walletExcluded
         let watched = wallet.addresses.map(\.address)
+            .filter { a in !(excluding ?? []).contains { WalletWatch.sameAddress($0, a) } }
         // **THE LAST READING, AT ONCE (prd §1593).** A scope with nothing on
         // screen draws what it last read, stamped with when, while the live
         // read waits on Tor; the live answer replaces it, and a failed one
@@ -407,7 +411,7 @@ extension FeedScreen {
         holdingsReads += 1
         Task { @MainActor in
             defer { holdingsReads -= 1 }
-            let reading = await WalletIngest.portfolioReading(scopeTo: scope, only: only)
+            let reading = await WalletIngest.portfolioReading(scopeTo: scope, only: only, excluding: excluding)
             var read = reading.read
             #if DEBUG
             NSLog("[Casberi] walletHoldings| asked=%@ now=%@ total=%.0f", scope ?? "all", selectedWallet ?? "all", read?.portfolio.totalUSD ?? -1)

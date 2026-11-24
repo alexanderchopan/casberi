@@ -77,7 +77,8 @@ check(WalletSection.spending.label == "Spending", "the tile reads Spending — H
 // every case, each once, so a new scope cannot be silently unlisted. The
 // watchlist is Home's door trailing the day's mover, drawn apart from the
 // row, and a watched token is its page (prd §1632).
-let watchlistPages: [WalletSection] = [.watchlist, .watchedToken]
+// A wallet you follow is a page behind Following (prd §1969).
+let watchlistPages: [WalletSection] = [.watchlist, .watchedToken, .followedWallet]
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
     + WalletSection.yourAccountDoors + watchlistPages
 check(Set(WalletSection.order).union(homePages).union(doors) == Set(WalletSection.allCases)
@@ -710,8 +711,12 @@ guard FeedScreen.swift ".dsText(.stat24)" \
   "a door's figure is no longer the section rung's peer (prd §1496)"
 deny FeedScreen.swift "lineTone:" \
   "a door carries a line again (prd §1496: a door has no line; its state is the figure's ink)"
-guard FeedScreen.swift "ForEach(slots) { slot in walletAccountRow(slot) }" \
-  "the Following page no longer lists the accounts you follow (prd §1410, §1480)"
+# Since prd §1969 each row says what the wallet did since you looked and opens
+# the wallet's own page (`followed-since-selftest.sh` holds the words).
+guard FeedScreen.swift "ForEach(ordered) { slot in walletFollowedRow(slot) }" \
+  "the Following page no longer lists the accounts you follow (prd §1410, §1480, §1969)"
+guard FeedScreen.swift "chrome.openFollowedWallet(address)" \
+  "a followed wallet's row no longer opens its page (prd §1969)"
 guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow }" \
   "the Accounts header's + no longer raises Follow an account (prd §1410, §1090)"
 guard FeedScreen+WalletHome.swift "route.present(.apps)" \

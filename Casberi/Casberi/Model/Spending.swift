@@ -38,12 +38,16 @@ enum Spending {
         case wallet(Set<String>)
         /// An app: the `Thing.source`s its rows land under.
         case app(Set<String>)
+        /// Your money (prd §1969): everything but the wallets you follow,
+        /// each in every spelling it is followed by, lowercased.
+        case allBut(Set<String>)
 
         /// Whether a charge, a fee or a buy of `app` or `wallet` is this
         /// scope's. A plan tracked by hand (no app, no wallet) is All's only.
         func holds(app: String?, wallet: String?) -> Bool {
             switch self {
             case .all: return true
+            case .allBut(let forms): return wallet.map { w in !forms.contains(w.lowercased()) } ?? true
             case .wallet(let forms): return wallet.map { forms.contains($0.lowercased()) } ?? false
             case .app(let sources): return app.map { sources.contains($0) } ?? false
             }

@@ -317,9 +317,12 @@ struct WalletPortfolio: Equatable, Codable {
 
     static func demoFixture(scopeTo address: String? = nil, only: [String]? = nil,
                             privy: [(symbol: String, usd: Double, holderID: String, label: String)] = [],
-                            account: DemoAccountHeld? = nil)
+                            account: DemoAccountHeld? = nil,
+                            excluding: [String]? = nil)
     -> WalletPortfolio {
         let watched = WalletStore.shared.addresses.filter { entry in
+            // All is your money (prd §1969): never a wallet you follow.
+            if let excluding, excluding.contains(where: { WalletWatch.sameAddress(entry.address, $0) }) { return false }
             if let only { return only.contains { WalletWatch.sameAddress(entry.address, $0) } }
             guard let address else { return true }
             return WalletWatch.sameAddress(entry.address, address)

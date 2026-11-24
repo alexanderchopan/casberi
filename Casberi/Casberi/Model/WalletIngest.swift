@@ -2314,7 +2314,8 @@ enum WalletIngest {
     /// the map it already drew over such a nil, rather than "Nothing held"
     /// over money it showed a minute ago; a reached, empty nil clears it.
     @MainActor
-    static func portfolioReading(scopeTo address: String? = nil, only: [String]? = nil) async
+    static func portfolioReading(scopeTo address: String? = nil, only: [String]? = nil,
+                                 excluding: [String]? = nil) async
         -> (read: (doc: [String], portfolio: WalletPortfolio)?, failed: Bool, readAt: Date?) {
         // Following (prd §1536) reads every wallet you follow and nothing
         // that is not a wallet: no exchange, cash, validators or Privy app.
@@ -2344,7 +2345,8 @@ enum WalletIngest {
                 privy += privately + (await Self.lentIfAsked(lentAccount)).venues
             }
             let account = await MainActor.run { WalletPortfolio.demoAccountHeld(scopeTo: address, only: only) }
-            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy, account: account)
+            let portfolio = WalletPortfolio.demoFixture(scopeTo: address, only: only, privy: privy, account: account,
+                                                        excluding: excluding)
             guard !portfolio.isEmpty else { return (read: nil, failed: false, readAt: nil) }
             // Cut by section, as the live read is (prd §1698).
             return (read: (doc: holdingsDoc(portfolio, appsApart: combined), portfolio: portfolio), failed: false, readAt: nil)
@@ -2393,6 +2395,8 @@ enum WalletIngest {
         // regardless of what the feed is currently showing.
         if let address { groups = groups.filter { scopeMatch($0.address, address) } }
         if let only { groups = groups.filter { g in only.contains { scopeMatch(g.address, $0) } } }
+        // All is your money (prd §1969): a wallet you follow is never in it.
+        if let excluding { groups = groups.filter { g in !excluding.contains { scopeMatch(g.address, $0) } } }
         // Stamped from the groups that SURVIVED the scope, so a scoped page
         // never wears another wallet's date (nil on a live read — the normal
         // case — because a live group carries no `stale`).

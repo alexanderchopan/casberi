@@ -668,9 +668,24 @@ final class ShellChrome {
         guard let section = walletSection, section != .home,
               case .page(let page) = walletBackStep(section) else { return }
         if !walletTrail.isEmpty { walletTrail.removeLast() }
+        // Back off a wallet you follow lets its pick go (prd §1969): the
+        // page under it reads your money again.
+        if section == .followedWallet, let scope = walletScope, !RoomAccounts.isSeat(scope) {
+            Task { @MainActor in FollowedNews.shared.markSeen(scope) }
+            walletScope = nil
+        }
         walletTraceOff = true
         walletSection = page
         walletTraceOff = false
+    }
+
+    /// **A WALLET YOU FOLLOW IS A PAGE (prd §1969)** over the list that
+    /// opened it (Following, or Accounts): the Wallet's pick is its address
+    /// while the page stands, so its money and its moves are read alone.
+    func openFollowedWallet(_ address: String) {
+        guard WalletHere.isOn else { return }
+        walletScope = address
+        walletSection = .followedWallet
     }
 
     /// Which scopes the wallet room currently HAS something for, published by

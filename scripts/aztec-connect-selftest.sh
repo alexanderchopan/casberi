@@ -239,10 +239,11 @@ grep -q "additionalScopes: \[fpc.address\], maxAcceptableGasCost: cap," $MAIN \
   || { echo "✗ a private payment is measured with no ceiling: the contract keeps the whole declared limit"; exit 1; }
 grep -q "    reached: sendsReached," $MAIN \
   || { echo "✗ a failed private send no longer asks whether it reached Aztec before it is tried again"; exit 1; }
-(( $(grep -c "await sendOwn(wallet, " $MAIN) == 4 )) \
-  || { echo "✗ Casberi's four sends (a claim, a private send, an exit, an authorization's take-back) no longer all pay through sendOwn"; exit 1; }
-(( $(grep -c "sendOwn(wallet, " $MAIN) == 6 )) \
-  || { echo "✗ sendOwn has a caller the pass does not know (its own line, the four sends, an app's authorization)"; exit 1; }
+# Pay many (prd §1952) is the fifth: one private transaction for up to five.
+(( $(grep -c "await sendOwn(wallet, " $MAIN) == 5 )) \
+  || { echo "✗ Casberi's five sends (a claim, a private send, pay many, an exit, an authorization's take-back) no longer all pay through sendOwn"; exit 1; }
+(( $(grep -c "sendOwn(wallet, " $MAIN) == 7 )) \
+  || { echo "✗ sendOwn has a caller the pass does not know (its own line, the five sends, an app's authorization)"; exit 1; }
 (( $(grep -c "\.send({ from: me" $MAIN) == 2 )) \
   || { echo "✗ a send in main.js goes around sendOwn (two are allowed: sendOwn's own, and the legacy gas claim)"; exit 1; }
 (cd $ENGINE && node test/private-fees.test.mjs) || { echo "✗ the private gas checks failed"; exit 1; }

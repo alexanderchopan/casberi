@@ -1027,7 +1027,8 @@ let waitBook: [F.Entry] = [
     F.Entry(index: 3, address: "0xc", made: made0, state: .moved(amount: "1", tx: "0x1"), chainId: 1),
     F.Entry(index: 4, address: "0xd", made: made0, state: .tooLittle(amount: "1"), chainId: 1),
     F.Entry(index: 5, address: "0xe", made: made0, state: .waiting, chainId: 1),
-    F.Entry(index: 6, address: "0xf", made: made0, state: .needsGas(amount: "5"), symbol: "USDC"),
+    // 5 USDC, never base-unit dust, which §1959 leaves off whatever network.
+    F.Entry(index: 6, address: "0xf", made: made0, state: .needsGas(amount: "5000000"), symbol: "USDC"),
 ]
 check(F.waiting(waitBook, on: 1).map(\.address) == ["0xb", "0xa"], "Holdings misses money waiting at a one-time address, or lists money that is not waiting")
 check(F.waiting(waitBook, on: 11_155_111).map(\.address) == ["0xf"], "money waiting on one network is listed on another")
@@ -1094,7 +1095,7 @@ mutate "the fresh key ignores its index" "$FRESH" 's/let message = domain \+ big
 mutate "a fresh key may be n or more" "$FRESH" 's/ && k\.lexicographicallyPrecedes\(curveOrder\)//'
 mutate "the token goes first whatever ETH is beside it" "$FRESH" 's/return \(Decimal\(string: gas\.shortfall\) \?\? 1\) == 0/return true/'
 mutate "token dust goes first" "$FRESH" 's/have >= least,\n              let gas = tokenGas/have >= 0,\n              let gas = tokenGas/'
-mutate "a move that failed is not listed as waiting" "$FRESH" 's/case \.needsGas, \.failed: return true/case .needsGas: return true/'
+mutate "a move that failed is not listed as waiting" "$FRESH" 's/case \.needsGas\(let amount\), \.failed\(let amount\): return/case .needsGas(let amount): return/'
 mutate "money waiting on another network is listed" "$FRESH" 's/guard entry\.network == chainId else \{ return false \}/guard entry.network >= 0 else { return false }/'
 mutate "Pay the gas sends the bare shortfall" "$FRESH" 's/var eth = short \* Decimal\(string: "1\.5"\)! \/ pow\(10, 18\)/var eth = short \/ pow(10, 18)/'
 mutate "a fresh address is reused" "$FRESH" 's/\}\.map\(\\\.index\)\.max\(\)\.map \{ \$0 \+ 1 \}/}.map(\\.index).max()/'

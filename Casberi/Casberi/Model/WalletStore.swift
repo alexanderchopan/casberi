@@ -581,6 +581,13 @@ final class WalletStore {
     /// means the line only ever shows the true combined net worth, never a
     /// composition change masquerading as a gain. Empty until at least two such
     /// aligned points exist, so a single-point line never draws.
+    /// **YOUR MONEY'S LINE (prd §1969):** your Casberi account's, never a
+    /// wallet you follow. Every summary of "your money" reads this one.
+    func yourValueSamples() -> [ValueSample] {
+        guard let yours = YourAccountDemo.shownAddress else { return [] }
+        return combinedValueSamples(only: [yours])
+    }
+
     func combinedValueSamples(only: [String]? = nil) -> [ValueSample] {
         let lines = addresses
             .filter { a in only.map { $0.contains { WalletWatch.sameAddress($0, a.address) } } ?? true }

@@ -285,7 +285,10 @@ ESCAPE_ACTION = re.compile(r"accessibilityAction\(\s*\.escape\s*\)")
 # draws its `name:` as text in a head at least 44pt tall (§1017, §1482), so a
 # row whose name is a variable rather than a `Text(` literal is still a worded,
 # floored target — not a face-only disc (2026-10-23, the Holdings accounts row).
-WORDS = re.compile(r"\bText\(|\bLabel\(|dsText|LocalizedStringKey|String\(localized:|\bDSFeedRow\(")
+# `walletLedgerWords(` is the Wallet's one-line ledger row (prd §1956): a
+# name and a fact as `Text`, on the same row head as `DSFeedRow`, so the same
+# reasoning holds (2026-11-23, Private's three rows of §1960).
+WORDS = re.compile(r"\bText\(|\bLabel\(|dsText|LocalizedStringKey|String\(localized:|\bDSFeedRow\(|\bwalletLedgerWords\(")
 
 # --- Check 4 -----------------------------------------------------------------
 # A DRAWING SIZED FROM DATA. The first three patterns are unambiguous drawings;

@@ -99,7 +99,11 @@ fi
 use "$STORE" "!DemoMode.isActive" "the demo's wallets are checked against Ethereum"
 use "$STORE" "Date().timeIntervalSince(lastRun[owner] ?? .distantPast) > HoldingsCheck.every" "a wallet is checked more than once a window"
 use "$STORE" "PrivacyEngine.shared.verifyHoldings(owner: owner, tokens: held.map(\\.contract))" "the store no longer asks the verified provider"
-use "$ROWS" "if HoldingsCheckStore.shared.mismatched(position) {" "the Tokens list no longer says a holding doesn't match"
+# Since prd §1954 the row reads the verdict once, as `twoLine` (its pitch
+# rides it), and the amber line stands on it.
+use "$ROWS" "var twoLine: Bool { HoldingsCheckStore.shared.mismatched(position) }" "the Tokens list no longer reads whether a holding matches"
+awk '/struct WalletTokenRowLabel/,/^}$/' "$ROWS" | grep -A1 "if twoLine {" | grep -q "Doesn't match Ethereum" \
+  || { echo "✗ the Tokens list no longer says a holding doesn't match"; exit 1; }
 use "$HOME" "let differs = HoldingsCheckStore.shared.mismatched(token)" "Home's tokens no longer say a holding doesn't match"
 use "$REACH" 'Endpoint(service: "Wallet check",' "the check's hosts are not declared"
 awk '/Endpoint\(service: "Wallet check",/,/throughTor: true\)/' "$REACH" | grep -q "throughTor: true" \

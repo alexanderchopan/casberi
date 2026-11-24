@@ -240,6 +240,7 @@ extension WalletSection: DSTileScope {
         case .threats:         return ScopeTileGlyph.threats
         case .watchlist:       return ScopeTileGlyph.watchlist
         case .watchedToken:    return ScopeTileGlyph.watchedToken
+        case .followedWallet:  return ScopeTileGlyph.accounts
         case .holdingAccounts: return ScopeTileGlyph.holdingAccounts
         case .positions:       return ScopeTileGlyph.positions
         case .apps:            return ScopeTileGlyph.apps

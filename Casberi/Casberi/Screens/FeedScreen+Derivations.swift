@@ -102,6 +102,10 @@ extension FeedScreen {
         // resolved again for every row, and the app pick builds a set over
         // every connected bridge.
         let walletAllows = walletScopeTest()
+        // **A WALLET YOU FOLLOW IS NEVER YOUR FEED (prd §1969):** its moves
+        // stand on its own page in Following, never in Activity, the Wallet
+        // or the Feed. Its page (a followed wallet picked) keeps them.
+        let leftOut = FollowedNews.isFollowed(selectedWallet) ? [] : FollowedNews.followed
         // DAY IS ITS OWN DOOR (prd §1231): on the phone's scrolling Feed the
         // calendar and to-dos stand behind the Day tile, never in the Feed —
         // its box, its glances or its sections.
@@ -135,6 +139,7 @@ extension FeedScreen {
                 && (source != "All" || Corpus.showsInAll(thing))
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletAllows(thing)
+                && (leftOut.isEmpty || !FollowedNews.isFollowedRow(thing, followed: leftOut))
                 && personScopeAllows(thing, people: people)
                 && notesScopeAllows(thing)
                 // Privy's display choices (prd §803e): hidden apps, and empty

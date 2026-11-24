@@ -52,7 +52,7 @@ enum WalletAsk {
         let groups = await WalletIngest.topHoldingsByWallet()
         let liveTotal = groups.isEmpty ? nil : groups.reduce(0.0) { $0 + $1.totalUSD }
         let samples = multi
-            ? store.combinedValueSamples()
+            ? store.yourValueSamples()
             : store.valueSamples(forAddress: store.addresses[0].address)
 
         guard let total = liveTotal ?? samples.last?.usd else {

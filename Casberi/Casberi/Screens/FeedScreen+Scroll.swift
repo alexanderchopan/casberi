@@ -347,8 +347,11 @@ extension FeedScreen {
             predicate: #Predicate { sources.contains($0.source) },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         newest.fetchLimit = Self.walletFeedFetchLimit
+        // A wallet you follow is never your Feed (prd §1969).
+        let leftOut = FollowedNews.followed
         let rows = ((try? modelContext.fetch(newest)) ?? []).filter { thing in
             thing.isLive && Self.scrollCategory(ofSource: thing.source) == CategoryFold.walletRoom
+                && !FollowedNews.isFollowedRow(thing, followed: leftOut)
                 && (thing.source != PrivyHomeFeed.source || PrivyHomeStore.shared.shows(thing, inRoom: false))
         }
         guard rows.map(\.id) != walletFeedRows.map(\.id) else { return }

@@ -298,7 +298,7 @@ enum KeptAskComposers {
         let store = WalletStore.shared
         guard !store.addresses.isEmpty else { return nil }
         let samples = store.addresses.count > 1
-            ? store.combinedValueSamples()
+            ? store.yourValueSamples()
             : store.valueSamples(forAddress: store.addresses[0].address)
         guard samples.count >= 2, let first = samples.first else { return nil }
         let csv = samples.map { String(format: "%.2f", $0.usd) }.joined(separator: ",")

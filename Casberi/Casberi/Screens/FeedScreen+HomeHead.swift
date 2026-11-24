@@ -646,6 +646,30 @@ extension FeedScreen {
     var homeWalletLeadRows: some View {
         homeWatchRow
         homeSpendingRow
+        homeFollowingRow
+    }
+
+    /// **FOLLOWING IS A ROW IN THE WALLET'S SECTION (prd §1969).** The wallets
+    /// you follow are never your money; the row opens their page and says
+    /// how many did something since you looked. Only while you follow one.
+    @ViewBuilder
+    var homeFollowingRow: some View {
+        if !FollowedNews.followed.isEmpty {
+            let news = FollowedNews.shared.newCount
+            Button {
+                ActivitySeen.shared.leavingForPage()
+                homeOpen(.following)
+            } label: {
+                DSHomeFactRow(glyph: WalletSection.following.glyph, name: WalletSection.following.label,
+                              items: news > 0 ? [DSHomeFactRow.Item(id: "following", name: String(localized: "\(news) new"))] : [],
+                              inRowColumns: true)
+            }
+            .buttonStyle(RowPress())
+            .task { FollowedNews.shared.refresh(modelContext) }
+            .feedRowBackground()
+            .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
+            .listRowSeparator(.hidden)
+        }
     }
 
     /// The one token the row names: the day's biggest mover, else the first

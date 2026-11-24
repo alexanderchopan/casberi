@@ -34,9 +34,11 @@ struct WalletWhoseSwitch: View {
             .filter { a in own.map { !WalletWatch.sameAddress(a, $0) } ?? true }
     }
 
-    static var offered: [WalletWhose] {
-        WalletWhose.offered(hasYours: yours != nil || noAccountYet, hasFollowing: !followed.isEmpty)
-    }
+    /// **NO SWITCH (prd §1969, retiring §1526, §1536 and §1590's words).**
+    /// The Wallet is your money and nothing else; the wallets you follow
+    /// stand in Following, each on its own page. Nothing is offered, so no
+    /// surface draws the words.
+    static var offered: [WalletWhose] { [] }
 
     var body: some View {
         let offered = Self.offered
@@ -81,13 +83,13 @@ struct WalletWhoseSwitch: View {
 
     /// The scope the remembered choice names, unless `current` already
     /// holds a pick.
+    /// With no switch (prd §1969) the Wallet opens on your money: a
+    /// remembered Yours or Following is let go, an app's pick kept.
     @MainActor private static func rememberedScope(over current: String?) -> String? {
-        let remembered = UserDefaults.standard.data(forKey: WalletWhose.defaultsKey)
-            .flatMap { String(data: $0, encoding: .utf8) }.flatMap(WalletWhose.init(rawValue:))
-        // Following with nothing followed any more opens on All.
-        let start = remembered == .following && followed.isEmpty ? .everything : remembered
-        return WalletWhose.launchScope(current: current, yours: yours, remembered: start,
-                                       hasFollowing: !followed.isEmpty)
+        guard let current else { return nil }
+        if WalletWhose.isFollowing(current) { return nil }
+        if let yours, WalletWatch.sameAddress(current, yours) { return nil }
+        return current
     }
 
     /// **HOME SHOWS THE CHOICE YOU MADE ON HOLDINGS (prd §1843).** Back on
