@@ -346,15 +346,24 @@ enum SocialRoom {
     /// The author is matched as a WHOLE WORD at the front, case-insensitively:
     /// "sam liked" names sam, "samantha liked" does not, and an empty author
     /// names nobody.
-    static func sentenceNamesAuthor(words: String, author: String) -> Bool {
+    ///
+    /// A NOTICE (a row with no post words of its own, §704) may name its
+    /// author anywhere, as a whole word: X's "New post from mia" and "New
+    /// post notifications for mia and 6 others" drew mia over them, then mia
+    /// again in the quote (2026-11-23). A post keeps the front-only rule, so
+    /// somebody's own words are never folded into a name line.
+    static func sentenceNamesAuthor(words: String, author: String, notice: Bool = false) -> Bool {
         let author = author.trimmingCharacters(in: .whitespaces)
         guard !author.isEmpty else { return false }
         let words = words.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard words.count > author.count,
-              words.prefix(author.count).caseInsensitiveCompare(author) == .orderedSame
-        else { return false }
-        let next = words[words.index(words.startIndex, offsetBy: author.count)]
-        return next == " "
+        guard words.count > author.count else { return false }
+        if words.prefix(author.count).caseInsensitiveCompare(author) == .orderedSame {
+            let next = words[words.index(words.startIndex, offsetBy: author.count)]
+            if next == " " { return true }
+        }
+        guard notice else { return false }
+        return words.components(separatedBy: " ")
+            .contains { $0.caseInsensitiveCompare(author) == .orderedSame }
     }
 
     /// The sentence a row draws IN ITS NAME SLOT instead of the author's name,
@@ -364,13 +373,15 @@ enum SocialRoom {
     /// when it names the author (above) and is short enough to be a line —
     /// `rowSentenceCap` characters, no newline. A long notice keeps the two-line
     /// shape rather than cutting its own sentence at the tail.
-    static func rowSentence(words: String, author: String) -> String? {
-        guard sentenceNamesAuthor(words: words, author: author) else { return nil }
+    static func rowSentence(words: String, author: String, notice: Bool = false) -> String? {
+        guard sentenceNamesAuthor(words: words, author: author, notice: notice) else { return nil }
         let words = words.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !words.contains("\n"), words.count <= rowSentenceCap else { return nil }
         return words
     }
 
     /// What fits a row's one name line at `body17` on a phone, with the lead.
-    static let rowSentenceCap = 72
+    /// Measured on an iPhone 17 Pro, 2026-11-23: 72 cut "New post
+    /// notifications for mia and 6…" (43) at the tail; ~40 is the line.
+    static let rowSentenceCap = 40
 }

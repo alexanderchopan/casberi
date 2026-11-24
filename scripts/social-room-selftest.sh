@@ -295,6 +295,16 @@ check("the name alone is not a sentence",
       !SocialRoom.sentenceNamesAuthor(words: "sam", author: "sam"))
 check("an empty author names nobody",
       !SocialRoom.sentenceNamesAuthor(words: "liked your post", author: ""))
+check("a notice past one phone line keeps the two-line shape",
+      SocialRoom.rowSentence(words: "New post notifications for mia and 6 others", author: "mia", notice: true) == nil)
+check("a notice names its author at its end",
+      SocialRoom.sentenceNamesAuthor(words: "New post from mia", author: "mia", notice: true))
+check("…or in its middle",
+      SocialRoom.sentenceNamesAuthor(words: "New post notifications for mia and 6 others", author: "mia", notice: true))
+check("a post's own words name nobody past the front",
+      !SocialRoom.sentenceNamesAuthor(words: "Lunch with mia today", author: "mia"))
+check("a notice still matches whole words only",
+      !SocialRoom.sentenceNamesAuthor(words: "New post from miami", author: "mia", notice: true))
 check("the row draws the sentence as its name",
       SocialRoom.rowSentence(words: "mia and 2 others liked your repost", author: "mia")
         == "mia and 2 others liked your repost")
@@ -528,8 +538,19 @@ mutate "Bluesky falls out of the social room" \
 # §915: a longer name reads as the name ("samantha" names sam), so the
 # eyebrow drops a name the sentence never said.
 mutate "a longer name is taken for the author" \
-  '        return next == " "' \
-  '        return true'
+  '            if next == " " { return true }' \
+  '            return true'
+
+# 2026-11-23: a notice names its author anywhere as a WHOLE word; a part
+# of a word ("miami" for mia) must not count.
+mutate "a notice's partial word is taken for the author" \
+  '            .contains { $0.caseInsensitiveCompare(author) == .orderedSame }' \
+  '            .contains { $0.lowercased().hasPrefix(author.lowercased()) }'
+
+# A post's own words fold into the name line when they mention the author.
+mutate "a post's words are read as a notice" \
+  '        guard notice else { return false }' \
+  '        _ = notice'
 
 # §915: a long notice is cut at the tail of the one-line name slot.
 mutate "a long notice is forced into the name slot" \

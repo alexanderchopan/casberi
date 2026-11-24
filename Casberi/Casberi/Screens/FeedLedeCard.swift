@@ -586,7 +586,8 @@ struct FeedLedeCard: View {
             // the age. `SocialRoom.sentenceNamesAuthor` is the rule, shared
             // with the row.
             if isPost, !SocialRoom.sentenceNamesAuthor(
-                words: words, author: SocialRoomSource.author(of: thing)) {
+                words: words, author: SocialRoomSource.author(of: thing),
+                notice: (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
                 Text(verbatim: SocialRoomSource.author(of: thing))
                     .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)

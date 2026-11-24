@@ -112,7 +112,13 @@ struct PersonRoomScreen: View {
                     // and `RootShell.rootPresented`'s own note); PUSHED, this
                     // room is already under the shell's copy.
                     DSHaptic.tap()
-                    withAnimation(DS.Motion.standard) { windowSteps += 1 }
+                    // No crossfade (2026-11-23, user: "sometimes it glitches"): an
+                    // animated insert faded the new rows in OVER the fading
+                    // door, two layers in one place for a fifth of a second.
+                    // The rows land below the finger, as Apple's lists do.
+                    var plain = Transaction()
+                    plain.disablesAnimations = true
+                    withTransaction(plain) { windowSteps += 1 }
                 } label: {
                     Text("Show older")
                         .dsText(.subhead12)

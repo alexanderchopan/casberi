@@ -826,7 +826,13 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     private var opener: some View {
         Button {
             DSHaptic.tap()
-            withAnimation(DS.Motion.standard) { windowSteps += 1 }
+            // No crossfade (2026-11-23, user: "sometimes it glitches"): an
+            // animated insert faded the new rows in OVER the fading
+            // door, two layers in one place for a fifth of a second.
+            // The rows land below the finger, as Apple's lists do.
+            var plain = Transaction()
+            plain.disablesAnimations = true
+            withTransaction(plain) { windowSteps += 1 }
         } label: {
             Text("Show more")
                 .dsText(.subhead12)

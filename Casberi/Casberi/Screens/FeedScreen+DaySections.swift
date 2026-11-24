@@ -1221,7 +1221,16 @@ extension FeedScreen {
     /// screens the first cut budgeted (user, 2026-08-01: "why not just show the
     /// last day and current day only on load" — right that it was too
     /// generous; see `windowed` for why the unit is rows and not days).
-    private static let windowRowTarget = 30
+    ///
+    /// `-feedRowTarget <n>` (DEBUG) shrinks it, so a probe reaches
+    /// "Show older" on a page with only a handful of rows.
+    private static let windowRowTarget: Int = {
+        #if DEBUG
+        let n = UserDefaults.standard.integer(forKey: "feedRowTarget")
+        if n > 0 { return n }
+        #endif
+        return 30
+    }()
 
     /// How many rows a room's `@Query` will materialise, ever. See the long
     /// note in `init` for the measurement that produced it: unbounded, that
@@ -1381,7 +1390,13 @@ extension FeedScreen {
     private func olderRow(hidden: Int) -> some View {
         Button {
             DSHaptic.tap()
-            withAnimation(DS.Motion.standard) { windowSteps += 1 }
+            // No crossfade (2026-11-23, user: "sometimes it glitches"): an
+            // animated insert faded the new rows in OVER the fading
+            // door, two layers in one place for a fifth of a second.
+            // The rows land below the finger, as Apple's lists do.
+            var plain = Transaction()
+            plain.disablesAnimations = true
+            withTransaction(plain) { windowSteps += 1 }
         } label: {
             DSPushRowLabel(title: Text("Show older"),
                            fact: hidden > 0 ? Text("\(hidden) more") : nil,

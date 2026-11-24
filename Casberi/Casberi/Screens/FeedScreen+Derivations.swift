@@ -137,6 +137,11 @@ extension FeedScreen {
                 // would bury the day's real captures. All sees its receipt
                 // only; the chip opens the room that holds the rest.
                 && (source != "All" || Corpus.showsInAll(thing))
+                // THE IMPORT RECEIPT IS NOT A THING YOU DID (2026-11-23):
+                // "Imported 214 things" stood in Telegram's feed among the
+                // messages, dated the day of the import, for good. The
+                // import's page still reads its count off it as data.
+                && !Corpus.isImportReceipt(thing)
                 && (filter.tag == "All" || thing.tags.contains(filter.tag))
                 && walletAllows(thing)
                 && (leftOut.isEmpty || !FollowedNews.isFollowedRow(thing, followed: leftOut))

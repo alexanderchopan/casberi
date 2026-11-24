@@ -2491,7 +2491,16 @@ struct PostCard: View {
         // said mia twice, one row apart. When the sentence names its author
         // and fits the name slot, it IS the name; the quote and the media
         // still ride below. `SocialRoom.rowSentence` is the rule.
-        let sentence = SocialRoom.rowSentence(words: words, author: author)
+        let ownWords = !(thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let sentence = SocialRoom.rowSentence(words: words, author: author, notice: !ownWords)
+        // **A WORDLESS PICTURE SAYS NOTHING (2026-11-23).** A channel post or
+        // archive post that is only a picture is titled the media's word
+        // ("Photo", "Video") so a list has something to read; over the
+        // picture itself that word is a caption saying "this is a photo".
+        let wordlessPicture = !ownWords && thing.quote == nil
+            && (thing.tags.contains("Photo") || thing.tags.contains("Video"))
+            && (!thing.imageURLs.isEmpty || !(thing.previewImageURL ?? "").isEmpty
+                || StoredPixels.probe(thing) != nil)
         // **EVERY ACTIVITY ROW IS ONE HEIGHT (prd §1810).** A notice's one
         // picture ("rui liked your video") rode under the sentence and made
         // the row twice as tall as its neighbours; on Activity it rides the
@@ -2531,7 +2540,7 @@ struct PostCard: View {
                 if let parent = thing.parent {
                     ReplyingToRow(parent: parent)
                 }
-                if sentence == nil {
+                if sentence == nil, !wordlessPicture {
                     Text(words)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(clamp)
