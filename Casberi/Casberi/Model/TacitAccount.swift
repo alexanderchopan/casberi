@@ -55,10 +55,14 @@ final class TacitAccount {
         let coSigner: String
         /// The address another Tacit account pays.
         let address: String
-        /// The plain address any wallet or exchange pays, on either network.
+        /// The pool's deposit address: ETH sent to it is moved into the
+        /// pool. Not the public address: that is the co-signer's own.
         let receive: String
         let held: [Held]
         let asOf: Date
+        /// TAC the co-signer's wallet holds in public, as Tacit's own page
+        /// counts Public; nil when it was not read.
+        var publicTAC: Double? = nil
 
         var eth: Double { held.map(\.eth).reduce(0, +) }
     }
@@ -76,7 +80,7 @@ final class TacitAccount {
         receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
         held: [Held(chainId: 1, network: "Ethereum", eth: 0.42, waiting: 0, pool: 14.7, reached: true),
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
-        asOf: .now)
+        asOf: .now, publicTAC: 240)
     static let demoPrice = 3_850.0
 
     var phase: Phase { DemoMode.isActive ? .open : livePhase }
@@ -192,8 +196,10 @@ final class TacitAccount {
                      reached: n.reading != nil)
             }
             let receive = overview.networks.first { !$0.receive.isEmpty }?.receive ?? ""
+            let publicTAC = await TacitPocket.publicTAC(of: coSigner)
             keep(Reading(coSigner: coSigner.lowercased(), address: overview.address, receive: receive,
-                         held: held, asOf: .now))
+                         held: held, asOf: .now,
+                         publicTAC: publicTAC ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.publicTAC : nil }))
             livePhase = .open
             await readPrice()
         } catch {
@@ -234,7 +240,8 @@ final class TacitAccount {
                           receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
                           held: [Held(chainId: 1, network: "Ethereum", eth: 0.42, waiting: 0, pool: 14.7, reached: true),
                                  Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
-                          asOf: raw == "closed" ? Date.now.addingTimeInterval(-3 * 3600) : .now)
+                          asOf: raw == "closed" ? Date.now.addingTimeInterval(-3 * 3600) : .now,
+                          publicTAC: 23.85)
         livePrice = 2044
         livePhase = raw == "closed" ? .closed : .open
     }

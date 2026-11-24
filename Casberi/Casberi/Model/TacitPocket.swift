@@ -70,4 +70,33 @@ enum TacitPocket {
         }
         return Overview(address: address, networks: readings)
     }
+
+    // MARK: - Public TAC
+
+    /// TAC, Tacit's token on Ethereum (18 decimals): `ADDR.tac` in Tacit's
+    /// own deployments file, its symbol and decimals read on 2026-11-24.
+    static let tacToken = "0xA1313eb9f3A445606D9583bcAc3ebeB56a858279"
+
+    /// The TAC `wallet` holds in public: what Tacit's own page calls Public
+    /// (the connected wallet's balance, `readPublicTac`). One `balanceOf` at
+    /// the Ethereum node the engine already reads, through the same funnel.
+    /// nil when the node did not answer.
+    static func publicTAC(of wallet: String) async -> Double? {
+        let hex = wallet.lowercased().dropFirst(wallet.hasPrefix("0x") || wallet.hasPrefix("0X") ? 2 : 0)
+        guard hex.count == 40, hex.allSatisfy(\.isHexDigit),
+              let url = URL(string: TacitNetwork.ethereum.rpcUrl) else { return nil }
+        let call: [String: Any] = ["to": tacToken, "data": "0x70a08231" + String(repeating: "0", count: 24) + hex]
+        let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "eth_call", "params": [call, "latest"]]
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        request.timeoutInterval = 30
+        guard let (data, http) = await IngestSupport.sendRequest(request, service: TacitEngine.service),
+              http.statusCode == 200,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let result = object["result"] as? String, result.count == 66,
+              let amount = TacitEngineWire.eth(result) else { return nil }
+        return NSDecimalNumber(decimal: amount).doubleValue
+    }
 }

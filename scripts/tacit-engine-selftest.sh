@@ -130,6 +130,8 @@ sends=$(grep -n "IngestSupport.sendRequest(request, service: TacitEngine.service
 [[ -n "$allows" && -n "$sends" && "$allows" -lt "$sends" ]] || fail "a request is sent before its host is checked"
 has "Casberi/Casberi/Model/NetworkReach.swift" 'Endpoint(service: "Tacit engine",' "the engine's hosts are not declared"
 has "$M/TacitPocket.swift" "digest: TacitIdentity.digest, signer: coSigner," "the co-signer's answer is no longer checked against Tacit's message"
+has "$M/TacitPocket.swift" 'static let tacToken = "0xA1313eb9f3A445606D9583bcAc3ebeB56a858279"' "TAC's token address moved: Public would read another token"
+has "$M/TacitPocket.swift" "IngestSupport.sendRequest(request, service: TacitEngine.service)" "the public TAC read leaves the engine's funnel"
 hasnt "$M/TacitAccount.swift" "kSecClass" "the account keeps something in the Keychain: the key is never stored"
 
 # ── The wallet file is the pinned one, and the bundle is built from it ───────

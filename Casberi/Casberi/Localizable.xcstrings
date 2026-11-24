@@ -16798,34 +16798,6 @@
         }
       }
     },
-    "%@ · Public" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · Público"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · 公開"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · 공개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · 公开"
-          }
-        }
-      }
-    },
     "%@ · Renews %@" : {
       "localizations" : {
         "es" : {
@@ -16996,6 +16968,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ · 全部为 %@ 步骤"
+          }
+        }
+      }
+    },
+    "%@ · arriving" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · en camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 到着中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 도착 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · 正在到账"
           }
         }
       }
@@ -86068,6 +86068,34 @@
         }
       }
     },
+    "Deposit address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dirección de depósito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入金アドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입금 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存入地址"
+          }
+        }
+      }
+    },
     "Deposit in your co-signer's wallet" : {
       "localizations" : {
         "es" : {
@@ -88512,6 +88540,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "ETH 或 USDC，发往地址"
+          }
+        }
+      }
+    },
+    "ETH sent here goes private · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El ETH enviado aquí pasa a ser privado · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ここに送ったETHはプライベートになります · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기로 보낸 ETH는 비공개가 됩니다 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送到这里的 ETH 会变为私密 · %@"
           }
         }
       }
@@ -91758,6 +91814,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Ethereum · 私密"
+          }
+        }
+      }
+    },
+    "Ethereum · Public" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ethereum · Público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ethereum · 公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ethereum · 공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ethereum · 公开"
           }
         }
       }
@@ -103151,34 +103235,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自任意钱包"
-          }
-        }
-      }
-    },
-    "From any wallet or exchange · %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desde cualquier billetera o exchange · %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "任意のウォレットや取引所から · %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "모든 지갑 또는 거래소에서 · %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "来自任何钱包或交易所 · %@"
           }
         }
       }
@@ -160905,6 +160961,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "私密 · %@"
+          }
+        }
+      }
+    },
+    "Private · not read yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privado · aún no se lee"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライベート · まだ読み取りません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비공개 · 아직 읽지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私密 · 尚未读取"
           }
         }
       }
@@ -241330,6 +241414,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "由你的共同签名人的钱包签名。不会转移任何资产。"
+          }
+        }
+      }
+    },
+    "Your co-signer's wallet · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La billetera de tu cofirmante · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者のウォレット · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자의 지갑 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的共同签名者的钱包 · %@"
           }
         }
       }
