@@ -1114,7 +1114,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         saving = address
                     } label: {
                         HStack(spacing: DS.Space.s2) {
-                            Text("Save \(AddressTail.short(address))").dsText(.heading17).fontWeight(.semibold)
+                            Text("Save \(AddressTail.short(address))").dsText(.heading17)
                                 .foregroundStyle(DS.aztecInk)
                             Spacer(minLength: DS.Space.s2)
                         }
