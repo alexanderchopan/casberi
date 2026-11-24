@@ -1139,7 +1139,7 @@ struct MoveRailgunSentence<Head: View>: View {
                                 .foregroundStyle(DS.pickInk)
                             Spacer(minLength: DS.Space.s2)
                         }
-                        .frame(minHeight: DS.Hit.min)
+                        .frame(minHeight: DSFeed.headHeight)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
