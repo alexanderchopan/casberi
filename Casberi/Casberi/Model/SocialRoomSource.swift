@@ -114,8 +114,14 @@ enum SocialRoomSource {
     /// fills it in on the next sync) — never a permalink. One copy, for
     /// `author`'s reason.
     static func words(of thing: Thing) -> String {
-        let full = (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return full.isEmpty ? thing.title : full
+        hasOwnWords(thing) ? (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines) : thing.title
+    }
+
+    /// Whether the post carries words of its own; a notice ("New post from
+    /// mia") or a wordless picture does not, and `words(of:)` then falls back
+    /// to the title. Same owner as `words(of:)`, for the same reason (prd §756).
+    static func hasOwnWords(_ thing: Thing) -> Bool {
+        !(thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Whether a day's rows may be called POSTS — see `SocialRoom.groupIsPosts`.

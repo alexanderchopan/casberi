@@ -2491,7 +2491,7 @@ struct PostCard: View {
         // said mia twice, one row apart. When the sentence names its author
         // and fits the name slot, it IS the name; the quote and the media
         // still ride below. `SocialRoom.rowSentence` is the rule.
-        let ownWords = !(thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let ownWords = SocialRoomSource.hasOwnWords(thing)
         let sentence = SocialRoom.rowSentence(words: words, author: author, notice: !ownWords)
         // **A WORDLESS PICTURE SAYS NOTHING (2026-11-23).** A channel post or
         // archive post that is only a picture is titled the media's word

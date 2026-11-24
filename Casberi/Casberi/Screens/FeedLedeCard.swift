@@ -587,7 +587,7 @@ struct FeedLedeCard: View {
             // with the row.
             if isPost, !SocialRoom.sentenceNamesAuthor(
                 words: words, author: SocialRoomSource.author(of: thing),
-                notice: (thing.postText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                notice: !SocialRoomSource.hasOwnWords(thing)) {
                 Text(verbatim: SocialRoomSource.author(of: thing))
                     .dsText(.label12)
                     .foregroundStyle(DS.textPrimary)
