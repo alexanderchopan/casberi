@@ -378,7 +378,10 @@ check "the All room takes the lower of its ceiling and the budget" \
 # B6. The budget is smaller than nothing a person can open inside a slide, and
 #     comfortably above the feed's own first window. Arithmetic, not taste.
 budget="$(grep -Eo 'swipeRowBudgetRows = [0-9]+' "$MAIN" | grep -Eo '[0-9]+')"
-target="$(grep -Eo 'windowRowTarget = [0-9]+' "$FEED" | grep -Eo '[0-9]+')"
+# Since 2026-11-23 the target is a closure (a DEBUG `-feedRowTarget` override,
+# then the shipped default), so read the default it RETURNS; the old literal
+# grep matched nothing and `pipefail` ended the script with no ✗ line.
+target="$(perl -0777 -ne 'print $1 if /windowRowTarget: Int = \{.*?\n\s*return ([0-9]+)\n\s*\}\(\)/s' "$FEED")"
 if [[ -n "$budget" && -n "$target" ]] && (( budget >= target * 4 )); then
   ok "swipeRowBudgetRows ($budget) is ≥ 4 windows of $target"
 else
@@ -617,7 +620,7 @@ check "the helper suppresses the entrance during a swipe" \
 # D8. Arithmetic, not taste: the ceiling must be many windows past anything a
 #     person opens in one visit, or the footer people meet is the bound.
 src_limit="$(grep -Eo 'sourceRoomFetchLimit = [0-9]+' "$FEED" | grep -Eo '[0-9]+')"
-win="$(grep -Eo 'windowRowTarget = [0-9]+' "$FEED" | grep -Eo '[0-9]+')"
+win="$target"  # B6 read the closure's shipped default
 if [[ -n "$src_limit" && -n "$win" ]] && (( src_limit >= win * 10 )); then
   ok "sourceRoomFetchLimit ($src_limit) is ≥ 10 windows of $win"
 else
