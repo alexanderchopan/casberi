@@ -274,6 +274,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-wise { background: #9fe870; }
 .ai-splits { background: #000000; }   /* their icon's own field */
 .ai-simplefin { background: #ffffff; }   /* their mark's white field (prd §1663) */
+.ai-tacit { background: #0c0c0c; }   /* their icon's own field */
 /* Privacy.com's mark is a dark CIRCLE on transparency — not the full-bleed
    square artwork .tilefull assumes (Slack/PostHog above), so its four corners
    let the page through and the tile reads unfilled beside its neighbours.

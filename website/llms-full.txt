@@ -4,7 +4,7 @@
 
 Website: https://casberi.app · Docs: https://casberi.app/docs.html · App Store: https://apps.apple.com/us/app/casberi/id6788637831 · Privacy: https://casberi.app/privacy.html
 
-Last updated: November 16, 2026 · Describes Casberi 3.0.36. The App Store may be a version behind.
+Last updated: November 16, 2026 · Describes Casberi 3.0.40. The App Store may be a version behind.
 
 ## What Casberi does
 
