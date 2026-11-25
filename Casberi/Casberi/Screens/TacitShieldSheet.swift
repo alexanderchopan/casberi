@@ -144,8 +144,9 @@ struct TacitShieldSheet: View {
             value()
             Spacer(minLength: 0)
         }
-        // One finger's height, the Wallet's row (prd §1957), never a number.
-        .walletTwoLineHead()
+        // One finger's height (prd §1971 item 22): the row's height with
+        // the air a List would give it, since this sheet stands in a stack.
+        .frame(minHeight: DSFeed.headHeight + 2 * DS.Space.s2)
     }
 
     // MARK: - Sending

@@ -104,8 +104,8 @@ struct WalletTokenRowLabel: View {
                 }
             }
         }
+        // Holdings' pitch, no air of its own (prd §1973 item 11).
         .frame(minHeight: twoLine ? DSFeed.headHeight : WalletCardStyle.ledgerHead)
-        .padding(.vertical, FeedScreen.rowAir)
     }
 }
 

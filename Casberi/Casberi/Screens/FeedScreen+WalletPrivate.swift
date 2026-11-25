@@ -152,7 +152,9 @@ extension FeedScreen {
                 .foregroundStyle((place.usd ?? 0) < 0.01 ? DS.textSecondary : DS.textPrimary)
                 .lineLimit(1)
         }
-        .frame(minHeight: WalletCardStyle.ledgerHead, alignment: .bottom)
+        // The header's own words and a little air above them, so a group
+        // reads as one block under its name (prd §1973 item 11).
+        .padding(.top, DS.Space.s2)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: [place.name, figure].joined(separator: ". ")))
@@ -895,10 +897,11 @@ extension FeedScreen {
 
 extension View {
     /// **A Holdings row of two lines (user, 2026-11-25; amends §1954):** the
-    /// name over its line, at the Wallet's 52pt pitch, as a preview row with
-    /// a line has always stood.
+    /// name over its line, at the row's own height plus its List row's air,
+    /// about 44pt (prd §1973 item 11, user: "should it be more compact in
+    /// holdings"). No air of its own: that made 49.
     func walletTwoLineHead() -> some View {
-        frame(minHeight: DSFeed.headHeight).padding(.vertical, FeedScreen.rowAir)
+        frame(minHeight: DSFeed.headHeight)
     }
 }
 

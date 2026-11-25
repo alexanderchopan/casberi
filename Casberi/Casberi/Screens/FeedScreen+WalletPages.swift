@@ -768,7 +768,7 @@ extension FeedScreen {
             // A token under a network's header keeps 52 with no line, so
             // every token row is one height (prd §1973 item 1).
             .frame(minHeight: line == nil && !twoLine ? WalletCardStyle.ledgerHead : DSFeed.headHeight)
-            .padding(.vertical, line == nil && !twoLine ? 0 : FeedScreen.rowAir)
+
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
