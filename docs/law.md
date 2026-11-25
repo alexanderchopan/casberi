@@ -262,7 +262,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2156 of 2230 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2157 of 2231 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -285,7 +285,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §22 — Marks
 - §23 — Generative UI
 - §24 — Composer
-- §25 — Apps spec
+- §25 — Apps spec (amended by §1973)
 - §26 — Account tab
 - §27 — Analytics
 - §28 — Do, distributed
@@ -2096,7 +2096,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1687 — Face ID is asked at the tap, beside preparing, and the send's first signature takes what it passed
 - §1688 — Aztec's testnet room is deleted; Aztec stays in the Wallet as it is (supersedes §1270, §1271, §1276, §1419 and §1565'…
 - §1689 — A row lead flips to its APP's mark, and to its category's glyph only when it already wears the app's mark (amended by §1691)
-- §1690 — Round-ups are set aside as you go: every send puts its change in Round-ups (Aave on Base), and at $10 the next send m… (amended by §1830)
+- §1690 — Round-ups are set aside as you go: every send puts its change in Round-ups (Aave on Base), and at $10 the next send m… (amended by §1830, §1973)
 - §1691 — The cycle turns where a landing is SEEN: the Feed's cover disc and Newest's app icon
 - §1692 — zk.money on Aztec V6: its moves named again, and Move's Send pays a tag (amends §1273's "never its payment gateway" f… (amended by §1746, §1750)
 - §1693 — Move to private says why it asks for funds: the least that moves in and the ETH kept for the fee (amended by §1694)
@@ -2114,7 +2114,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1700b — Moving money in and out of Aztec is Move's, never an app's page: Shield's bridge is how Move moves, as Across and Uni… (amended by §1700c, §1700d, §1700f)
 - §1700c — Aztec's apps become verbs, never a list; an Aztec app opens in Casberi's browser from a link (amended by §1700i)
 - §1700d — Move's bridge to Aztec is Shield's, closed as it is, because it is what everyone uses (amended by §1700e, §1943)
-- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700ac, §1700k, §1720)
+- §1700e — Keep going: Shield with the Human Passport score only, never an ID; gas through Aztec's own portal (amended by §1700ac, §1700k, §1720, §1973)
 - §1700f — Your Aztec account in the Wallet, Move and Security, after the first phone test: Fee Juice is a public token, private… (amended by §1700g, §1700h, §1700q, §1700r, §1719, §1720, §1776, §1779, §1820)
 - §1700g — Aztec is your private account; 0xBow is your private balance (amended by §1719)
 - §1700h — Networks counts Aztec
@@ -2157,7 +2157,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1715 — Three places and the act: Feed · Wallet · Library in the bar, Move the circle, Search deleted and made Library's field (amended by §1735)
 - §1716 — The crown's window lives with the control that picks it: `WalletWindowed` owns the 7d · 30d · Followed pick as its ow…
 - §1717 — The balance line has two windows, 7d and 30d: the whole-record window ("Followed", once "Watched") is deleted; 30d is…
-- §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720, §1776, §1778)
+- §1718 — Holdings is Public · Private: lent money is a fact on its row, every line reads network · fact · place with no small… (amended by §1719, §1720, §1776, §1778, §1973)
 - §1719 — Your private balance is one place you never choose a protocol for: told apart by network in Send and Receive, private… (amended by §1779, §1877, §1908)
 - §1720 — Into your private balance on Aztec from your co-signer: when Shield scores your co-signer and not your account, Move'… (amended by §1890)
 - §1721 — Railgun in Holdings and Move, in every build: its tokens in the one Private block, moving in by the token you picked,… (amended by §1727, §1877)
@@ -2222,7 +2222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1776 — Private has an Add money row that stays, and Move has no slider anywhere
 - §1777 — A send within Aztec goes on behind its sheet: the sheet closes once you have answered, and a capsule over the tab bar…
 - §1778 — At a one-time private address the token moves first while the ETH beside it pays, and what waits there shows in Holdings (amended by §1779, §1823)
-- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885, §1921, §1924)
+- §1779 — Money, simplified, stage one: Move opens on a ranked menu, rows change the sentence, the private doors are in view, A… (amended by §1823, §1885, §1921, §1924, §1973)
 - §1780 — Gas paid in USDC on Base: an account short of ETH for a send's fee pays it from its own USDC through Circle's paymast…
 - §1781 — Move's sentence takes no touch: every choice is a row under it, in every verb; the menu is every verb A–Z at one size… (amended by §1872, §1892, §1897, §1898)
 - §1782 — Move's rows are bigger and the next list opens by itself after a pick; the token is never chosen for you (amends §1781)
@@ -2373,7 +2373,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945, §1963)
-- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946)
+- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946, §1973)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
 - §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934, §1970)
 - §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933)
@@ -2418,8 +2418,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1968 — A watched token's page swaps for it
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 - §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
-- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read
+- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973)
 - §1972 — Earn's From list names the rate and the place, and the network moves to the badge
+- §1973 — How money is listed: one row is one token in one place, Holdings is Home's cut with the tokens under it (Public by ne…
 
 ## Dead rulings → what replaced them (generated)
 

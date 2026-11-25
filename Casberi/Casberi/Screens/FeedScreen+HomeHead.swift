@@ -379,6 +379,9 @@ extension FeedScreen {
 
     /// One place on Home: a network or a private place, with all it holds.
     static let homeTacitPlace = "tacit"
+    static let homePoolsPlace = "pools"
+    static let homeRailgunPlace = "railgun"
+    static let homeAztecPlace = "aztec"
 
     struct HomePlace: Identifiable {
         let id: String
@@ -386,11 +389,6 @@ extension FeedScreen {
         /// Nil while something there has no price yet.
         let usd: Double?
         var ink: Color = DS.textPrimary
-        /// The network a private place sits on, when it is not the place's
-        /// own: "Ethereum" beside Privacy Pools (user, 2026-11-25: "privacy
-        /// pools we have on ethereum, railgun on ethereum too"; "you have to
-        /// decide").
-        var network: String? = nil
     }
 
     /// **THE BALANCE IS ITS SECTIONS' SUM (user, 2026-11-21: "the balances
@@ -479,15 +477,21 @@ extension FeedScreen {
         }
         var out: [HomePlace] = []
         if PrivateMove.available {
-            out.append(HomePlace(id: "pools", name: "Privacy Pools",
-                                 usd: poolsUSD.count == held.count ? poolsUSD.reduce(0, +) : nil,
-                                 network: "Ethereum"))
+            // The place alone (prd §1973 item 7, retiring §1971 item 25's
+            // network beside it): Home is sums, and every private row on
+            // Holdings names its network.
+            out.append(HomePlace(id: Self.homePoolsPlace, name: "Privacy Pools",
+                                 usd: poolsUSD.count == held.count ? poolsUSD.reduce(0, +) : nil))
         }
         if RailgunPocket.available {
-            out.append(HomePlace(id: "railgun", name: "Railgun", usd: sum(railgunUSD), network: "Ethereum"))
+            out.append(HomePlace(id: Self.homeRailgunPlace, name: "Railgun", usd: sum(railgunUSD)))
         }
-        if AztecProver.isAvailable, aztecStore.isShown {
-            out.append(HomePlace(id: "aztec", name: "Aztec", usd: sum(aztecUSD), ink: DS.aztecInk))
+        // Grey like every place: colour is a move or a warning, never a
+        // place (prd §1973 item 3, retiring §1779's ink here).
+        // Wherever its rows stand (`walletShowsAztec`), so money held there
+        // is never left out for want of a prover on this device.
+        if aztecStore.isShown {
+            out.append(HomePlace(id: Self.homeAztecPlace, name: "Aztec", usd: sum(aztecUSD)))
         }
         // Your Tacit account, once your co-signer has opened it: its last
         // reading counts, open or closed, as a wallet that could not be
@@ -495,19 +499,18 @@ extension FeedScreen {
         // Three days and no longer, and only while its co-signer is still
         // this account's (`TacitAccount.countedUSD`).
         if let usd = TacitAccount.shared.countedUSD {
-            out.append(HomePlace(id: Self.homeTacitPlace, name: TacitAccount.name, usd: usd,
-                                 network: TacitAccount.shared.reading.map(Self.tacitNetworks)))
+            out.append(HomePlace(id: Self.homeTacitPlace, name: TacitAccount.name, usd: usd))
         }
-        return out
-    }
-
-    /// Where your Tacit account's private money sits: the Tacit chain for
-    /// its TAC, then each network its ETH is on, most first.
-    static func tacitNetworks(_ reading: TacitAccount.Reading) -> String {
-        var names: [String] = []
-        if (reading.privateTACAll ?? 0) > 0 { names.append(String(localized: "Tacit chain")) }
-        names += reading.held.filter { $0.eth > 0 }.sorted { $0.eth > $1.eth }.map(\.network)
-        return names.joined(separator: " · ")
+        // By dollars, most first (prd §1973 item 6); one still waiting on a
+        // price keeps its place after the priced ones, never moves by a guess.
+        return out.enumerated().sorted { a, b in
+            switch (a.element.usd, b.element.usd) {
+            case let (x?, y?) where x != y: x > y
+            case (_?, nil): true
+            case (nil, _?): false
+            default: a.offset < b.offset
+            }
+        }.map(\.element)
     }
 
     /// **A PLACE ON HOME (prd §1929).** The place's mark in the rows' lead
@@ -531,12 +534,6 @@ extension FeedScreen {
                 Text(verbatim: place.name).dsText(.fact15)
                     .foregroundStyle(place.ink == DS.textPrimary ? DS.textSecondary : place.ink).lineLimit(1)
                     .layoutPriority(1)
-                // Private's place first, the network it sits on beside it,
-                // smaller (prd §1971 item 25).
-                if let network = place.network, !network.isEmpty {
-                    Text(verbatim: network).dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary).lineLimit(1)
-                }
                 Spacer(minLength: DS.Space.s2)
                 Text(verbatim: figure).dsText(.fact15).monospacedDigit()
                     .foregroundStyle(empty ? DS.textSecondary : DS.textPrimary)
@@ -545,7 +542,7 @@ extension FeedScreen {
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-        .accessibilityLabel(Text(verbatim: [place.name, place.network, figure].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityLabel(Text(verbatim: [place.name, figure].joined(separator: ", ")))
         .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)

@@ -589,7 +589,9 @@ extension FeedScreen {
             let lent = walletLentStanding
             if !tokens.isEmpty || anyHidden || lent.map({ !$0.rows.isEmpty || $0.roundUps != nil }) == true {
                 walletDoor(.holdings, name: String(localized: "Public"),
-                           figure: mask ?? WalletValue.money(walletPublicUSD),
+                           // Whole dollars, as Home's Public (prd §1973 item 7),
+                           // and every row it heads counted.
+                           figure: mask ?? WalletValue.exactMoney(walletPublicUSD),
                            act: { feedSheet = .walletTokens })
                     .task(id: lent?.account) {
                         if let lent { await lent.lend.read(account: lent.account) }
@@ -597,22 +599,25 @@ extension FeedScreen {
                 // A token's row opens that token, every one (prd §1670); a
                 // lent row opens Take back; the door and See all open the
                 // tokens list.
-                ForEach(walletPublicRows(tokens: Array(tokens.prefix(Self.holdingsPreviewCount)), lent: lent)) { row in
-                    switch row {
-                    case .token(let token):
-                        walletTokenPreview([token], mask: mask) { walletOpenToken($0) }
-                    case .lent(let m):
-                        if let lent { walletLentRow(m, lend: lent.lend, mask: mask, prices: lent.lend.prices) }
-                    case .roundUps(let units):
-                        walletRoundUpsRow(units, mask: mask)
-                    case .ollaBack(let units, let ready):
-                        if let lent { walletOllaBackRow(units, ready: ready, lend: lent.lend, mask: mask) }
+                // **BY NETWORK (prd §1973 item 4):** Home's networks, each
+                // its line as a header, what you hold there under it.
+                let networks = walletPublicNetworks(tokens: tokens, lent: lent)
+                ForEach(networks) { group in
+                    if !group.place.id.isEmpty { walletPlaceHead(group.place, mask: mask) }
+                    ForEach(group.rows) { row in
+                        switch row {
+                        case .held(let token, let network, let usd, let amount):
+                            walletHeldRow(token, network: network, usd: usd, amount: amount, mask: mask)
+                        case .lent(let m):
+                            if let lent { walletLentRow(m, lend: lent.lend, mask: mask, prices: lent.lend.prices) }
+                        case .roundUps(let units):
+                            walletRoundUpsRow(units, mask: mask)
+                        case .ollaBack(let units, let ready):
+                            if let lent { walletOllaBackRow(units, ready: ready, lend: lent.lend, mask: mask) }
+                        }
                     }
                 }
-                // What your Aztec account holds in the open: its gas, first
-                // (prd §1700e). Never in the figure above.
-                walletAztecPublicRows
-                if tokens.count > Self.holdingsPreviewCount || anyHidden {
+                if networks.contains(where: \.cut) || anyHidden {
                     DSMoreRow(title: Text("See all \(tokens.count) tokens")) { feedSheet = .walletTokens }
                         .walletListRow()
                 }
@@ -634,11 +639,9 @@ extension FeedScreen {
             }
             // Then what is private (prd §1718: Public · Private; Lent's rows
             // stand in Public since option B).
+            // Your Aztec account's holdings stand under its own header there
+            // (prd §1700 item 4, §1973 item 7).
             walletPrivateRows
-            // Your Aztec account's holdings, after 0xBow's (prd §1700 item 4).
-            walletAztecRows
-            // What the private balances add up to against your goal (§1835).
-            walletSavingsGoalRow(mask: mask)
             // The section's one verb, last (prd §1776).
             walletAddMoneyRow
             if positions > 0 {
@@ -714,6 +717,7 @@ extension FeedScreen {
                                       held: String? = nil,
                                       figure: String?, tone: Color = DS.textPrimary,
                                       move: Double? = nil,
+                                      twoLine: Bool = false,
                                       act: @escaping () -> Void,
                                       @ViewBuilder mark: () -> Mark) -> some View {
         Button {
@@ -753,45 +757,18 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 // The figure over its day, as Home's token rows (prd §1862);
                 // a day that rounds to zero draws nothing (§83).
-                let day = move.map { WatchlistRules.change($0 * 100) }
-                let moved = day.map { $0.tone == .up || $0.tone == .down } ?? false
-                if line == nil {
-                    // **ONE LINE, THE DAY BEFORE THE FIGURE (prd §1954):**
-                    // the figure pins to the edge, so the dollars read down
-                    // one column and the day down the one beside it.
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        if let day, moved {
-                            Text(verbatim: day.words)
-                                .dsText(.fact15)
-                                .monospacedDigit()
-                                .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
-                                .lineLimit(1)
-                        }
-                        if let figure {
-                            walletRowFigure(figure, tone: tone)
-                        }
-                    }
-                } else {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        if let figure {
-                            walletRowFigure(figure, tone: tone)
-                        }
-                        if let day, moved {
-                            Text(verbatim: day.words)
-                                .dsText(.subhead12)
-                                .monospacedDigit()
-                                .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
-                                .lineLimit(1)
-                        }
-                    }
-                }
+                // The move under the dollars, never beside them (prd §1973
+                // item 1, retiring §1954's one-line day).
+                walletFigureOverDay(figure, tone: tone, move: move)
             }
             // **HOLDINGS IS A LEDGER (prd §1954, amending §1482 and §1862):**
             // a one-line row stands at the ledger's 40pt pitch so the whole
             // list reads at once; a row with a line under it keeps the
             // Wallet's 52.
-            .frame(minHeight: line == nil ? WalletCardStyle.ledgerHead : DSFeed.headHeight)
-            .padding(.vertical, line == nil ? 0 : FeedScreen.rowAir)
+            // A token under a network's header keeps 52 with no line, so
+            // every token row is one height (prd §1973 item 1).
+            .frame(minHeight: line == nil && !twoLine ? WalletCardStyle.ledgerHead : DSFeed.headHeight)
+            .padding(.vertical, line == nil && !twoLine ? 0 : FeedScreen.rowAir)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -800,30 +777,23 @@ extension FeedScreen {
         .walletListRow()
     }
 
-    /// A door's tokens, each wearing the mark its treemap tile wears, over
-    /// the networks it sits on (prd §1718).
-    @ViewBuilder
-    func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
-                            act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
-        ForEach(tokens) { token in
-            // Two lines (user, 2026-11-25, amends §1954): the symbol and how
-            // many you hold over the networks it sits on; the dollars over
-            // the day.
-            // Ethereum disagreeing twice in a row (prd §1825) still takes a
-            // line of its own in amber: a warning is never folded away.
-            let differs = HoldingsCheckStore.shared.mismatched(token)
-            walletPreviewRow(token.symbol,
-                             line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
-                             lineInk: differs ? DS.attentionInk : DS.textSecondary,
-                             held: token.amount.map { WalletValue.held($0) },
-                             figure: mask ?? WalletValue.money(token.usd),
-                             move: walletHoldingMoves[HoldingMoves.key(token.symbol)], act: { act(token) }) {
-                AssetMark(name: token.symbol, size: DS.Mark.row)
-            }
-            // Hide from the row you see first, as from the Tokens list
-            // (prd §1591); the list's Hidden row brings it back.
-            .contextMenu { TokenHideMenu(position: token) { walletSetHidden($0, hidden: $1) } }
+    /// **A TOKEN ON ONE NETWORK (prd §1973 item 4):** under its network's
+    /// header, so the row is the token and how many you hold there, the
+    /// dollars over the day; no line but the amber one when Ethereum
+    /// disagrees (§1825). Its tap opens the token, on every network.
+    func walletHeldRow(_ token: WalletPortfolio.Position, network: String, usd: Double, amount: Double?,
+                       mask: String?) -> some View {
+        let differs = network == "eth-mainnet" && HoldingsCheckStore.shared.mismatched(token)
+        return walletPreviewRow(token.symbol,
+                                line: differs ? String(localized: "Doesn't match Ethereum") : nil,
+                                lineInk: DS.attentionInk,
+                                held: amount.map { WalletValue.held($0) },
+                                figure: mask ?? WalletValue.exactMoney(usd),
+                                move: walletHoldingMoves[HoldingMoves.key(token.symbol)],
+                                twoLine: true, act: { walletOpenToken(token) }) {
+            AssetMark(name: token.symbol, size: DS.Mark.row)
         }
+        .contextMenu { TokenHideMenu(position: token) { walletSetHidden($0, hidden: $1) } }
     }
 
     /// Positions' preview (prd §1525), in the page's order: each borrow by

@@ -34,14 +34,19 @@ extension FeedScreen {
             // Network · fact · place (prd §1718): on Aztec the network is the
             // place, so the line is the one word.
             ForEach(store.privateHeld) { holding in
-                let figure = mask ?? store.usd(holding, units: holding.privateUnits).map(WalletValue.money)
-                    ?? Self.aztecFigure(holding, units: holding.privateUnits)
+                // The token and how many over its network; the dollars over
+                // the day where it has a price, else none (prd §1973 item 1).
+                let usd = store.usd(holding, units: holding.privateUnits)
+                let held = Self.aztecFigure(holding, units: holding.privateUnits)
+                let figure = mask ?? usd.map(WalletValue.exactMoney)
                 // Its page, Send from Aztec on it (user, 2026-11-21: "yes i
                 // guess it should open send"); the row did nothing.
-                let page = WalletHolding(id: "aztec:\(holding.id)", symbol: holding.name, figure: figure,
-                                         usd: mask == nil ? store.usd(holding, units: holding.privateUnits) : nil,
+                let page = WalletHolding(id: "aztec:\(holding.id)", symbol: holding.name, figure: figure ?? held,
+                                         usd: mask == nil ? usd : nil,
                                          line: "Aztec", aztec: true, verbs: [.aztecSend])
                 aztecRow(title: holding.name, line: "Aztec", figure: figure, mark: holding.name, tone: DS.textPrimary,
+                         held: mask == nil ? held : nil,
+                         move: usd == nil ? nil : walletHoldingMoves[HoldingMoves.key(holding.name)],
                          page: page, act: { walletOpenHolding(page) })
             }
             .background { aztecReading }
@@ -56,20 +61,12 @@ extension FeedScreen {
             // (§1713 item 5) — a state, nobody waiting on you, never amber.
             ForEach(store.arriving) { deposit in
                 aztecRow(title: deposit.symbol, line: "Aztec · " + String(localized: "On its way"),
-                         figure: mask ?? store.usd(deposit).map(WalletValue.money) ?? AztecAccountStore.figure(deposit),
+                         figure: mask ?? store.usd(deposit).map(WalletValue.exactMoney) ?? AztecAccountStore.figure(deposit),
                          mark: nil, tone: DS.textSecondary, arriving: true)
             }
             .background { aztecArriving }
-            // Empty, the place stands where its rows will (prd §1718, §769):
-            // Aztec, saying what it takes, its tap Move's sentence to your
-            // private account on Aztec.
-            if store.privateHeld.isEmpty, store.arriving.isEmpty {
-                walletPlaceRow("Aztec", line: String(localized: "Aztec to Aztec only"), mark: nil,
-                               hint: String(localized: "Sends to Aztec")) {
-                    chrome.moveAztec = .deposit
-                    chrome.moveTray = true
-                }
-            }
+            // Empty, the place is its header at $0 (prd §1973 item 7); Add
+            // money is the way in.
         }
     }
 
@@ -82,7 +79,7 @@ extension FeedScreen {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             ForEach(store.arriving) { deposit in
                 aztecRow(title: deposit.symbol, line: "Aztec · " + String(localized: "On its way"),
-                         figure: mask ?? store.usd(deposit).map(WalletValue.money) ?? AztecAccountStore.figure(deposit),
+                         figure: mask ?? store.usd(deposit).map(WalletValue.exactMoney) ?? AztecAccountStore.figure(deposit),
                          mark: nil, tone: DS.textSecondary, arriving: true)
             }
         }
@@ -105,15 +102,21 @@ extension FeedScreen {
                 // And what Aztec has carried for the next send to mint (prd §1886).
                 let units = gas ? NSDecimalNumber(decimal: holding.gasUnits + AztecGas.carried(store.snapshot.gas ?? [])).stringValue
                     : holding.publicUnits
-                // Network · fact (prd §1718): "Aztec · Gas"; a public token,
-                // "Aztec" alone, as the Tokens rows above it name theirs.
+                let usd = gas ? nil : store.usd(holding, units: units)
+                // Under Private › Aztec (prd §1973 item 8): the line says
+                // which it is, "Private gas" or "Public gas", and a token
+                // held in the open says "Public", so the header never claims
+                // more privacy than is true. Never counted in its figure: its
+                // dollars stand grey.
                 aztecRow(title: holding.name,
                          // A row holding gas never says None (prd §1862, §83).
-                         line: gas ? Self.gasLine(Self.gasStanding(units)) : "Aztec",
-                         figure: mask ?? (gas ? nil : store.usd(holding, units: units).map(WalletValue.money))
-                             ?? Self.aztecFigure(holding, units: units),
-                         // Grey, as every Tokens row's figure is.
+                         // Under Aztec's header the row drops the network (prd §1973 item 2).
+                         line: gas ? Self.gasLine(Self.gasStanding(units), network: false) : String(localized: "Public"),
+                         figure: usd.map { mask ?? WalletValue.exactMoney($0) },
                          mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary,
+                         // Masked once: on the right where priced, else beside the name.
+                         held: usd != nil && mask != nil ? nil : mask ?? Self.aztecFigure(holding, units: units),
+                         move: usd == nil ? nil : walletHoldingMoves[HoldingMoves.key(holding.name)],
                          // The gas row opens Gas on Aztec (prd §1761).
                          act: gas ? { feedSheet = .aztecGas } : nil)
             }
@@ -125,12 +128,13 @@ extension FeedScreen {
                 if carried > 0 {
                     // Carried and waiting for the next send to mint it (prd
                     // §1886): gas you hold, never None.
-                    aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state),
-                             figure: mask ?? Self.gasFigure(carried), mark: "AZTEC", tone: DS.textSecondary,
+                    aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state, network: false),
+                             figure: nil, mark: "AZTEC", tone: DS.textPrimary,
+                             held: mask ?? Self.gasFigure(carried),
                              act: { feedSheet = .aztecGas })
                 } else {
                     // The figure says None; the line does not say it twice.
-                    aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state),
+                    aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state, network: false),
                              figure: String(localized: "None"), mark: "AZTEC", tone: DS.attentionInk,
                              act: { feedSheet = .aztecGas })
                 }
@@ -206,25 +210,27 @@ extension FeedScreen {
         return held && AztecGas.state == .none ? .enough : AztecGas.state
     }
 
-    @MainActor static func gasLine(_ state: AztecGas.Standing) -> String {
+    @MainActor static func gasLine(_ state: AztecGas.Standing, network: Bool = true) -> String {
         // Private gas is said so (user, 2026-11-19): what the private fee
         // contract holds pays the next send without naming the account.
-        let name = AztecGas.paysPrivately ? String(localized: "Aztec · Private gas") : String(localized: "Aztec · Gas")
+        let name = network
+            ? (AztecGas.paysPrivately ? String(localized: "Aztec · Private gas") : String(localized: "Aztec · Gas"))
+            : (AztecGas.paysPrivately ? String(localized: "Private gas") : String(localized: "Public gas"))
         guard let word = AztecGasTray.word(state) else { return name }
         return name + " · " + word.words
     }
 
     @ViewBuilder
-    private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color,
-                          arriving: Bool = false, page: WalletHolding? = nil, ledger: Bool = false,
-                          act: (() -> Void)? = nil) -> some View {
+    private func aztecRow(title: String, line: String, figure: String?, mark: String?, tone: Color,
+                          arriving: Bool = false, held: String? = nil, move: Double? = nil,
+                          page: WalletHolding? = nil, act: (() -> Void)? = nil) -> some View {
         if let act {
             Button {
                 DSHaptic.selection()
                 act()
             } label: {
                 aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving,
-                              ledger: ledger)
+                              held: held, move: move)
                     .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -233,56 +239,17 @@ extension FeedScreen {
             .walletListRow()
         } else {
             aztecRowLabel(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving,
-                          ledger: ledger)
+                          held: held, move: move)
                 .walletListRow()
         }
     }
 
-    /// `ledger`: Public's one line at 40pt (prd §1954), the line's words
-    /// after the name; else the name over its line at 52.
-    @ViewBuilder
-    private func aztecRowLabel(title: String, line: String, figure: String, mark: String?, tone: Color,
-                               arriving: Bool, ledger: Bool = false) -> some View {
-        if ledger {
-            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                aztecRowMark(mark: mark, arriving: arriving)
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    Text(verbatim: title)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .layoutPriority(1)
-                    // Aztec's own ink (prd §1779).
-                    Text(verbatim: line)
-                        .dsText(.fact15)
-                        .foregroundStyle(DS.aztecInk)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                walletRowFigure(figure, tone: tone)
-            }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // its List row carries the air (prd §1954)
-        } else {
-            aztecRowStacked(title: title, line: line, figure: figure, mark: mark, tone: tone, arriving: arriving)
-        }
-    }
-
-    private func aztecRowMark(mark: String?, arriving: Bool) -> some View {
-        Group {
-            if arriving {
-                Image(systemName: "clock").dsGlyph(.body, weight: .regular).foregroundStyle(DS.textSecondary)
-            } else if let mark {
-                AssetMark(name: mark, size: DS.Mark.row)
-            } else {
-                ProtocolInlineMark(mark: "aztec")
-            }
-        }
-        .frame(width: DSRoomChassis.headGlyph)
-        .accessibilityHidden(true)
-    }
-
-    private func aztecRowStacked(title: String, line: String, figure: String, mark: String?, tone: Color,
-                                 arriving: Bool) -> some View {
+    /// **ONE ROW (prd §1973 item 1):** the token and how many over its grey
+    /// line, the dollars over the day. The line is grey like every row's:
+    /// colour is a move or a warning, never a place (item 3, retiring
+    /// §1779's ink on balance lists).
+    private func aztecRowLabel(title: String, line: String, figure: String?, mark: String?, tone: Color,
+                               arriving: Bool, held: String?, move: Double?) -> some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             Group {
                 if arriving {
@@ -295,25 +262,13 @@ extension FeedScreen {
             }
             .frame(width: DSRoomChassis.headGlyph)
             .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                // The line's word carries the place (prd §1718): no small
-                // mark beside it.
-                // Aztec's own ink on its line (prd §1779): a different world, seen in the list.
-                Text(verbatim: line)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.aztecInk)
-                    .lineLimit(1)
-            }
+            walletLedgerWords(title, held: held, fact: line)
             Spacer(minLength: DS.Space.s2)
-            walletRowFigure(figure, tone: tone)
+            walletFigureOverDay(figure, tone: tone, move: move)
         }
-        .walletRowPitch()
+        .walletTwoLineHead()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: [title, line, figure].joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [title, held, line, figure].compactMap { $0 }.joined(separator: ". ")))
     }
 
     // MARK: - Authorizations given to Aztec apps (prd §1762)

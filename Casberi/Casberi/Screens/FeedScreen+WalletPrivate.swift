@@ -22,26 +22,17 @@ extension FeedScreen {
     var walletPrivateRows: some View {
         let store = PrivateMoneyStore.shared
         let rows = store.rows
+        // **BY PLACE (prd §1973 item 7):** each place Home lists, in Home's
+        // order, under a header that is Home's line word for word and dollar
+        // for dollar; its rows under it, never merged with another place's.
+        let places = walletShowsPrivatePlaces ? homePrivatePlaces : []
         // Yours and All only (prd §1590): private money is your Casberi
         // account's, never a followed wallet's or an app's pick. Privacy
         // Pools has no pick (prd §1738): its tile lands here.
-        if selectedSeat == nil, !walletOnFollowing,
-           selectedWallet.map(YourAccountDemo.isYours) ?? true,
-           PrivateMove.available || !rows.isEmpty {
+        if walletShowsPrivatePlaces, !places.isEmpty || !rows.isEmpty {
             let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
             Group {
-                // Your Aztec account's rows stand under this head on All and
-                // Yours (`walletAztecRows`), so its figure adds them (prd §1700e).
-                let aztecStore = AztecAccountStore.shared
-                // Railgun's tokens too (prd §1721): one Private balance.
-                let railgun = RailgunHoldings.shared
-                let railgunRows = selectedSeat == nil ? railgun.shown : []
-                let aztec = (selectedSeat == nil && aztecStore.isShown
-                    ? aztecStore.privateHeld.compactMap { aztecStore.usd($0, units: $0.privateUnits) }.reduce(0, +) : 0)
-                    + railgunRows.compactMap { railgun.usd($0, units: $0.amount) }.reduce(0, +)
-                    // Your Tacit account's last reading (`walletTacitRow`), as Home counts it.
-                    + (selectedSeat == nil ? walletTacitUSD : 0)
-                walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices, plus: aztec))
+                walletPrivateHead(total: mask ?? walletPrivateTotal(rows, prices: store.shownPrices, places: places))
                     .task(id: rows.map(\.id)) {
                         await store.refresh()
                         await store.readPrices()
@@ -79,36 +70,105 @@ extension FeedScreen {
                         .walletListRow()
                         .transition(.opacity)
                 }
-                ForEach(rows) { row in
-                    walletPrivateRow(row, mask: mask, prices: store.shownPrices)
+                // What the private balances add up to against your goal
+                // (§1835): all of Private's, so under its head, before any
+                // one place's header.
+                walletSavingsGoalRow(mask: mask)
+                // Empty, a place is its header at $0 (§769: what would fill
+                // it, empty); Add money, last, is the way in.
+                ForEach(places) { place in
+                    walletPlaceHead(place, mask: mask)
+                    walletPlaceRows(place, rows: rows, mask: mask)
                 }
-                // Railgun's tokens (prd §1713, §1721): whatever the wallet
-                // holds, spendable first, then what Railgun's screening has
-                // yet to list.
-                if selectedSeat == nil {
-                    walletRailgunRows(mask: mask)
-                    walletTacitRow(mask: mask)
-                }
-                // What arrived at a one-time address and has not moved in
-                // (prd §1778): never invisible.
-                walletFreshWaitingRows(mask: mask, prices: store.shownPrices)
-                // Empty, the place stands where its rows will (prd §1718, by
-                // §769's rule: an empty state draws what would fill it): one
-                // row for Privacy Pools, named and marked as a holding's line
-                // ends, saying what it takes; its tap is the Private head's,
-                // Send to your private balance.
-                // One row whatever protocol sits behind it (prd §1719): the
-                // token decides Privacy Pools or Railgun, never the person.
-                if rows.isEmpty, RailgunHoldings.shared.shown.isEmpty, !store.restoring, PrivateMove.available,
-                   walletFreshWaiting.isEmpty {
-                    walletPlaceRow("Privacy Pools",
-                                   line: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
-                                   mark: nil,
-                                   hint: String(localized: "Sends to Privacy Pools")) {
-                        walletOpenPrivate(.deposit)
-                    }
+                // Privacy Pools' notes in a build that cannot move to private
+                // still stand, under no header.
+                if !places.contains(where: { $0.id == Self.homePoolsPlace }) {
+                    walletPlaceRows(HomePlace(id: Self.homePoolsPlace, name: "Privacy Pools", usd: nil),
+                                    rows: rows, mask: mask)
                 }
             }
+        }
+    }
+
+    /// Where a private place's header goes: Tacit's page, or a send to
+    /// Privacy Pools or Aztec; nil for a place with no such door.
+    func walletPlaceDoor(_ id: String) -> (() -> Void)? {
+        switch id {
+        case Self.homeTacitPlace: { chrome.landWallet(on: .tacit) }
+        case Self.homePoolsPlace where PrivateMove.available: {
+            chrome.movePrivately = .deposit
+            chrome.moveTray = true
+        }
+        case Self.homeAztecPlace where Self.aztecTakesMoney: {
+            chrome.moveAztec = .deposit
+            chrome.moveTray = true
+        }
+        default: nil
+        }
+    }
+
+    /// The rows under one private place's header (prd §1973 item 7).
+    @ViewBuilder
+    func walletPlaceRows(_ place: HomePlace, rows: [PrivateMoney.Row], mask: String?) -> some View {
+        let store = PrivateMoneyStore.shared
+        switch place.id {
+        case Self.homePoolsPlace:
+            ForEach(rows) { row in
+                walletPrivateRow(row, mask: mask, prices: store.shownPrices)
+            }
+            // What arrived at a one-time address and has not moved in (prd
+            // §1778): never invisible. Its addresses are Privacy Pools'.
+            walletFreshWaitingRows(mask: mask, prices: store.shownPrices)
+        case Self.homeRailgunPlace:
+            // Railgun's tokens (prd §1713, §1721): spendable first, then what
+            // Railgun's screening has yet to list.
+            walletRailgunRows(mask: mask)
+        case Self.homeAztecPlace:
+            walletAztecRows
+            // Its gas and anything it holds in the open stand with the place
+            // they serve (prd §1973 item 8), each line saying which.
+            walletAztecPublicRows
+        case Self.homeTacitPlace:
+            walletTacitRow(mask: mask)
+        default:
+            EmptyView()
+        }
+    }
+
+    /// **A PLACE'S HEADER (prd §1973 item 7):** Home's line, word for word
+    /// and dollar for dollar — the name grey, everything there in whole
+    /// dollars; the network is each row's to say. Tacit's
+    /// opens its page, as on Home; Privacy Pools' and Aztec's open a send to
+    /// them, as their empty rows did; Railgun's is words.
+    @ViewBuilder
+    func walletPlaceHead(_ place: HomePlace, mask: String?) -> some View {
+        let figure = place.usd.map { $0 < 0.01 ? "$0" : mask ?? WalletValue.exactMoney($0) } ?? ""
+        let label = HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: place.name).dsText(.fact15)
+                .foregroundStyle(DS.textSecondary).lineLimit(1)
+                .layoutPriority(1)
+            Spacer(minLength: DS.Space.s2)
+            Text(verbatim: figure).dsText(.fact15).monospacedDigit()
+                .foregroundStyle((place.usd ?? 0) < 0.01 ? DS.textSecondary : DS.textPrimary)
+                .lineLimit(1)
+        }
+        .frame(minHeight: WalletCardStyle.ledgerHead, alignment: .bottom)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: [place.name, figure].joined(separator: ". ")))
+        if let open = walletPlaceDoor(place.id) {
+            Button {
+                DSHaptic.selection()
+                open()
+            } label: { label }
+            .buttonStyle(RowPress())
+            .dsHover()
+            .accessibilityAddTraits(.isButton)
+            .walletListRow()
+        } else {
+            label
+                .accessibilityAddTraits(.isHeader)
+                .walletListRow()
         }
     }
 
@@ -158,7 +218,7 @@ extension FeedScreen {
             guard let price = prices[symbol.lowercased()], let units = Decimal(string: amount) else { return nil }
             return NSDecimalNumber(decimal: units / pow(10, decimals)).doubleValue * price
         }()
-        let figure = mask ?? usd.map(WalletValue.money) ?? PrivateMoney.figure(amount, decimals: decimals, symbol: symbol)
+        let figure = mask ?? usd.map(WalletValue.exactMoney) ?? PrivateMoney.figure(amount, decimals: decimals, symbol: symbol)
         return Button {
             DSHaptic.selection()
             // Receive, where every address money reached has its Status line
@@ -171,7 +231,7 @@ extension FeedScreen {
                     .foregroundStyle(DS.attention)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                walletLedgerWords(symbol, fact: state, factInk: DS.attentionInk)
+                walletLedgerWords(symbol, held: Self.heldWords(amount, decimals: decimals), fact: state, factInk: DS.attentionInk)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: DS.textSecondary)
             }
@@ -198,7 +258,8 @@ extension FeedScreen {
     func walletRailgunRows(mask: String?) -> some View {
         let store = RailgunHoldings.shared
         ForEach(store.spendableShown) { h in
-            walletRailgunRow(h, units: h.spendable, line: String(localized: "Ethereum · Railgun"), pending: false, mask: mask)
+            // Under Railgun's header the line is its network (prd §1973 item 2).
+            walletRailgunRow(h, units: h.spendable, line: String(localized: "Ethereum"), pending: false, mask: mask)
         }
         ForEach(store.pendingShown) { h in
             walletRailgunRow(h, units: h.pending, line: String(localized: "Private in about an hour"), pending: true, mask: mask)
@@ -220,18 +281,22 @@ extension FeedScreen {
     func walletTacitRow(mask: String?) -> some View {
         let tacit = TacitAccount.shared
         if let reading = tacit.reading, tacit.countedUSD != nil {
+            // Under Tacit's header each line is its networks (prd §1973
+            // item 2); dollars only where there is a price.
             if reading.eth > 0 {
-                walletTacitLine("ETH", fact: tacitEthLine(reading),
-                                figure: mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH"))
+                walletTacitLine("ETH", held: WalletValue.held(reading.eth), fact: tacitEthLine(reading, place: false),
+                                figure: tacit.usd.map { mask ?? WalletValue.exactMoney($0) },
+                                move: tacit.usd == nil ? nil : walletHoldingMoves[HoldingMoves.key("ETH")])
             }
             if let tac = reading.privateTACAll, tac > 0 {
-                walletTacitLine("TAC", fact: String(localized: "Tacit chain · Tacit"),
-                                figure: mask ?? tacit.privateTacUSD.map(WalletValue.money) ?? WalletValue.token(tac, "TAC"))
+                walletTacitLine("TAC", held: WalletValue.held(tac), fact: String(localized: "Tacit chain"),
+                                figure: tacit.privateTacUSD.map { mask ?? WalletValue.exactMoney($0) },
+                                move: tacit.privateTacUSD == nil ? nil : walletHoldingMoves[HoldingMoves.key("TAC")])
             }
         }
     }
 
-    private func walletTacitLine(_ symbol: String, fact: String, figure: String) -> some View {
+    private func walletTacitLine(_ symbol: String, held: String, fact: String, figure: String?, move: Double?) -> some View {
         Button {
             DSHaptic.selection()
             chrome.landWallet(on: .tacit)
@@ -240,9 +305,9 @@ extension FeedScreen {
                 AssetMark(name: symbol, size: DS.Mark.row)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                walletLedgerWords(symbol, fact: fact)
+                walletLedgerWords(symbol, held: held, fact: fact)
                 Spacer(minLength: DS.Space.s2)
-                walletRowFigure(figure)
+                walletFigureOverDay(figure, move: move)
             }
             .walletTwoLineHead()
             .contentShape(Rectangle())
@@ -251,18 +316,21 @@ extension FeedScreen {
         .dsHover()
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [symbol, fact, figure].joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [symbol, held, fact, figure].compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }
 
     private func walletRailgunRow(_ h: RailgunHoldings.Held, units: String, line: String, pending: Bool, mask: String?) -> some View {
         let store = RailgunHoldings.shared
-        let figure = mask ?? store.usd(h, units: units).map(WalletValue.money)
+        let figure = mask ?? store.usd(h, units: units).map(WalletValue.exactMoney)
             ?? RailgunHoldings.figure(units, decimals: h.decimals)
         // Its page, Send and Swap on it (user, 2026-11-21); Send opens with
         // your account in To, as the row's tap did (§1721 item 3).
+        let usd = store.usd(h, units: units)
+        let held = pending ? nil : Self.heldWords(units, decimals: h.decimals)
         let holding = WalletHolding(id: "railgun:" + h.id, symbol: h.symbol, figure: figure,
-                                    usd: mask == nil ? store.usd(h, units: units) : nil, line: line,
+                                    usd: mask == nil ? usd : nil,
+                                    line: pending ? line : String(localized: "Ethereum · Railgun"),
                                     verbs: pending ? [] : [.railgunSend(contract: h.contract), .railgunSwap(contract: h.contract)])
         return Button {
             DSHaptic.selection()
@@ -287,9 +355,10 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                walletLedgerWords(h.symbol, fact: line)
+                walletLedgerWords(h.symbol, held: held, fact: line)
                 Spacer(minLength: DS.Space.s2)
-                walletRowFigure(figure, tone: pending ? DS.textSecondary : DS.textPrimary)
+                walletFigureOverDay(figure, tone: pending ? DS.textSecondary : DS.textPrimary,
+                                    move: pending || usd == nil ? nil : walletHoldingMoves[HoldingMoves.key(h.symbol)])
             }
             .walletTwoLineHead()
             .contentShape(Rectangle())
@@ -299,43 +368,7 @@ extension FeedScreen {
         .contextMenu { walletHoldingMenu(holding) }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [h.symbol, line, figure].joined(separator: ". ")))
-        .walletListRow()
-    }
-
-    /// **A PRIVATE PLACE WITH NOTHING IN IT YET (prd §1718).** The row a
-    /// holding there will take — the place's mark in the lead, its name, the
-    /// line saying what it takes, no figure — so an empty Private section
-    /// shows the places you have (Privacy Pools, Aztec; Railgun with its
-    /// Holdings), one each, and a tap opens Move's sentence to that place.
-    /// A place appears only once it exists for you; nothing promises one
-    /// you don't have.
-    func walletPlaceRow(_ name: String, line: String, mark: String?, hint: String,
-                        act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                // Private's eye where no one mark stands for the place.
-                Group {
-                    if let mark {
-                        BridgeIcon(name: mark, size: DS.Face.badge, circular: true)
-                    } else {
-                        Image(systemName: "eye.slash").dsGlyph(.body).foregroundStyle(DS.textSecondary)
-                    }
-                }
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
-                walletLedgerWords(name, fact: line)
-                Spacer(minLength: DS.Space.s2)
-            }
-            .walletTwoLineHead()
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .dsHover()
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [name, line].joined(separator: ". ")))
-        .accessibilityHint(Text(verbatim: hint))
+        .accessibilityLabel(Text(verbatim: [h.symbol, held, line, figure].compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }
 
@@ -509,12 +542,15 @@ extension FeedScreen {
         .lineLimit(1)
     }
 
-    /// The section's total: the private dollars, as the box counts them; with
-    /// none to count (test money, §949), one token's quantity, else nothing.
-    private func walletPrivateTotal(_ rows: [PrivateMoney.Row], prices: [String: Double], plus aztec: Double = 0) -> String? {
+    /// The section's total: its places' sum, Home's Private dollar for
+    /// dollar (prd §1973 item 7); with none to count (test money, §949), one
+    /// token's quantity, else nothing.
+    private func walletPrivateTotal(_ rows: [PrivateMoney.Row], prices: [String: Double], places: [HomePlace]) -> String? {
         let held = rows.filter { $0.kind == .held }
+        let sum = places.reduce(0) { $0 + ($1.usd ?? 0) }
+        if sum >= 0.01 || places.contains(where: { $0.usd != nil }) { return WalletValue.exactMoney(sum) }
         let usd = held.compactMap { PrivateMoney.rowUSD($0, prices: prices) }
-        if !usd.isEmpty || aztec > 0 { return WalletValue.money(usd.reduce(0, +) + aztec) }
+        if !usd.isEmpty { return WalletValue.money(usd.reduce(0, +)) }
         guard held.count == 1, let only = held.first else { return nil }
         return PrivateMoney.figure(only.amount, decimals: only.decimals, symbol: only.symbol)
     }
@@ -567,7 +603,7 @@ extension FeedScreen {
     /// (`walletPreviewRow`) with a line under the name — the network for
     /// private money, the state for the rest.
     private func walletPrivateRow(_ row: PrivateMoney.Row, mask: String?, prices: [String: Double]) -> some View {
-        let figure = mask ?? PrivateMoney.rowUSD(row, prices: prices).map(WalletValue.money)
+        let figure = mask ?? PrivateMoney.rowUSD(row, prices: prices).map(WalletValue.exactMoney)
             ?? PrivateMoney.figure(row.amount, decimals: row.decimals, symbol: row.symbol)
         let (glyph, hue, state, stateInk): (String?, Color, String, Color) = switch row.kind {
         // What earns says so, in the one Holdings grammar (prd §1718,
@@ -577,7 +613,8 @@ extension FeedScreen {
         // in amber, in place of its line (prd §1569a).
         case .held where PrivateMoneyStore.shared.mismatched:
             (nil, DS.textSecondary, String(localized: "Doesn't match Ethereum"), DS.attentionInk)
-        case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)
+        // Under Privacy Pools' header the line drops the place (prd §1973 item 2).
+        case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row, place: false), DS.textSecondary)
         // Nobody waits on you (prd §1841): grey, and it says who it waits on.
         // Since when (prd §1938): the oldest deposit it sums, by day.
         case .waiting: ("clock", DS.textSecondary, PrivateMoney.beingChecked(since: PrivateMoneyStore.shared.notes
@@ -585,9 +622,15 @@ extension FeedScreen {
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
         // Its page, Send on it (user, 2026-11-21), as every holding's.
+        // Its page stands alone, so its line keeps the place.
         let holding = WalletHolding(id: "private:" + row.id, symbol: row.symbol, title: row.title, figure: figure,
                                     usd: mask == nil ? PrivateMoney.rowUSD(row, prices: prices) : nil,
-                                    line: state, verbs: [.privateSend])
+                                    line: row.kind == .held && !PrivateMoneyStore.shared.mismatched
+                                        ? PrivateMoneyStore.shared.heldLine(row) : state,
+                                    verbs: [.privateSend])
+        let usd = PrivateMoney.rowUSD(row, prices: prices)
+        let held = row.kind == .held ? Self.heldWords(row.amount, decimals: row.decimals) : nil
+        let move = row.kind == .held && usd != nil ? walletHoldingMoves[HoldingMoves.key(row.symbol)] : nil
         return Button {
             // Being checked: its steps (prd §1787), nothing to send yet, and
             // Take it back for the notes it sums (§1576, §1841).
@@ -616,10 +659,10 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                // The whole line: "Ethereum · 1.5% on Aave · Privacy Pools".
-                walletLedgerWords(row.title, fact: state, factInk: stateInk)
+                // "ETH 0.0382" over "Ethereum · 1.5% on Aave".
+                walletLedgerWords(row.title, held: held, fact: state, factInk: stateInk)
                 Spacer(minLength: DS.Space.s2)
-                walletRowFigure(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary)
+                walletFigureOverDay(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary, move: move)
             }
             .walletTwoLineHead()
             .contentShape(Rectangle())
@@ -629,7 +672,7 @@ extension FeedScreen {
         .contextMenu { if row.kind != .waiting { walletHoldingMenu(holding) } }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [row.title, state, figure].joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [row.title, held, state, figure].compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }
 }
@@ -789,17 +832,28 @@ extension FeedScreen {
     /// **A LEDGER ROW'S WORDS (prd §1954, §1956):** the name, then one short
     /// fact after it in grey on the same line. The name never gives way; the
     /// fact is cut at its tail.
-    func walletLedgerWords(_ name: String, fact: String?, factInk: Color = DS.textTertiary,
+    func walletLedgerWords(_ name: String, held: String? = nil, fact: String?, factInk: Color = DS.textTertiary,
                            nameInk: Color = DS.textPrimary) -> some View {
         // **TWO LINES (user, 2026-11-25: "i just don't think we have room
         // with it all on one line if we want to show the full information";
         // amends §1954, §1956): the name over the whole line, network · fact
-        // · place (§1718).**
+        // · place (§1718).** How many you hold after the name, grey, on every
+        // token (prd §1973 item 1), as the Public rows draw it.
         VStack(alignment: .leading, spacing: 2) {
-            Text(verbatim: name)
-                .dsText(.body17)
-                .foregroundStyle(nameInk)
-                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(verbatim: name)
+                    .dsText(.body17)
+                    .foregroundStyle(nameInk)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                if let held {
+                    Text(verbatim: held)
+                        .dsText(.fact15)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textTertiary)
+                        .lineLimit(1)
+                }
+            }
             if let fact, !fact.isEmpty {
                 Text(verbatim: fact)
                     .dsText(.subhead12)
@@ -807,6 +861,35 @@ extension FeedScreen {
                     .lineLimit(1)
             }
         }
+    }
+}
+
+extension FeedScreen {
+    /// **THE RIGHT SIDE OF A ROW (prd §1973 item 1):** the dollars over the
+    /// day's move. No figure, nothing; a move that rounds to zero draws
+    /// nothing (§83); the move never stands beside the dollars.
+    func walletFigureOverDay(_ figure: String?, tone: Color = DS.textPrimary, move: Double?) -> some View {
+        let day = move.map { WatchlistRules.change($0 * 100) }
+        let moved = day.map { $0.tone == .up || $0.tone == .down } ?? false
+        return VStack(alignment: .trailing, spacing: 2) {
+            if let figure {
+                walletRowFigure(figure, tone: tone)
+            }
+            if let day, moved, figure != nil {
+                Text(verbatim: day.words)
+                    .dsText(.subhead12)
+                    .monospacedDigit()
+                    .foregroundStyle(day.tone == .up ? DS.confirmInk : DS.destructiveInk)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    /// How many of a token, from its base units: the amount beside a row's
+    /// name (prd §1973 item 1), masked under Hide balances.
+    static func heldWords(_ units: String, decimals: Int) -> String {
+        let whole = (Decimal(string: units) ?? 0) / pow(10, decimals)
+        return WalletValue.held(NSDecimalNumber(decimal: whole).doubleValue)
     }
 }
 
@@ -822,8 +905,9 @@ extension View {
 extension FeedScreen {
     /// Where your Tacit account's private ETH sits: "Ethereum · Robinhood ·
     /// Tacit", by network, most first; "Tacit" alone with no split read.
-    func tacitEthLine(_ reading: TacitAccount.Reading) -> String {
+    /// `place: false` under Tacit's own header (prd §1973 item 2).
+    func tacitEthLine(_ reading: TacitAccount.Reading, place: Bool = true) -> String {
         let names = reading.held.filter { $0.eth > 0 }.sorted { $0.eth > $1.eth }.map(\.network)
-        return (names + [TacitAccount.name]).joined(separator: " · ")
+        return (names + (place ? [TacitAccount.name] : [])).joined(separator: " · ")
     }
 }

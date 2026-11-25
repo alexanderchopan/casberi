@@ -136,14 +136,16 @@ final class PrivateMoneyStore {
     /// holds it last — the one grammar every Holdings row reads in, so a
     /// Railgun row beside this one is told apart by its last word, not by a
     /// corner mark.
-    func heldLine(_ row: PrivateMoney.Row) -> String {
+    /// `place: false` under Holdings' Privacy Pools header, which already
+    /// names it (prd §1973 item 2): "Ethereum · 1.1% on Aave".
+    func heldLine(_ row: PrivateMoney.Row, place named: Bool = true) -> String {
         let network = PrivateMoney.network(row.chainId)
-        let place = PrivacyPoolsBridge.sourceName
+        let place = named ? [PrivacyPoolsBridge.sourceName] : []
         guard row.kind == .held, let pool = PrivacyNetwork.forChain(row.chainId)?.yield.first(where: { $0.symbol == row.symbol }) else {
-            return [network, place].joined(separator: " · ")
+            return ([network] + place).joined(separator: " · ")
         }
         let apy = heldAPY(row, pool: pool)
-        return [network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), place].joined(separator: " · ")
+        return ([network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave")] + place).joined(separator: " · ")
     }
 
     /// A held row's one-line fact on Holdings (prd §1960), worded as a lent

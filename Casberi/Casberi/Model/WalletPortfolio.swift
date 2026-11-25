@@ -129,6 +129,10 @@ struct WalletPortfolio: Equatable, Codable {
     /// not a wallet, and not an app either.
     static let privateHolderID = "private"
 
+    /// Your Aztec account's private block (`AztecAccountStore.holderID`):
+    /// private money, never a Public row (prd §1973 item 9).
+    static let aztecHolderID = "aztec"
+
     static let privyHolderPrefix = "privy:"
 
     /// Every non-wallet place holding money, biggest first, totalled across
@@ -291,7 +295,8 @@ struct WalletPortfolio: Equatable, Codable {
     /// Apps, Tokens, Lent and Private add up to the Wallet's number.
     func tokensOnly(appsApart: Bool) -> WalletPortfolio {
         scoped { holder in
-            holder != Self.privateHolderID && holder != Self.lentHolderID && !(appsApart && Self.isVenue(holder))
+            holder != Self.privateHolderID && holder != Self.aztecHolderID && holder != Self.lentHolderID
+                && !(appsApart && Self.isVenue(holder))
         }
     }
 
@@ -493,7 +498,8 @@ struct WalletPortfolio: Equatable, Codable {
         // Private and Lent, by their holders (never a symbol another file
         // owns: this file compiles alone in `wallet-viz-selftest.sh`).
         for p in positions {
-            for h in p.holders where h.address == Self.privateHolderID || h.address == Self.lentHolderID {
+            for h in p.holders where h.address == Self.privateHolderID || h.address == Self.aztecHolderID
+                || h.address == Self.lentHolderID {
                 bySymbol[p.symbol, default: 0] += h.usd
             }
         }

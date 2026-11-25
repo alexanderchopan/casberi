@@ -77,16 +77,20 @@ struct WalletTokenRowLabel: View {
                 }
             }
             Spacer(minLength: DS.Space.s2)
-            // **THE AMOUNT PINS TO THE EDGE, THE SHARE STANDS BEFORE IT**
-            // (user, 2026-09-26: "the dollar values should be aligned").
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            // **THE DOLLARS OVER THE DAY (prd §1973 item 1, retiring §1954's
+            // move beside them):** the dollars pin to the edge (user,
+            // 2026-09-26: "the dollar values should be aligned").
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(WalletValue.exactMoney(position.usd))
+                    .dsText(.price17).foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
                 // The day's move, where a read has one (prd §1090).
                 // A move that rounds to nothing says nothing (§83, prd
                 // §1338): a stablecoin's "0.0%" is dropped, not greyed.
                 if let move {
                     if !TokenChartStyle.isFlat(move) {
                         Text(TokenChartStyle.changeText(move))
-                            .dsText(.fact15)
+                            .dsText(.subhead12)
                             .foregroundStyle(move > 0 ? DS.confirmInk : DS.destructiveInk)
                             .monospacedDigit()
                     }
@@ -94,13 +98,10 @@ struct WalletTokenRowLabel: View {
                     let pct = Int((position.usd / total * 100).rounded())
                     if pct >= 1 {
                         Text("\(pct)%")
-                            .dsText(.fact15).foregroundStyle(DS.textTertiary)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             .monospacedDigit()
                     }
                 }
-                Text(WalletValue.money(position.usd))
-                    .dsText(.price17).foregroundStyle(DS.textPrimary)
-                    .monospacedDigit()
             }
         }
         .frame(minHeight: twoLine ? DSFeed.headHeight : WalletCardStyle.ledgerHead)

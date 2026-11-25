@@ -80,7 +80,7 @@ struct WalletHoldingSheet: View {
                     .padding(.horizontal, DS.Space.s4)
                 Text(verbatim: holding.line)
                     .dsText(.body17)
-                    .foregroundStyle(holding.aztec ? DS.aztecInk : DS.textSecondary)
+                    .foregroundStyle(DS.textSecondary) // never a place's colour (prd §1973 item 3)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s1)
