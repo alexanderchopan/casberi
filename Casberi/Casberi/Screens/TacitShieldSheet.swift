@@ -72,7 +72,7 @@ struct TacitShieldSheet: View {
                     HStack(spacing: DS.Space.s2) {
                         Button { pick(.account) } label: { Chip(text: "Casberi", selected: from == .account) }
                             .buttonStyle(PressSpring())
-                        Button { pick(.wallet) } label: { Chip(text: String(localized: "Your wallet"), selected: from == .wallet) }
+                        Button { pick(.wallet) } label: { Chip(text: String(localized: "Co-signer"), selected: from == .wallet) }
                             .buttonStyle(PressSpring())
                     }
                 }
@@ -155,15 +155,23 @@ struct TacitShieldSheet: View {
         }
         .dsText(.heading34)
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            step(String(localized: "Proved"), state: provedState,
-                 figure: shield.proveMs.map { "\(Int((Double($0) / 1000).rounded())) s" })
-            step(String(localized: "Your wallet signs"), state: signState, figure: signFigure)
+            // While it proves, the seconds count, so a slow read is seen
+            // moving, never a spinner alone.
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                step(String(localized: "Proved"), state: provedState, figure: provedFigure(at: context.date))
+            }
+            step(String(localized: "Co-signer signs"), state: signState, figure: signFigure)
             step(String(localized: "Tacit takes it"), state: takeState, figure: nil)
         }
         .padding(.top, DS.Space.s6)
     }
 
     private enum StepState { case waiting, now, done }
+
+    private func provedFigure(at now: Date) -> String? {
+        if let since = shield.provingSince { return "\(Int(now.timeIntervalSince(since))) s" }
+        return shield.proveMs.map { "\(Int((Double($0) / 1000).rounded())) s" }
+    }
 
     private var provedState: StepState {
         if case .proving = shield.step { return .now }
@@ -229,6 +237,9 @@ struct TacitShieldSheet: View {
                     shield.reset()
                     if let tac { Task { await shield.quote(tac: tac) } }
                 }
+            case .proving, .signing, .handing:
+                // The steps above say where it is; the foot stays quiet.
+                EmptyView()
             default:
                 if !TacitEngine.shared.isOpen, !DemoMode.isActive, let coSigner, (tac ?? 0) > 0, (tac ?? 0) <= held {
                     // Closed, the account is opened here, then quoted: never a
@@ -261,10 +272,10 @@ struct TacitShieldSheet: View {
 
     private var footWaiting: String {
         guard let tac, tac > 0 else { return String(localized: "Type an amount") }
-        if tac > held { return String(localized: "More than your wallet holds") }
+        if tac > held { return String(localized: "More than it holds") }
         switch account.phase {
         case .connecting: return String(localized: "Connecting")
-        case .signing: return String(localized: "Your wallet signs")
+        case .signing: return String(localized: "Co-signer signs")
         default: break
         }
         return String(localized: "Reading the fee")

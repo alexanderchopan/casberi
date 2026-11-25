@@ -101,7 +101,7 @@ final class TacitShield {
         do {
             // 1. Proved on this phone.
             step = .proving
-            let proved = try await TacitEngine.shared.shieldProve(units: units)
+            let proved = try await prove()
             proveMs = proved.proveMs
             // 2. Checked against the chain itself, before the wallet is asked.
             guard let inboxData = TacitPermit.inboxCall(proved.deposit, back: proved.back),
@@ -134,7 +134,7 @@ final class TacitShield {
                   let text = String(data: json, encoding: .utf8) else { throw Stop.unreadable }
             let tac = Double(units) / 1e8
             let signature = try await SignerRequestSheet.asking(
-                signer: coSigner, title: String(localized: "Your wallet signs \(TacitAccountRows.amount(tac)) TAC to Tacit")) { ask in
+                signer: coSigner, title: String(localized: "Co-signer signs \(TacitAccountRows.amount(tac)) TAC to Tacit")) { ask in
                 try await YourAccountSignerLink.signForApp(
                     method: "eth_signTypedData_v4", params: [coSigner, text], digest: digest, signer: coSigner,
                     resend: ask.resends, sent: { ask.ask(kept: $0) },
@@ -170,7 +170,7 @@ final class TacitShield {
         let alikeDone = UserDefaults.standard.bool(forKey: Self.alikeKey(coSigner))
         do {
             step = .proving
-            let proved = try await TacitEngine.shared.shieldProve(units: units)
+            let proved = try await prove()
             proveMs = proved.proveMs
             guard let inboxData = TacitPermit.inboxCall(proved.deposit, back: proved.back),
                   let inboxWord = await Self.ethCall(to: TacitChain.blocks, data: inboxData),
@@ -213,6 +213,43 @@ final class TacitShield {
         } catch {
             step = .failed(TacitAccount.words(error))
         }
+    }
+
+    /// The longest the proof and the return path's slot may take. Asked
+    /// after the DeFi read, about ten seconds; cold, through Tor, about three
+    /// minutes. Past this the sheet says so and offers Try again, never a
+    /// spinner that does not end (user, 2026-11-25: "just stays on this
+    /// screen forever spinning"). The engine's read keeps going, so a second
+    /// try picks up its answer.
+    static let proveLimit: Double = 240
+
+    /// When the proof began, for the seconds the sheet counts.
+    private(set) var provingSince: Date?
+
+    private func prove() async throws -> TacitEngineWire.ShieldProved {
+        let units = self.units
+        provingSince = .now
+        defer { provingSince = nil }
+        let once = Once()
+        return try await withCheckedThrowingContinuation { cont in
+            Task { @MainActor in
+                do {
+                    let p = try await TacitEngine.shared.shieldProve(units: units)
+                    if once.take() { cont.resume(returning: p) }
+                } catch {
+                    if once.take() { cont.resume(throwing: error) }
+                }
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(Self.proveLimit))
+                if once.take() { cont.resume(throwing: Stop.tooLong) }
+            }
+        }
+    }
+
+    @MainActor private final class Once {
+        private var taken = false
+        func take() -> Bool { if taken { return false }; taken = true; return true }
     }
 
     /// Asks the leader every few seconds until the deposit lands or is
@@ -259,14 +296,16 @@ final class TacitShield {
         case unreadable
         case refused(TacitPermit.Problem)
         case signsDifferently
+        case tooLong
 
         var words: String {
             switch self {
+            case .tooLong: return String(localized: "Tacit took too long. Try again")
             case .unreadable: return String(localized: "Tacit could not be read")
-            case .signsDifferently: return String(localized: "Your wallet signs differently each time, so it can't hold a Tacit key")
+            case .signsDifferently: return String(localized: "Your co-signer signs differently each time, so it can't hold a Tacit key")
             case .refused(let p):
                 switch p {
-                case .notEnough: return String(localized: "More than your wallet holds")
+                case .notEnough: return String(localized: "More than it holds")
                 case .feeRose: return String(localized: "Tacit's fee rose. Try again for a new quote")
                 case .overCap: return String(localized: "More than Tacit takes in one deposit")
                 default: return String(localized: "This deposit didn't check out, so nothing was asked")

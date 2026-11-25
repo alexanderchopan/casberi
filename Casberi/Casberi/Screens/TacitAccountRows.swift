@@ -165,7 +165,7 @@ struct TacitAccountRows: View {
                 // In dollars, as every row under it is; the amount moves
                 // into the line (user, 2026-11-24: "the tac just shows tac
                 // but not the dollar amount").
-                line("TAC", fact: "\(Self.amount(tac)) · \(String(localized: "Your wallet"))",
+                line("TAC", fact: "\(Self.amount(tac)) · \(String(localized: "Co-signer"))",
                      figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
                     .walletListRow()
             } else {
@@ -296,7 +296,7 @@ struct TacitAccountRows: View {
                     .walletListRow()
             }
             copyRow(String(localized: "Public address"),
-                    fact: String(localized: "Your wallet · \(AddressTail.short(reading.coSigner))"),
+                    fact: String(localized: "Co-signer · \(AddressTail.short(reading.coSigner))"),
                     value: reading.coSigner)
                 .walletListRow()
         }

@@ -74076,6 +74076,90 @@
         }
       }
     },
+    "Co-signer signs" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firma el cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者が署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자가 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同签名人签名"
+          }
+        }
+      }
+    },
+    "Co-signer signs %@ TAC to Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El cofirmante firma %@ TAC a Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者が %@ TAC を Tacit へ署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자가 Tacit으로 %@ TAC 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同签名人签署 %@ TAC 至 Tacit"
+          }
+        }
+      }
+    },
+    "Co-signer · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cofirmante · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同签名人 · %@"
+          }
+        }
+      }
+    },
     "Co-signs any move over your spend limit. Activates on your first move." : {
       "localizations" : {
         "es" : {
@@ -123758,6 +123842,34 @@
         }
       }
     },
+    "More than it holds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más de lo que tiene"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保有額を超えています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보유액보다 많습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超过其持有量"
+          }
+        }
+      }
+    },
     "More than you have" : {
       "localizations" : {
         "es" : {
@@ -123782,34 +123894,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "超过你的持有量"
-          }
-        }
-      }
-    },
-    "More than your wallet holds" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Más de lo que tiene tu billetera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ウォレットの残高を超えています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지갑 잔액보다 많음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "超过钱包余额"
           }
         }
       }
@@ -199553,6 +199637,34 @@
         }
       }
     },
+    "Tacit took too long. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit tardó demasiado. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit の応答に時間がかかりすぎました。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 응답이 너무 오래 걸렸습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 用时过长,请重试"
+          }
+        }
+      }
+    },
     "Tacit's chain didn't take it. It goes back to your DeFi pool." : {
       "localizations" : {
         "es" : {
@@ -241950,6 +242062,34 @@
         }
       }
     },
+    "Your co-signer signs differently each time, so it can't hold a Tacit key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu cofirmante firma distinto cada vez, así que no puede guardar una clave de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者の署名が毎回異なるため、Tacit の鍵を保持できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자의 서명이 매번 달라 Tacit 키를 보관할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的共同签名人每次签名都不同,因此无法持有 Tacit 密钥"
+          }
+        }
+      }
+    },
     "Your co-signer signs in to Shield" : {
       "localizations" : {
         "es" : {
@@ -246536,146 +246676,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包共享了 1 个地址。关注为只读 — 永远无法交易或转移资金。"
-          }
-        }
-      }
-    },
-    "Your wallet signs" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu billetera firma"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ウォレットが署名"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지갑이 서명"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的钱包签名"
-          }
-        }
-      }
-    },
-    "Your wallet signs %@ TAC to Tacit" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu billetera firma %@ TAC a Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ウォレットが%@ TACをTacitへ署名"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지갑이 %@ TAC를 Tacit으로 서명"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的钱包签署 %@ TAC 至 Tacit"
-          }
-        }
-      }
-    },
-    "Your wallet signs differently each time, so it can't hold a Tacit key" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu billetera firma distinto cada vez, así que no puede tener una clave de Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ウォレットの署名が毎回異なるため、Tacitの鍵を保てません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지갑 서명이 매번 달라 Tacit 키를 보관할 수 없습니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的钱包每次签名不同，无法持有 Tacit 密钥"
-          }
-        }
-      }
-    },
-    "Your wallet · %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu billetera · %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あなたのウォレット · %@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내 지갑 · %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的钱包 · %@"
-          }
-        }
-      }
-    },
-    "Your wallet · Tacit" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu billetera · Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あなたのウォレット · Tacit"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내 지갑 · Tacit"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的钱包 · Tacit"
           }
         }
       }

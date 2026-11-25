@@ -229,21 +229,7 @@ extension FeedScreen {
         }
     }
 
-    /// **YOUR WALLET'S TAC, IN HOLDINGS' PUBLIC (user, 2026-11-25: "my
-    /// public tacit doesn't show in my holdings").** The TAC your co-signer's
-    /// wallet holds, as Tacit's page reads it: a row, the door to that page.
-    /// Never in Public's figure, as Aztec's public rows are not: the wallet
-    /// is your co-signer, not one of your accounts.
-    @ViewBuilder
-    func walletTacitPublicRow(mask: String?) -> some View {
-        let tacit = TacitAccount.shared
-        if selectedSeat == nil, let reading = tacit.reading, let tac = reading.publicTAC, tac > 0 {
-            walletTacitLine("TAC", figure: mask ?? tacit.tacPrice.map { WalletValue.money(tac * $0) } ?? WalletValue.token(tac, "TAC"),
-                            fact: String(localized: "Your wallet · Tacit"))
-        }
-    }
-
-    private func walletTacitLine(_ symbol: String, figure: String, fact: String = TacitAccount.name) -> some View {
+    private func walletTacitLine(_ symbol: String, figure: String) -> some View {
         Button {
             DSHaptic.selection()
             chrome.landWallet(on: .tacit)
@@ -252,7 +238,7 @@ extension FeedScreen {
                 AssetMark(name: symbol, size: DS.Mark.row)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                walletLedgerWords(symbol, fact: fact)
+                walletLedgerWords(symbol, fact: TacitAccount.name)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure)
             }
@@ -263,7 +249,7 @@ extension FeedScreen {
         .dsHover()
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [symbol, fact, figure].joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [symbol, TacitAccount.name, figure].joined(separator: ". ")))
         .walletListRow()
     }
 

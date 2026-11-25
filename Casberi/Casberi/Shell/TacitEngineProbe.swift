@@ -100,6 +100,19 @@ enum TacitEngineProbe {
                         let q = try await TacitEngine.shared.shieldQuote(units: 100_000_000)
                         let p = try await TacitEngine.shared.shieldProve(units: 100_000_000)
                         log("prove", ms(t), "fee \(q.sweepFee) arrives \(q.arrives) · proved in \(p.proveMs) ms · inbox \(p.inbox) · value \(p.value) · index \(p.index)")
+                    case "race":
+                        // The phone's hang (2026-11-25): Make private asked
+                        // while the DeFi read was still going. The slot read
+                        // now waits for it; this proves alongside it.
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        async let d = TacitEngine.shared.defi()
+                        try await Task.sleep(for: .seconds(2))
+                        _ = try await TacitEngine.shared.shieldQuote(units: 100_000_000)
+                        let p = try await TacitEngine.shared.shieldProve(units: 100_000_000)
+                        let proved = ms(t)
+                        let r = try await d
+                        log("race", proved, "proved in \(p.proveMs) ms · index \(p.index) · defi \(r.ms) ms")
                     case "resume":
                         // A scan, then one resumed from where it stopped:
                         // the second tries only what came after.

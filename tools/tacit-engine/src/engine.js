@@ -52,7 +52,13 @@ let pending = null;
 // The return path's next free slot, asked for as soon as a deposit is
 // quoted: reading it takes about a minute, the proof about ten seconds.
 let backIndex = null;
-function forget() { identity?.fill(0); identity = null; client = null; pending = null; backIndex = null; }
+// The DeFi read in flight. Its pass of the pool holds every Wrap log, so the
+// return path's slot waits for it and reads only what came after; asked at
+// once, the two passes read the whole pool twice through Tor, and on a phone
+// the second never ended (user, 2026-11-25: "just stays on this screen
+// forever spinning").
+let defiRead = null;
+function forget() { identity?.fill(0); identity = null; client = null; pending = null; backIndex = null; defiRead = null; }
 
 function poolUx() {
   setActiveNetwork('mainnet');
@@ -62,7 +68,8 @@ function poolUx() {
 function nextBackIndex() {
   if (!backIndex) {
     const key = Uint8Array.from(identity);
-    backIndex = poolUx().nextWrapIndex({ walletPriv: key, ticker: 'TAC' }).finally(() => key.fill(0));
+    const warm = defiRead ? defiRead.catch(() => {}) : Promise.resolve();
+    backIndex = warm.then(() => poolUx().nextWrapIndex({ walletPriv: key, ticker: 'TAC' })).finally(() => key.fill(0));
     backIndex.catch(() => { backIndex = null; });
   }
   return backIndex;
@@ -192,22 +199,11 @@ const methods = {
   // says it has read them all. 8 decimals, as on the Tacit chain.
   async defi() {
     if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
-    const t = now();
-    setActiveNetwork('mainnet');
-    pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet' });
-    const key = Uint8Array.from(identity);
-    try {
-      let r = await pool.balance(key, { spent: true, positions: false, recent: 150 });
-      let passes = 1;
-      while (r.reading && passes < 6) { r = await pool.balance(key, { spent: true, positions: false, recent: 0 }); passes++; }
-      const id = String(pool.assetByTicker.cTAC?.assetId || '').toLowerCase();
-      const held = id ? r.byAsset?.[id] : null;
-      return {
-        worth: hex(held ? held.value : 0n), notes: held?.notes?.length ?? 0, leaves: Number(r.leafCount ?? 0),
-        whole: !r.reading, errors: Object.keys(r.diag?.errors || {}), passes, ms: Math.round(now() - t),
-      };
-    } finally { key.fill(0); }
+    const read = readDefi();
+    defiRead = read;
+    try { return await read; } finally { if (defiRead === read) defiRead = null; }
   },
+
 
   // What a deposit of `units` (TAC, 8 decimals) costs and lands as now.
   async shieldQuote({ rpcUrl, blocks, leader, units }) {
@@ -305,6 +301,26 @@ async function chainClient({ rpcUrl, blocks, leader }) {
   const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
   client = makeChainClient({ cfg: { blocks, leader }, rpcCall, priv: Uint8Array.from(identity), system, storage });
   return client;
+}
+
+// The DeFi read itself (`defi`), in passes until the library says it has
+// read the whole pool.
+async function readDefi() {
+  const t = now();
+  setActiveNetwork('mainnet');
+  pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet' });
+  const key = Uint8Array.from(identity);
+  try {
+    let r = await pool.balance(key, { spent: true, positions: false, recent: 150 });
+    let passes = 1;
+    while (r.reading && passes < 6) { r = await pool.balance(key, { spent: true, positions: false, recent: 0 }); passes++; }
+    const id = String(pool.assetByTicker.cTAC?.assetId || '').toLowerCase();
+    const held = id ? r.byAsset?.[id] : null;
+    return {
+      worth: hex(held ? held.value : 0n), notes: held?.notes?.length ?? 0, leaves: Number(r.leafCount ?? 0),
+      whole: !r.reading, errors: Object.keys(r.diag?.errors || {}), passes, ms: Math.round(now() - t),
+    };
+  } finally { key.fill(0); }
 }
 
 const bigintSafe = (_, v) => (typeof v === 'bigint' ? hex(v) : v);
