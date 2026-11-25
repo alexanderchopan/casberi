@@ -218,6 +218,13 @@ final class LendMove {
     var figure: String {
         guard let m = market else { return symbol }
         guard let units else { return "0 \(m.symbol)" }
+        // A claim is Olla's figure, not one typed: whole AZTEC, rounded down
+        // (it pays at least this), never six places of false precision.
+        if claims, let d = Decimal(string: units) {
+            var whole = d / pow(10, m.decimals), rounded = Decimal()
+            NSDecimalRound(&rounded, &whole, 0, .down)
+            return "\(rounded.formatted(.number.precision(.fractionLength(0)))) \(m.symbol)"
+        }
         return PrivateMoney.figure(units, decimals: m.decimals, symbol: m.symbol)
     }
 
