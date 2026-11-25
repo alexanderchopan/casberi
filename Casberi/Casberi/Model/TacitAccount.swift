@@ -70,6 +70,9 @@ final class TacitAccount {
         /// True when the key's record names a PQ ID: its notes are under a
         /// passkey this phone does not hold, so `privateTAC` may be short.
         var privateElsewhere: Bool? = nil
+        /// TAC in your Casberi account, on Ethereum: public too, and made
+        /// private from there by a send. nil when not read.
+        var accountTAC: Double? = nil
         /// TAC held privately in Tacit's DeFi pool; nil when not read whole.
         var defiTAC: Double? = nil
         /// Your Tacit chain address (`tc1…`), for a sender of private TAC.
@@ -90,7 +93,14 @@ final class TacitAccount {
 
         /// Public and private TAC together; nil when none was read.
         var tac: Double? {
-            publicTAC == nil && privateTACAll == nil ? nil : (publicTAC ?? 0) + (privateTACAll ?? 0)
+            publicTAC == nil && privateTACAll == nil && accountTAC == nil ? nil
+                : (publicTAC ?? 0) + (accountTAC ?? 0) + (privateTACAll ?? 0)
+        }
+
+        /// Public TAC in both places: your co-signer's wallet and your
+        /// Casberi account; nil when neither was read.
+        var publicAll: Double? {
+            publicTAC == nil && accountTAC == nil ? nil : (publicTAC ?? 0) + (accountTAC ?? 0)
         }
 
         var eth: Double { held.map(\.eth).reduce(0, +) }
@@ -115,7 +125,7 @@ final class TacitAccount {
         receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
         held: [Held(chainId: 1, network: "Ethereum", eth: 0.42, waiting: 0, pool: 14.7, reached: true),
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
-        asOf: .now, publicTAC: 240, privateTAC: 310, defiTAC: 0,
+        asOf: .now, publicTAC: 240, privateTAC: 310, accountTAC: 55, defiTAC: 0,
         chainAddress: "tc1" + String(repeating: "3f", count: 40) + "c91d",
         earnedTAC: 2.1, earnedSince: Date.now.addingTimeInterval(-21 * 86_400))
     static let demoPrice = 3_850.0
@@ -293,6 +303,9 @@ final class TacitAccount {
                               chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, earnedSince: reading.earnedSince)
             keep(reading)
             if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
+            if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
+                update(me) { $0.accountTAC = tac }
+            }
             await readPrice()
             // The Tacit chain and the DeFi pool, side by side: each is kept
             // the moment it answers.

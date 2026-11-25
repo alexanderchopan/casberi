@@ -259,6 +259,18 @@ const methods = {
     return { id, kept: JSON.stringify(kept) };
   },
 
+  // The same hand-off with no permit, for TAC your Casberi account pays
+  // into the inbox itself: the leader holds the deposit until the inbox is
+  // funded, then puts it in a block. Asked BEFORE the account pays, so a
+  // refusal costs nothing.
+  async shieldOffer() {
+    if (!pending) throw Object.assign(new Error('nothing is proved'), { name: 'NothingProved' });
+    const p = pending;
+    const { id, kept } = await p.s.offer({ back: p.back, meta: { inbox: p.inbox, src: 'casberi-account' } });
+    pending = null;
+    return { id, kept: JSON.stringify(kept) };
+  },
+
   // A handed deposit's state at the leader: queued, landed or refused.
   async shieldStatus({ leader, id }) {
     const r = await fetch(leader.replace(/\/$/, '') + '/receipt/' + encodeURIComponent(id));

@@ -12,10 +12,16 @@ struct TacitShieldSheet: View {
     @Bindable var account = TacitAccount.shared
     @Environment(\.dismiss) private var dismiss
     @State private var amount = ""
+    @State private var source: TacitShield.Source?
     @FocusState private var typing: Bool
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
-    private var held: Double { account.reading?.publicTAC ?? 0 }
+    private var walletHeld: Double { account.reading?.publicTAC ?? 0 }
+    private var accountHeld: Double { account.reading?.accountTAC ?? 0 }
+    /// Where it comes from: your Casberi account first when it holds TAC
+    /// (what Buy TAC buys), else your wallet; a choice only when both do.
+    private var from: TacitShield.Source { source ?? (accountHeld > 0 ? .account : .wallet) }
+    private var held: Double { from == .account ? accountHeld : walletHeld }
     private var tac: Double? { Double(amount.replacingOccurrences(of: ",", with: ".")) }
 
     var body: some View {
@@ -61,6 +67,17 @@ struct TacitShieldSheet: View {
                 label("To")
                 Chip(text: "Tacit", glyph: "lock.fill")
             }
+            if walletHeld > 0, accountHeld > 0 {
+                GridRow {
+                    label("From")
+                    HStack(spacing: DS.Space.s2) {
+                        Button { pick(.account) } label: { Chip(text: "Casberi", selected: from == .account) }
+                            .buttonStyle(PressSpring())
+                        Button { pick(.wallet) } label: { Chip(text: String(localized: "Your wallet"), selected: from == .wallet) }
+                            .buttonStyle(PressSpring())
+                    }
+                }
+            }
             GridRow {
                 label("Token")
                 HStack(spacing: DS.Space.s2) {
@@ -104,7 +121,16 @@ struct TacitShieldSheet: View {
         }
     }
 
+    private func pick(_ s: TacitShield.Source) {
+        DSHaptic.selection()
+        source = s
+        amount = TacitAccountRows.amount(held)
+    }
+
+    /// From your wallet the leader's sweep fee is paid in TAC; from your
+    /// Casberi account the send pays its own gas, as every send does.
     private var feeWords: String {
+        if from == .account { return String(localized: "Network fee, as any send") }
         guard let q = shield.quote, let fee = TacitPermit.number(q.sweepFee) else { return "—" }
         return Self.tacText(NSDecimalNumber(decimal: fee / pow(Decimal(10), 18)).doubleValue)
     }
@@ -205,7 +231,7 @@ struct TacitShieldSheet: View {
                              enabled: canSend) {
                     typing = false
                     guard let coSigner else { return }
-                    Task { await shield.send(coSigner: coSigner) }
+                    Task { await shield.send(coSigner: coSigner, from: from) }
                 }
             case .arriving, .landed:
                 MoveFootWord(word: String(localized: "Done")) { dismiss() }

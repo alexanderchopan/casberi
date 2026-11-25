@@ -184,6 +184,10 @@ final class TacitEngine: NSObject {
         try await call(.shieldHand, permit, as: Wire.ShieldHanded.self)
     }
 
+    func shieldOffer() async throws -> Wire.ShieldHanded {
+        try await call(.shieldOffer, Wire.Empty(), as: Wire.ShieldHanded.self)
+    }
+
     func shieldStatus(id: String) async throws -> Wire.ShieldStatus {
         try await call(.shieldStatus, Wire.ShieldStatusAsk(leader: TacitChain.leader, id: id), as: Wire.ShieldStatus.self)
     }

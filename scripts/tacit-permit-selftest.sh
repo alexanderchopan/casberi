@@ -68,6 +68,15 @@ check(run(proved(deadline: 1795582125 + 30)) == .deadline, "a permit about to en
 check(run(proved(), balance: Decimal(string: "23000000000000000000")!) == .notEnough, "more than the wallet holds is let through")
 check(run(proved(), q: W.ShieldQuote(fee: "0x17a602", arrives: "0x8e0948f5", cap: "0x3b9aca00", sweepFee: fee)) == .overCap, "a deposit over Tacit's cap is let through")
 
+// From your Casberi account: no permit, the same inbox, amount, cap and balance.
+func runT(_ p: W.ShieldProved, chainInbox: String = inbox, balance: Decimal = plenty, u: UInt64 = units) -> P.Problem? {
+    P.checkTransfer(proved: p, quote: quote, units: u, chainInbox: chainInbox, balance: balance)
+}
+check(runT(proved()) == nil, "a good deposit from the account is refused")
+check(runT(proved(), chainInbox: "0x" + String(repeating: "8", count: 40)) == .wrongInbox, "the account pays an inbox the chain did not compute")
+check(runT(proved(units: "0x8e283641")) == .wrongValue, "the account pays for a proof of another amount")
+check(runT(proved(), balance: Decimal(string: "23000000000000000000")!) == .notEnough, "the account pays more than it holds")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   ethers' permit digest, the inbox and nonces calls, and every check")
 SWIFT
@@ -94,4 +103,5 @@ mutate "the deadline is not bounded"      's/left > 60, left <= longest/left > 6
 mutate "the balance is not checked"       's/guard balance >= value else \{ return \.notEnough \}//'
 mutate "the domain's version moves"       's/static let version = "1"/static let version = "2"/'
 mutate "the owner is not the co-signer"   's/guard owner\.caseInsensitiveCompare\(coSigner\) == \.orderedSame else \{ return \.notTheCoSigner \}//'
-print "✓ tacit permit: ethers' digest, the chain's inbox, the exact value, the fee, the deadline, the balance (7 mutations)"
+mutate "the account's inbox is not compared" 's/(checkTransfer[\s\S]*?)guard proved\.inbox\.lowercased\(\) == chainInbox\.lowercased\(\), isAddress\(chainInbox\) else \{ return \.wrongInbox \}/$1/'
+print "✓ tacit permit: ethers' digest, the chain's inbox, the exact value, the fee, the deadline, the balance, from the wallet and the account (8 mutations)"

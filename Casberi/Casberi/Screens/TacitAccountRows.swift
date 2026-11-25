@@ -90,7 +90,7 @@ struct TacitAccountRows: View {
 
     /// Public's sum: the public TAC in dollars, or its amount with no price.
     private func publicFigure(_ reading: TacitAccount.Reading) -> String? {
-        guard let tac = reading.publicTAC else { return nil }
+        guard let tac = reading.publicAll else { return nil }
         return account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC")
     }
 
@@ -165,7 +165,7 @@ struct TacitAccountRows: View {
                 // In dollars, as every row under it is; the amount moves
                 // into the line (user, 2026-11-24: "the tac just shows tac
                 // but not the dollar amount").
-                line("TAC", fact: Self.amount(tac),
+                line("TAC", fact: "\(Self.amount(tac)) · \(String(localized: "Your wallet"))",
                      figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
                     .walletListRow()
             } else {
@@ -176,9 +176,28 @@ struct TacitAccountRows: View {
             // we were going to make tacit option to make private is not in
             // tacit website").** Tacit's own Send, in a sheet; the website
             // door it replaced is deleted.
-            if let tac = reading.publicTAC, tac > 0, let makePrivate {
+            // TAC in your Casberi account (what Buy TAC buys) is public too.
+            if let tac = reading.accountTAC, tac > 0 {
+                line("TAC", fact: "\(Self.amount(tac)) · Casberi",
+                     figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
+                    .walletListRow()
+            }
+            if (reading.publicAll ?? 0) > 0, let makePrivate {
                 actionRow(String(localized: "Make private"), glyph: "lock") { makePrivate() }
                     .walletListRow()
+            }
+            // **BUY TAC (user, 2026-11-24, "do all").** Swap opens to buy it
+            // into your Casberi account, on the pool Swap pins; from there it
+            // is made private here (item 21).
+            if YourAccountDemo.shownAddress != nil {
+                actionRow(String(localized: "Buy TAC"), glyph: "arrow.left.arrow.right") {
+                    Task { @MainActor in
+                        guard let draft = await MoveSentence.watchedDraft(id: "ethereum:\(TacitPocket.tacToken.lowercased())", symbol: "TAC") else { return }
+                        chrome.moveDraft = draft
+                        chrome.moveTray = true
+                    }
+                }
+                .walletListRow()
             }
         }
         Section {

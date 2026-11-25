@@ -127619,6 +127619,34 @@
         }
       }
     },
+    "Network fee, as any send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comisión de red, como cualquier envío"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ネットワーク手数料（通常の送金と同じ）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "네트워크 수수료, 일반 송금과 동일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网络费用，与普通发送相同"
+          }
+        }
+      }
+    },
     "Network under a cent" : {
       "localizations" : {
         "es" : {
@@ -245920,6 +245948,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你等待中的转出已离开内存池 — 已被替换或丢弃"
+          }
+        }
+      }
+    },
+    "Your wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu billetera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的钱包"
           }
         }
       }

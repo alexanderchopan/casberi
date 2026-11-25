@@ -86,9 +86,16 @@ final class TacitShield {
         }
     }
 
+    /// Where the TAC comes from: your co-signer's wallet, by a permit it
+    /// signs, or your Casberi account, by a send to the deposit's inbox
+    /// (user, 2026-11-25: "if a user is going to swap in casberi why not swap
+    /// into casberi account", then "ok great" to making it private from there).
+    enum Source: Equatable { case wallet, account }
+
     /// Proves, checks, asks the co-signer, hands it to the leader, and waits.
-    func send(coSigner: String) async {
+    func send(coSigner: String, from source: Source = .wallet) async {
         guard case .ready = step, let quote, units > 0, TacitEngine.shared.isOpen else { return }
+        if source == .account { await sendFromAccount(coSigner: coSigner, quote: quote); return }
         let alikeDone = UserDefaults.standard.bool(forKey: Self.alikeKey(coSigner))
         let signatures = alikeDone ? 1 : 2
         do {
@@ -141,6 +148,60 @@ final class TacitShield {
                 r: "0x" + Keccak256.hexString(Array(signature[0..<32])),
                 s: "0x" + Keccak256.hexString(Array(signature[32..<64]))))
             TacitShieldKept.save(handed.kept, id: handed.id)
+            arriving.append(Arriving(id: handed.id, tac: tac, at: .now))
+            keepArriving()
+            step = .arriving
+            Task { await self.watch(handed.id, coSigner: coSigner) }
+        } catch is CancellationError {
+            step = .ready
+        } catch let stop as Stop {
+            step = .failed(stop.words)
+        } catch {
+            step = .failed(TacitAccount.words(error))
+        }
+    }
+
+    /// From your Casberi account: proved, checked, the deposit handed to the
+    /// leader first (a refusal costs nothing), then your account sends the
+    /// TAC to its inbox as any send goes, Face ID and your co-signer's
+    /// approval included.
+    private func sendFromAccount(coSigner: String, quote: TacitEngineWire.ShieldQuote) async {
+        guard let account = YourAccountKey.address else { step = .failed(Stop.unreadable.words); return }
+        let alikeDone = UserDefaults.standard.bool(forKey: Self.alikeKey(coSigner))
+        do {
+            step = .proving
+            let proved = try await TacitEngine.shared.shieldProve(units: units)
+            proveMs = proved.proveMs
+            guard let inboxData = TacitPermit.inboxCall(proved.deposit, back: proved.back),
+                  let inboxWord = await Self.ethCall(to: TacitChain.blocks, data: inboxData),
+                  let chainInbox = TacitPermit.address(fromWord: inboxWord),
+                  let balance = await TacitPocket.publicTAC(of: account).map({ Decimal($0) * pow(Decimal(10), 18) })
+            else { throw Stop.unreadable }
+            if let problem = TacitPermit.checkTransfer(proved: proved, quote: quote, units: units,
+                                                       chainInbox: chainInbox, balance: balance) {
+                throw Stop.refused(problem)
+            }
+            // The first time, Tacit's message once more: the same key.
+            if !alikeDone {
+                step = .signing(done: 0, of: 2)
+                var again = try await TacitPocket.signIn(coSigner: coSigner)
+                defer { for i in again.indices { again[i] = 0 } }
+                guard TacitAccount.shared.isKey(again) else { throw Stop.signsDifferently }
+                UserDefaults.standard.set(true, forKey: Self.alikeKey(coSigner))
+            }
+            step = .handing
+            let handed = try await TacitEngine.shared.shieldOffer()
+            TacitShieldKept.save(handed.kept, id: handed.id)
+            // Your account's own send: TAC, exactly the amount, to the inbox
+            // the chain's contract named.
+            step = .signing(done: alikeDone ? 0 : 1, of: alikeDone ? 1 : 2)
+            let wei = TacitPermit.text(Decimal(units) * pow(Decimal(10), 10))
+            let payment = YourAccountOp.Payment(network: YourAccountOp.ethereum,
+                                                token: .init(symbol: "TAC", decimals: 18, contract: TacitPermit.token),
+                                                amount: wei, to: EIP55.checksum(chainInbox), toName: "Tacit")
+            let sent = try await YourAccountChain.send([payment], reason: String(localized: "Make private"), stage: { _ in })
+            if case .dryRun = sent.outcome { throw Stop.unreadable }
+            let tac = Double(units) / 1e8
             arriving.append(Arriving(id: handed.id, tac: tac, at: .now))
             keepArriving()
             step = .arriving

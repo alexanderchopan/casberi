@@ -14,7 +14,7 @@ enum TacitEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, read, chain, defi, close
-        case shieldQuote, shieldProve, shieldHand, shieldStatus
+        case shieldQuote, shieldProve, shieldHand, shieldOffer, shieldStatus
     }
 
     typealias Failure = PrivacyEngineWire.Failure

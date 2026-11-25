@@ -125,8 +125,9 @@ hasnt "$JS" "provider:" "the engine hands the wallet a provider: a wallet with o
 # and it moves only by a permit the app checks and the co-signer signs: the
 # engine proves (`.shield(`), hands it to the leader (`.offer(`, once, in
 # `shieldHand`) and never sends a transaction or calls another moving verb.
-[[ "$(grep -c "\.offer(" "$JS")" == "1" ]] || fail "the engine hands a deposit to the leader from more than one place"
-grep -A12 "async shieldHand" "$JS" | grep -qF ".offer(" || fail "the engine's one hand-off is not in shieldHand"
+[[ "$(grep -c "\.offer(" "$JS")" == "2" ]] || fail "the engine hands a deposit to the leader from somewhere new"
+grep -A12 "async shieldHand" "$JS" | grep -qF ".offer(" || fail "the permit hand-off is not in shieldHand"
+grep -A8 "async shieldOffer" "$JS" | grep -qF ".offer({ back: p.back, meta:" || fail "the account's hand-off carries something besides the return path"
 for verb in ".deposit(" ".send(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts" ".spend(" ".publish(" ".makeNote(" ".submit(" "sendTransaction" "eth_sendRawTransaction"; do
   hasnt "$JS" "$verb" "the engine calls $verb: it reads only"
 done

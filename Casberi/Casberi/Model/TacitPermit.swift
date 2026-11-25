@@ -86,6 +86,20 @@ enum TacitPermit {
         return nil
     }
 
+    /// The checks for TAC your Casberi account pays into the inbox itself, no
+    /// permit: the proof is for this amount, the inbox is the chain's, the
+    /// account holds it, and it is under Tacit's cap. The send that pays it
+    /// is your account's own, checked and simulated as every send is.
+    static func checkTransfer(proved: TacitEngineWire.ShieldProved, quote: TacitEngineWire.ShieldQuote,
+                              units: UInt64, chainInbox: String, balance: Decimal) -> Problem? {
+        guard let provedUnits = number(proved.units) else { return .malformed }
+        guard provedUnits == Decimal(units) else { return .wrongValue }
+        guard proved.inbox.lowercased() == chainInbox.lowercased(), isAddress(chainInbox) else { return .wrongInbox }
+        if let cap = quote.cap.flatMap(number), Decimal(units) > cap { return .overCap }
+        guard balance >= Decimal(units) * pow(Decimal(10), 10) else { return .notEnough }
+        return nil
+    }
+
     /// The call that asks the chain's contract which inbox a deposit and
     /// its return path make: `inbox(shares, amount, cx, cy, body, back)`.
     static func inboxCall(_ d: TacitEngineWire.Deposit, back: String) -> String? {
