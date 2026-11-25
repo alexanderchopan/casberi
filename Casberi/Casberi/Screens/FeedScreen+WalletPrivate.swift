@@ -78,12 +78,12 @@ extension FeedScreen {
                 // it, empty); Add money, last, is the way in.
                 ForEach(places) { place in
                     walletPlaceHead(place, mask: mask)
-                    walletPlaceRows(place, rows: rows, mask: mask)
+                    walletPrivateGroupRows(place, rows: rows, mask: mask)
                 }
                 // Privacy Pools' notes in a build that cannot move to private
                 // still stand, under no header.
                 if !places.contains(where: { $0.id == Self.homePoolsPlace }) {
-                    walletPlaceRows(HomePlace(id: Self.homePoolsPlace, name: "Privacy Pools", usd: nil),
+                    walletPrivateGroupRows(HomePlace(id: Self.homePoolsPlace, name: "Privacy Pools", usd: nil),
                                     rows: rows, mask: mask)
                 }
             }
@@ -109,7 +109,7 @@ extension FeedScreen {
 
     /// The rows under one private place's header (prd §1973 item 7).
     @ViewBuilder
-    func walletPlaceRows(_ place: HomePlace, rows: [PrivateMoney.Row], mask: String?) -> some View {
+    func walletPrivateGroupRows(_ place: HomePlace, rows: [PrivateMoney.Row], mask: String?) -> some View {
         let store = PrivateMoneyStore.shared
         switch place.id {
         case Self.homePoolsPlace:

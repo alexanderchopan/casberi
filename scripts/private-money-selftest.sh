@@ -173,7 +173,8 @@ use "Casberi/Casberi/Screens/FeedScreen+WalletTiles.swift" 'guard let seat = Roo
 # On the deck it stands in the receipt, ready (prd §1927).
 use "Casberi/Casberi/Screens/MovePrivate.swift" 'if let hidden { hiddenLine(hidden) }' "a private send no longer says how hidden it is (prd §1738)"
 use "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" 'let tokens = portfolioShown?.tokensOnly(appsApart: walletOnAll).positions ?? []' "the Tokens rows count private, lent or an app's money twice (prd §1696)"
-use "Casberi/Casberi/Model/WalletPortfolio.swift" 'holder != Self.privateHolderID && holder != Self.lentHolderID && !(appsApart && Self.isVenue(holder))' "Tokens keeps a holder another section counts (prd §1696)"
+# Aztec's private block too (prd §1973 item 9: it stood in Public as well).
+use "Casberi/Casberi/Model/WalletPortfolio.swift" 'holder != Self.privateHolderID && holder != Self.aztecHolderID && holder != Self.lentHolderID' "Tokens keeps a holder another section counts (prd §1696, §1973)"
 use "Casberi/Casberi/Screens/FeedScreen+Sheets.swift" 'let portfolio = whole.hiding(walletHidden).tokensOnly(appsApart: walletOnAll)' "the Tokens sheet counts private, lent or an app's money twice (prd §1696)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'venues: cash + privy + privately + lent,' "Lent is not in the Wallet's number (prd §1695)"
 use "Casberi/Casberi/Model/WalletIngest.swift" 'let (candidates, reached) = await heldCandidates(addresses: addresses)' "the holdings read skips the aToken filter (prd §1695)"
@@ -407,8 +408,9 @@ sim=$(grep -n 'let simulated = await check(net, account: account' "$TMP0" | cut 
 req=$(grep -n 'try require(simulated, on: net, swaps: false)' "$TMP0" | cut -d: -f1)
 op=$(grep -n 'let outcome = try await operate(' "$TMP0" | cut -d: -f1)
 [[ -n "$sim" && -n "$req" && -n "$op" && "$sim" -lt "$req" && "$req" -lt "$op" ]] || { echo "✗ a private call is signed before its simulation is required to land"; exit 1; }
-use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row), DS.textSecondary)' "a private row no longer says its rate"
-use Casberi/Casberi/Model/PrivateMoneyStore.swift 'return [network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave"), place].joined(separator: " · ")' "a private row is not worded as a lent row: \"3.8% on Aave · Ethereum\" (prd §1690)"
+# Under Privacy Pools' header the line drops the place (prd §1973 item 2).
+use "$HOLD" 'case .held: (nil, DS.textSecondary, PrivateMoneyStore.shared.heldLine(row, place: false), DS.textSecondary)' "a private row no longer says its rate"
+use Casberi/Casberi/Model/PrivateMoneyStore.swift 'return ([network, PrivateYield.line(apy: apy) ?? String(localized: "On Aave")] + place).joined(separator: " · ")' "a private row is not worded as a lent row: \"3.8% on Aave · Ethereum\" (prd §1690)"
 use "$HOLD" 'await store.readYield()' "Holdings no longer reads the rate live"
 ! grep -q 'apys\[.*\] = [0-9]' "$STORE" || { echo "✗ a rate is written in, not read"; exit 1; }
 use "$TAKE" 'let (hash, figure, pending) = try await PrivateOnEthereum.takeBack(note)' "Take it back on Ethereum is not your account's"
@@ -1277,7 +1279,9 @@ use "$HOLD" '(YourAccountKey.address != nil || DemoMode.isActive) && AztecProver
 use "$SENT" '(YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable' "Send's To list changed when it offers Aztec: Add money's rule must follow (prd §1776)"
 use "$SENT" 'if let which = d.opens { open = which }' "a draft no longer opens its blank: Add money lands on a closed sentence (prd §1776)"
 use "$SENT" 'withID: nil, buy: nil, buyOn: nil, to: "", at: Date(), opens: .to)' "Add money's draft no longer opens To (prd §1776)"
-awk '/^            walletAztecRows$/{a=NR} /^            walletAddMoneyRow$/{m=NR} END{exit !(a && m && a<m)}' "$PAGES" \
+# Aztec's rows stand inside Private's block (prd §1973 item 7), so Add
+# money follows the block.
+awk '/^            walletPrivateRows$/{a=NR} /^            walletAddMoneyRow$/{m=NR} END{exit !(a && m && a<m)}' "$PAGES" \
     || { echo "✗ Add money is not the Private section's last row (prd §1776, §995)"; exit 1; }
 # No slider anywhere in Move (prd §1776, finishing §1754).
 [[ ! -e Casberi/Casberi/Design/DSShareSlider.swift ]] || { echo "✗ Move's slider is back (prd §1776)"; exit 1; }

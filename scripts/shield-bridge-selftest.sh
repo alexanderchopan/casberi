@@ -181,9 +181,10 @@ awk '/func warm\(\)/,/^    }/' "$STORE" | grep -q 'await AztecArrivals.settle()'
   || { echo "✗ a deposit is claimed only while Move's sentence stands again: the Wallet's open, its Holdings row or Move no longer asks"; exit 1; }
 awk '/static func settle\(\) async/{s=1} s&&/markShieldClaimed\(d.nonce\)/{m=NR} s&&/PrivateActivity.land\(hash: d.transaction,/{l=NR} s&&/await AztecAccountStore.shared.refresh\(\)/{r=NR} END{exit !(m && l && r && m<l && l<r)}' "$APP" \
   || { echo "✗ a claimed deposit no longer lands its Activity row, or lands it before the claim stood"; exit 1; }
+# The empty place is its header at $0 since prd §1973 item 7 (the row went).
 grep -q 'ForEach(store.arriving) { deposit in' "$HOLD" \
-  && grep -q 'if store.privateHeld.isEmpty, store.arriving.isEmpty {' "$HOLD" \
-  || { echo "✗ Holdings no longer draws a deposit on its way into Aztec, or draws the empty place beside it"; exit 1; }
+  && grep -q 'out.append(HomePlace(id: Self.homeAztecPlace, name: "Aztec", usd: sum(aztecUSD)))' "Casberi/Casberi/Screens/FeedScreen+HomeHead.swift" \
+  || { echo "✗ Holdings no longer draws a deposit on its way into Aztec, or Aztec's place when it is empty"; exit 1; }
 grep -q 'return DemoMode.isActive ? \[\] : (snapshot.shield ?? \[\]).filter { !$0.claimed }' "$STORE" \
   || { echo "✗ a deposit on its way is drawn in the demo, or after it was claimed"; exit 1; }
 awk '/var arriving: \[ShieldDeposit\]/,/^    }/' "$STORE" | awk '/#if DEBUG/{d=1} /#endif/{d=0} /aztecArrivingSample"\)/{if(!d) bad=1; seen=1} END{exit !(seen && !bad)}' \
