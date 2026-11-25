@@ -148633,6 +148633,34 @@
         }
       }
     },
+    "Open Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit を開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 Tacit"
+          }
+        }
+      }
+    },
     "Open Telegram Desktop on a computer" : {
       "localizations" : {
         "es" : {
@@ -162395,6 +162423,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "公开频道"
+          }
+        }
+      }
+    },
+    "Public gas" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開ガス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 가스"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公开 Gas"
           }
         }
       }
@@ -176899,6 +176955,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "凑整，%@"
+          }
+        }
+      }
+    },
+    "Round-ups, %@ of %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondeos, %1$@ de %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "おつり貯金、%2$@ 中 %1$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기, %2$@ 중 %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱储蓄，%2$@ 中的 %1$@"
           }
         }
       }
@@ -199409,6 +199493,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "系统"
+          }
+        }
+      }
+    },
+    "TAC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC"
+          }
+        }
+      }
+    },
+    "TAC · Ethereum" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC · Ethereum"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC · Ethereum"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC · Ethereum"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC · Ethereum"
           }
         }
       }
@@ -269525,6 +269665,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "给"
+          }
+        }
+      }
+    },
+    "to " : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a "
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "→ "
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "→ "
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到 "
           }
         }
       }
