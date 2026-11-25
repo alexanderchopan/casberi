@@ -156,7 +156,13 @@ def key_of(net, pid, created):
         # found near, not at, the estimate: a window either side of it.
         head = rpc(net, "eth_getBlockByNumber", ["latest", False])["result"]
         b = int(head["number"], 16) - (int(head["timestamp"], 16) - ts) // n["blocktime"]
-        spans = [(hex(b - n["window"]), hex(b + n["window"]))]
+        # MEV Blocker's node reads 10,000 blocks of logs at most (measured
+        # 2026-11-24: "range 120000 exceeds limit of 10000"), so the window
+        # is walked in pieces, nearest the estimate first.
+        step, lo0 = 10_000, b - n["window"]
+        pieces = [(lo0 + i * step, lo0 + (i + 1) * step - 1) for i in range(2 * n["window"] // step)]
+        pieces.sort(key=lambda p: abs((p[0] + p[1]) // 2 - b))
+        spans = [(hex(lo), hex(hi)) for lo, hi in pieces]
     elif net == "base":
         b = (ts - n["genesis"]) // n["blocktime"]
         spans = [(hex(b - 500), hex(b + 499))]

@@ -72,6 +72,10 @@ extension FeedScreen {
         case savingsGoal
         /// Where each network is read from (prd §1517, a tray since §1803).
         case ownNodes
+        /// A service's own page beside a Wallet page (`DSWebSheet`): Tacit's,
+        /// where TAC is made private (prd §1971 item 16). Routed here for
+        /// the reason every case is: the row that opens it is in this List.
+        case web(URL)
         /// Gas on Aztec, and Add gas (prd §1761).
         case aztecGas
         /// One thing on its way, its steps (prd §1779).
@@ -116,6 +120,7 @@ extension FeedScreen {
             case .walletTokens: "walletTokens"
             case .savingsGoal: "savingsGoal"
             case .ownNodes: "ownNodes"
+            case .web(let url): "web:\(url.absoluteString)"
             case .aztecGas: "aztecGas"
             case .onItsWay(let item): "onItsWay:\(item.id)"
             case .watchToken: "watchToken"
@@ -324,6 +329,8 @@ extension FeedScreen {
             SavingsGoalTray()
         case .ownNodes:
             OwnNodeTray()
+        case .web(let url):
+            DSWebSheet(url: url) { feedSheet = nil }
         case .aztecGas:
             AztecGasTray()
         case .onItsWay(let item):

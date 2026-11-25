@@ -289,6 +289,15 @@ enum YourAccountSwap {
                pair: ["0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"]),  // WBTC / wstETH 0.25%, $2,606,497
         V4Pool(fee: 2500, tickSpacing: 25,
                pair: ["0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a", "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"]),  // apyUSD / USDC 0.25%, $1,118,722
+        // TAC, Tacit's token (prd §1971 item 17, user: "we really need to
+        // find a way you can swap for it too"): pinned under the measuring
+        // floor on purpose, because the app reads a Tacit account. Its key
+        // read off the PoolManager's `Initialize` for pool 0x6104d61f… on
+        // 2026-11-24, hashed back to the id and quoted. A 4.8% fee and about
+        // $42K: a swap of any size says how far it moves the price (§1682).
+        // Last in the list, so no pinned pool's step moves.
+        V4Pool(fee: 48000, tickSpacing: 960,
+               pair: [native, "0xa1313eb9f3a445606d9583bcac3ebeb56a858279"]),  // TAC / ETH 4.8%, $42,310
     ]
 
     /// **Robinhood Chain.** Uniswap v3 from Uniswap's deployments page ("v3

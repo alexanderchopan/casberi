@@ -1787,6 +1787,12 @@
     "Screens/AccountsGuideTray.swift:passport"
    ],
    "why": "Human Passport's page from How your accounts work's Aztec plate (prd §1962): the same `AztecBrowserView` over `HumanPassport.site` that Screens/MoveAztecPrivate.swift:passport raises; it landed with §1962 without a sweep row, and whether the sweep's demo launch can reach the guide's door is not measured"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#web"
+   ],
+   "why": "A service's own page in `DSWebSheet` (prd §1971 item 16: Tacit's, from \"Make private on Tacit\"): Safari's own controller, the same sheet every account page's door raises, whose content the sweep cannot read for an anchor; opened and closed by hand on a simulator 2026-11-24."
   }
  ]
 }

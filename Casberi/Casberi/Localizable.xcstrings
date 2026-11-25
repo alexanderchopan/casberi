@@ -120465,6 +120465,34 @@
         }
       }
     },
+    "Make private on Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hacer privado en Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitでプライベートにする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit에서 비공개로 전환"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Tacit 上设为私密"
+          }
+        }
+      }
+    },
     "Make this phone a signer" : {
       "localizations" : {
         "es" : {

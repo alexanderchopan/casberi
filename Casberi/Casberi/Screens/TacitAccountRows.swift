@@ -11,6 +11,13 @@ struct TacitAccountRows: View {
     /// The wallet app that holds each co-signer key, once a session names it.
     @State private var walletName: String?
     @State private var copied: String?
+    @Environment(\.openURL) private var openURL
+    /// Raises a web page beside this page, through the screen's one sheet
+    /// (`FeedSheetRoute.web`): a row here cannot present one itself.
+    var openPage: ((URL) -> Void)? = nil
+
+    /// Tacit's own page for TAC, where public TAC is made private.
+    static let shieldPage = URL(string: "https://tacit.finance/tac/")!
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
 
@@ -66,6 +73,24 @@ struct TacitAccountRows: View {
             .environment(\.holdingsDayMoves, account.tacMove.map { [HoldingMoves.key("TAC"): $0] } ?? [:])
     }
 
+    /// An amount as Holdings' rows say it: the number alone, the symbol
+    /// beside it already naming the token ("TAC 23.85").
+    static func amount(_ value: Double) -> String {
+        value.formatted(.number.precision(.significantDigits(1...4)))
+    }
+
+    /// Public's sum: the public TAC in dollars, or its amount with no price.
+    private func publicFigure(_ reading: TacitAccount.Reading) -> String? {
+        guard let tac = reading.publicTAC else { return nil }
+        return account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC")
+    }
+
+    /// Private's sum, what the Wallet's Private total counts (`privateUSD`);
+    /// with no price, the ETH.
+    private func privateFigure(_ reading: TacitAccount.Reading) -> String? {
+        account.privateUSD.map(WalletValue.exactMoney) ?? WalletValue.token(reading.eth, "ETH")
+    }
+
     /// The page's one figure, over the map and beside Balance: dollars when
     /// everything held has a price; else the TAC of an account holding only
     /// TAC, never "$0.00" over a row of it (user, 2026-11-24: "i'm still
@@ -117,8 +142,12 @@ struct TacitAccountRows: View {
     // MARK: - The lists
 
     @ViewBuilder private func balance(_ reading: TacitAccount.Reading) -> some View {
+        // **PUBLIC AND PRIVATE APART, AS HOLDINGS IS (prd §1718; user,
+        // 2026-11-24: "why don't we separate public and private. so it's
+        // like our own holdings").** Each side names its own sum; the page's
+        // whole figure stands over the map.
         Section {
-            head(String(localized: "Balance"), figure: Self.figure(account, reading))
+            head(String(localized: "Public"), figure: publicFigure(reading))
                 .walletListRow()
             // Public, as Tacit counts it: TAC in the co-signer's own wallet.
             // Not read is said, never left out: a missing row and an empty
@@ -127,19 +156,55 @@ struct TacitAccountRows: View {
                 // In dollars, as every row under it is; the amount moves
                 // into the line (user, 2026-11-24: "the tac just shows tac
                 // but not the dollar amount").
-                line("TAC", fact: account.tacPrice == nil ? String(localized: "Ethereum · Public")
-                        : String(localized: "Public · \(WalletValue.token(tac, "TAC"))"),
+                line("TAC", fact: Self.amount(tac),
                      figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
                     .walletListRow()
             } else {
-                line("TAC", fact: String(localized: "Public · not read"), figure: "")
+                line("TAC", fact: String(localized: "Not read"), figure: "")
                     .walletListRow()
             }
+            // **THE DOOR TO TACIT'S SITE (user, 2026-11-24: "for sure do the
+            // door").** Casberi reads and cannot move this money: making
+            // public TAC private is done on Tacit's own page, with the wallet
+            // that holds it, and shows here at the next reading. In the
+            // app's own Safari sheet, as every door here opens (user: "why
+            // doesn't it show a sheet inside casberi"); the Mac has no such
+            // sheet and opens its browser.
+            if let tac = reading.publicTAC, tac > 0 {
+                // The rows' own columns, so its words start where theirs do;
+                // `DSDoorRow`'s 18pt glyph column would start them short.
+                Button {
+                    DSHaptic.selection()
+                    #if targetEnvironment(macCatalyst)
+                    openURL(Self.shieldPage)
+                    #else
+                    if let openPage { openPage(Self.shieldPage) } else { openURL(Self.shieldPage) }
+                    #endif
+                } label: {
+                    HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                        Image(systemName: "arrow.up.right")
+                            .dsGlyph(.body, weight: .medium)
+                            .foregroundStyle(DS.brandInk)
+                            .frame(width: DSRoomChassis.headGlyph)
+                            .accessibilityHidden(true)
+                        Text("Make private on Tacit").dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: WalletCardStyle.ledgerHead)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .walletListRow()
+            }
+        }
+        Section {
+            head(String(localized: "Private"), figure: privateFigure(reading))
+                .walletListRow()
             // Private TAC on the Tacit chain: shares of one pool, at what
             // they are worth now, so what the pool has earned is in the
             // figure. Tacit's pool on Bitcoin is not read.
             if let tac = reading.privateTAC {
-                line("TAC", fact: String(localized: "Tacit chain · \(WalletValue.token(tac, "TAC"))"),
+                line("TAC", fact: "\(Self.amount(tac)) · \(String(localized: "Tacit chain"))",
                      figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
                     .walletListRow()
                 if reading.privateElsewhere == true {
@@ -151,8 +216,11 @@ struct TacitAccountRows: View {
                 line("TAC", fact: String(localized: "Tacit chain · not read"), figure: "")
                     .walletListRow()
             }
-            ForEach(reading.held) { held in
-                line("ETH", fact: String(localized: "\(held.network) · Private"),
+            // Only what is held, as Holdings lists it: a network at zero
+            // is a "$0" row that says nothing (user: "we could make it a bit
+            // more clear"). One that did not answer stays, greyed.
+            ForEach(reading.held.filter { $0.eth > 0 || !$0.reached }) { held in
+                line("ETH", fact: held.eth > 0 ? "\(Self.amount(held.eth)) · \(held.network)" : held.network,
                      figure: account.usd(held).map(WalletValue.exactMoney) ?? WalletValue.token(held.eth, "ETH"),
                      figureInk: held.reached ? DS.textPrimary : DS.textSecondary)
                     .walletListRow()
@@ -193,7 +261,9 @@ struct TacitAccountRows: View {
     }
 
     @ViewBuilder private func hidden(_ reading: TacitAccount.Reading) -> some View {
-        let pools = reading.held.filter { $0.pool != nil }
+        // Only where you hold ETH: a pool you are not in hides nothing of
+        // yours, and its row had no figure to give.
+        let pools = reading.held.filter { $0.pool != nil && $0.eth > 0 }
         if !pools.isEmpty {
             Section {
                 head(String(localized: "How hidden"), figure: nil).walletListRow()
