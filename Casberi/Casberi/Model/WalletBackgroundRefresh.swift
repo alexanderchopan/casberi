@@ -103,19 +103,12 @@ enum WalletBackgroundRefresh {
         guard let context = SharedStore.live?.mainContext else { return }
         guard let things = sweepCorpus(context) else { return }
         let (plans, photos) = NotifySweep.plans(things: things, words: WalletValue.notificationWords)
-        // **THE DEVNET SPEAKS HERE TOO (prd §522, §728).** A corpus sweep
-        // cannot reach it: the Frames devnet lands no `Thing` at all by
-        // design, and a chain being wiped belongs to no row. Merged into the
-        // SAME submit rather than sent on its own, so a devnet alarm competes
-        // in one batch with every other alarm (since prd §770 a reset does not
-        // stand alone, so it waits for the digest as one line among the rest)
-        // instead of arriving as a second buzz beside a dispute — and so
+        // An app that stopped letting us in belongs to no row (prd §1162):
+        // merged into the SAME submit rather than sent on its own, so it
+        // competes in one batch with every other alarm — and so
         // `notify-selftest.sh`'s "only one file submits" guard stays true.
-        let devnet = DevnetNotify.plans()
-        // An app that stopped letting us in belongs to no row either (prd
-        // §1162) — the same merge, the same one submit.
         let broken = ReconnectNotify.plans(seats: BridgeStore().bridges.map(\.name))
-        await Notifications.submit(plans + devnet + broken, photos: photos)
+        await Notifications.submit(plans + broken, photos: photos)
         // The daily whisper used to be re-scheduled here on every sweep; cut
         // in prd §706 (`DayBrief.whisper` still composes the feed's day line).
         // This is the one place every install passes through on foreground AND

@@ -189,8 +189,6 @@ def self_test() -> bool:
     # --- check 1 fixtures ---
     check("the shipped bug", len(body_publishes(
         'let _ = { chrome.framesSections = FramesRoomSource.sections() }()')), 1)
-    check("its Logos twin", len(body_publishes(
-        'let _ = { chrome.logosSections = LogosSection.present() }()')), 1)
     # `memo` is a plain class on purpose — writing it during a body is the
     # sanctioned pattern, and flagging it would fire on correct code.
     check("memo is not a finding", len(body_publishes(

@@ -218,7 +218,6 @@ EXEMPT = [
   dict(covers=["Screens/SocialPostViews.swift:followImport"], why="Who they follow draws only for a watched person; the demo's profile pages show Follow alone (measured @nils, @uma, @sam, 2026-10-15)"),
   dict(covers=["Screens/FeedScreen.swift:folderShare", "Screens/ThingSheetView.swift:sharingHighlight"],
        why="NOT WALKED YET: a hold on a Notes folder opened it rather than raising its menu, and no demo thing has a readable body to keep a highlight from (measured 2026-10-15)"),
-  dict(covers=[FS+"logosSend", FS+"logosChat"], why="Send needs a Logos key made on this phone and chats need a paired Observer node; the demo has neither"),
   dict(covers=[FS+"subscriptionTrack"], why="raised once after an app's first real connect (SubscriptionPlans.shouldAsk); the demo's apps are poured, never connected"),
   dict(covers=["Screens/SocialPostViews.swift:profile@2"], why="reply avatars come from a live thread fetch; the demo has no replies to tap"),
   dict(covers=[MS+"node.apps"], why="present(.apps) is rewritten to .casberi (HomeRoute.present, prd §1234), so this sheet is node.casberi's, which on the phone is the Sources page (prd §1321) and rises only on the iPad"),
@@ -230,7 +229,6 @@ EXEMPT = [
   dict(covers=["Screens/FileverseDocPage.swift:webDoor", "Shell/NoteCaptureSheet.swift:hosted&&chrome.docToRead"],
        why="NOT WALKED YET: a dDoc's page (prd §1355) and a link inside it; the journey to a demo Fileverse doc is not written (2026-10-16)"),
   dict(covers=[RS+"safeAsk", "Screens/SafeScreen.swift:pastedAsk"], why="raised by a live Safe pairing (SafePeer) or a pasted ask from it; there is no Safe on the simulator to ask"),
-  dict(covers=[RS+"observerOffer", "Screens/LogosScreen.swift:pairOffer"], why="raised by a logos-observer pairing offer from a Logos node; there is no node on the simulator"),
 ]
 X = "text:=__never__"
 def d(id, launch, steps): return dict(id="d-"+id, covers=[], launch=launch, steps=steps+[{"wait": 2}], anchor=X)

@@ -62,9 +62,8 @@ struct MainSurface: View {
         return d
     }
     @Environment(ShellChrome.self) private var chrome
-    /// Read for the LIVE-room chips only (prd §234) — a connected devnet seat
-    /// (Logos) earns a chip with nothing landed yet, since its room's
-    /// content is live chain state rather than the corpus.
+    /// Read for the connected-seat chips (prd §234, §1036): a connected seat
+    /// earns a chip with nothing landed yet.
     @Environment(BridgeStore.self) private var store
     // Per-WINDOW, not per-process (see `SceneState`): `RootShell` owns one of
     // each and injects them, so a second window routes and filters on its own.
@@ -936,7 +935,7 @@ struct MainSurface: View {
     /// that move, and the scopes it picked stand.
     @State private var keepScopes = false
 
-    /// Connected live-room bridges (Logos) earn a chip with nothing
+    /// Connected seats earn a chip with nothing
     /// landed, so connecting one changes the label set without changing the
     /// corpus count. Cheap enough to read per body pass — it walks the ~25
     /// bridges, not the corpus — and it's what lets a chip appear the moment you
@@ -946,7 +945,7 @@ struct MainSurface: View {
         // label-set change whatever the seat.
         store.bridges.filter {
             $0.status == .connected
-                && (LiveRoomSources.has($0.name) || LiveRoomSources.earnsEmptyRoom($0.name))
+                && LiveRoomSources.earnsEmptyRoom($0.name)
         }.count
     }
 
@@ -1332,8 +1331,6 @@ struct MainSurface: View {
     /// strip decides on main — the connected live-room seats, the Notes
     /// room, the catalog fold and the stored category order. Shared by the
     /// synchronous fallback and the background walk (PERF 2026-09-08).
-    /// The screen the room on stage shows: itself, or — in a merged room of
-    /// own-screen apps, Testnets — the picked app's (prd §1050k).
     /// The place beside you on the phone's two-place walk, once it has been
     /// mounted after a settled moment (prd §1208l); nil keeps the cover.
     @State private var warmNeighbour: String?
@@ -1373,34 +1370,25 @@ struct MainSurface: View {
         return (walk.firstIndex(of: neighbour) ?? 0) > (walk.firstIndex(of: shownRoom) ?? 0)
     }
 
-    private var shownRoom: String {
-        let room = filter.source
-        guard RoomAccounts.mergedRooms.contains(room) else { return room }
-        let names = Set(store.bridges.lazy.filter { $0.status != .paused }.map(\.name))
-        return RoomAccounts.shownSource(room: room, scope: chrome.mergedScope[room], names: names)
-            ?? room
-    }
+    /// The room on stage.
+    private var shownRoom: String { filter.source }
 
     private func assembleChips(ordered walked: [String])
         -> (labels: [String], venues: [String: [String]], sources: [String]) {
         var ordered = walked
         var seen = Set(ordered)
-        // A LIVE-room source earns its chip by being CONNECTED, not by having
-        // landed anything (prd §234, `LiveRoomSources`): the devnet seats
-        // land no `Thing`, so a corpus-only rule left a connected one with
-        // no chip — and therefore no room, which is the entire point of
-        // connecting one. Appended after the corpus
-        // sources so the learned sort below still decides real order.
-        // …and through the SAME `earnsRoom` gate the corpus walk uses: a
+        // A KEYED AGENT earns its chip by being CONNECTED, not by having
+        // landed anything (prd §842, `LiveRoomSources`), appended after the
+        // corpus sources so the learned sort below still decides real order,
+        // and through the SAME `earnsRoom` gate the corpus walk uses: a
         // retired seat (`Corpus.retiredSources`, prd §638) that is still
         // connected on an older install must not earn a chip by this door
-        // after losing it by the other.
-        // A KEYED AGENT joins by the same door (prd §842): its room is real
+        // after losing it by the other. Its room is real
         // the moment the key is, because the Chat tile is what fills it — and
         // waiting for the first conversation meant waiting for a door that
         // only exists inside the room you could not reach.
         for bridge in store.bridges where bridge.status == .connected
-            && (LiveRoomSources.has(bridge.name) || LiveRoomSources.keyedAgent(bridge.name))
+            && LiveRoomSources.keyedAgent(bridge.name)
             && Corpus.earnsRoom(bridge.name)
             && seen.insert(bridge.name).inserted {
             ordered.append(bridge.name)
@@ -2287,7 +2275,7 @@ struct MainSurface: View {
             for: UIApplication.didBecomeActiveNotification)) { _ in
             if ProcessInfo.processInfo.isMacCatalystApp { freezeChips() }
         }
-        // Connecting a live-room bridge (Logos) earns a chip with
+        // Connecting a seat earns a chip with
         // nothing landed, so it changes the label set without changing the
         // corpus count the watcher above keys on. Without this the new chip
         // would wait for the next arrival or foreground — i.e. you'd come back
@@ -2673,7 +2661,7 @@ struct MainSurface: View {
     /// **ON THE PHONE THE FEED HOLDS THE CATEGORIES (prd §1208).** A door
     /// that names a category scrolls the Feed to its section; a door that
     /// names an app of one raises that app as a sheet over the page you are
-    /// on (§1208a). The Wallet and Testnets stay places, and the rail's
+    /// on (§1208a). The Wallet stays a place, and the rail's
     /// layouts keep their rooms. True when the request was handled here.
     private func routeIntoFeed(_ label: String) -> Routed? {
         guard !isRegular else { return nil }
@@ -2832,7 +2820,7 @@ struct MainSurface: View {
         // **TWO PLACES AGAIN (prd §1208, retiring §1207's walk).** The
         // Wallet and the Feed; the categories are sections of the Feed's
         // scroll and an app rises as a sheet (`routeIntoFeed`), so a room
-        // off the walk (Testnets) goes back to the Feed.
+        // off the walk goes back to the Feed.
         if !isRegular {
             // The tabs, in the bar's order (prd §1327 item 6); Markets walks
             // from the Wallet, whose tile it is.
@@ -2922,13 +2910,12 @@ struct MainSurface: View {
     /// A merged room's apps as stops in the walk (prd §1136 item 9): the
     /// connected ones its menu shows, A–Z, each by the source `go(to:)`
     /// resolves into "this room, picked to this app". None where the room
-    /// draws no pick (one app) or its apps are screens of their own
-    /// (Testnets, whose combined page already shows one).
+    /// draws no pick (one app).
     private func walkApps(in room: String, names: Set<String>) -> [String] {
         guard RoomAccounts.mergedRooms.contains(room) else { return [] }
         let seats = RoomAccounts.connected(in: room, names: names)
             .filter(chrome.seatShows)
-            .filter { !$0.ownScreen && $0.picks }
+            .filter(\.picks)
         guard seats.count > 1 else { return [] }
         return seats
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -3076,7 +3063,6 @@ struct MainSurface: View {
                         youPlace(place)
                     } else {
                         FeedScreen(source: shownRoom,
-                                   hostRoom: shownRoom == filter.source ? nil : filter.source,
                                    isActive: true, nearActive: true,
                                    // Only the room the swipe is going TO — see
                                    // `swipeBudgetSource`.
@@ -3093,8 +3079,6 @@ struct MainSurface: View {
                                          showsPane && !(shownRoom == "All" && feedFirstRun) ? .listWithoutBox : .list)
                     }
                 }
-                    // A pick that changes the screen a merged room shows
-                    // remounts it, as a room change does (prd §1050k).
                     .id(shownRoom)
                     .transition(.asymmetric(
                         // ARRIVES, never materializes (user, 2026-09-06: "when

@@ -390,11 +390,6 @@ enum BridgeGlyph {
         // nobody's product, so there is no brand to bundle. A server rack,
         // because what it names is the box at the address you gave.
         case "ownmodel", "your own model": return "server.rack"
-        // Logos bundles the λ its team sent (`brand-logos`), so `BridgeIcon`
-        // never reaches this in practice — kept defensive, in the
-        // neutral-letterform shape (the App Store Connect precedent) rather
-        // than an invented theme icon.
-        case "logos":     return "character"
         default:          return "app"
         }
     }

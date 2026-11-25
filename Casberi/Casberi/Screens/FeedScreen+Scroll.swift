@@ -35,7 +35,7 @@ extension FeedScreen {
     }
 
     /// The categories the Feed stacks: every one with a room, in the dock's
-    /// order, the Wallet (its own place) and Testnets (the tray's) excepted.
+    /// order, the Wallet (its own place) excepted.
     var scrollCategories: [String] {
         let all = HomeScope.feedCategories(chips: chrome.chipOrder)
         // THE PANE CARRIES DAY (prd §1403): beside a pane the Feed's Day

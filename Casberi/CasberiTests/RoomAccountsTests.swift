@@ -51,7 +51,7 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
         #expect(RoomAccounts.host(ofSource: "ETHBEAT")?.room == RoomAccounts.mediaRoom)
         #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.mediaRoom)
-        for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom] {
+        for room in [CategoryFold.walletRoom, "Markets"] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }
         // The networks folded into Social with §1068, so Bluesky has a host now.
@@ -178,43 +178,29 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Dodo Payments")?.room == RoomAccounts.workRoom)
     }
 
-    // MARK: - Testnets (prd §1050k)
+    // MARK: - Deleted networks (prd §1206, §1688; Logos and Testnets 2026-11-25)
 
-    /// The network folds into Testnets, never into the Wallet: test money
-    /// and real money never share a room (§1050). Logos is its one network
-    /// since Hegotá Frames was deleted (prd §1206).
-    @Test func theTestnetsFoldIntoTestnetsNotTheWallet() {
-        #expect(RoomAccounts.host(ofSource: LogosRoom.source)?.room == RoomAccounts.testnetsRoom)
-        #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: LogosRoom.source))
-        #expect(RoomAccounts.seats(for: CategoryFold.walletRoom).allSatisfy { !$0.ownScreen })
-        // A deleted network is no seat in the room (prd §1206, §1688, §723).
+    /// A deleted network is no seat in any room (§723), and Testnets is no
+    /// category or room any more.
+    @MainActor @Test func deletedNetworksAreNoSeat() {
+        #expect(RoomAccounts.host(ofSource: "Logos") == nil)
         #expect(RoomAccounts.host(ofSource: "Hegot\u{00e1} Frames") == nil)
         #expect(RoomAccounts.host(ofSource: "Aztec") == nil)
+        #expect(!RoomAccounts.mergedRooms.contains("Testnets"))
+        #expect(RoomAccounts.room(ofCategory: "Testnets") == nil)
+        #expect(!CategoryOrder.defaultOrder.contains("Testnets"))
+        #expect(BridgeCatalog.offer(forSource: "Logos") == nil)
     }
 
-    /// The room no seat names is its own category, so the strip folds it there
-    /// and the tray opens it.
-    @Test func testnetsIsItsCategory() {
-        #expect(BridgeCatalog.category(forSource: RoomAccounts.testnetsRoom) == "Testnets")
-        #expect(RoomAccounts.room(ofCategory: "Testnets") == RoomAccounts.testnetsRoom)
-        // Social became one room too (prd §1068).
+    /// A stored order naming Testnets loses it.
+    @MainActor @Test func aStoredOrderDropsTestnets() {
+        #expect(!CategoryOrder.reconcile(["Testnets", "Work"]).contains("Testnets"))
+    }
+
+    /// Social became one room too (prd §1068).
+    @Test func socialIsItsCategory() {
         #expect(RoomAccounts.room(ofCategory: "Social") == RoomAccounts.socialRoom)
         #expect(SocialRoom.mergedRoom == RoomAccounts.socialRoom)
-    }
-
-    /// The room shows the picked network's screen, the first connected one
-    /// with no pick, never a network that is not connected, and nothing for a
-    /// room that draws itself.
-    @Test func theRoomShowsOneConnectedNetwork() {
-        let room = RoomAccounts.testnetsRoom
-        let logos: Set = [LogosRoom.source]
-        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: logos) == LogosRoom.source)
-        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: logos) == LogosRoom.source)
-        // A pick of a network that is not connected shows nothing, never it.
-        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: []) == nil)
-        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: []) == nil)
-        #expect(RoomAccounts.shownSource(room: CategoryFold.walletRoom, scope: "seat:Safe",
-                                         names: ["Safe"]) == nil)
     }
 
     /// The query, the history screen and the row filter read one list.

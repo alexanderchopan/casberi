@@ -214,13 +214,16 @@ func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips
 // became a note of yours with no source of its own (§972). Pinned as a count
 // AND as the absences, so either slot creeping back fails here rather than
 // drawing a folder for a band nothing fills.
-check("nine slots: every catalogue category but Markets, a place in You (§1123, §1151); Reading folded into Media (§1204); Day and Notes Feed sections (§1343, §1347)", d.count == 9)
+check("eight slots: every catalogue category but Markets, a place in You (§1123, §1151); Reading folded into Media (§1204); Day and Notes Feed sections (§1343, §1347); Testnets deleted with Logos (2026-11-25)", d.count == 8)
 check("Day is a slot, first (a Feed section, §1343)", d.first == "Day")
 check("Reading is not a slot (folded into Media, §1204)", !d.contains("Reading"))
 check("a stored order from before §1204 sheds its Reading slot",
       !CategoryOrder.reconcile(["Reading", "Media", "Wallet"]).contains("Reading"))
 check("Markets is not a slot (§1151)", !d.contains("Markets"))
-check("Testnets closes the order (§1151)", d.last == "Testnets")
+check("Agents closes the order (§1151; Testnets, after it, deleted 2026-11-25)", d.last == "Agents")
+check("Testnets is not a slot (deleted with Logos, 2026-11-25)", !d.contains("Testnets"))
+check("a stored order sheds its Testnets slot",
+      !CategoryOrder.reconcile(["Wallet", "Testnets", "Work"]).contains("Testnets"))
 check("a stored order sheds its Markets slot (§1151)",
       !CategoryOrder.reconcile(["Wallet", "Markets", "Work"]).contains("Markets"))
 check("Voice is not a slot (no source carries it, §972)", !d.contains("Voice"))
@@ -273,11 +276,12 @@ check("…and the list is still complete", Set(dupes) == Set(d) && dupes.count =
 // The forward-compatibility case, and the one nobody would ever see reported:
 // somebody rearranges their strip, a later build adds a category, and their
 // stored list has no opinion about it.
-// Testnets and Notes stand in (Shopping, the old stand-in, left with §1051a).
-let older = CategoryOrder.reconcile(d.filter { $0 != "Testnets" && $0 != "Agents" })
-check("a category missing from a stored order still appears", older.contains("Testnets") && older.contains("Agents"))
+// Life and Agents stand in (Shopping, the old stand-in, left with §1051a;
+// Testnets after it, 2026-11-25).
+let older = CategoryOrder.reconcile(d.filter { $0 != "Life" && $0 != "Agents" })
+check("a category missing from a stored order still appears", older.contains("Life") && older.contains("Agents"))
 check("…at the tail, in default order",
-      Array(older.suffix(2)) == d.filter { $0 == "Testnets" || $0 == "Agents" })
+      Array(older.suffix(2)) == d.filter { $0 == "Life" || $0 == "Agents" })
 
 // --- rank -------------------------------------------------------------------
 check("rank follows the order given", CategoryOrder.rank(of: d[0], in: d) == 0)

@@ -33,7 +33,7 @@ import SwiftData
 /// and that half is what makes a mid-session CloudKit merge render correctly.
 /// But a ROOM is entered by `Thing.source`, and the surfaces that decide what a
 /// room draws compare that string to a seat's own identity (`FeedScreen`'s room
-/// heads: `source == LogosRoom.source`; the venue switcher's scopes). Every
+/// heads, each `source ==` a seat's own constant; the venue switcher's scopes). Every
 /// one of those would have to learn the alias independently, which is the
 /// cross-file promise `Thing.swift`'s own corollary 4 was written about. So the
 /// strings converge instead, and only display is tolerant.
@@ -293,7 +293,11 @@ enum SourceRename {
     /// Lightning"): the seat record, its settled payments (`lightning:` refs
     /// under the source "Lightning"), its balance defaults and the Nostr
     /// Wallet Connect string in the vault. Bitcoin on chain is the Wallet's
-    /// and stays.
+    /// and stays. Logos joined them 2026-11-25 with the Testnets category
+    /// (user: "retire the testnets category and logos bc we aren't doing
+    /// anything else with it anymore"): its seat record, its rows (`logos:`
+    /// refs under the source "Logos"), its watch list, node and Observer
+    /// pairings in defaults, and its signing key and Observer secrets.
     static let droppedSources: Set<String> = [
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
@@ -310,6 +314,8 @@ enum SourceRename {
         "Aztec",
         // Lightning (2026-11-09): its seat record and settled payments.
         "Lightning",
+        // Logos (2026-11-25): its seat record and every row it landed.
+        "Logos",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`
@@ -345,6 +351,11 @@ enum SourceRename {
         // Lightning (2026-11-09): the last balance read and its time
         // (`lightning.balance.msats`, `lightning.balance.at`).
         "lightning.",
+        // Logos (2026-11-25): its watch list, balances, cursor, node and its
+        // snapshot, genesis, token names, holdings, reset record, signer
+        // account id, Observer pairings and chat names (`logos.`), and the
+        // value history its room sampled.
+        "logos.", "room.value.history.Logos",
         // Privacy Pools' cover store (prd §397), deleted with the head that
         // read it (prd §1738): the live set sizes and the landing snapshots.
         // The seat's cursors and watchlist (`privacypools.` otherwise) stay.
@@ -360,6 +371,9 @@ enum SourceRename {
         "casberi-frames-signer", "casberi-frames-passkey",
         // The Aztec testnet signing key (prd §1276, §1688).
         "com.casberi.app.aztec.signer",
+        // Logos' testnet signing key and its Observer pairings' secrets
+        // (2026-11-25).
+        "casberi-logos-signer", "casberi-logos-observer",
     ]
 
     /// Cursor's API key, in the shared token vault (`TokenBridge.tokenKey`,
@@ -372,10 +386,10 @@ enum SourceRename {
 
     /// `.v2` since prd §1049 added three seats, `.v3` since Nostr joined,
     /// `.v4` since Farcaster joined (prd §1110), `.v5` since Hegotá Frames
-    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318), `.v7` since Markets joined (prd §1529), `.v8` since Aztec's testnet room joined (prd §1688), `.v9` since Lightning joined (2026-11-09): a device that ran the earlier pass would otherwise
+    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318), `.v7` since Markets joined (prd §1529), `.v8` since Aztec's testnet room joined (prd §1688), `.v9` since Lightning joined (2026-11-09), `.v10` since Logos joined (2026-11-25): a device that ran the earlier pass would otherwise
     /// never clear the new seats' defaults. The work it repeats is idempotent
     /// — every delete finds nothing.
-    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v9"
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v10"
 
     /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
     /// ROWS at every launch, because the store mirrors to CloudKit and a

@@ -446,19 +446,6 @@ enum BridgeCatalog {
         // read-only token there is nothing to mint and nothing to leak.
         Offer(name: "Radicle", tagline: "Peer-to-peer Git", group: "Work", connectable: true,
               needsSetup: true, added: day(2026, 8, 18)),
-        // NO USER-VISIBLE STRING IN ANY DEVNET SEAT MAY CALL THIS APP A WALLET,
-        // OR IMPLY IT BY COMPARISON (user, 2026-09-04): this app has already
-        // been rejected twice on crypto grounds (3.1.1 on BYOK, 3.1.5 on the
-        // devnet send). Hegotá Frames, the frame-transaction devnet that
-        // ruling was written for, is deleted (prd §1206).
-        // Logos (prd §988, 2026-09-29) — the network Nomos/Codex/Waku became,
-        // whose desktop suite is Basecamp. Wallet group beside the devnets,
-        // because what it watches is an account on a TESTNET: the coins are
-        // test coins, never joined to the wallet total, and the network has
-        // been reset from genesis before. Keyless (the LEZ sequencer answers
-        // anyone), so it is a no-account seat in the Radicle grade.
-        Offer(name: "Logos", tagline: "Accounts on the Logos testnet", group: "Testnets", connectable: true,
-              needsSetup: true, added: day(2026, 9, 29)),
         Offer(name: "Linear",      tagline: "",             group: "Work",      connectable: true,
               needsSetup: true),
         Offer(name: "Notion",      tagline: "",                group: "Notes",     connectable: true,
@@ -677,11 +664,11 @@ enum BridgeCatalog {
     static var offers: [Offer] {
         let cloud = privateCloudAvailable()
         #if targetEnvironment(macCatalyst)
-        // The Mac carries no wallet (`WalletHere`): no wallet app or chain
-        // testnet is offered there, connected or not.
+        // The Mac carries no wallet (`WalletHere`): no wallet app is offered
+        // there, connected or not.
         return allOffers.filter {
             !$0.unavailableOnMac && (cloud || !$0.needsPrivateCloud)
-                && $0.group != CategoryFold.walletCategory && $0.group != WalletHere.testnets
+                && $0.group != CategoryFold.walletCategory
         }
         #else
         return allOffers.filter { cloud || !$0.needsPrivateCloud }
@@ -761,13 +748,8 @@ enum BridgeCatalog {
         // heading waiting to render blank — the reason "Home" is gone from
         // this list too, three rows down.
         ("Wallet",  "Wallet",      ["Wallet"]),
-        // MARKETS AND TESTNETS ARE CATEGORIES OF THEIR OWN (prd §1050): once
-        // the Wallet folded its money apps into one room, every tray entry is
-        // a category, so Markets (a watchlist, not money you hold) stands
-        // alone, and the devnets stand in Testnets (Logos since Hegotá Frames
-        // went, prd §1206), never inside Wallet: real money moves in Wallet,
-        // and test money must never share its room.
-        ("Testnets", "Logos",      ["Testnets"]),
+        // Testnets, the devnets' category (prd §1050), is deleted with
+        // Logos, its last app (2026-11-25).
         ("Work",    "GitHub",      ["Work"]),
         // "Home" is GONE from this list, not merely empty (2026-09-04). Life
         // absorbed it on 2026-07-23 because HomeKit was the lone app in its
@@ -877,7 +859,7 @@ enum BridgeCatalog {
     /// the table that filed Voice under Notes had no other entry, and it is
     /// deleted with it.
     static func category(forSource source: String) -> String? {
-        // A merged room no seat names (Testnets, prd §1050k) is its category.
+        // A merged room no seat names is its category.
         if let offer = offer(forSource: source) { return category(of: offer) }
         return RoomAccounts.room(ofCategory: source)
     }
@@ -1089,7 +1071,7 @@ enum BridgeSetupMode {
         "RSS", "Substack", "Podcasts", "Pinterest", "Bluesky",
         "Telegram", "Hugging Face", "Radicle",
         "npm", "PyPI", "Walletbeat", "ETHBEAT", "ENS",
-        "ETH Validators", "NerdWallet", "Logos",
+        "ETH Validators", "NerdWallet",
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence",
         // An address, and a key only if the server asks (prd §1478).

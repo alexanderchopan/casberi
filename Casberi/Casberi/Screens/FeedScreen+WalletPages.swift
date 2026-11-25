@@ -683,6 +683,9 @@ extension FeedScreen {
                 }
             }
             walletAccountsSection(appAccounts, nextEventID: nil)
+        } else {
+            // The Wallet apps you could add, last (prd §1974).
+            walletAddApps
         }
     }
 

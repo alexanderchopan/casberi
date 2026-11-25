@@ -708,18 +708,6 @@ final class ShellChrome {
     /// drift apart.
     var walletSections: [WalletSection] = []
 
-    /// The Logos room's scope, its published scopes and its account pick
-    /// (prd §991) — `walletSection`'s trio one room over, deliberately
-    /// SEPARATE properties rather than a shared generic pair: the rooms publish
-    /// different enums and only one may draw at a time, and whoever writes a
-    /// list owns its clear-on-exit. **Shell-held, exactly as Wallet's are** —
-    /// the figure, the rail and the switcher are three sections of the room
-    /// rather than children of one card, and three sections cannot share a
-    /// card's `@State`.
-    var logosSection: LogosSection?
-    var logosSections: [LogosSection] = []
-    var logosScope: String?
-
 
     /// Which half of an AGENT room is standing (prd §840) — the conversations
     /// you have had, or the one you are having.
@@ -1244,10 +1232,9 @@ final class ShellChrome {
         // A source that never surfaces a row (Contacts, §916) is no pick in
         // any mode: it opened "Nothing here yet" (prd §1073).
         guard Corpus.earnsRoom(seat.source ?? seat.name) else { return false }
-        // A testnet draws its own screen from live reads, not stored rows;
-        // a seat with money in the total (an exchange) draws its balance,
+        // A seat with money in the total (an exchange) draws its balance,
         // which is all it lands (prd §1065).
-        guard DemoMode.isActive, !landedSources.isEmpty, !seat.ownScreen, seat.holder == nil
+        guard DemoMode.isActive, !landedSources.isEmpty, seat.holder == nil
         else { return true }
         return landedSources.contains { seat.owns($0) }
     }

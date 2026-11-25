@@ -70,12 +70,12 @@ struct TokensScope: DSTileScope {
 
     /// THE BOX (prd §1138, user: "the categories w/ no numbers, just their
     /// glyph and name"): every category whose pack holds a company A–Z — a
-    /// tile onto an empty list is a dead control (§83). Testnets has no
-    /// market and Markets is a place in You (§1123). Watchlist and Alerts
+    /// tile onto an empty list is a dead control (§83). Markets is a place in
+    /// You (§1123). Watchlist and Alerts
     /// moved to the bar (prd §1171b, user: "put watchlist and alerts in it so
     /// markets and notes have their own lil menu capsule"), so the box is the
     /// eight categories two across, as Settings' eight counts stand.
-    static let box: [TokensScope] = packs.keys.filter { $0 != "Testnets" && $0 != HomeScope.markets }
+    static let box: [TokensScope] = packs.keys.filter { $0 != HomeScope.markets }
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
             .map { TokensScope(category: $0) }
 

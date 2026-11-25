@@ -80,11 +80,9 @@ enum ScopeTileGlyph {
     /// Markets' Alerts (prd §1081): the system's bell, the bell a note's
     /// reminder already wears for "tell me".
     static let alerts       = "bell"
-    /// Logos' Node scope (prd §991) — the node you run.
+    /// Your own node (prd §1517, first Logos' Node scope, §991) — the node
+    /// you run.
     static let node         = "server.rack"
-    /// Logos' Chat scope (prd §1155): one speech bubble, a conversation —
-    /// never Social's two, which is the category's (one glyph, one meaning).
-    static let chat         = "bubble.left"
     /// The Notes room's tiles (prd §969). Pin is the dial's own pin glyph —
     /// the same meaning, so the same symbol; New is the bare plus, a verb in
     /// the tile row and the one tile that never lights. (`square.and.pencil`,
@@ -258,19 +256,3 @@ extension WalletSection: DSTileScope {
         }
     }
 }
-
-/// Logos' scopes (prd §991, §1155): the family's Home glyph, a bubble for your
-/// chats and a rack for the node you run. No verb is a tile (§1108).
-extension LogosSection: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .home:     return ScopeTileGlyph.home
-        case .holdings: return ScopeTileGlyph.holdings
-        case .node:     return ScopeTileGlyph.node
-        case .chat:     return ScopeTileGlyph.chat
-        }
-    }
-}
-
-
-

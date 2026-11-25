@@ -85,8 +85,7 @@ enum HomeScope {
     }
 
     /// The categories the Feed stacks (prd §1208 item 2): every one with a
-    /// room, in the dock's order, the Wallet (its own place) and Testnets
-    /// (the tray's) excepted.
+    /// room, in the dock's order, the Wallet (its own place) excepted.
     /// The Feed's Notes section (prd §1347): your notes and the apps you
     /// write in. Its rows are `Pinboard.inRoom`'s; the page behind it is
     /// `Pinboard.room`, reached from Library.
@@ -102,17 +101,16 @@ enum HomeScope {
         // there").** Its section repeated the top of its tab's Home; the tab
         // is one tap away and wears a dot while something waits on you.
         return CategoryOrder.current.filter {
-            $0 != RoomAccounts.testnetsRoom && $0 != CategoryFold.walletRoom
+            $0 != CategoryFold.walletRoom
                 && ($0 == RoomAccounts.dayRoom || $0 == Self.notesSection || present.contains($0))
         }
     }
 
     /// Whether the phone shows `source` as a section of the Feed rather than
-    /// a page: a category's combined room, the Wallet and Testnets excepted.
+    /// a page: a category's combined room, the Wallet excepted.
     @MainActor static func isFeedSection(_ source: String) -> Bool {
         // Day is a section since prd §1343; the Wallet keeps its tab.
-        source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom
-            && RoomAccounts.mergedRooms.contains(source)
+        source != CategoryFold.walletRoom && RoomAccounts.mergedRooms.contains(source)
     }
 
     /// Where `source` stands in the walk: You's places at the Feed's, an

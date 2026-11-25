@@ -70,7 +70,7 @@ ALIASES = {
     # A wallet you follow is a page behind Following (prd §1969): the same
     # people glyph, never a meaning of its own.
     ("WalletSection", "followedWallet"): "accounts",
-    # Your own node's page (prd §1517) is the node a Logos room means.
+    # Your own node's page (prd §1517) wears the node's own glyph.
     ("WalletSection", "nodes"): "node",
     # The Wallet's Needs you (prd §1480) is Home's Needs you list as a page:
     # what waits on you, the bell it wore since §1111.

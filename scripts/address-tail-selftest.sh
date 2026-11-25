@@ -7,10 +7,10 @@
 # Every failure here renders as an ordinary row: `0x4b19…e07a` reads fine,
 # `…e07a` reads fine, and only a person who made the rule sees it is wrong.
 # So the shape is asserted on real ids of every family the app draws (EVM,
-# Aztec, Solana, Bitcoin, Logos, a tx hash), then each rule is broken on
+# Aztec, Solana, Bitcoin, a tx hash), then each rule is broken on
 # purpose and the run must notice.
 #
-# The forwarders (`WalletStore.shortAddress`, `LogosWire.short`,
+# The forwarders (`WalletStore.shortAddress`,
 # `YourAccount.short`, `YourAccountPreview.short`) are pinned to the helper by grep below, so a
 # forwarder that grows its own spelling again fails here, not on screen.
 # `address-tail-audit.py` is the tree-wide half: no new shortener elsewhere.
@@ -25,10 +25,9 @@ TAIL="Casberi/Shared/AddressTail.swift"
 # --- the forwarders say nothing of their own --------------------------------
 pin() { grep -qF -- "$2" "$1" || { echo "✗ $1 no longer forwards to AddressTail ($3)"; exit 1; }; }
 pin Casberi/Casberi/Model/WalletStore.swift        '        AddressTail.short(address)'                      "WalletStore.shortAddress"
-pin Casberi/Casberi/Model/LogosWire.swift          'static func short(_ id: String) -> String { AddressTail.short(id, wholeUpTo: 10) }' "LogosWire.short"
 pin Casberi/Casberi/Model/YourAccount.swift        'static func short(_ address: String) -> String { AddressTail.short(address, wholeUpTo: 4) }' "YourAccount.short"
 pin Casberi/Casberi/Model/YourAccountPreview.swift 'static func short(_ address: String) -> String { AddressTail.short(address) }' "YourAccountPreview.short"
-echo "✓ the four forwarders pass straight through"
+echo "✓ the three forwarders pass straight through"
 
 TMP=$(mktemp -d /tmp/address-tail-selftest.XXXXXX)
 WORK="$TMP/work"
@@ -47,7 +46,6 @@ let ids: [(String, String)] = [
     ("Aztec", "0x07ba1234567890abcdef00000000000000000000000000000000000000008416"),
     ("Solana", "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"),
     ("Bitcoin", "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"),
-    ("Logos", "CbgR6tj3Lp2x8E1WnvQZu5qGxHkF7mYcD9sPaTbSr2r"),
     ("a tx hash", "0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060"),
 ]
 for (family, id) in ids {

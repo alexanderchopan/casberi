@@ -50,10 +50,6 @@ enum BridgeRouter {
         case cardPointers
         case huggingFace
         case radicle
-        /// Logos (prd §988) — a watch list of LEZ accounts, its own
-        /// destination for L2BEAT's reason: riding `.token` would dismiss the
-        /// raised sheet the moment the first watched account registered it.
-        case logos
         case icloudMail
         case gmail
         case rss
@@ -313,7 +309,6 @@ enum BridgeRouter {
             case .cardPointers:   "cardpointers"
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
-            case .logos:          "logos"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -433,7 +428,6 @@ enum BridgeRouter {
         Row(offer: "CardPointers", id: "cardpointers", destination: .cardPointers),
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
-        Row(offer: "Logos",      id: "logos",      destination: .logos),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -623,7 +617,6 @@ struct BridgeDestinationView: View {
         case .cardPointers:   CardPointersScreen()
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
-        case .logos:          LogosScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

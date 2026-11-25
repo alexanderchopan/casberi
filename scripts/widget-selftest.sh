@@ -204,7 +204,7 @@ grep -qE "        PriceActivity\(\)" "$TMP/bundle.nc" \
 grep -q 'feed.isCurrent(now: entry.date)' "$TMP/FeedWidget.nc" \
   || { print -u2 "✗ the Feed widget draws its counts without asking whether they are today's"; exit 1; }
 # The Feed holds no money (§1208 item 7), so neither does its tile.
-grep -q '"Wallet", "Markets", "Testnets"' "$TMP/publish.nc" \
+grep -q '"Wallet", "Markets"' "$TMP/publish.nc" \
   || { print -u2 "✗ the Feed widget's payload no longer leaves the money categories out"; exit 1; }
 # A reading past the normal cadence says when it was read (§825).
 grep -q 'WidgetStamp.text(for: home.asOf' "$TMP/walletw.nc" \

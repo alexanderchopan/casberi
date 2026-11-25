@@ -5,7 +5,7 @@ import Foundation
 /// (`0x4b19…e07a` is banned), and never the `…` character.
 ///
 /// The one shortener for every id the app draws short: EVM, Aztec, Solana,
-/// Bitcoin and Logos addresses, Safes and contracts, transaction hashes. A
+/// Bitcoin addresses, Safes and contracts, transaction hashes. A
 /// file that needs a short form calls this; `address-tail-audit.py` fails a
 /// new head-and-tail shortener and a re-spelled tail anywhere else.
 ///

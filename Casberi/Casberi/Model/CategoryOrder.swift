@@ -74,8 +74,9 @@ enum CategoryOrder {
         // of wallet, b/c a new user won't think to go in settings"): Day
         // (calendar, mail, subscriptions) leads, then Social, Work and the
         // Wallet (user: "have work and wallet before reading"), then Reading,
-        // Life, Media (user: "lets have media after Life"), Agents, and
-        // Testnets last. Markets is a place in You (§1123), never a slot
+        // Life, Media (user: "lets have media after Life"), and Agents last
+        // (Testnets, after it, is deleted with Logos, 2026-11-25). Markets
+        // is a place in You (§1123), never a slot
         // (user: "Markets is not longer in those categories"). A stored order
         // keeps its own. Media stands in Reading's slot since Reading folded
         // into it (prd §1204): most of what it holds is still reading.
@@ -83,7 +84,7 @@ enum CategoryOrder {
         // Day is a Feed section again (prd §1343): first, and movable; Notes
         // after it (prd §1347), your writing before the feeds.
         "Day", "Notes", "Social", "Work", "Wallet", "Media", "Life",
-        "Agents", "Testnets",
+        "Agents",
     ]
 
     /// The order in force — the stored one reconciled against `defaultOrder`,

@@ -174,6 +174,10 @@ enum Corpus {
         // Lightning the same way (2026-11-09, user: "we can get rid of
         // Lightning"); Bitcoin on chain is the Wallet's and stays.
         "Lightning",
+        // Logos the same way (2026-11-25, user: "retire the testnets
+        // category and logos bc we aren't doing anything else with it
+        // anymore"), and the Testnets category with it.
+        "Logos",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now

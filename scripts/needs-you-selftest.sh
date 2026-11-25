@@ -125,7 +125,7 @@ feed_wallet_gone() { # $1 a root holding the files below; prints the breach and 
   local root="$1"
   [[ -e "$root/Casberi/Casberi/Screens/FeedScreen+WalletNeeds.swift" ]] \
     && { echo "✗ FeedScreen+WalletNeeds.swift is back — the Feed has no Wallet section (prd §1489)"; return 1; }
-  grep -q '$0 != RoomAccounts.testnetsRoom && $0 != CategoryFold.walletRoom' "$root/$HOME_SCOPE" \
+  grep -Eq '^[[:space:]]*[$]0 != CategoryFold[.]walletRoom$' "$root/$HOME_SCOPE" \
     || { echo "✗ the Feed's categories take the Wallet again (HomeScope.feedCategories, prd §1489)"; return 1; }
   local f
   for f in "$SCROLL" "$FEED"; do
@@ -158,7 +158,7 @@ feed_wallet_gone . || exit 1
 # one section, never a page of its own.
 grep -q 'scrollSection(RoomAccounts.dayRoom, visible, nextEventID: nextEventID)' "$ROOM" \
   || { echo "✗ Day's room on iPad and the Mac no longer draws the Feed's Day section (prd §1344)"; exit 1; }
-grep -q 'source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom' "$HOME_SCOPE" \
+grep -q 'source != CategoryFold.walletRoom && RoomAccounts.mergedRooms.contains(source)' "$HOME_SCOPE" \
   && ! grep -q 'source != RoomAccounts.dayRoom' "$HOME_SCOPE" \
   || { echo "✗ a door naming Day no longer lands on its Feed section (HomeScope.isFeedSection, prd §1343)"; exit 1; }
 # Day's + (prd §1343): Track a subscription, in the verb's own word, raising

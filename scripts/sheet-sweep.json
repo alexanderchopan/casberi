@@ -1610,13 +1610,6 @@
   },
   {
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#logosSend",
-    "Screens/FeedScreen+Sheets.swift:feedSheet#logosChat"
-   ],
-   "why": "Send needs a Logos key made on this phone and chats need a paired Observer node; the demo has neither"
-  },
-  {
-   "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscriptionTrack"
    ],
    "why": "raised once after an app's first real connect (SubscriptionPlans.shouldAsk); the demo's apps are poured, never connected"
@@ -1669,13 +1662,6 @@
     "Screens/SafeScreen.swift:pastedAsk"
    ],
    "why": "raised by a live Safe pairing (SafePeer) or a pasted ask from it; there is no Safe on the simulator to ask"
-  },
-  {
-   "covers": [
-    "Shell/RootShell.swift:observerOffer",
-    "Screens/LogosScreen.swift:pairOffer"
-   ],
-   "why": "raised by a logos-observer pairing offer from a Logos node; there is no node on the simulator"
   },
   {
    "covers": [

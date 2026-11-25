@@ -66,7 +66,7 @@ enum PlaceTab: String, Identifiable, CaseIterable {
     }
 
     /// The tab a source stands in: Markets is a Wallet tile (prd §1232), and
-    /// a room off the five (Testnets) is nobody's tab.
+    /// a room off the five is nobody's tab.
     /// A tab pressed (prd §1327): the place's own door, the one its tile and
     /// the face took before. The Feed's, pressed on the Feed, returns to the
     /// top (§1280's face); Library is Sources' place (§1321). ONE door for

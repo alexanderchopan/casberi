@@ -173,7 +173,7 @@ extension FeedScreen {
             }
         }
         guard pageUnderActivity, roomPick != nil, clearRoomPick != nil else { return nil }
-        let room = hostRoom ?? source
+        let room = source
         // The middle name is Activity: the root is Home.
         if roomName == PlaceTab.feed.label {
             return DSTitleBack(word: PlaceTab.wallet.label) {
@@ -202,8 +202,7 @@ extension FeedScreen {
 
     /// The title's category word pressed: drop the pick `roomPick` names and
     /// show the whole category (prd §1262), as the tray's category row does.
-    /// Nil wherever the pick is not one to drop: You's places, and a network
-    /// the Testnets room stands on (it has no view across networks).
+    /// Nil wherever the pick is not one to drop: You's places.
     var clearRoomPick: (() -> Void)? {
         guard roomPick != nil else { return nil }
         // A door taken on a page (prd §1812): the page's name goes back to
@@ -226,7 +225,7 @@ extension FeedScreen {
         // stands from it (prd §1813). Notes narrowed to a folder or an app
         // goes back to Notes first, below.
         if pageUnderActivity, !(Pinboard.isPinnedRoom(source) && notesNarrowed) {
-            let room = hostRoom ?? source
+            let room = source
             return {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) {
@@ -259,7 +258,7 @@ extension FeedScreen {
             }
         }
         if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
-           rail.source == source || source == RoomAccounts.testnetsRoom,
+           rail.source == source,
            rail.slots.contains(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
             return {
                 DSHaptic.selection()
@@ -319,10 +318,6 @@ extension FeedScreen {
             if let seat = selectedSeat, seat.name == pick, openNotesFolderName == nil {
                 name = seat.name
                 seatSource = seat.source ?? seat.name
-            } else if let host = hostRoom, host != source,
-                      pick == BridgeCatalog.seatName(forSource: source) {
-                name = pick
-                seatSource = source
             } else if source == CategoryFold.walletRoom, chrome.walletSection == .tacit,
                       pick == TacitAccount.name,
                       bridges.bridges.contains(where: { $0.id == TacitAccount.seatID }) {
@@ -337,7 +332,7 @@ extension FeedScreen {
             }
         } else {
             // An app's own page: the room IS the app (Library's tap, §1418).
-            guard hostRoom == nil, pinnedWalletSection == nil, !HomeScope.contains(source),
+            guard pinnedWalletSection == nil, !HomeScope.contains(source),
                   !Pinboard.isPinnedRoom(source), !RoomAccounts.mergedRooms.contains(source)
             else { return nil }
             name = roomName
@@ -353,8 +348,8 @@ extension FeedScreen {
     }
 
     /// What the title names after the category's dot, or nil while the room
-    /// shows everything (prd §1133): the app or account picked, or the
-    /// network the Testnets room is showing. You's places name themselves
+    /// shows everything (prd §1133): the app or account picked. You's places
+    /// name themselves
     /// (`youPlaceName`, §1156), so they pick nothing.
     var roomPick: String? {
         // Notes names the open folder (prd §1312), else the app you picked
@@ -370,9 +365,9 @@ extension FeedScreen {
         // A door taken on a page names itself last (prd §1812).
         if let scope = pageScope { return scope.label }
         // The page at Activity's place: the app picked, else the category.
-        if pageUnderActivity { return selectedSeat?.name ?? BridgeCatalog.seatName(forSource: hostRoom ?? source) }
+        if pageUnderActivity { return selectedSeat?.name ?? BridgeCatalog.seatName(forSource: source) }
         if let rail = chrome.accountRail,
-           rail.source == source || source == RoomAccounts.testnetsRoom,
+           rail.source == source,
            let slot = rail.slots.first(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
             return slot.name
         }
@@ -385,7 +380,6 @@ extension FeedScreen {
         if source == CategoryFold.walletRoom, pinnedWalletSection == nil, let seat = selectedSeat {
             return seat.name
         }
-        if let host = hostRoom, host != source { return BridgeCatalog.seatName(forSource: source) }
         // The Wallet's tile, now a page (prd §1321): "Wallet · Holdings".
         if source == CategoryFold.walletRoom, pinnedWalletSection == nil,
            let section = chrome.walletSection, section != .home {
@@ -412,11 +406,11 @@ extension FeedScreen {
     /// A category or an app standing as a page at Activity's place on the
     /// phone (prd §1809, `ShellChrome.pageRoom`).
     ///
-    /// Every page off Home and Activity reads this way, Notes and Testnets
+    /// Every page off Home and Activity reads this way, Notes
     /// included: with no bar (§1809) the title's first word is the way back.
     var pageUnderActivity: Bool {
         roomSizeClass == .compact && !inSheet && source != "All"
-            && (hostRoom ?? source) != CategoryFold.walletRoom && !HomeScope.isMarkets(source)
+            && source != CategoryFold.walletRoom && !HomeScope.isMarkets(source)
     }
 
     /// **MONEY OPENED FROM ACTIVITY IS UNDER ACTIVITY (prd §1840, user: "I

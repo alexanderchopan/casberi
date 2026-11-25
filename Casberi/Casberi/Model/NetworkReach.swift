@@ -488,15 +488,6 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Radicle"),
                  purpose: "Reads the patches and issues of the repos you follow, from the seed node you name. Carries only the repo ids you asked for; there is no account and no key, so nothing identifies you — but the seed you pick does see which repos you ask about.",
                  hosts: ["rosa.radicle.network", "iris.radicle.network", "the seed you name"]),
-        // Logos (prd §988) — the LEZ testnet's sequencer, keyless JSON-RPC.
-        // The explorer is a link a row opens, never fetched.
-        Endpoint(service: "Logos",
-                 reach: .whenConnected(bridge: "Logos"),
-                 purpose: "Reads the balance, tokens and activity of the public LEZ accounts you follow, from the Logos testnet's sequencer, and your own node's sync state, peers and reward vouchers at the address you give it. Carries the account ids you asked about and the block numbers it reads; a send you make carries the transaction this phone signed, and nothing else about you.",
-                 // The node's address is TYPED BY THE PERSON (prd §989), the
-                 // §289 case: every node request names this service to
-                 // `NetworkLedger`, so a self-chosen address is attributed.
-                 hosts: ["testnet.lez.logos.co", "the node address you give it"]),
         Endpoint(service: "Privacy Pools",
                  reach: .whenConnected(bridge: "Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits, v1 and v2, from the public chain and their review status from 0xBow's public APIs, for the accounts you follow.",
@@ -682,7 +673,7 @@ enum NetworkReach {
                  refusesTor: ["api.relay.link"]),
         // Your own node (prd §1517): an address the person types, per network,
         // reached directly (a home node is on their own network). Every
-        // request names this service to `NetworkLedger`, the Logos node's rule.
+        // request names this service to `NetworkLedger` (the §289 rule).
         Endpoint(service: "Your own node",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "When you turn on your own node, your account reads that network from the address you give it, and from nothing else, directly rather than through Tor. Your node sees your account's address and what it reads. Sending still goes through the public bundlers.",
@@ -1192,8 +1183,8 @@ enum NetworkReach {
                  hosts: ["gemini.google.com", "accounts.google.com"]),
 
         // Your own model (prd §1478) — the person's own OpenAI-compatible
-        // server. No fixed host: the address is TYPED (the §289 case, as the
-        // Logos node's), so every request names this service to
+        // server. No fixed host: the address is TYPED (the §289 case), so
+        // every request names this service to
         // `NetworkLedger` and the receipts screen attributes it. Not "stays on
         // your device": the server is somebody's computer (§83).
         // The catalogue name spelled out, never `OwnModel.name`: the

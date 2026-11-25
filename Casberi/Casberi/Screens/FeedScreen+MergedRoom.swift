@@ -2,9 +2,8 @@ import SwiftUI
 
 // THE ACCOUNT MENU OF A MERGED ROOM THAT DRAWS NO SCREEN OF ITS OWN
 // (prd §1049, §1050d, built §1052). Reading first; Agents, Media, Life, Day
-// and Work follow. The Wallet keeps its own menu (addresses and apps), and
-// Testnets crosses networks from each network's menu (§1050k). A pick
-// narrows the list to that app (`selectedSeat`, through `walletScopeTest`)
+// and Work follow. The Wallet keeps its own menu (addresses and apps). A
+// pick narrows the list to that app (`selectedSeat`, through `walletScopeTest`)
 // and the box to that app's own head, or to its newest row.
 extension FeedScreen {
     /// The apps the menu lists: the room's connected ones, and only once
@@ -13,7 +12,7 @@ extension FeedScreen {
         guard source != CategoryFold.walletRoom, RoomAccounts.mergedRooms.contains(source)
         else { return [] }
         let seats = RoomAccounts.connected(in: source, names: connectedSeatNames)
-            .filter { !$0.ownScreen && chrome.seatShows($0) }
+            .filter(chrome.seatShows)
         return seats.count > 1 ? seats : []
     }
 

@@ -468,7 +468,7 @@ struct MoveKeypad: View {
         text = next
     }
 
-    /// The whole edit grammar (as `DevnetAmountInput.sanitize`): one point at
+    /// The whole edit grammar (as the devnet send sheet's was): one point at
     /// most, a bare point becomes "0.", a digit typed on a lone "0" replaces
     /// it, and no more places than the unit holds.
     static func sanitize(_ text: String, previous: String, places: Int) -> String {

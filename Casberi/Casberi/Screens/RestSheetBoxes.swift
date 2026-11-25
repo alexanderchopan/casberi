@@ -381,8 +381,8 @@ struct ThingSheetBox: View {
         let seat = BridgeCatalog.seatName(forSource: source)
         let squash: (String) -> String = { $0.lowercased().filter { $0.isLetter || $0.isNumber } }
         let names = Set([squash(source), squash(seat)].filter { $0.count >= 1 })
-        // The registrable label, and every label left of it ("explorer.
-        // testnet.lez.logos.co" names Logos at "logos").
+        // The registrable label, and every label left of it ("app.
+        // dodopayments.com" names Dodo Payments at "dodopayments").
         if labels.count >= 2, labels.dropLast().contains(where: { names.contains($0) }) {
             return seat
         }

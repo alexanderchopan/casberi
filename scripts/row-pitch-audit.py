@@ -48,7 +48,6 @@ ALLOWED = {
     "Casberi/Casberi/Screens/FeedScreen+DaySections.swift": 1,
     "Casberi/Casberi/Screens/FeedScreen+HomeHead.swift": 2,
     "Casberi/Casberi/Screens/FeedScreen+WalletAztec.swift": 1,
-    "Casberi/Casberi/Screens/LogosChatTray.swift": 1,
     "Casberi/Casberi/Screens/MoveAztecPrivate.swift": 3,
     "Casberi/Casberi/Screens/MoveBack.swift": 2,
     "Casberi/Casberi/Screens/MoveDeck.swift": 3,

@@ -231,61 +231,8 @@ if [[ "$back" -eq 0 ]]; then
   printf '  ✓ no quiet-hours hold anywhere (§870)\n'
 fi
 
-# ── the devnet (prd §522, §728) ─────────────────────────────────────────────
-# The compiled half above proves the RULES. These guard the wiring it cannot
-# see — and the wiring is where a devnet seat fails: a reset is chain state,
-# never a landed `Thing`, so nothing it learns could ever reach a lock screen
-# through the corpus, and no audit in this repo could report that as a gap.
-# (Hegotá Frames' half went with the seat, prd §1206; Logos is the seat.)
-DEVNET="Casberi/Casberi/Model/DevnetNotify.swift"
-LOGOSB="Casberi/Casberi/Model/LogosBridge.swift"
-BG="Casberi/Casberi/Model/WalletBackgroundRefresh.swift"
-for f in "$DEVNET" "$LOGOSB" "$BG"; do
-  [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
-done
-
 guard "the headline has ONE authority, forwarded from the sweep" \
       'static func headline\(_ kind: NotifyKind\) -> String \{ kind\.headline \}' "$SWEEP"
-
-# A seat name that does not equal the source the bridge really stamps fails at
-# NEITHER end: the notification arrives with a blank right-hand slot and its tap
-# opens the All feed. Derived from the bridges rather than typed twice here.
-for pair in "Logos:Casberi/Casberi/Model/LogosRoom.swift"; do
-  label="${pair%%:*}"; file="${pair#*:}"
-  src=$(grep -oE 'static let source = "[^"]+"' "$file" | head -1 | sed 's/.*"\(.*\)"/\1/')
-  if [[ -n "$src" ]] && grep -qF "return \"$src\"" "$PLAN"; then
-    printf '  ✓ %s'"'"'s seat name is the source its bridge really stamps\n' "$label"
-  else
-    printf '  ✗ DRIFT: NotifyDevnet.Seat does not spell %s'"'"'s source (%s) the way %s does\n' \
-           "$label" "$src" "$file"; fail=1
-  fi
-done
-
-# A reset stays news for a week, and no longer.
-guard "a reset stays sayable for a week" \
-      'static let resetWindow: TimeInterval = 7 \* 86_400' "$PLAN"
-
-# ONE submit, so a devnet alarm competes in the same batch as every other alarm
-# instead of arriving as a second buzz beside a dispute.
-guard "the devnet plans ride the corpus sweep's one submit" \
-      'Notifications\.submit\(plans \+ devnet' "$BG"
-
-# §522's sticky record: without the KEY the ledger cannot tell one wipe from
-# the next, and the room's own date alone would announce the same reset on
-# every pass forever.
-guard "a reset stores the new block-1 hash that makes it announceable once" \
-      'if reset \{ resetSeen = \(hash, \.now\) \}' "$LOGOSB"
-
-# THE GATHERER HOLDS NO RULE. Every threshold lives in the compiled file; one
-# that drifted down here would be a rule no harness could ever reach — which is
-# the whole reason this feature is split the way it is. Read from a
-# COMMENT-STRIPPED copy: the file documents these rules by naming them.
-devnet_code=$(sed 's://.*::' "$DEVNET")
-if print -r -- "$devnet_code" | grep -qE 'TimeInterval|86_400|3600'; then
-  printf '  ✗ DRIFT: DevnetNotify carries a window of its own — the rules belong in NotifyPlan.swift\n'; fail=1
-else
-  printf '  ✓ the gathering half holds no thresholds of its own\n'
-fi
 
 # ── the digest's wiring (prd §770) ──────────────────────────────────────────
 # The compiled half proves the queue and the words; these guard the one door
@@ -473,39 +420,7 @@ ok(NotifyRules.deadlinePhrase(cal.date(byAdding: .day, value: 3, to: at(9))!,
 ok(NotifyRules.deadlinePhrase(cal.date(byAdding: .day, value: -1, to: at(9))!,
                               now: at(9), calendar: cal) == "overdue", "the past reads 'overdue'")
 
-// ── the devnet (prd §522, §728) ─────────────────────────────────────────────
-// A devnet reset is chain state, never a landed `Thing`, so `NotifySweep.classify`
-// structurally cannot reach any of this — and nothing in this repo can make a
-// devnet reset on demand. These fixtures are not the best proof the rules
-// hold; they are the only one.
-let dnow = at(12)
-
-func reset(_ seat: NotifyDevnet.Seat, key: String = "id-1-2",
-           observed: Date = at(11), watching: Int = 2) -> NotifyDevnet.Reset {
-    NotifyDevnet.Reset(seat: seat, key: key, observedAt: observed, watching: watching)
-}
-ok(NotifyDevnet.plan(reset: reset(.logos), now: dnow) != nil,
-   "a reset observed an hour ago is news")
-ok(NotifyDevnet.plan(reset: reset(.logos, watching: 0), now: dnow) == nil,
-   "NOBODY WATCHING, NOTHING TO SAY — a reset is only news about someone who had something there")
-ok(NotifyDevnet.plan(reset: reset(.logos, observed: dnow.addingTimeInterval(60)), now: dnow) == nil,
-   "an observation from the FUTURE never fires (a clock that moved under us)")
-ok(NotifyDevnet.plan(reset: reset(.logos, observed: dnow.addingTimeInterval(-8 * 86_400)), now: dnow) == nil,
-   "a reset older than the week the room keeps explaining it never fires")
-ok(NotifyDevnet.plan(reset: reset(.logos, observed: dnow.addingTimeInterval(-6 * 86_400)), now: dnow) != nil,
-   "…and one inside that week still does")
-// The id is the whole of "fires once, ever" — and of a SECOND wipe being news.
-let dr1 = NotifyDevnet.plan(reset: reset(.logos, key: "id-1-2", observed: at(9)), now: dnow)!
-let dr2 = NotifyDevnet.plan(reset: reset(.logos, key: "id-1-2", observed: at(11)), now: dnow)!
-ok(dr1.id == dr2.id, "the same reset keeps ONE id however often the sticky record is re-read")
-let dr3 = NotifyDevnet.plan(reset: reset(.logos, key: "id-2-3"), now: dnow)!
-ok(dr3.id != dr1.id, "a SECOND reset is a different id, so it is new news")
-ok(dr1.source == "Logos",
-   "the plan carries its seat's source (LogosRoom.source), so the right-hand slot gets its mark")
-ok(dr1.body.contains("Logos") && dr1.body.contains("accounts you follow"),
-   "the body names the testnet and says the followed accounts survive — §515a's easily-missed half")
-ok(dr1.cls == .alarm && !dr1.isTimeSensitive,
-   "a devnet reset is an alarm that never breaks a Focus")
+// ── your own node stopping (prd §1084; an Aztec stake since Logos went) ──
 ok(NotifyKind.nodeDown.cls == .alarm && NotifyKind.nodeDown.severity > NotifyKind.runningLow.severity
    && NotifyKind.nodeDown.severity < NotifyKind.priceRose.severity && !NotifyKind.nodeDown.isTimeSensitive,
    "a stopped node: an alarm above running low, below money, never breaking a Focus")
@@ -517,29 +432,7 @@ ok(NotifyKind.connectionBroken.cls == .alarm && !NotifyKind.connectionBroken.sta
    && !NotifyKind.connectionBroken.isTimeSensitive,
    "a broken connection: a digest alarm above a stopped node, below money, never breaking a Focus")
 
-// Each seat's door must PARSE. The name carries a space and an accent, so an
-// unencoded link is one `URL(string:)` hands back as nil — a tap that opens
-// the app on whatever room it was already showing.
-for seat in NotifyDevnet.Seat.allCases {
-    ok(URL(string: seat.link)?.pathComponents.last == seat.source,
-       "\(seat) links to its own room, percent-encoded so URL() can parse it back")
-}
-
-// Composed, and then batched like any other alarm.
-let dAll = NotifyDevnet.plans(resets: [reset(.logos), reset(.logos, key: "id-2-3")], now: dnow)
-ok(dAll.count == 2, "two resets compose")
-let dCollapsed = NotifyRules.collapse(dAll)
-ok(dCollapsed.count == 1, "two devnet alarms collapse to one, like any other alarm")
-ok(dCollapsed[0].kind == .chainReset, "…and it is a reset")
-
-// ── where it sits on the ladder, both boundaries ────────────────────────────
-ok(NotifyKind.paymentsSilent.severity > NotifyKind.chainReset.severity,
-   "a devnet reset never outranks revenue that stopped — no real money is involved")
-ok(NotifyKind.chainReset.severity > NotifyKind.poolCleared.severity,
-   "…and it outranks good news you can act on whenever")
-ok(NotifyKind.chainReset.cls == .alarm, "a reset is an alarm")
-ok(NotifyKind.chainReset.severity > 0, "a reset has a real severity, not the default 0 that ties with arrivals")
-ok(!NotifyKind.chainReset.isTimeSensitive, "a reset never breaks a Focus — it states no clock still running")
+// ── every kind has a headline ──────────────────────────────────────────────
 // The headline moved onto the kind (§522) and `NotifySweep.headline` forwards,
 // so EVERY kind must answer — not only the ones a switch happened to list.
 for k in NotifyKind.allCases { ok(!k.headline.isEmpty, "\(k) has a non-empty headline") }
@@ -869,23 +762,13 @@ mutate "a wallet incident claims the Focus-breaking level" \
        's/self == \.disputeOpened \|\| self == \.deadlineNear/self == .disputeOpened || self == .deadlineNear || self == .walletIncident/'
 
 
-# ── the devnet (prd §522, §728) ─────────────────────────────────────────────
-# Every one of these renders as a perfectly ordinary notification — or as
-# silence, which is worse, because silence here is also the healthy answer.
-mutate "a devnet reset alarms someone who follows nothing on it" \
-       's/guard r\.watching > 0 else \{ return nil \}//'
-mutate "a reset stays news forever, long after the room stops explaining it" \
-       's/static let resetWindow: TimeInterval = 7 \* 86_400/static let resetWindow: TimeInterval = 3650 * 86_400/'
-mutate "the same reset is announced again on every sweep (the key leaves the id)" \
-       's/:\\\(r\.key\)//'
-mutate "a devnet reset outranks a dispute" \
-       's/case \.chainReset:       return 55/case .chainReset:       return 200/'
+# ── the dateline and the headlines ──────────────────────────────────────────
 mutate "the dateline draws even when delivery is on time (the lag floor is lost)" \
        's/static let datelineLag: TimeInterval = 3600/static let datelineLag: TimeInterval = -1_000_000/'
 mutate "last night and yesterday collapse into one phrase" \
        's/return hour >= 21\n                \? String\(localized: "last night at/return hour >= 99\n                ? String(localized: "last night at/'
 mutate "a kind loses its headline, so a notification arrives with an empty title" \
-       's/case \.chainReset:       return String\(localized: "A devnet was reset"\)/case .chainReset:       return ""/'
+       's/case \.nodeDown:         return String\(localized: "Your node stopped"\)/case .nodeDown:         return ""/'
 
 # ── the digest (prd §770) ───────────────────────────────────────────────────
 mutate "money arriving stands alone again, one buzz per transfer" \
@@ -1081,15 +964,9 @@ func row(ref: String, source: String = "Wallet", tags: [String] = []) -> Thing {
 func runFixtures() {
     let now = Date()
 
-    // ── Logos (prd §1084): your node stopping is news; the chain's content is not ──
-    ok(NotifySweep.classify(row(ref: "logos:node:offline:1790000000"), now: now) == .nodeDown,
-       "a Logos node that stopped answering classifies as nodeDown")
-    ok(NotifySweep.classify(row(ref: "logos:node:tickets:1790000000"), now: now) == nil,
-       "mining tickets stay a row, never a notification")
-    ok(NotifySweep.classify(row(ref: "logos:node:back:1790000000"), now: now) == nil,
-       "a node answering again is not news")
-    ok(NotifySweep.classify(row(ref: "logos:lez:6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV:e246"), now: now) == nil,
-       "test coins arriving never notify (§522: devnet content is not news)")
+    // ── Logos is deleted (2026-11-25): a straggler row of its never notifies ──
+    ok(NotifySweep.classify(row(ref: "logos:node:offline:1790000000"), now: now) == nil,
+       "a Logos node row left from before the seat was deleted never notifies")
 
     // ── Aztec mainnet staking (prd §1279): money ready and a stopped sequencer
     //    notify; an Aztec vote stays a row ──

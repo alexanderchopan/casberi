@@ -233,7 +233,7 @@ Casberi holds none of your keys, and runs no server that could. Every key is mad
 - An exported key. Export makes a new private key for your Safe, adds it as an owner and shows it once; Casberi keeps only its address. For Aztec, it shows the account's own keys once.
 - Your apps' keys. A key you paste syncs through iCloud Keychain to your other devices. Sign-ins and tokens that refresh stay on this device and out of backups. Delete access removes them all.
 - A locked note's key is in iCloud Keychain, so the note opens on your other devices.
-- Keys that sign for others. When Casberi co-signs a Safe you share, its key stays on this device behind Face ID and can't move money on its own. Testnet keys stay on this device and sign on testnets only.
+- Keys that sign for others. When Casberi co-signs a Safe you share, its key stays on this device behind Face ID and can't move money on its own.
 
 Who can move your money. This device, after Face ID. Whoever holds your Apple account and the passcode of one of your devices holds your recovery key, your private balance's key and your private account's key: without a co-signer, that's enough to move your account to another device, and the two private keys spend on their own. With your co-signer required, moving your account to another device needs your co-signer too, and Casberi asks it before any Aztec transaction; a copy of Casberi someone has altered could skip that, which is why your Apple account and your passcode are what protect your private money.
 
@@ -262,7 +262,7 @@ An agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, OpenRouter, Grok,
 
 ## Every app
 
-Over a hundred apps, in nine catalog categories: Wallet, Testnets, Work, Agents, Day, Notes, Life, Social and Media. The full list, each with one line, is on https://casberi.app/docs.html#every-app.
+Over a hundred apps, in eight catalog categories: Wallet, Work, Agents, Day, Notes, Life, Social and Media. The full list, each with one line, is on https://casberi.app/docs.html#every-app.
 
 ## Questions, answered
 

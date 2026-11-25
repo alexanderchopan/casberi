@@ -213,9 +213,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 /* AWS's own real mark (the user's saved icon file, inlined per the site's
    no-hotlink rule), on AWS's own dark navy ("Squid Ink") ground. */
 .ai-aws { background: #232f3e; }
-/* Logos ships its λ on its own light-grey field — full-bleed, as Radicle. */
-.ai-logos { background: #dcdcd9; }
-.ai-logos img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-sentry    { background: #fff; }
 .ai-vercel    { background: #000; }
 .ai-pagerduty { background: #04ac38; }
@@ -2119,7 +2116,7 @@ body { overflow-x: clip; }
    category, its name and count on top, its icons on one even six-column
    grid shared by every card, so the tiles line up card to card. Cards are
    ordered largest first (Wallet, Work, Media / Agents, Life, Social / Day,
-   Notes, Testnets) so each row of three is cards of one height; on two
+   Notes) so each row of three is cards of one height; on two
    columns the last small card spans the row. The count is a CSS counter,
    so it can never disagree with the cells. */
 #catalog .store-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));

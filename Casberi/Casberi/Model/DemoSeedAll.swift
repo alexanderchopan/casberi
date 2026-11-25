@@ -310,9 +310,6 @@ enum DemoSeedAll {
                               // GitLab's two families (prd §911), the Radicle reason.
                               "gitlab:issue:demo", "gitlab:mr:demo",
                               "radicle:issue:rad:zDEMO",
-                              // Logos (prd §988): the real `logos:lez:<id>:<hash>`
-                              // shape with a demo account id inside it.
-                              "logos:lez:DEMO",
                               // Walletbeat (prd §419) carries the REAL ref
                               // shapes for the same reason as Radicle above —
                               // the room head joins a watch to its stored card
@@ -824,8 +821,6 @@ enum DemoSeedAll {
         // keep off a lived-in install (a real Cloudflare bridge reads as
         // "Cloudflare" too, indistinguishable by name).
         CloudflareEstateStore.clear()
-
-        LogosStore.shared.remove(demoLogosAccount)
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -4364,22 +4359,6 @@ enum DemoSeedAll {
                 t.tags = r.2
             }
         }
-        // Logos (prd §988) — the rows the block walk lands, in its own words:
-        // bare amounts (LEZ has no unit), the counterparty's short id after
-        // the seam. The ref carries a DEMO account id so teardown finds it.
-        let logos: [(String, [String], Double)] = [
-            ("Received 150 — from ...Kf2W", ["Received"], 0.5),
-            ("Sent 40 — to ...hE51", ["Sent"], 2),
-            ("Created token ANTV", ["Created"], 4),
-        ]
-        out += logos.enumerated().map { i, r in
-            row(.link, r.0, source: "Logos", ref: "logos:lez:DEMO:\(i)",
-                days: r.2, hour: 13,
-                content: "https://explorer.testnet.lez.logos.co") { t in
-                t.authorHandle = "...Sr2r"
-                t.tags = r.1
-            }
-        }
         let posthog: [(String, Double)] = [
             ("signed_up crossed 1,000", 3), ("Annotation · shipped the onboarding", 5),
             ("doc_exported has gone quiet", 8),
@@ -5087,9 +5066,6 @@ enum DemoSeedAll {
     /// address to find and shift the wallet curve it seeds below — a second
     /// copy of the literal is how that drifts silently.
     static let demoWallet = "0x1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
-    /// The Logos account the demo watches (prd §1073) — a real-shaped public
-    /// id, the one `logos-selftest.sh` parses.
-    static let demoLogosAccount = "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r"
 
     /// Every wallet the demo watches, in shelf order. The FIRST is
     /// `demoWallet` — the one every seeded row, the balance curve, the Safe
@@ -5337,12 +5313,6 @@ enum DemoSeedAll {
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
         seedCloudflareEstate()
-        // 5c' · Logos' watched account (prd §1073): the rows below name it
-        // (`CbgR…Sr2r`), and with no account watched the room's box said
-        // "No account watched yet." over its own moves. A fixture balance,
-        // never a read.
-        LogosStore.shared.add(demoLogosAccount)
-        LogosStore.shared.rememberBalances([demoLogosAccount: 110], at: .now)
         // 6 · Safe's reading (2026-08-11; `SafeAsk` since prd §1738 deleted
         // the head) reads `SafeBridge`'s own bridge state, not the seeded
         // `.transaction` things above (`SafeRoomSource`'s own doc) — refs match the `wallet:safe:eth:demo0/1` rows in `wallet()`
@@ -5606,7 +5576,6 @@ enum DemoSeedAll {
         ("Slack", "3 channels", "Reads the channels you name."),
         ("Trello", "Synced 40m ago", "Reads cards assigned to you."),
         ("Radicle", "1 repo", "Reads patches and issues, keyless."),
-        ("Logos", "1 account", "Reads a public testnet account, keyless."),
         ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
         ("ENS", "3 names followed", "Reads when a followed name expires, keyless."),
         ("ETHBEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),

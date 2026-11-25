@@ -1,14 +1,11 @@
 import SwiftUI
 
-/// **SOURCES IS A LIBRARY (prd §1316, user: "Do A. it's like Apple's Library
-/// and so will feel familiar"; "the app is a joy to use, but the app
-/// catalogue and sources section is not").** Under the box, every category is
-/// a folder, three across, as the App Library draws them: inside, the apps you
-/// have wearing a green dot (§1319), every icon in colour; under
-/// it the name and "3 of 21". A tap springs the folder open in place, over the
-/// page (`SourcesOpenFolder`), the way the dock's folders spring (§621):
-/// yours first with the dot, the rest with a plus. Casberi's own settings take the
-/// first slot, where the App Library keeps Suggestions.
+/// **APPS: RECENT, THE WALLET, THEN THE FEED (prd §1974, retiring §1316's
+/// grid of folders).** Recent leads; the Wallet is its own section, two rows
+/// of its apps; the Feed's categories follow A–Z, one line each. Yours are
+/// lit and the rest step back (§1733). A tap on a section or a line springs
+/// its folder open in place, over the page (`SourcesOpenFolder`, §1316):
+/// yours first, the rest with a plus.
 ///
 /// The search field stays above the folders: on the phone Sources rises as a
 /// sheet over the band's search (§1245), and a focused field lists every app
@@ -38,9 +35,6 @@ struct SourcesLibrary: View {
     let openApp: (String) -> Void
     let settings: (String) -> (() -> Void)?
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s4, alignment: .top),
-                                count: 3)
-
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             // **ONE TAP TO WHAT YOU USE (prd §1733).** The apps of yours last
@@ -53,13 +47,31 @@ struct SourcesLibrary: View {
                 SourcesQuickRow(title: String(localized: "Start with any of these"), apps: starts, adds: true,
                                 needs: { _ in false }, settings: { _ in nil }, open: openApp)
             }
-            LazyVGrid(columns: columns, alignment: .leading, spacing: DS.Space.s6) {
-                ForEach(folders) { folder in
-                    SourcesFolderTile(folder: folder, has: has, needs: needs) { open(folder.category) }
-                }
-                // No Settings folder here (prd §1808): Casberi's settings are
-                // on the Account page, with the account they belong to.
+            // **THE WALLET, THEN THE FEED (prd §1974, retiring §1316's
+            // folder grid; user: "we could also have wallet be first and like
+            // a different section than the feed ones").** A crypto user
+            // scanned nine folders to find Wallet among the feeds. Now the
+            // Wallet stands first, its own section with two rows of its apps;
+            // the Feed's categories follow under their own word, A–Z, one
+            // line each: the name, then as many of its apps as the line
+            // holds. A tap still springs the folder open (§1316).
+            if let wallet = folders.first(where: { $0.category == CategoryFold.walletCategory }) {
+                SourcesWalletSection(folder: wallet, has: has, needs: needs) { open(wallet.category) }
             }
+            let feed = folders.filter { $0.category != CategoryFold.walletCategory }
+            if !feed.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Feed")
+                        .dsText(.heading24).foregroundStyle(DS.headInk)
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.bottom, DS.Space.s1)
+                    ForEach(feed) { folder in
+                        SourcesCategoryRow(folder: folder, has: has, needs: needs) { open(folder.category) }
+                    }
+                }
+            }
+            // No Settings folder here (prd §1808): Casberi's settings are
+            // on the Account page, with the account they belong to.
         }
     }
 
@@ -274,72 +286,116 @@ struct FeedStartBox: View {
 }
 
 /// One folder: the well with nine of its apps, the name, the count.
-private struct SourcesFolderTile: View {
+/// The Wallet's section in Apps (prd §1974): its name and fact over two rows
+/// of its apps, seven across, yours first and lit, the rest stepped back;
+/// "N more" under them when the folder holds more. The whole section is
+/// one press that opens the folder.
+private struct SourcesWalletSection: View {
     let folder: SourcesLibrary.Folder
     let has: (String) -> Bool
     let needs: (String) -> Bool
     let action: () -> Void
 
+    static let across = 7
+    static let rows = 2
+
     var body: some View {
+        let shown = Array(folder.apps.prefix(Self.across * Self.rows))
+        let fact = SourcesLibrary.fact(folder)
         Button {
             DSHaptic.tap()
             action()
         } label: {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Color.clear
-                    .aspectRatio(1, contentMode: .fit)
-                    .overlay {
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(verbatim: folder.category)
+                        .dsText(.heading24).foregroundStyle(DS.headInk)
+                    Spacer(minLength: DS.Space.s2)
+                    Text(verbatim: fact.text)
+                        .dsText(.body17).foregroundStyle(fact.needsYou ? DS.attentionInk : DS.textSecondary)
+                }
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2), count: Self.across),
+                          spacing: DS.Space.s2) {
+                    ForEach(shown, id: \.self) { name in
                         GeometryReader { geo in
-                            let pad = DS.Space.s3
-                            let gap = DS.Space.s2
-                            let side = max(0, (geo.size.width - 2 * pad - 2 * gap) / 3)
-                            LazyVGrid(columns: Array(repeating: GridItem(.fixed(side), spacing: gap), count: 3),
-                                      alignment: .leading, spacing: gap) {
-                                ForEach(folder.apps.prefix(9), id: \.self) { name in
-                                    BridgeIcon(name: name, size: side)
-                                        .sourcesState(yours: has(name), needsYou: needs(name),
-                                                      size: max(7, side * 0.34), ring: DS.page)
-                                }
-                            }
-                            .padding(pad)
+                            BridgeIcon(name: name, size: geo.size.width)
+                                .sourcesState(yours: has(name), needsYou: needs(name),
+                                              size: max(7, geo.size.width * 0.3), ring: DS.page)
                         }
+                        .aspectRatio(1, contentMode: .fit)
                     }
-                    .dsWell(cornerRadius: DS.Radius.widget)
-                SourcesFolderWords(name: folder.category,
-                                   fact: SourcesLibrary.fact(folder).text,
-                                   needsYou: SourcesLibrary.fact(folder).needsYou)
+                }
+                if folder.apps.count > shown.count {
+                    Text("\(folder.apps.count - shown.count) more")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(PressSpring())
+        .buttonStyle(RowPress())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "\(folder.category), \(SourcesLibrary.fact(folder).text)"))
+        .accessibilityLabel(Text(verbatim: "\(folder.category), \(fact.text)"))
         .accessibilityAddTraits(.isButton)
     }
 }
 
+/// A Feed category in Apps (prd §1974): its name in a fixed column, then as
+/// many of its apps as the line holds at the row mark's size, yours first
+/// and lit, and "+N" for the rest. One press opens the folder.
+///
+/// Holdings' foot draws the same row (prd §1974 item 3), titled "Add to
+/// Wallet", over the Wallet apps you could add.
+struct SourcesCategoryRow: View {
+    let folder: SourcesLibrary.Folder
+    let has: (String) -> Bool
+    let needs: (String) -> Bool
+    /// The words in the name column, when they are not the category's.
+    var title: String? = nil
+    var nameColumn: CGFloat = 84
+    let action: () -> Void
 
-private struct SourcesFolderWords: View {
-    let name: String
-    let fact: String
-    /// The fact is an app that needs you: the one amber word (prd §1733).
-    var needsYou = false
+    private static let mark = DS.Mark.row
+    private static let gap = DS.Space.s1 + 2
+    private static let moreColumn: CGFloat = 32
+
     var body: some View {
-        // **THE NAME ALONE, CENTRED UNDER ITS FOLDER (prd §1815, user: "apps
-        // folder names lose glyphs, yes. should the title and count for each
-        // folder be centered?").** The pink glyph was §1737's match for the
-        // Feed's section, which no longer wears one (§1814). With nothing
-        // leading it the pair is a label for the tile above, and a label
-        // under an icon sits on its centre, as the Home Screen's does.
-        VStack(alignment: .center, spacing: 0) {
-            Text(verbatim: name)
-                .dsText(.body17).fontWeight(.semibold).foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.8)
-            Text(verbatim: fact)
-                .dsText(.subhead12).foregroundStyle(needsYou ? DS.attentionInk : DS.textSecondary)
-                .lineLimit(1).minimumScaleFactor(0.8)
+        let fact = SourcesLibrary.fact(folder)
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Text(verbatim: title ?? folder.category)
+                    .dsText(.body17).fontWeight(.semibold)
+                    .foregroundStyle(fact.needsYou ? DS.attentionInk : DS.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                    .frame(width: nameColumn, alignment: .leading)
+                GeometryReader { geo in
+                    let fit = max(1, Int((geo.size.width - Self.moreColumn + Self.gap) / (Self.mark + Self.gap)))
+                    let shown = Array(folder.apps.prefix(fit))
+                    HStack(spacing: Self.gap) {
+                        ForEach(shown, id: \.self) { name in
+                            BridgeIcon(name: name, size: Self.mark)
+                                .sourcesState(yours: has(name), needsYou: needs(name), size: 9, ring: DS.page)
+                        }
+                        Spacer(minLength: 0)
+                        if folder.apps.count > shown.count {
+                            Text(verbatim: "+\(folder.apps.count - shown.count)")
+                                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(height: geo.size.height)
+                }
+                .frame(height: Self.mark)
+            }
+            .frame(minHeight: DSFeed.headHeight)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity)
+        .buttonStyle(RowPress())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: title ?? "\(folder.category), \(fact.text)"))
+        .accessibilityAddTraits(.isButton)
     }
 }
 

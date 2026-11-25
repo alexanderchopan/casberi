@@ -175,7 +175,7 @@ struct WalletBalanceHeadline: View {
     /// sentence explaining that the line had not started yet. Both were true of
     /// the parameter and neither was true of the wallet.
     /// **HOW THE NUMBER IS SPELLED (prd §683).** This crown is the shared Home
-    /// of every wallet-family room — Wallet, Frames and Logos — and the
+    /// of every wallet-family room — the Wallet, once Frames and Logos — and the
     /// spelling is the ONE piece of it that cannot be
     /// shared: the Wallet counts dollars, a devnet counts its own chain's ETH.
     /// Everything else (the caption, the odometer roll, the plot, the range

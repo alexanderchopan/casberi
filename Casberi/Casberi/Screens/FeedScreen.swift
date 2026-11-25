@@ -61,7 +61,6 @@ extension FeedScreen: Equatable {
             // 150-row query for the life of the mount and "Show older" would
             // stop at the bound with nothing on screen able to say why.
             && a.rowBudget == b.rowBudget
-            && a.hostRoom == b.hostRoom
     }
 }
 
@@ -138,11 +137,6 @@ struct FeedScreen: View {
     /// than a person can open inside the transition.
     let rowBudget: Int?
 
-    /// The merged room this screen stands inside, when it is one app's own
-    /// screen shown there (prd §1050k: a testnet inside Testnets). The room
-    /// names itself by it, and the account menu leads with its other apps.
-    let hostRoom: String?
-
     /// across the person's own swipes instead of all at once on launch.
     @State private var everBuilt = false
     /// The room's own share card, raised by the door under its tiles
@@ -181,12 +175,11 @@ struct FeedScreen: View {
     /// (prd §959); regular keeps it on the shell's rail.
     @Environment(\.horizontalSizeClass) var roomSizeClass
 
-    init(source: String, hostRoom: String? = nil, isActive: Bool, nearActive: Bool = true,
+    init(source: String, isActive: Bool, nearActive: Bool = true,
          rowBudget: Int? = nil, inSheet: Bool = false, pinnedWalletSection: WalletSection? = nil) {
         self.source = source
         self.inSheet = inSheet
         self.pinnedWalletSection = pinnedWalletSection
-        self.hostRoom = hostRoom
         self.rowBudget = rowBudget
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
         // a `.task`, i.e. after the first body AND after SwiftUI has installed
@@ -1065,26 +1058,6 @@ struct FeedScreen: View {
                 guard shape == .wallet, isActive, pinnedWalletSection == nil else { return }
                 chrome.walletSections = []
             }
-            // The testnet room's half of the same contract (PERF
-            // 2026-09-01), replacing writes made from inside `roomBody` — see
-            // `logosSectionPublication`. `initial: true` for the reason the
-            // one above gives: the room's live state is usually already loaded
-            // by the time the room mounts, so a room that never changes
-            // afterwards would publish nothing and draw no switcher at all.
-            .onChange(of: logosSectionPublication, initial: true) { _, now in
-                // A sheet over the testnet room is not it (the Wallet's bug).
-                guard isActive, !inSheet || source == LogosRoom.source else { return }
-                chrome.logosSections = now
-            }
-            // Cleared on the way OUT, which the body-path writes never did:
-            // every room evaluated those lines, so the list left behind was
-            // whatever the last devnet visit put there. The list is also each
-            // switcher's own gate, so clearing it is what makes "a devnet
-            // switcher cannot appear over another room" true by construction
-            // rather than by a source test in two files.
-            .onDisappear {
-                if source == LogosRoom.source { chrome.logosSections = [] }
-            }
     }
 
     /// A source room's COMPOSE action — "New event", "New email", "New task" —
@@ -1136,8 +1109,8 @@ struct FeedScreen: View {
     ///
     /// **Every arm but the populated room is behind `AnyView` (PERF
     /// 2026-10-17).** An `if` in a body builds the type metadata of EVERY arm,
-    /// drawn or not, so the All feed's first build was paying for Logos'
-    /// and both empty states' view types at launch. Erased, an arm's
+    /// drawn or not, so the All feed's first build was paying for both
+    /// empty states' view types at launch. Erased, an arm's
     /// types are built the first time it draws. `AnyView` forwards a view
     /// list, so the `List` still sees each section and row. `shapedSections`
     /// follows the same rule.
@@ -1199,15 +1172,6 @@ struct FeedScreen: View {
         // materialises is empty. A room narrowed to empty by a tag or a scope
         // reads twice, which is what it read before.
         //
-        // THE EXCEPTION, stated rather than glossed: the seats whose branches
-        // below return before they ever reach the rows (Logos)
-        // previously paid one short-circuiting
-        // `contains` and now pay `visible`'s `Corpus.surfaced` allocation too.
-        // It is free in fact and not in principle — such a seat lands few
-        // `Thing`s, so the array it allocates over is small — and it is
-        // written down here because a premise that stops being true is exactly
-        // what this change had to go and correct one property up.
-        //
         // `Corpus.hasSurfaced(rows)` rather than `!rows.isEmpty`, so the answer
         // is unchanged for the PINNED room: `feedThings` deliberately does not
         // surface-filter that one (a contact you pinned is one you asked to
@@ -1229,7 +1193,7 @@ struct FeedScreen: View {
         // The Notes room is never replaced either (prd §969, §979): its New
         // tile is how an empty one stops being empty, and the generic state
         // told a first-time writer to open the catalog instead.
-        if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
+        if !roomHasContent && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All"
             && source != RoomAccounts.dayRoom && !pinnedPage {
             AnyView(Group {
@@ -1243,34 +1207,14 @@ struct FeedScreen: View {
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
             })
-        } else if source == LogosRoom.source {
-            AnyView(Group {
-                // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
-                // rows. The chrome draws the box, the tiles and the account menu on
-                // every page (prd §1039). Home (the chain's moves), Node and
-                // Rewards then list their own rows here, with no cover: the crown
-                // is the room's lead, not the newest row.
-                let logosSection = LogosSection.resolve(chrome.logosSection,
-                                                        present: chrome.logosSections)
-                logosScopeChromeSection(logosSection)
-                    .background { appPageProbe(rows) }
-                if logosSection == .holdings {
-                    logosHoldingsSection
-                } else {
-                    let days = chronoGroups(logosRows(rows, section: logosSection))
-                    groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
-                }
-            // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
-            // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
-            // to the first arm so an agent room would stop being replaced by the
-            // generic empty state — and that is only half a move: it took the room
-            // OUT of the empty arm without putting it INTO a drawing one, so a
-            // connected agent with no conversation yet matched nothing here at all.
-            // Reported the moment the dock fix worked: *"i press the bankr tile i
-            // just see a black screen"*. `LiveRoomSources`' own doc names this
-            // exact shape — it is why Logos has an arm above
-            // rather than a flag.
-            })
+        // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
+        // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
+        // to the first arm so an agent room would stop being replaced by the
+        // generic empty state — and that is only half a move: it took the room
+        // OUT of the empty arm without putting it INTO a drawing one, so a
+        // connected agent with no conversation yet matched nothing here at all.
+        // Reported the moment the dock fix worked: *"i press the bankr tile i
+        // just see a black screen"*.
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
                     || walletKeepsChrome || source == "All"
                     || source == RoomAccounts.dayRoom || pinnedPage {
@@ -1615,14 +1559,14 @@ struct FeedScreen: View {
         }
         // The Wallet's place is Home (prd §1807): the whole app is the
         // wallet, so its own page takes the place's word.
-        if (hostRoom ?? source) == CategoryFold.walletRoom { return PlaceTab.wallet.label }
+        if source == CategoryFold.walletRoom { return PlaceTab.wallet.label }
         // A door taken on a page (prd §1812): the page's own name stands
         // before it, the app's on an app's page, else the category's.
         if pageScope != nil { return selectedSeat?.name ?? BridgeCatalog.seatName(forSource: source) }
         // An app's page stands at Activity's place (§1809), one step from
         // it (prd §1813): "Home · Activity · App Store Connect".
         if pageUnderActivity { return feedBackLabel }
-        return BridgeCatalog.seatName(forSource: hostRoom ?? source)
+        return BridgeCatalog.seatName(forSource: source)
     }
 
     /// Scroll the room back to its own head, with the standard motion so it

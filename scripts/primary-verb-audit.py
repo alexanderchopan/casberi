@@ -83,7 +83,6 @@ EXEMPT_FILES = {
     # mentions one.
     "DSSlab.swift",
     "DSActVerb.swift",
-    "DevnetSendConsole.swift",
 }
 
 # A solid, non-decorative fill — the materials a primary verb is painted in.

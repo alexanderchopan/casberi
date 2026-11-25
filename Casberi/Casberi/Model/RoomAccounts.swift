@@ -6,8 +6,8 @@ import Foundation
 /// narrows the room to that app.
 ///
 /// One table per room, read by the menu, the row filter and the total, so the
-/// three cannot disagree about what an app owns. Only the Wallet and Testnets
-/// have entries so far; each room merged later adds its own beside it.
+/// three cannot disagree about what an app owns. Every merged room has its
+/// table here.
 enum RoomAccounts {
 
     struct Seat: Equatable {
@@ -23,10 +23,6 @@ enum RoomAccounts {
         let group: String
         /// The mark the menu draws.
         let mark: String
-        /// Whether a pick shows the app's own screen inside the merged room
-        /// rather than narrowing the room's (prd §1050k): a testnet's tiles,
-        /// verbs and accounts are its own, and no view adds two networks.
-        var ownScreen = false
         /// Where a door that names the app lands (prd §1738). `.pick` narrows
         /// the room to it and lists it in the room's menu. The others have no
         /// pick: their money is already a section of the Wallet, so the door
@@ -80,7 +76,6 @@ enum RoomAccounts {
     static func seats(for room: String) -> [Seat] {
         switch room {
         case CategoryFold.walletRoom: return wallet
-        case testnetsRoom: return testnets
         case readingRoom: return reading
         case agentsRoom: return agents
         case mediaRoom: return media
@@ -125,13 +120,8 @@ enum RoomAccounts {
     /// Every room that has absorbed apps. Each is named for its category,
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
-    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, agentsRoom, mediaRoom,
+    static let mergedRooms: [String] = [CategoryFold.walletRoom, agentsRoom, mediaRoom,
                                           lifeRoom, dayRoom, workRoom, socialRoom]
-
-    /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
-    /// the room exists while Logos is connected (Hegotá Frames, its other
-    /// network, was deleted by prd §1206).
-    static let testnetsRoom = "Testnets"
 
     /// The Reading room (prd §1049, §1050d, §1051a, built §1052) folded into
     /// Media (prd §1204). The name stays as the source a shared article is
@@ -161,17 +151,6 @@ enum RoomAccounts {
     static func room(ofCategory category: String) -> String? {
         if category == readingRoom { return mediaRoom }
         return mergedRooms.contains(category) ? category : nil
-    }
-
-    /// THE SCREEN A ROOM OF OWN-SCREEN APPS SHOWS (prd §1050k): the picked
-    /// app's when it is connected, else the first connected one in menu
-    /// order. Nil for a room that draws itself (the Wallet), and for one with
-    /// nothing connected.
-    static func shownSource(room: String, scope: String?, names: Set<String>) -> String? {
-        let own = connected(in: room, names: names).filter(\.ownScreen)
-        guard !own.isEmpty else { return nil }
-        let picked = seat(scope, in: room).flatMap { pick in own.first { $0 == pick } }
-        return (picked ?? own[0]).source
     }
 
     /// Every source a room's query, its row filter and its safety-net probe
@@ -206,7 +185,6 @@ enum RoomAccounts {
     private static let trades = String(localized: "Trades and privacy")
     private static let names = String(localized: "Names")
     private static let teams = String(localized: "Teams")
-    private static let networks = String(localized: "Networks")
 
     /// A category's catalogue members as seats, A to Z (§995's order for a
     /// room's picks): a room whose apps have no money to slice and no screen
@@ -274,13 +252,6 @@ enum RoomAccounts {
     /// Threads and Bluesky, and Contacts since 2026-10-30. Contacts lands no
     /// row (§916), so it never reaches the menu.
     private static let social = catalogSeats(socialRoom)
-
-    /// The testnets (prd §1050): test money, never in the Wallet's menu or
-    /// total (§83).
-    private static let testnets: [Seat] = [
-        Seat(name: LogosRoom.source, source: LogosRoom.source,
-             holder: nil, group: networks, mark: LogosRoom.source, ownScreen: true),
-    ]
 
     /// The Wallet's (prd §1048; Bitrefill since §1051a). L2BEAT and Walletbeat
     /// are Reading's (§1051a), not the Wallet's.

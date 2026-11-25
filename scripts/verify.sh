@@ -1123,17 +1123,6 @@ python3 "$ROOT/scripts/setup-anatomy-audit.py" --self-test >/dev/null   || fail 
 python3 "$ROOT/scripts/setup-anatomy-audit.py"   || fail "a setup screen drifted out of the family's anatomy — see the output above"
 print -P "%F{green}✓ setup anatomy audit%f"
 
-# The devnet send sheet's grammar (prd §553, §1084): the keypad is ours, the
-# verbs are rows, the sheet presents nothing of its own, and the send refuses
-# in a demo. Static, no build. Its room-fit budgets went with Hegotá Frames
-# (prd §1206), whose panel and plan strip they measured.
-step "Devnet console audit"
-python3 "$ROOT/scripts/devnet-console-audit.py" --self-test >/dev/null \
-  || fail "the devnet-console audit's own self-test failed — the check is broken, not the code"
-python3 "$ROOT/scripts/devnet-console-audit.py" \
-  || fail "the devnet send sheet drifted — see the output above"
-print -P "%F{green}✓ devnet console audit%f"
-
 # The connect family's ARRANGEMENT, after §315 made its WORDS mechanical.
 # Static, no build. Same reason, one layer over: on 2026-08-29 the L2BEAT
 # connect page was reported as "totally messy like it was just thrown together
@@ -2592,12 +2581,6 @@ harness "ENS pure-logic self-test" "ens self-test" "scripts/ens-selftest.sh" "th
 harness "ENS renewal encoding self-test" "ens renew self-test" "scripts/ens-renew-selftest.sh" "the ENS renewal encoding self-test failed — run scripts/ens-renew-selftest.sh"
 
 harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-selftest.sh" "the Radicle logic self-test failed — run scripts/radicle-selftest.sh"
-# Logos (prd §988). The only proof of the LEZ block reader: a watch is forward-only on a
-# quiet testnet, so the landing path runs only when somebody else moves coins. Pins the
-# v0.2 Borsh layout to five real blocks whose hashes the chain confirmed, and catches the
-# failures that render as a clean row — a u128 read backwards, a timestamp read as
-# seconds, a hash that opens nothing, the per-block clock landing a row a minute.
-harness "Logos pure-logic self-test" "logos self-test" "scripts/logos-selftest.sh" "the Logos logic self-test failed — run scripts/logos-selftest.sh"
 harness "zk.money pure-logic self-test" "zkmoney self-test" "scripts/zkmoney-selftest.sh" "the zk.money logic self-test failed — run scripts/zkmoney-selftest.sh"
 # The Aztec testnet signer (prd §1276): the phone rebuilds the hash from the calls and
 # refuses anything not on an Aztec testnet, so a mainnet request or a blind hash never
@@ -2622,10 +2605,6 @@ harness "zFi + Tacit self-test" "zfi + tacit self-test" "scripts/zfi-selftest.sh
 # to the id being signed; nine real orders, tampered copies refused.
 harness "CoW order self-test" "cow order self-test" "scripts/cow-order-selftest.sh" "the CoW order self-test failed — run scripts/cow-order-selftest.sh"
 harness "Casberi clear-signing descriptors self-test" "casberi clear-signing descriptors self-test" "scripts/clearsign-casberi-selftest.sh" "Casberi's clear-signing descriptors failed — run scripts/clearsign-casberi-selftest.sh"
-# Logos Observer v2 (2026-10-03). Runs the Observer's OWN interoperability vectors (HMAC,
-# SPKI pin, pairing QR) through the client: a wrong byte in any of them answers every
-# request 401 bad_signature, or pairs with nothing, and looks identical from the phone.
-harness "Logos Observer self-test" "logos observer self-test" "scripts/logos-observer-selftest.sh" "the Logos Observer self-test failed — run scripts/logos-observer-selftest.sh"
 # Walletbeat (prd §419). Catches the silent wrong answer this seat is built around: a
 # coverage gate that stops firing draws a confident ratings bar for a wallet Walletbeat has
 # never examined, so the one nobody has looked at renders as the cleanest on the screen.

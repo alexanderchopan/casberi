@@ -84,7 +84,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Robinhood reads through Zerion (Alchemy prices none of it, §828) and on Alchemy too (`WalletIngest.zerionOmits`); a DEX-only token is priced by `DexPrices` only off a pool ≥$10K holding ≤25% of it, a native coin takes the cent floor (prd §968)** → docs/hooks/wallet.md · prd §828 · §968
 - **Zerion is THREE in flight, 0.4s between starts, holdings `ahead` of transactions, and the day's pool read off the headers (`ZerionLane`, prd §934 · §1722; Developer tier since 2026-10-20). The holdings window (10 min) is DATED when a hit is older than a minute and THROWN OUT for a wallet a transfer landed at (`WalletStore.holdingsRevision` re-reads the room)** → docs/hooks/wallet.md · prd §934 · §1722
 - **The wallet crown counts YOUR accounts, and Zerion answering does not end the read (prd §826).** → docs/hooks/wallet.md · prd §826
-- **One Wallet (prd §1048): the money rooms merge into one room (Markets, Logos stay apart); its total adds cash (`WalletCash`: Wise + Apple Wallet assets, Kraken's six fiat pairs, the rest left out and named) and Privy's apps, never Privy alone, both on the combined page only (`wallet-total-audit.py` rule 6)** → prd §1048
+- **One Wallet (prd §1048): the money rooms merge into one room (Markets stays apart); its total adds cash (`WalletCash`: Wise + Apple Wallet assets, Kraken's six fiat pairs, the rest left out and named) and Privy's apps, never Privy alone, both on the combined page only (`wallet-total-audit.py` rule 6)** → prd §1048
 - **One chain may not empty every wallet's balances, and a wallet we could not reach stands on its LAST READING, stamped (prd §825) — the room showed a Privy app wallet's stored figure and none of the person's own.** → docs/hooks/wallet.md · prd §825
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
 - **Address-book shape self-test (scripts/address-book-selftest.sh)** → docs/verify.md · prd §440
@@ -108,7 +108,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Defaults-lock audit (scripts/defaults-lock-audit.py) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721
 - **ShareLink style audit (scripts/sharelink-style-audit.py) — an unstyled share control in a `List` row becomes the row's action; give it `.buttonStyle(.plain)`** → docs/verify.md · prd §693
 - **Day-divider audit (scripts/day-divider-audit.py) — the day header wears `DS.headInk` (white words, prd §1252); a group named by something other than time passes `dated: false` and keeps the primary ramp** → docs/verify.md · prd §740
-- **A mark PACKS, a word TILES (prd §917): the source maps are circle packs (`Design/DSCirclePack.swift`, `circle-pack-selftest.sh`); the Wallet's and the devnets' holdings are a true-area treemap (`Design/HoldingsTreemap.swift`, §939, §949); words keep `UnitTreemap`** → docs/hooks/design.md · prd §917 · §939 · §949
+- **A mark PACKS, a word TILES (prd §917): the source maps are circle packs (`Design/DSCirclePack.swift`, `circle-pack-selftest.sh`); the Wallet's holdings are a true-area treemap (`Design/HoldingsTreemap.swift`, §939, §949); words keep `UnitTreemap`** → docs/hooks/design.md · prd §917 · §939 · §949
 - **Design-template audit (scripts/ds-template-audit.py) — reach for `DSSpinner`, `dsReadSheet`, `DSPushRow`/`DSChevron`/`DSMoreLink`, `DSToggleRow`, `DSEmptyState`, `DSCopyRow` and `Chip` before drawing one by hand** → prd §715
 - **Secret-scan self-test (scripts/secret-scan-selftest.py)** → docs/verify.md · prd §277
 - **On-device self-test (scripts/ondevice-selftest.sh)** → docs/verify.md · prd §282
@@ -242,7 +242,7 @@ deliberately does not check are in `docs/verify.md`.
 - **No plates under ANY spelling (prd §782, user: "these plates"), one exception: Account is lines on three plates, Security, Money and App (§1937).** `dsInkFill` is the floating layer's only. → docs/hooks/design.md · prd §782 · §1937
 - **A room head draws NO PLATE (prd §758, supersedes §745's "one surface" and §757's "the head keeps its card").** `dsRoomHeadCard()` is `dsRoomHeadBlock()` and applies no `dsWidgetSurface`. → docs/hooks/design.md · prd §758
 - **The wallet family's rows stand on NOTHING (prd §757).** → docs/hooks/design.md · prd §757
-- **Wallet and Logos take every room's anatomy: box · tiles · account menu · list (prd §1039, amends §750); the Wallet's tiles are §1480's Home · Activity · Holdings · Spending, doors on Home.** The Overview rows and the Actions block are deleted; verbs are rows (§1107, §1108) → prd §1480 · §1039 · §750
+- **The Wallet takes every room's anatomy: box · tiles · account menu · list (prd §1039, amends §750); the Wallet's tiles are §1480's Home · Activity · Holdings · Spending, doors on Home.** The Overview rows and the Actions block are deleted; verbs are rows (§1107, §1108) → prd §1480 · §1039 · §750
 - **The room's faces ride the dock folder's capsule, after the venues, and draw no words (prd §753).** → docs/hooks/design.md · prd §753
 - **That capsule always LEADS with the room you are standing in (prd §754).** Shut, the folder draws one seat. → docs/hooks/design.md · prd §754
 - **Every room's lead is `DSRoomChassis.leadHeight`, the wallet head's card, and nothing in it is air it could honestly fill (prd §760).** → docs/hooks/design.md · prd §760

@@ -34,7 +34,7 @@ struct RootShell: View {
     /// the type-checker's limit the day the note sheet joined them.
     private var modalUp: Bool {
         composerOpen || chrome.noteOpen || chrome.docToRead != nil || deepLinkThing != nil
-            || deepLinkPerson != nil || safeAsk != nil || observerOffer != nil || !onboarded
+            || deepLinkPerson != nil || safeAsk != nil || !onboarded
     }
     @State private var deepLinkThing: Thing?
     /// Open a thing by one of the shell's own doors — Spotlight,
@@ -58,11 +58,6 @@ struct RootShell: View {
     /// A paired app's ask (prd §913) — the first waiting one, mounted here
     /// because the relay can ring on any screen.
     @State private var safeAsk: SafePeer.PendingAsk?
-    /// A Logos Observer pairing link (prd §1095): its consent tray rises over
-    /// whatever is showing. It used to open the Logos page and wait there,
-    /// and once Logos was connected the link landed in its screen instead,
-    /// where nothing raised the tray (2026-10-06).
-    @State private var observerOffer: LogosObserverWire.Offer?
     @AppStorage("onboarded") private var onboarded = false
     /// Mirrors `DemoMode.isActive` so the standing demo mark appears and
     /// disappears with the mode — its layer is in `body`, beside the seat
@@ -252,7 +247,6 @@ struct RootShell: View {
                     chrome.watchedTokenID = UserDefaults.standard.string(forKey: "watchedToken")
                     NSLog("[Casberi] watchedToken: %@", chrome.watchedTokenID ?? "none")
                 }
-                if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
                 // Work's Coming up (prd §1057), for the room sweep.
@@ -598,8 +592,6 @@ struct RootShell: View {
                 // Markets' sweeps (Stocktwits into Markets, coin converge, dead
                 // logos, removed alerts) went with Markets (prd §1529); its
                 // rows go through `sweepRetiredSeats` below.
-                // Logos node rows lose the node's address (prd §1474).
-                LogosIngest.scrubNodeRows(context: modelContext)
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat
                 // records, address-book tags, defaults and devnet keys.
                 SourceRename.sweepRetiredSeats(context: modelContext, store: bridges)
@@ -1972,9 +1964,6 @@ struct RootShell: View {
         .sheet(item: $safeAsk) { ask in
             rootPresented(SafeAskSheet(ask: ask, paired: true))
         }
-        .sheet(item: $observerOffer) { offer in
-            rootPresented(LogosObserverPairTray(offer: offer))
-        }
         // THE FIRST-LAUNCH COVER IS GONE (2026-09-05). It was a
         // `.fullScreenCover` on `!onboarded` presenting `HowItWorksSheet` with
         // two doors, and it pinned the demo pour to its `onDismiss`. The
@@ -2914,14 +2903,6 @@ struct RootShell: View {
     }
 
     private func route(_ url: URL) {
-        // A Logos Observer's pairing QR, scanned by the system camera
-        // (2026-10-03): land on the Logos page, which raises the consent tray.
-        // Nothing is sent until the person taps Pair there.
-        if url.scheme?.lowercased() == "logos-observer" {
-            guard let offer = LogosObserverWire.offer(url.absoluteString) else { return }
-            observerOffer = offer
-            return
-        }
         // A deep link lands you AT a destination, not back in a store the route
         // singleton still holds from an earlier visit. apps/settings re-set it
         // below.

@@ -812,15 +812,6 @@ enum BridgeRefresh {
                 _ = await RadicleIngest.refresh(context: context)
             }
         }
-        // Logos (prd §988). A pass is one head read, one balance read per
-        // watched account, and the blocks since the cursor in pages of 200 —
-        // a few hundred a day away, capped at `LogosIngest.walkCap`.
-        if wallet, LogosStore.shared.connected {
-            let s = slot(); BridgeRefresh.landingTask { @MainActor in
-                await BridgeRefresh.stagger(s)
-                _ = await LogosIngest.refresh(context: context)
-            }
-        }
         // npm and PyPI are keyless watch lists, so — like Hugging Face
         // above — they need their own line here rather than
         // riding `TokenBridge.allCases`. One slot each: they are separate

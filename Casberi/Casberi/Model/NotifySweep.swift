@@ -244,12 +244,6 @@ enum NotifySweep {
             return state?.alarming == true ? .appRejected : nil
         }
 
-        // — Logos: your own node stopped answering (prd §1084). The ref
-        //   carries the kind (`logos:node:<kind>:<seconds>`, `LogosIngest
-        //   .readNode`), so this reads the machine value, never the title.
-        //   Every other Logos row stays quiet: test coins are not news (§522).
-        if ref.hasPrefix("logos:node:offline:") { return .nodeDown }
-
         // — Aztec mainnet: a sequencer holding your staked AZTEC stopped
         //   attesting (prd §1279, `aztec:stake:<attester>:stopped:<slot>`),
         //   and staked AZTEC you can now withdraw (`aztec:exit:`), the
@@ -452,11 +446,8 @@ enum NotifySweep {
     }
 
     /// **MOVED onto `NotifyKind` (2026-08-29, prd §522) and forwarded from
-    /// here.** The devnet plans are composed in `NotifyDevnet`, inside the
-    /// Foundation-only file the harness compiles WHOLE — so leaving the
-    /// headlines in this file meant either a second copy of three of them or a
-    /// plan built without its own title. One authority, in the half that can be
-    /// tested; this keeps every existing caller and every fixture working.
+    /// here.** One authority, in the Foundation-only file the harness compiles
+    /// WHOLE; this keeps every existing caller and every fixture working.
     static func headline(_ kind: NotifyKind) -> String { kind.headline }
 
     /// Rung 1 of the attachment ladder, and it asks only for what a row really

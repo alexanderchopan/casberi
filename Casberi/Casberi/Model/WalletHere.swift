@@ -19,15 +19,11 @@ enum WalletHere {
         #endif
     }()
 
-    /// A source that stands in the wallet: the Wallet room, Markets, any app
-    /// the catalogue files under Wallet, or a chain testnet (Logos).
+    /// A source that stands in the wallet: the Wallet room, Markets, or any app
+    /// the catalogue files under Wallet.
     @MainActor static func isWalletSource(_ source: String) -> Bool {
         if source == CategoryFold.walletRoom || HomeScope.isMarkets(source) { return true }
         guard let category = BridgeCatalog.category(forSource: source) else { return false }
-        return category == CategoryFold.walletCategory || category == testnets
+        return category == CategoryFold.walletCategory
     }
-
-    /// The catalogue group a chain testnet files under (`BridgeCatalog`'s
-    /// Logos offer).
-    static let testnets = "Testnets"
 }

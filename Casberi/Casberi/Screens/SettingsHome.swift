@@ -374,11 +374,12 @@ struct SettingsHome: View {
         let offers = BridgeCatalog.offers.filter { Self.inLibrary($0) }
         let other = String(localized: "Other")
         let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
-        // THE FEED'S ORDER (prd §1347): Library's folders and the Feed's
-        // sections are one list in one order, so a reorder on the Feed moves
-        // the folders too. A name the order has never heard of sorts A–Z
-        // after it (`CategoryOrder.sorted`), and Other is last.
-        let named = CategoryOrder.sorted(byCategory.keys.filter { $0 != other })
+        // **A–Z (prd §1974, amending §1347's shared order).** Apps no longer
+        // follows the Feed's reorder: its Feed categories read A–Z, and the
+        // Wallet, drawn first as its own section, is pulled out of the list
+        // by `SourcesLibrary`. Other is last.
+        let named = byCategory.keys.filter { $0 != other }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         return (named + (byCategory[other] == nil ? [] : [other]))
             .map { category in
                 (category, (byCategory[category] ?? []).sorted {

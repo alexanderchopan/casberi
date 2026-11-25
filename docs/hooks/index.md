@@ -105,7 +105,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The agent rooms, past §367 — and the fold that already existed** → docs/hooks/agent.md · prd §418
 - **The ask is DELETED (2026-10-01, user: "re the ask side, we don't need it"): the on-device model reads, never answers; the composer stays as Find and the keyed agents' and Apple Intelligence's door (§833); `SourceRename.sweepRetiredAsk` clears what the ask stored** → docs/hooks/agent.md · prd §1047
 - `-ghWatchPerson "<login|@login|profile URL>"` `-ghPeopleProbe` — watch a PERSON on GitHub → docs/hooks/bridges.md · prd §519
-- **A wallet-family room's verbs are ROWS, never tiles (prd §1108 over §1039): adding an account is the Accounts menu's first row (`accountAction`: Watch a wallet, New account), moving money leads Holdings (Logos' Send) on All and your own account's page, never a stranger's — `LogosSection.canSend`; Logos' Explorer tile is deleted** → docs/hooks/devnets.md · prd §1108 · §1206
+- **A wallet-family room's verbs are ROWS, never tiles (prd §1108 over §1039): adding an account is the Accounts menu's first row (`accountAction`: Watch a wallet, New account), moving money leads Holdings on All and your own account's page, never a stranger's** → docs/hooks/devnets.md · prd §1108 · §1206
 - `-ghClientID <id>` — override the GitHub device-flow client id; `-ghDeviceProbe YES` — start the device flow, NSLog the user code (`Model/GitHubDeviceFlow.swift`).
 - `-viProbe` — run the Visual Intelligence label→corpus matcher headlessly (VisualCorpusMatch → docs/hooks/system.md
 - `-feedRowTarget <n>` `-feedWindowSteps <n>` — shrink a page's row window (30) or open it n steps, so "Show older" can be reached on a few demo rows; the tap adds rows with no crossfade (2026-11-23)
@@ -257,7 +257,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-privyProbe YES` `-privyForget YES` — Privy, a sign-in seat on Privy Home (Wallet group) → docs/hooks/bridges.md · prd §803c
 - `-rocketLoginProbe YES` — open Rocket Money's sign-in headlessly (with `-deeplink casberi://account -connectTap "Rocket Money"`; `-openSetup` is gone) and NSLog what the page drew; the site walls anything 450px wide or narrower, so the view pins a 520px desktop viewport → docs/hooks/bridges.md · prd §781
 - **Apple Intelligence is a seat (prd §833): Apple's model on Private Cloud Compute answers the composer, one tap in the Agents catalogue, no key.** → docs/hooks/system.md · prd §833
-- `-logosWatch "<id[,id]>"` `-logosProbe YES|<from>-<to>` `-logosRewind <block>` `-logosNode "<address>"|forget` — Logos: LEZ accounts keyless, forward-only; a range decodes WHOLE, a rewind re-walks history; your node, rows on change → docs/hooks/bridges.md · prd §988 · §989 · §1016
 - `-holdingsMismatchSample <SYMBOL>` `-privateMismatchSample YES` — draw a token row's or the private rows' "Doesn't match Ethereum" amber line (§1825, §1569a) on a simulator, where no real disagreement is seen; DEBUG only, the ledgers untouched
 - `-aztecStakeProbe <0x…>` `-zkMoneyProbe "<tag|link|short=<r#>|deposit=0x…|escrow=0x…|portal>"` `-zfiOrdersProbe` `-tacitProbe <0x>` → prd §1273 · §1277 · §1279 · §1281 · §1384 · §1688 (the testnet room is deleted)
 - `-tacitEngineProbe identity|load|open|read|chain|defi|all` `-tacitEngineKey <0x…>` `-tacitSample open|closed|tac|clear` — Tacit, an app (prd §1971): an account you already have, opened by your co-signer and read on its Wallet page (`-openRoom Wallet -openSection tacit`); the probe opens a random account, nothing sent (`tacitEngine|`, `tacit-engine-selftest.sh`)
@@ -267,7 +266,6 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-railgunEngineProbe load|open|sync|shield|unshield|all` — the Railgun engine on Ethereum, a random wallet, nothing sent (`railgunEngine|`) → prd §1713
 - `-privacyEngineProbe load|keys|deposit|discover|bench|spend|all|forget` — Privacy Pools v2 engine, Sepolia only (`privacyEngine|`); `discover` also checks the balance against Ethereum through Kohaku's provider (`privacyEngine| check`) → docs/hooks/wallet.md · prd §1540 · §1569a
 - `-moveToPrivate YES` `-movePrivateSend YES` `-privateMoneySample YES|mainnet|clear` — Send, privately (Sepolia, DEBUG): Holdings' Private section; `-moveHiddenPreview soon|<n>`: How hidden, in the foot (§1738) → docs/hooks/wallet.md · prd §1554
-- **Logos names token moves, holds a Holdings tile, and sends; `sendTransaction` lives in `LogosSend.swift` alone** → docs/hooks/bridges.md · prd §1084
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|X>/<handle>`.
 

@@ -2,7 +2,7 @@ import Foundation
 
 /// **WHAT A ROOM HELD, OVER TIME (prd §683).**
 ///
-/// The wallet-family rooms — Wallet, Frames, Logos — all draw the same Home:
+/// The wallet-family rooms — Wallet, and once Frames and Logos — all draw the same Home:
 /// a caption, a number, a change, a line, and the range chips over it. The
 /// line needs a dated series, and every room solved that differently or not
 /// at all until this store: the Wallet keeps `WalletStore.ValueSample`s, and
@@ -13,7 +13,7 @@ import Foundation
 ///   * **DERIVE** it, where every move carries its amount (Frames). Exact, and
 ///     it reaches back as far as the moves do.
 ///   * **SAMPLE** it — this store — where they do not, so the balance is
-///     recorded per read (Logos).
+///     recorded per read (Privy Home; Logos until it was deleted).
 ///
 /// Samples are `WalletStore.ValueSample` deliberately, not a new type: that is
 /// what `WalletRange.offered`/`clip` and `TokenChart.from(samples:)` already

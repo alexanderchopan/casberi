@@ -42,14 +42,6 @@ extension FeedScreen {
         /// Carries a handle and a source, so no `Thing` and no liveness
         /// question.
         case person(source: String, handle: String)
-        /// The Logos send form (prd §1084), on a sheet: routed here because a
-        /// `.sheet` on a view inside this List resolves to the same presenting
-        /// controller as this one and half-opens before closing again.
-        case logosSend
-        /// One Logos conversation (prd §1155), read live from the Observer.
-        /// Carries the conversation's id and title, never a message: nothing
-        /// of the chat is kept.
-        case logosChat(id: String, title: String)
         /// Everyone a social room's face row leaves behind its `+N` (prd §824),
         /// routed here since the row moved into the room (§959): a `.sheet`
         /// inside a List row tears this screen's own sheet down mid-rise.
@@ -129,8 +121,6 @@ extension FeedScreen {
             case .mailSubscriptionAdd: "mailSubscriptionAdd"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
-            case .logosSend: "logosSend"
-            case .logosChat(let id, _): "logosChat:\(id)"
             case .githubWatch: "githubWatch"
             case .delegation(let d): "delegation:\(d.delegate)"
             case .nymisReading(let address, _): "nymis:\(address)"
@@ -425,28 +415,6 @@ extension FeedScreen {
             // Only on THIS door — pushed, the room is under the shell's copy
             // and a second listener would buzz twice.
             .background(DSHapticSink())
-        // **THE SEND FORM (prd §553).** The room hands the sheet what it
-        // knows: who the book knows, what the account holds, whether a Max is
-        // honest, and the one closure that actually sends. Everything visual
-        // lives in `DevnetSendSheet`.
-        case .logosChat(let id, let title):
-            LogosChatTray(convo: id, title: title)
-        case .logosSend:
-            // **A NATIVE TRANSFER, ONE SIGNER, NO MAX (prd §1084).** The
-            // sender pays the fee and must hold its reserve besides, so the
-            // whole balance cannot send itself: a Max would be the dead
-            // control §83 bans.
-            DevnetSendSheet(
-                venue: String(localized: "Logos"),
-                seat: LogosRoom.source,
-                tint: DS.pickInk,
-                unit: String(localized: "test tokens"),
-                candidates: logosSendCandidates,
-                heldLine: logosHeldLine,
-                maxAmount: nil,
-                isValidAddress: { LogosWire.watchableID($0) != nil },
-                isValidAmount: { LogosWire.typedAmount($0) != nil },
-                perform: { to, amount in await sendLogos(to: to, amount: amount) })
         }
     }
 

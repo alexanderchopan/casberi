@@ -1687,7 +1687,7 @@ enum AgentAnswer {
             // by `OwnModel.parse` (`/v1` appended when no path was typed). No
             // address, no request. Attributed to the ledger by NAME, because
             // the host is theirs and the registry cannot declare it (the
-            // Logos node's §289 case).
+            // §289 case).
             case .ownModel:
                 guard let own = OwnModel.base else { return nil }
                 base = own.absoluteString

@@ -167,7 +167,8 @@ src = "\n".join("" if l.strip().startswith("//") else l
 # that room matches no arm at all.
 # `agentRoomShown` since §1054: one agent's room, or the Agents room while an
 # agent there can answer.
-esc = "!roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown"
+# `LiveRoomSources.has` left with Logos, its one member (prd §1974).
+esc = "!roomHasContent && !agentRoomShown"
 body = "} else if roomHasContent || agentRoomShown"
 if esc not in src:
     print("  \u2717 the empty-state arm's shape changed — this guard is blind")
@@ -204,7 +205,10 @@ import sys, re
 src = open(sys.argv[1]).read()
 m = re.search(r"static let all: Set<String> = \[(.*?)\]", src, re.S)
 if not m:
-    print("  \u2717 LiveRoomSources.all is gone — this guard is blind"); sys.exit(1)
+    # The set held only Logos and left with it (prd §1974): with no
+    # "never lands a Thing" set, no keyed agent can be put in one.
+    print("  \u2713 keyed agents stay OUT of LiveRoomSources.all (no such set since \u00a71974)")
+    sys.exit(0)
 body = m.group(1)
 if "AgentProvider" in body or "agent" in body.lower():
     print("  \u2717 a keyed agent is inside LiveRoomSources.all — that set means "

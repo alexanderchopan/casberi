@@ -7,8 +7,7 @@ import Foundation
 /// corpus sweep only speaks about rows, so a dead connection went untold —
 /// the feed just went quiet, which reads as "nothing happened". This composes
 /// one plan per break from `BridgeHealth`'s sticky refusal stamp, merged into
-/// `WalletBackgroundRefresh.runNotifySweep`'s one submit as `DevnetNotify`'s
-/// plans are, so it waits for the evening digest with everything else (it is
+/// `WalletBackgroundRefresh.runNotifySweep`'s one submit, so it waits for the evening digest with everything else (it is
 /// not one of `standsAlone`'s kinds — a reconnect keeps until then).
 ///
 /// **Once per break, never per sweep.** The id carries the moment the refusals

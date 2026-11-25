@@ -7,7 +7,7 @@ import Foundation
 enum OwnNodeStore {
     /// The service every request to your node names to `NetworkLedger`: the
     /// address is typed by you, so `NetworkReach` declares the family, not
-    /// the host (the Logos node's rule, prd §989).
+    /// the host (the §289 rule, prd §989).
     static let service = "Your own node"
     private static let key = "yourAccount.ownNode"
     private static let lock = NSLock()

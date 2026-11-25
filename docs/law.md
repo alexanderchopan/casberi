@@ -18,7 +18,7 @@ parser.
 Then regenerate, and edit the matching line here if it changed the law.
 
 Retired seats are left out on purpose: Altana, Hegotá UTXO, Base Vibenet, Hegotá
-Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logos is the one devnet that remains.
+Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logos is retired too (§1974).
 
 ## Current law by area
 
@@ -85,7 +85,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Pictures tile under their own day, three across, in the room's own shape, with the caption under the picture (§910).
 - A lead turns to its app's mark and back, once, when it lands while you watch or its title moves in place; a lead that already is the app's mark turns to its dock category's glyph. On the Feed it is the cover's disc and Newest's app icon that turn, where a landing is seen (§1691, §1689, §901, §901b).
 - The feed's days are felt: a tick as a divider passes. The floor draws the mark (§866, §866a).
-- The Feed stacks every category but the Wallet and Testnets: the Wallet is its own tab (§1489). No tab wears a badge, dot or ring, on the phone's bar or the Mac's rail: the Wallet's asks are its Home's Needs you, a broken app says so on its own row (§1490).
+- The Feed stacks every category but the Wallet: the Wallet is its own tab (§1489). No tab wears a badge, dot or ring, on the phone's bar or the Mac's rail: the Wallet's asks are its Home's Needs you, a broken app says so on its own row (§1490).
 
 ### 6. Thing sheets
 - Each kind has its own head: an article leads with its picture and puts the dial under the head (§882). A post leads with the person (§884), a screenshot with the picture big and no Zoom (§885), money with the party and the amount at the head rung (§887). Notes, chats and mail use the shared head (§892–§894), and media leads with its art (§897).
@@ -108,7 +108,8 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Library is named Apps on the tab, its title and every way back; the tab wears the grid and Move wears your face once you pick one (§1741). It is its title and the folders, with no counts box (§1612). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
+- Library is named Apps on the tab, its title and every way back; the tab wears the grid and Move wears your face once you pick one (§1741). It is its title, its search, Recent, the Wallet as its own section (two rows of its apps), then Feed: every other category one line, A–Z, its name and as many of its apps as the line holds; a tap springs the folder (§1974, §1612). Apps no longer follows the Feed's reorder (§1974). Contacts is Social's; a tap on Contacts or Calendar in a folder opens its page (everyone you know; your calendars), yours or not (§1612).
+- Holdings ends in "Add to Wallet", one row drawn as Apps draws a category: the Wallet apps you have not added, A–Z; a tap opens Apps on the Wallet folder (§1974).
 - Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library (Contacts and Calendar open their pages, §1612); one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns and Rocket Money are on the Wallet shelf (§780c); NerdWallet is in Media (§1564). The card seat is "Privacy.com" (§1564). L2BEAT is "ETHBEAT", host ethbeat.org (§1699).
 - Markets is deleted (§1529): its tile, seat, alerts and Watchlist widget. The app-to-company map (`CompanyPacks`) stays for Subscriptions. A watchlist came back as a Wallet Home door (§1632), not as Markets.
@@ -127,7 +128,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - Which chains are on is one rule, `WalletChainStore.effectiveIDs`, and every ingest reads it. A total may not silently omit a chain (§827).
 - One refused chain may not empty every read. An unreachable wallet stands on its last reading, stamped (§825).
 - Zerion and Alchemy results are unioned, not either/or (§826).
-- The money rooms merge into one Wallet; Frames and Logos stay their own rooms (§1048). The total counts the chains, exchanges, validators, cash (Wise, Apple Wallet's asset accounts, converted at Kraken's six USD pairs; any other currency is left out and named) and Privy's apps. Privy never stands alone, and cash and Privy count only on the combined page (§1048).
+- The money rooms merge into one Wallet; Frames stays its own room; Logos is retired (§1974) (§1048). The total counts the chains, exchanges, validators, cash (Wise, Apple Wallet's asset accounts, converted at Kraken's six USD pairs; any other currency is left out and named) and Privy's apps. Privy never stands alone, and cash and Privy count only on the combined page (§1048).
 - Zerion goes through one lane: one request a second, 300 a day for every install. A refusal is waited out (§934).
 - Robinhood is read on Alchemy beside Zerion. A DEX-only token is priced off a pool of at least $10K, holding at most 25% of it. A native coin takes the cent floor (§968).
 - The Wallet is the place; what is in it is an account, and the verb is "Follow an account" (§1415). "Wallet" stays for the place and for a wallet app (the software that signs); code identifiers keep their names.
@@ -138,12 +139,12 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - The Wallet's tiles are Home · Holdings · Security · Subscriptions (§1107, §1111). Subscriptions tracks subscriptions and nothing else: "$X a month", the count and the year, the renewals on its calendar, then Track a subscription first and every plan (§1111, the verb since §1117). Holdings is Tokens (each worth 5% of the whole, five at most, the rest one "N more tokens" row opening every token), then Positions (lending closest to liquidation first, a borrow saying how far it can fall), then NFTs (§1048a, §1107). Security's box is a checkup of six counts and nothing over them (Signatures · Delegations · Approvals over Address poisoning · Fake tokens · Fake transfers), each a door to its section; amber only for what waits on you, has no limit, or is trying to fool you; a fake token wears `xmark.seal.fill`, a fake transfer `arrow.down.circle.dotted` (§1107, §1107a). Watch a wallet is the Accounts pill's first row, never a tile (§1107).
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (a card's spending), inside the box's own well (§1048d). An app keeps a pick only when its money is not already a section of the Wallet: Safe, Privacy Pools and Railgun have none; Library's tiles for Privacy Pools and Railgun land on Holdings at Private and Safe's on Your account, where Your Safes and Without a signature stand; how hidden a private balance is, is said in a private send's foot; Aztec's tile is its directory; Lightning is deleted (§1738).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Home leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under Needs you (§1048c, §1111). Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f); Rocket Money's repeating bills are Subscriptions' (§1105).
-- Testnets (Logos, `flask`) is its own category, never inside Wallet (§1050, §1050a). Aztec's testnet room is deleted; Aztec lives in the Wallet as its mainnet staking (§1688).
+- Testnets and Logos are retired (§1974): no category, room, seat or probe. Aztec lives in the Wallet as its mainnet staking (§1688).
 - Aztec mainnet is the Wallet's, never Testnets': its contracts are named, and AZTEC staked is a Positions row per sequencer, in AZTEC, never priced. A stake is found by its withdrawer (the wallet, or its token vault's staker) and read on the Registry's canonical Rollup, never the one that queued it. Its line says its health and the wallet's share of unclaimed rewards. Withdrawable money and a stopped sequencer notify; an Aztec vote is a quiet row (§1277, §1279).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
 - Day's Subscriptions tile lists every mailing list that writes to you, found by `List-Id` or `List-Unsubscribe`, never a guess: one row per list, the most mail this month first, each with how often it writes and a way out that opens in the browser or Mail; the app never unsubscribes for you and shows no open counts (§1111). A sender with no list header joins it from its mail's sheet or Day's own tray, Track a subscription; every mail from that address files, and Stop tracking takes back only what the add filed (§1115, §1117). Both Subscriptions tiles are one tile with two measures: a statement with "a month", one line, the five-week calendar (the Wallet's ahead, Day's looking back), then Track a subscription, the category map and the rows, each row's figure trailing (cost a month, mails in thirty days) and the other room named in its line, never a price outside the Wallet (§1117). Day's tray searches every header-less sender kept, not only this month; its field says Search mail (§1134).
-- Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
+- Wallet and Frames take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - The Wallet's tiles are Home · Activity · Holdings · Spending; Home's doors are Your account, Following, Needs you, Permissions, Risks (§1480; Threats is Risks, §1741; Markets deleted, §1529).
@@ -182,11 +183,11 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - The operation reads before the calldata: a batch is a DELEGATECALL into a known MultiSend and nothing else; any other DELEGATECALL reads "Runs another contract's code as the Safe" in the destructive ink. `disableModule`, `setFallbackHandler` and `changeMasterCopy` change control (§1249).
 - The sign block simulates the Safe's own call on Alchemy (never Gnosis, never a DELEGATECALL) and draws net balance changes, or says why it did not. Executed history lands dated by execution time. "Review and sign" on the notification opens the sign block and never signs (§1249).
 
-### 12. Devnets (Frames, Logos)
+### 12. Devnets (Frames)
 - Devnet rooms use the Wallet's shapes, and Home lists the moves (§1039; the Accounts and Activity tiles are gone). Holdings: a treemap over test money, a count and never a dollar total (§949). Moves: under the day, no ages (§950). Permissions: the Wallet's crown (§951). Frames: one column per transaction (§952).
 - Accounts split into On this phone, Watching, then Tied to yours (§964). Every Frames page offers New account in the Accounts menu, Logos' while the phone holds no key; Frames' own pages lead Holdings with Send and Top up, Logos' with Send (§774, §1108). No suggested addresses (§990).
 - Frames runs on ethpandaops' frames-devnet-0. `FramesNetwork.current` is the one value that names the chain (§962).
-- Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
+- Logos is retired (§1974): its seat, room, probes and node reads are deleted; stored rows go through the retired-seat sweep.
 
 ### 13. Notes and voice
 - Notes is a place in Home, reached through the tray's You row and its folder, always drawn (§1127, §1133). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
@@ -262,7 +263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2157 of 2231 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2158 of 2232 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2421,6 +2422,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973)
 - §1972 — Earn's From list names the rate and the place, and the network moves to the badge
 - §1973 — How money is listed: one row is one token in one place, Holdings is Home's cut with the tokens under it (Public by ne…
+- §1974 — Apps is Recent, the Wallet, then the Feed A–Z; Holdings ends in Add to Wallet; Testnets and Logos are retired (supers…
 
 ## Dead rulings → what replaced them (generated)
 

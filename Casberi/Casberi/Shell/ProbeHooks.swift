@@ -1933,35 +1933,18 @@ enum ProbeHooks {
                 // measures a different thing than the code it reports on is
                 // worse than no probe.
                 let things = WalletBackgroundRefresh.sweepCorpus(context) ?? []
-                let (corpusPlans, photos) = NotifySweep.plans(things: things, words: WalletValue.notificationWords)
-                // The devnet (prd §522), composed the same way production
-                // composes it and reported APART from the corpus count —
-                // `planned=` counting them together would hide the case this
-                // probe exists for, which is that a devnet plan has a
-                // completely different reason to be missing (no reset observed)
-                // than a corpus one.
-                let devnetPlans = DevnetNotify.plans()
-                let plans = corpusPlans + devnetPlans
+                let (plans, photos) = NotifySweep.plans(things: things, words: WalletValue.notificationWords)
                 let s = Notifications.settings
                 // Which switches are off (prd §1237), because a quiet probe has
                 // a new cause: Wallet or Feed switched off.
-                NSLog("[Casberi] notify| corpus=%d planned=%d devnet=%d off=%@ asked=%@",
-                      things.count, corpusPlans.count, devnetPlans.count,
+                NSLog("[Casberi] notify| corpus=%d planned=%d off=%@ asked=%@",
+                      things.count, plans.count,
                       s.off.isEmpty ? "none" : s.off.sorted().joined(separator: ","),
                       Notifications.hasAsked ? "YES" : "NO")
                 // Why nothing planned, when nothing planned. One NSLog per
                 // line (the `-todayProbe` truncation lesson).
                 for line in NotifySweep.skipCensus(things: things) {
                     NSLog("[Casberi] notifySkip| %@", line)
-                }
-                // Why the devnet said nothing, when it said nothing — the
-                // same reasoning `notifySkip|` carries for the corpus, and the
-                // reason this seat needs it MORE: silence is the healthy answer
-                // almost every day, and only a drifted read is a bug.
-                // `-notifyProbe` on a device with Logos watched and NOTHING
-                // here is the shape that says the gathering broke.
-                for line in DevnetNotify.census() {
-                    NSLog("[Casberi] notifyDevnet| %@", line)
                 }
                 let ledger = Notifications.ledger
                 for plan in plans {
@@ -2617,28 +2600,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-logosRewind <block>` — move the walk's cursor back, so the next
-        // pass re-reads real history and LANDS it (prd §988). A watch is
-        // forward-only and LEZ is quiet, so without this the landing path
-        // could not be exercised on demand. Listed before `-logosWatch` so a
-        // single launch rewinds, then walks.
-        Hook(key: "logosRewind") { spec, _ in
-            guard let block = Int(spec) else { NSLog("logosRewind: REFUSED %@", spec); return }
-            LogosStore.shared.advance(to: block)
-            NSLog("logosRewind: cursor=%d", block)
-        },
-        // `-logosWatch "<id[,id]>"` — watch public LEZ accounts and sync
-        // (prd §988). A `Private/` id is refused by name, never watched.
-        Hook(key: "logosWatch") { spec, context in
-            Task { @MainActor in
-                for raw in spec.split(separator: ",") {
-                    let one = String(raw).trimmingCharacters(in: .whitespaces)
-                    NSLog("logosWatch: %@ | %@", one, "\(LogosStore.shared.add(one))")
-                }
-                let outcome = await LogosIngest.refresh(context: context)
-                NSLog("logosWatch: %@", outcome.map { "+\($0.added) skipped=\($0.skipped)" } ?? "FAILED")
-            }
-        },
         // `-zkMoneyProbe "<tag.zk.money | zk.money link | short=<r# link> | deposit=<0x…> | portal>"`
         // — what the app reads about zk.money (2026-10-11), NSLogged as
         // `zkMoney:` lines: a tag's public record, a link as capture would
@@ -2694,88 +2655,6 @@ enum ProbeHooks {
                     if case .missed(let words)? = follow { NSLog("zkMoney: follow | %@", words) }
                 } else {
                     NSLog("zkMoney: REFUSED %@", spec)
-                }
-            }
-        },
-        // `-logosNode "<address>"|forget` — watch your own node (prd §989),
-        // read it, and print the reading and what it landed. Run it twice to
-        // see a transition: the first read lands nothing by design. The
-        // simulator shares the Mac's loopback, so `127.0.0.1:8080` reaches a
-        // node (or a stand-in) running on this Mac.
-        Hook(key: "logosNode") { spec, context in
-            Task { @MainActor in
-                let store = LogosStore.shared
-                if spec == "forget" { store.useNode(nil); NSLog("logosNode: forgotten"); return }
-                guard let base = LogosWire.nodeBase(spec) else { NSLog("logosNode: REFUSED %@", spec); return }
-                store.useNode(base)
-                let before = store.nodeSnapshot
-                let added = await LogosIngest.readNode(base, context: context)
-                if added > 0 { context.saveHonestly() }
-                let snap = store.nodeSnapshot
-                NSLog("logosNode: %@ | loopback=%@ | first=%@ | reachable=%@ | phase=%@ | height=%@ | peers=%@ | vouchers=%@ | claimable=%@ | mining=%@ | tickets=%@ | +%d | line=%@",
-                      base, LogosWire.isLoopback(base) ? "YES" : "NO", before == nil ? "YES" : "NO",
-                      snap?.reachable == true ? "YES" : "NO", snap?.phase ?? "-",
-                      snap?.height.map(String.init) ?? "-", snap?.peers.map(String.init) ?? "-",
-                      snap?.vouchers.map(String.init) ?? "-", snap?.claimable.map { "\($0)" } ?? "-",
-                      snap?.mining.map { $0 ? "YES" : "NO" } ?? "-", snap?.tickets.map(String.init) ?? "-",
-                      added, LogosWire.nodeLine(snap))
-            }
-        },
-        // `-logosProbe YES|<from>-<to>` — what the seat reads, one NSLog per
-        // line. `YES` prints the head, every watched account's balance, the
-        // cursor, and the rows held. A RANGE decodes those blocks WHOLE,
-        // watched or not, and prints every transaction's program, accounts
-        // and decoded event — the only way to prove the Borsh reader against
-        // the live chain, since a quiet watch decodes nothing and an empty
-        // room has five causes (nothing watched, the sequencer unreachable, a
-        // reset, a quiet account, a layout that drifted) and only the last is
-        // a bug. A block that fails to decode prints `UNREADABLE`, which is
-        // the drift signal (it was, for every block, on the v0.3 reset —
-        // prd §1007).
-        Hook(key: "logosProbe") { spec, context in
-            Task { @MainActor in
-                let store = LogosStore.shared
-                let head = await LogosIngest.head()
-                NSLog("logosProbe: head=%@ | cursor=%@ | watching %d",
-                      head.map(String.init) ?? "UNREACHABLE",
-                      store.cursor.map(String.init) ?? "-", store.accounts.count)
-                let range = spec.split(separator: "-").compactMap { Int($0) }
-                if range.count == 2 {
-                    guard let blocks = await LogosIngest.blocks(from: range[0], to: range[1]) else {
-                        NSLog("logosBlock| FETCH FAILED"); return
-                    }
-                    for raw in blocks {
-                        guard let block = LogosWire.block(raw) else {
-                            NSLog("logosBlock| UNREADABLE | %d bytes", raw.count); continue
-                        }
-                        NSLog("logosBlock| %d | %@ | %d txs", block.id,
-                              ISO8601DateFormatter().string(from: block.timestamp),
-                              block.transactions.count)
-                        for tx in block.transactions {
-                            let everyone = Set(tx.accounts.map { Data($0) })
-                            let events = LogosWire.events(tx, watched: everyone)
-                            NSLog("logosTx| %@ | program=%@ | accounts=%d | signers=%d | %@", tx.hashHex,
-                                  tx.program.isEmpty ? "private" : LogosWire.short(LogosWire.base58Encode(tx.program)),
-                                  tx.accounts.count, tx.signers,
-                                  events.map(\.title).joined(separator: " / "))
-                        }
-                    }
-                    return
-                }
-                for id in store.accounts {
-                    if let balance = await LogosIngest.balance(id) {
-                        NSLog("logosAccount| %@ | balance=%@", id, LogosWire.amount(balance))
-                    } else {
-                        NSLog("logosAccount| %@ | UNREADABLE", id)
-                    }
-                }
-                let rows = (try? context.fetch(
-                    FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Logos" })
-                )) ?? []
-                for thing in rows.filter(\.isLive)
-                    .sorted(by: { $0.capturedAt > $1.capturedAt }).prefix(30) {
-                    NSLog("logosRow| %@ | ref=%@ | tags=%@", thing.title,
-                          thing.sourceRef ?? "-", thing.tags.joined(separator: ","))
                 }
             }
         },

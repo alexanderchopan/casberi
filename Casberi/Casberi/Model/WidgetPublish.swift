@@ -106,12 +106,12 @@ enum WidgetPublish {
     /// The Feed tile's rows (prd §1881, after §1864): each app's newest thing
     /// today, newest first, as Home's Activity draws it, and how many more
     /// came. Over the caller's newest-600 slice, the slice the Feed's day
-    /// reads. No money (§1208 item 7): the Wallet, Markets and Testnets are
+    /// reads. No money (§1208 item 7): the Wallet and Markets are
     /// left out, so Hide balances (§374) has nothing to withhold here; a thing
     /// with no category (a note of yours) is the Notes tile's.
     static func feed(things: [Thing], now: Date = .now) -> WidgetFeed {
         let calendar = Calendar.current
-        let money: Set<String> = ["Wallet", "Markets", "Testnets"]
+        let money: Set<String> = ["Wallet", "Markets"]
         var items: [WidgetFeed.Row] = []
         for thing in things where calendar.isDate(thing.capturedAt, inSameDayAs: now) {
             guard let category = BridgeCatalog.category(forSource: thing.source),

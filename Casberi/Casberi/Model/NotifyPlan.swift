@@ -82,27 +82,9 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// disclosing its own vulnerability does not push you a notification, and
     /// the wallet you are about to open is the last place you would look.
     case walletIncident
-    /// A DEVNET THIS APP WATCHES WAS RESET (2026-08-29, prd §522).
-    ///
-    /// An experimental chain is relaunched from genesis as a matter of course,
-    /// and when it happens every reading the room holds describes a chain that
-    /// no longer exists — while the seat renders perfectly, because the host
-    /// answers quickly and with nothing. §515a is the user's own account of
-    /// finding out: the room read "nothing has landed here", and the real
-    /// answer was that the chain had been wiped overnight.
-    ///
-    /// ONE kind for any devnet, because the news reads the same whichever chain
-    /// it was — the `runningLow` ruling, where four different numbers share a
-    /// kind for exactly that reason. The body names the chain; the plan carries
-    /// its source, so the right-hand slot carries its mark.
-    case chainReset
-    /// YOUR LOGOS NODE STOPPED ANSWERING (prd §1084) — the machine you run
-    /// went quiet while you were elsewhere. §522's devnet doctrine keeps
-    /// the chain's CONTENT silent (test coins arriving are not news), and
-    /// this is not content: it is your own node, and a node that stopped is
-    /// also one that stopped mining — mining is off after every restart.
-    /// Landed as a row (`logos:node:offline:`) only on a CHANGE between two
-    /// readings, so a node that was never up says nothing.
+    /// YOUR NODE STOPPED (prd §1084, first written for the Logos node,
+    /// deleted 2026-11-25) — the machine you run went quiet while you were
+    /// elsewhere: an Aztec stake's sequencer stopping (`aztec:stake:…:stopped:`).
     case nodeDown
     /// AN APP STOPPED LETTING US IN (prd §1162) — a refused key, a lapsed
     /// session. Nothing arrives from that app until it is reconnected, and
@@ -161,7 +143,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .disputeOpened, .deadlineNear, .positionAtRisk, .networkUpgrade, .approvalGranted,
              .poolProofNeeded, .poolCleared, .paymentsSilent, .priceRose,
              .appRejected, .runningLow, .safeSignatureNeeded,
-             .walletIncident, .chainReset, .nodeDown, .connectionBroken,
+             .walletIncident, .nodeDown, .connectionBroken,
              .moveFailed, .moveReturned, .orderEnded, .needsYou:
             return .alarm
         case .moneyIn, .payoutPaid, .likesReceived, .repliesReceived, .followersGained, .appWalletMade, .digest,
@@ -213,12 +195,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // rejection is a decision somebody made about you.
         case .appRejected:      return 65
         case .paymentsSilent:   return 60    // revenue stopped; nothing to click
-        // A devnet wiped under you. ABOVE `poolCleared` because something is
-        // asked of you (accounts redeploy on their next transaction, and until
-        // then every reading is of a chain that is gone) and BELOW
-        // `paymentsSilent` because no real money is involved either way — a
-        // devnet reset must never win a batch against revenue that stopped.
-        case .chainReset:       return 55
         case .poolCleared:      return 50    // good news, act whenever
         // Your own machine stopped: something to do, no money at risk and
         // no clock — above `runningLow` (a stop has already happened, where
@@ -284,9 +260,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
     /// shouting their own noun. The row's own title is the body.
     ///
     /// Lives here rather than in `NotifySweep` (moved 2026-08-29, prd §522) so
-    /// there is ONE authority a harness can read: `NotifyDevnet` below composes
-    /// whole plans, and a headline it could not reach would have meant a second
-    /// copy of three strings in a file no check compiles.
+    /// there is ONE authority a harness can read.
     ///
     /// A headline never repeats what the body already leads with — see
     /// `.appRejected` and `.walletIncident`, both of which say who decided
@@ -313,10 +287,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         // who decided, which the row doesn't.
         case .appRejected:      return String(localized: "App Review turned it down")
         case .runningLow:       return String(localized: "Running low")
-        // Names WHAT happened, never which chain — the plan carries its
-        // source, so the mark says which devnet, and the body names it in
-        // words (see `NotifyKind.chainReset`).
-        case .chainReset:       return String(localized: "A devnet was reset")
         case .nodeDown:         return String(localized: "Your node stopped")
         case .connectionBroken: return String(localized: "Needs reconnecting")
         case .moneyIn:          return String(localized: "Money arrived")
@@ -359,7 +329,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .priceRose:           return String(localized: "a price went up")
         case .appRejected:         return String(localized: "App Review said no")
         case .runningLow:          return String(localized: "running low")
-        case .chainReset:          return String(localized: "devnet reset")
         case .nodeDown:            return String(localized: "node stopped")
         case .connectionBroken:    return String(localized: "needs reconnecting")
         case .moneyIn:             return String(localized: "money arrived")
@@ -421,7 +390,6 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .priceRose:           (one, many) = (String(localized: "price rise"), String(localized: "price rises"))
         case .appRejected:         (one, many) = (String(localized: "rejection"), String(localized: "rejections"))
         case .runningLow:          (one, many) = (String(localized: "running low"), String(localized: "running low"))
-        case .chainReset:          (one, many) = (String(localized: "reset"), String(localized: "resets"))
         case .nodeDown:            (one, many) = (String(localized: "node stopped"), String(localized: "nodes stopped"))
         case .connectionBroken:    (one, many) = (String(localized: "app to reconnect"), String(localized: "apps to reconnect"))
         case .moneyIn:             (one, many) = (String(localized: "transfer in"), String(localized: "transfers in"))
@@ -692,136 +660,6 @@ struct NotifyLedger {
     }
 
     func reset() { defaults.removeObject(forKey: Self.key) }
-}
-
-
-// MARK: - The devnet (prd §522, §728)
-
-/// The judgement behind the one notification the devnet seat could not send
-/// on its own.
-///
-/// **WHY THIS IS NOT IN `NotifySweep`.** That file is the one place a LANDED
-/// ROW becomes a notification and its own doc says so — but a devnet seat
-/// lands no `Thing` for its chain state by design (its subject is chain state, not news), so
-/// nothing it learns could ever have reached a lock screen through the corpus.
-/// `Notifications.likes` is the standing precedent for a notification with
-/// nothing behind it in the corpus; this is the second, with the same
-/// reasoning one gathering step further out.
-///
-/// **THE ROOM'S CONTENT DOES NO NOTIFICATIONS, and a relaunch is the one
-/// exception.** No balance or move is urgent, because the asset is test ETH
-/// and nothing can move against you. A RELAUNCH is not content: it is the
-/// statement that every reading the room holds describes a chain that no
-/// longer exists, which is the evening §515a describes somebody losing.
-///
-/// **A REVERTED FRAME WAS BUILT AND THEN CUT, and the reason generalises.** It
-/// is the one thing this chain publishes that no receipt elsewhere can say, so
-/// it looks like the strongest case here and is the weakest: §306's own "did
-/// you already know?" test settles it, because somebody who just sent a frame
-/// transaction on an experimental devnet IS the person building against it —
-/// at the desk, in the tooling, probably watching the explorer. A chain wipe
-/// has the opposite property: it happens without you and while you are
-/// elsewhere.
-///
-/// **PURE, and in THIS file rather than beside the bridge**, so
-/// `scripts/notify-selftest.sh` compiles it WHOLE. Every rule below is a
-/// silent wrong notification if it drifts, and nothing in this repo can make
-/// a devnet reset on demand — so the harness is not the best proof these
-/// rules hold, it is the only one.
-///
-/// **STATED CEILING: none of this reaches the network.** It reads state a
-/// FOREGROUND pass already wrote, so the announcement rides the next notify
-/// sweep after the seat's own read observed the fact — not the background task,
-/// which deliberately drives no bridge refresh (`WalletBackgroundRefresh`'s own
-/// budget note). A reset stays sayable for a week.
-enum NotifyDevnet {
-
-    /// The seats, closed. Each carries its own copy so the words live where
-    /// the harness can read them.
-    ///
-    /// Hegotá Frames joined in §728 and left with its seat (prd §1206).
-    ///
-    /// **A STALL IS NOT ANNOUNCED.** It takes nothing, it ends by itself, and
-    /// nothing a notification could lead to would change it — §306's "can it
-    /// be acted on", failed. The room says it instead.
-    enum Seat: String, Sendable, CaseIterable {
-        /// The Logos testnet (prd §1084), once it recorded the reset it
-        /// observes (`LogosStore.resetSeen`, block 1's hash changing, §1035).
-        case logos
-
-        /// **MUST equal the seat's source.** It routes the deep link and
-        /// picks the brand mark for the right-hand slot, and a wrong string
-        /// fails at neither — the notification arrives with a blank slot and
-        /// opens the All feed. Tied to the constant by a drift guard in
-        /// `notify-selftest.sh`.
-        var source: String {
-            switch self {
-            // MUST equal `LogosRoom.source` (`notify-selftest.sh`).
-            case .logos:   return "Logos"
-            }
-        }
-
-        /// `casberi://feed/source/…`, percent-encoded: the name carries a space
-        /// and an accent, and an unencoded string is one `URL(string:)` hands
-        /// back as nil — a tap that opens the app on whatever room it was
-        /// already showing, which reads as the notification being broken
-        /// rather than as a bad link.
-        var link: String {
-            let path = source.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? source
-            return "casberi://feed/source/" + path
-        }
-    }
-
-    /// How long after a reset it is still the reason anything looks wrong.
-    /// A notification that outlived the room's own explanation would land
-    /// somebody in a room that no longer explains itself.
-    static let resetWindow: TimeInterval = 7 * 86_400
-
-    // MARK: A devnet was reset
-
-    struct Reset: Sendable, Equatable {
-        var seat: Seat
-        /// Unique to THIS reset, so a second relaunch is new news and the same
-        /// one is never announced twice. **Never a bare timestamp**: the sticky
-        /// record is re-read on every sweep, so a key that moved with the clock
-        /// would fire on every pass forever.
-        var key: String
-        /// When THIS DEVICE observed it — never when the chain restarted, which
-        /// we cannot know and must not imply.
-        var observedAt: Date
-        /// How many addresses are watched on that seat.
-        var watching: Int
-    }
-
-    static func plan(reset r: Reset, now: Date) -> NotifyPlan? {
-        // NOBODY WATCHING, NOTHING TO SAY — a reset is only news about someone
-        // who had something on that chain.
-        guard r.watching > 0 else { return nil }
-        // Never announce an observation from the future (a clock that moved
-        // under us), and never one the room has stopped explaining.
-        let age = now.timeIntervalSince(r.observedAt)
-        guard age >= 0, age <= resetWindow else { return nil }
-        let body: String
-        switch r.seat {
-        case .logos:
-            body = String(localized: "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you follow are still yours.")
-        }
-        return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
-                          kind: .chainReset,
-                          title: NotifyKind.chainReset.headline,
-                          body: body,
-                          link: r.seat.link,
-                          occurredAt: r.observedAt,
-                          source: r.seat.source)
-    }
-
-    /// Everything the devnet has to say, given what its last read left behind.
-    /// A reset never stands alone (prd §770), so it waits for the digest,
-    /// which is what stops a chain reset that touched four watched addresses
-    /// being four buzzes.
-    static func plans(resets: [Reset] = [], now: Date = Date()) -> [NotifyPlan] {
-        resets.compactMap { plan(reset: $0, now: now) }
-    }
 }
 
 

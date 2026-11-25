@@ -199,10 +199,6 @@ enum DemoCensus {
             let plans = NotifySweep.plans(things: things).plans
             return plans.isEmpty ? .empty("nothing would notify") : .ok("\(plans.count) planned")
         })
-        out.append(Surface(name: "notify.devnet", gate: .ranked) {
-            let plans = DevnetNotify.plans()
-            return plans.isEmpty ? .empty("no devnet plan") : .ok("\(plans.count) planned")
-        })
 
         // ── Rooms: every source the demo furnishes, through the same reader ─
         let sources = Array(Set(all.map(\.source))).filter { Corpus.earnsRoom($0) }.sorted()

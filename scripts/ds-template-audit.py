@@ -172,7 +172,6 @@ EXEMPT_PLAIN = {
     "Shell/DockFolderRow.swift": (2, "the dock, a user-protected differentiator: nothing about it changes here"),
     "Shell/TopDoors.swift": (1, "the face door's tap is a highPriorityGesture (the pager pan), so the "
                                 "Button's own press never fires — a style there would be dead"),
-    "Screens/DevnetSendConsole.swift": (1, "the keypad draws its own pressed circle inside the key (§553)"),
 }
 
 

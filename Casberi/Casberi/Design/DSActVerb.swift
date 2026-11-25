@@ -36,9 +36,10 @@ struct DSActVerb: View {
     /// It is a second parameter rather than part of `title` for the reason
     /// `DSTreemapLeader` splits its two: folded into one string the unit is
     /// set at 40pt, which both wraps the verb onto a second line and states a
-    /// denomination in the size reserved for the amount. `DevnetSendSheet`'s
-    /// amount screen already sets a figure and its unit at exactly these two
-    /// rungs, so this is that lockup, on the tile that commits it.
+    /// denomination in the size reserved for the amount. The devnet send
+    /// sheet's amount screen (deleted with Logos, 2026-11-25) set a figure and
+    /// its unit at exactly these two rungs, so this is that lockup, on the
+    /// tile that commits it.
     var unit: String? = nil
     /// The disc's glyph — the slot that says HOW the act happens: "faceid" on
     /// a commit Face ID confirms, "key" where a key is made, "plus" where
