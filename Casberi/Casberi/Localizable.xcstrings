@@ -148549,34 +148549,6 @@
         }
       }
     },
-    "Open Tacit" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Abrir Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacitを開く"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 열기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "打开 Tacit"
-          }
-        }
-      }
-    },
     "Open Telegram Desktop on a computer" : {
       "localizations" : {
         "es" : {
@@ -150041,34 +150013,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在打开 Spotify 登录…"
-          }
-        }
-      }
-    },
-    "Opening Tacit" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abriendo Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tacitを開いています"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tacit 여는 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在打开 Tacit"
           }
         }
       }
@@ -246704,6 +246648,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的钱包 · %@"
+          }
+        }
+      }
+    },
+    "Your wallet · Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu billetera · Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたのウォレット · Tacit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 지갑 · Tacit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的钱包 · Tacit"
           }
         }
       }

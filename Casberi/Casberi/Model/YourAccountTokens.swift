@@ -75,8 +75,10 @@ enum YourAccountTokens {
         // The demo asks for nothing (§1475): its own few tokens.
         if YourAccountDemo.isOn {
             let q = term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            return YourAccountDemo.list(net).filter {
+            // With the apps' own tokens (TAC), so Buy TAC opens Swap here too.
+            return (YourAccountDemo.list(net) + (appTokens[net.chainId] ?? [])).filter {
                 q.isEmpty || $0.token.symbol.lowercased().contains(q) || $0.name.lowercased().contains(q)
+                    || $0.token.contract?.lowercased() == q
             }
         }
         let q = term.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -104,8 +106,27 @@ enum YourAccountTokens {
                                   name: e.name, onList: false))
             }
         }
+        // A token an app in Casberi reads and Swap pins a pool for (prd §1971
+        // items 17 and 21: TAC, Tacit's), found by its symbol, name or
+        // contract though neither list names it (user, 2026-11-25: "i went to
+        // swap in casberi and it can't find tac to swap into"). Said to be
+        // off Uniswap's list, as it is.
+        let lower = q.lowercased()
+        for own in appTokens[net.chainId] ?? [] where !out.contains(where: { $0.id == own.id }) {
+            if lower.isEmpty { continue }
+            if own.token.symbol.lowercased().hasPrefix(lower) || own.name.lowercased().hasPrefix(lower)
+                || own.token.contract?.lowercased() == lower {
+                out.append(own)
+            }
+        }
         return out
     }
+
+    /// Tokens Casberi's own apps hold and Swap has a pool for, by network.
+    static let appTokens: [Int: [Listed]] = [
+        1: [Listed(token: Op.Token(symbol: "TAC", decimals: 18, contract: EIP55.checksum(TacitPermit.token)),
+                   name: "Tacit Token", onList: false)],
+    ]
 
     /// The wider list per network, read once a day, as Uniswap's is.
     @MainActor private static var wide: [Int: (tokens: [OpenTokenList.Entry], at: Date)] = [:]

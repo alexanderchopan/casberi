@@ -62,14 +62,13 @@ struct TacitShieldSheet: View {
 
     @ViewBuilder private var form: some View {
         Text("Send").dsText(.heading34).foregroundStyle(DS.textPrimary)
-        Grid(alignment: .leading, horizontalSpacing: DS.Space.s4, verticalSpacing: DS.Space.s3) {
-            GridRow {
-                label("To")
-                Chip(text: "Tacit", glyph: "lock.fill")
-            }
+        // **ONE ROW HEIGHT, ONE GAP (user, 2026-11-25: "row spacing looks
+        // uneven between fee and you get").** Every row, chips or words,
+        // stands a finger's height, the label in one column.
+        VStack(alignment: .leading, spacing: 0) {
+            row("To") { Chip(text: "Tacit", glyph: "lock.fill") }
             if walletHeld > 0, accountHeld > 0 {
-                GridRow {
-                    label("From")
+                row("From") {
                     HStack(spacing: DS.Space.s2) {
                         Button { pick(.account) } label: { Chip(text: "Casberi", selected: from == .account) }
                             .buttonStyle(PressSpring())
@@ -78,15 +77,13 @@ struct TacitShieldSheet: View {
                     }
                 }
             }
-            GridRow {
-                label("Token")
+            row("Token") {
                 HStack(spacing: DS.Space.s2) {
                     AssetMark(name: "TAC", size: 24)
                     Text("TAC · Ethereum").dsText(.body17).foregroundStyle(DS.textPrimary)
                 }
             }
-            GridRow {
-                label("Amount")
+            row("Amount") {
                 HStack(spacing: DS.Space.s3) {
                     TextField("0", text: $amount)
                         .keyboardType(.decimalPad)
@@ -104,15 +101,9 @@ struct TacitShieldSheet: View {
                     .buttonStyle(RowPress())
                 }
             }
-            GridRow {
-                label("Fee")
-                Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
-            }
-        }
-        .padding(.top, DS.Space.s6)
-        VStack(spacing: DS.Space.s2) {
-            fact(String(localized: "You get"), arrivesWords)
-            fact(String(localized: "Arrives"), String(localized: "In a minute"))
+            row("Fee") { Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary) }
+            row("You get") { Text(verbatim: arrivesWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary) }
+            row("Arrives") { Text("In a minute").dsText(.body17).foregroundStyle(DS.textPrimary) }
         }
         .padding(.top, DS.Space.s6)
         if case .failed(let why) = shield.step {
@@ -144,16 +135,14 @@ struct TacitShieldSheet: View {
         "\(v.formatted(.number.precision(.significantDigits(1...4)))) TAC"
     }
 
-    private func label(_ words: LocalizedStringKey) -> some View {
-        Text(words).dsText(.body17).foregroundStyle(DS.textSecondary)
-    }
-
-    private func fact(_ name: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
-            Spacer(minLength: DS.Space.s2)
-            Text(verbatim: value).dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+    private func row<V: View>(_ name: LocalizedStringKey, @ViewBuilder _ value: () -> V) -> some View {
+        HStack(alignment: .center, spacing: DS.Space.s4) {
+            Text(name).dsText(.body17).foregroundStyle(DS.textSecondary)
+                .frame(width: 92, alignment: .leading)
+            value()
+            Spacer(minLength: 0)
         }
+        .frame(minHeight: DS.Hit.min + DS.Space.s2)
     }
 
     // MARK: - Sending
@@ -244,10 +233,16 @@ struct TacitShieldSheet: View {
                 if !TacitEngine.shared.isOpen, !DemoMode.isActive, let coSigner, (tac ?? 0) > 0, (tac ?? 0) <= held {
                     // Closed, the account is opened here, then quoted: never a
                     // word that asks you to go and do it (§780c).
-                    MoveFootWord(word: String(localized: "Open Tacit")) {
+                    // Connect, Tacit's own word (prd §1971 item 12): your
+                    // wallet signs, and the fee is read the moment the account
+                    // is open, not after every balance is.
+                    MoveFootWord(word: String(localized: "Connect")) {
+                        Task { await account.open(coSigner: coSigner) }
                         Task {
-                            await account.open(coSigner: coSigner)
-                            if let tac { await shield.quote(tac: tac) }
+                            for _ in 0..<360 where !TacitEngine.shared.isOpen {
+                                try? await Task.sleep(for: .milliseconds(500))
+                            }
+                            if TacitEngine.shared.isOpen, let tac { await shield.quote(tac: tac) }
                         }
                     }
                 } else {
@@ -267,8 +262,10 @@ struct TacitShieldSheet: View {
     private var footWaiting: String {
         guard let tac, tac > 0 else { return String(localized: "Type an amount") }
         if tac > held { return String(localized: "More than your wallet holds") }
-        if account.phase == .connecting || account.phase == .signing || account.phase == .reading {
-            return String(localized: "Opening Tacit")
+        switch account.phase {
+        case .connecting: return String(localized: "Connecting")
+        case .signing: return String(localized: "Your wallet signs")
+        default: break
         }
         return String(localized: "Reading the fee")
     }
