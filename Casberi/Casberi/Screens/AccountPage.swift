@@ -86,6 +86,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// in it — until §708 deleted that block outright; the flag now governs
     /// the Activity row alone.)
     var lands = true
+    /// How THIS app connects, under the name while it is not connected,
+    /// where the mode's own line would be wrong: Tacit's sign-in is your
+    /// co-signer's wallet, not "their site". nil keeps the mode's line.
+    var connectLine: String? = nil
     /// The rows under "Watching". The caller composes them from its own
     /// store; the chassis sorts and labels them.
     var rows: [AccountPageShape.Row] = []
@@ -493,6 +497,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             return AccountPageShape.activityFact(today: today, week: week, connected: true)
         }
         if let meta = metaLine { return meta }
+        if !state.connected, let connectLine { return connectLine }
         if !state.connected, let mode { return mode.label }
         return nil
     }

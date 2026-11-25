@@ -77,10 +77,12 @@ check(T.scalar(n) != n && T.scalar([UInt8](repeating: 0xff, count: 32)) != [UInt
 // Wei, 0x-hex, as ETH.
 typealias W = TacitEngineWire
 check(W.eth("0xde0b6b3a7640000") == 1 && W.eth("0x0") == 0 && W.eth("0x2386f26fc10000") == Decimal(string: "0.01"), "wei is misread")
+// The Tacit chain counts TAC in 8 decimals.
+check(W.tac("0x3b9aca00") == 10 && W.tac("0x1") == Decimal(string: "0.00000001") && W.tac("zz") == nil, "chain units are misread as TAC")
 check(W.eth("12") == nil && W.eth("0x") == nil && W.eth("0xzz") == nil && W.eth("0x" + String(repeating: "f", count: 65)) == nil, "nonsense reads as an amount")
 
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   Tacit's message, its test wallet's key, a high-s and a malformed signature, and wei")
+print("  ok   Tacit's message, its test wallet's key, a high-s and a malformed signature, wei and chain units")
 SWIFT
 
 # The wire is pure but leans on the Privacy Pools wire's envelope types.
@@ -119,7 +121,7 @@ has "$JS" "import './net.js';" "the engine no longer imports its network door fi
 has "$JS" "makeEvmPoolWallet({ chainId, identityKey: key, rpc: n.rpcUrl, relay: n.relayUrl ?? null })" \
     "the wallet is no longer opened view-only (rpc and relay, no provider)"
 hasnt "$JS" "provider:" "the engine hands the wallet a provider: a wallet with one can send"
-for verb in ".deposit(" ".send(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts"; do
+for verb in ".deposit(" ".send(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts" ".spend(" ".publish(" ".makeNote(" "makeChainClient"; do
   hasnt "$JS" "$verb" "the engine calls $verb: it reads only"
 done
 has "$ENGINE" '"connect-src \(scheme):",' "the page's Content-Security-Policy lets it reach a host"
@@ -129,16 +131,29 @@ allows=$(grep -n "PrivacyEngineWire.allows(url, declared: declared)" "$ENGINE" |
 sends=$(grep -n "IngestSupport.sendRequest(request, service: TacitEngine.service)" "$ENGINE" | head -1 | cut -d: -f1)
 [[ -n "$allows" && -n "$sends" && "$allows" -lt "$sends" ]] || fail "a request is sent before its host is checked"
 has "Casberi/Casberi/Model/NetworkReach.swift" 'Endpoint(service: "Tacit engine",' "the engine's hosts are not declared"
+# The Tacit chain: read with Tacit's own wallet, given no prover, at the
+# contract and server Tacit's own config names.
+has "$JS" "makeChainWallet({ poseidon, prover: null," "the chain wallet is handed a prover: with one it could spend"
+has "$JS" "{ from: 0, keep: false }" "the chain scan keeps a tree it has no use for"
+has "$M/TacitEngineWire.swift" 'static let blocks = "0x00000000000a9147ffd8d41d152d730ca5f84e6c"' "the Tacit chain's contract moved"
+has "$M/TacitEngineWire.swift" 'static let leader = "https://tacit-chain-leader.onrender.com"' "the Tacit chain's server moved"
+has "Casberi/Casberi/Model/NetworkReach.swift" '"tacit-chain-leader.onrender.com",' "the Tacit chain's server is not declared"
 has "$M/TacitPocket.swift" "digest: TacitIdentity.digest, signer: coSigner," "the co-signer's answer is no longer checked against Tacit's message"
 has "$M/TacitPocket.swift" 'static let tacToken = "0xA1313eb9f3A445606D9583bcAc3ebeB56a858279"' "TAC's token address moved: Public would read another token"
 has "$M/TacitPocket.swift" "IngestSupport.sendRequest(request, service: TacitEngine.service)" "the public TAC read leaves the engine's funnel"
 hasnt "$M/TacitAccount.swift" "kSecClass" "the account keeps something in the Keychain: the key is never stored"
 
 # ── The wallet file is the pinned one, and the bundle is built from it ───────
-pinned=$(python3 -c "import json;print(json.load(open('tools/tacit-engine/upstream.json'))['files']['vendor/tacit-evm-pool-wallet.js']['sha256'])")
-found=$(shasum -a 256 tools/tacit-engine/vendor/tacit-evm-pool-wallet.js | cut -d' ' -f1)
-[[ "$pinned" == "$found" ]] || fail "the vendored wallet is not the pinned file"
+python3 - <<'PY' || fail "a vendored file is not the pinned file"
+import hashlib, json, sys
+files = json.load(open('tools/tacit-engine/upstream.json'))['files']
+bad = [p for p, f in files.items() if hashlib.sha256(open('tools/tacit-engine/' + p, 'rb').read()).hexdigest() != f['sha256']]
+if len(files) < 14 or bad: print(bad or 'files are missing from upstream.json'); sys.exit(1)
+PY
 [[ -s Casberi/Casberi/Resources/tacit-engine.js ]] || fail "the engine's bundle is missing"
+if command -v node >/dev/null; then
+  (cd tools/tacit-engine && node test/chain-scan.mjs) || fail "the chain scan does not find an account's own notes"
+fi
 if [[ -d tools/tacit-engine/node_modules/esbuild ]]; then
   (cd tools/tacit-engine && node build.mjs --check >/dev/null) || fail "tacit-engine.js is not what tools/tacit-engine builds"
   print "  ok   the bundle reproduces from the pinned wallet"

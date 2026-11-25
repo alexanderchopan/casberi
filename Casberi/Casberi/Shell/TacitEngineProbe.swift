@@ -14,14 +14,15 @@ import Security
 /// - `load`   start the web view, load the bundle, ask what it carries
 /// - `open`   open the account on Ethereum and Robinhood
 /// - `read`   find its notes on each network and add them up
-/// - `all`    identity, load, open, read
+/// - `chain`  try the Tacit chain's notes with its key: private TAC
+/// - `all`    identity, load, open, read, chain
 enum TacitEngineProbe {
 
     @MainActor
     static func run(_ raw: String) {
         Task { @MainActor in
             let steps: [String] = raw == "all" || raw == "YES"
-                ? ["identity", "load", "open", "read"]
+                ? ["identity", "load", "open", "read", "chain"]
                 : raw.split(separator: ",").map(String.init)
             var key: [UInt8]?
             for step in steps {
@@ -67,6 +68,12 @@ enum TacitEngineProbe {
                                 log("read", ms(t), "\(network.name) FAILED \(describe(error))")
                             }
                         }
+                    case "chain":
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        let r = try await TacitEngine.shared.chain()
+                        let worth = TacitEngineWire.tac(r.worth).map { "\($0)" } ?? r.worth
+                        log("chain", ms(t), "worth \(worth) TAC · \(r.notes) notes, \(r.spent) spent · \(r.leaves) tried · elsewhere \(r.elsewhere) · page \(r.ms) ms")
                     default:
                         log(step, 0, "unknown step")
                     }

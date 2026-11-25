@@ -218,6 +218,7 @@ The licence notices of each are kept at the end of railgun-engine.js. Its exact 
 The app's Tacit engine (tacit-engine.js) bundles, unmodified:
 
 - Tacit's standalone private-ETH wallet (tacit-evm-pool-wallet.js, from github.com/z0r0z/tacit at commit 8738946f). Copyright (c) 2026 ross. MIT License.
+- Tacit's chain wallet and the files it imports (tacit-chain-wallet.js, tacit-chain-memo.js, tacit-chain-lane.js, tacit-chain-root.js, tacit-chain-lock.js, btc-pool-zk.js, amm-bjj.js, adaptor-signature.js, bulletproofs.js, bulletproofs-plus.js, from the same repository and commit). Copyright (c) 2026 ross. MIT License. With them, as Tacit bundles them: noble-secp256k1, noble-hashes, noble-curves and noble-post-quantum (Copyright (c) Paul Miller, MIT License) and poseidon-lite (MIT License).
 - noble-secp256k1 and noble-hashes, by Paul Miller, and poseidon-lite, carried inside it. MIT License.
 - snarkjs 0.7.6, by iden3, with the libraries it bundles, carried inside it for a prove worker the app never starts. GNU General Public License, version 3.
 

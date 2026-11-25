@@ -196,7 +196,7 @@ enum BrandMark {
         // A protocol's token and the protocol share one mark — `HYPE` is
         // Hyperliquid's own logo, and the composition strip names the venue
         // "ether.fi Cash" where the roster names it "ether.fi".
-        "hype": "hyperliquid", "aave-token": "aave",
+        "hype": "hyperliquid", "aave-token": "aave", "tac": "tacit",
         "etherfi-cash": "etherfi", "etherfi-liquid": "etherfi",
         // A network named whole wears its own mark: Ethereum's is ETH's, and
         // Robinhood's is the one the Wallet's network rows already draw

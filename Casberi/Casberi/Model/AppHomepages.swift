@@ -26,6 +26,7 @@ enum AppHomepages {
         "Acorns": "acorns.com",
         "Rocket Money": "rocketmoney.com",
         "Privy": "privy.io",
+        "Tacit": "tacit.finance",
         "Wise": "wise.com",
         "Splits": "splits.org",
         "SimpleFIN": "simplefin.org",

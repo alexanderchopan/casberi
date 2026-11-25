@@ -13,7 +13,7 @@ import Foundation
 enum TacitEngineWire {
 
     enum Method: String, CaseIterable {
-        case info, open, read, close
+        case info, open, read, chain, close
     }
 
     typealias Failure = PrivacyEngineWire.Failure
@@ -30,6 +30,12 @@ enum TacitEngineWire {
 
     struct Read: Encodable {
         let chainId: Int
+    }
+
+    struct Chain: Encodable {
+        let rpcUrl: String
+        let blocks: String
+        let leader: String
     }
 
     // MARK: - Answers
@@ -71,6 +77,32 @@ enum TacitEngineWire {
         let ms: Int
     }
 
+    /// Your private TAC on the Tacit chain: notes that are SHARES of one pool.
+    struct ChainReading: Decodable, Equatable {
+        /// 0x-hex, 8 decimals: your unspent notes' shares, added up.
+        let shares: String
+        /// 0x-hex, 8 decimals: what those shares are worth in TAC at the
+        /// pool's rate, read from the chain's contract.
+        let worth: String
+        let notes: Int
+        let spent: Int
+        /// How many of the chain's notes were tried.
+        let leaves: Int
+        /// 0x-hex, 8 decimals: the pool's TAC and its shares; their ratio is
+        /// what one share is worth, and it only rises.
+        let pool: String
+        let allShares: String
+        /// The key's record names another chain address: a PQ ID, whose notes
+        /// are under a passkey's root this phone does not hold.
+        let elsewhere: Bool
+        let ms: Int
+    }
+
+    /// 0x-hex chain units (8 decimals) as TAC; nil for anything else.
+    static func tac(_ hex: String) -> Decimal? {
+        eth(hex).map { $0 * pow(Decimal(10), 10) }
+    }
+
     /// 0x-hex wei as a decimal amount of ETH; nil for anything else.
     static func eth(_ hex: String) -> Decimal? {
         guard hex.hasPrefix("0x"), hex.count > 2, hex.count <= 66 else { return nil }
@@ -91,6 +123,14 @@ enum TacitEngineWire {
 /// Ethereum and Robinhood. Base is left out on purpose: its pool holds
 /// 274,000 entries, and a first read of them took 190 s and 120 MB on a Mac
 /// (measured 2026-11-20); these two take about 2 s and under 1 MB.
+/// The Tacit chain, where private TAC is held: its contract on Ethereum and
+/// Tacit's server for its notes (`TACIT_CHAIN` in Tacit's own
+/// `dapp/tacit-chain-config.js`, read 2026-11-24).
+enum TacitChain {
+    static let blocks = "0x00000000000a9147ffd8d41d152d730ca5f84e6c"
+    static let leader = "https://tacit-chain-leader.onrender.com"
+}
+
 struct TacitNetwork: Codable, Equatable, Identifiable {
     let chainId: Int
     let name: String

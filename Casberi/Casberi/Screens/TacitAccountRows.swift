@@ -17,7 +17,7 @@ struct TacitAccountRows: View {
     var body: some View {
         let reading = account.reading
         Section {
-            if let reading, reading.eth > 0 {
+            if let reading, reading.eth > 0 || (reading.tac ?? 0) > 0 {
                 map(reading).walletListRow()
             }
             state.walletListRow()
@@ -46,13 +46,34 @@ struct TacitAccountRows: View {
     /// Your money by network: Holdings' own map, a tile per network.
     private func map(_ reading: TacitAccount.Reading) -> some View {
         let price = account.ethPrice
-        let tiles = reading.held.filter { $0.eth > 0 }.map { held in
+        var tiles = reading.held.filter { $0.eth > 0 }.map { held in
             HoldingsTreemap.Holding(id: held.network, usd: price.map { held.eth * $0 } ?? held.eth, route: nil,
                                     display: price == nil ? WalletValue.token(held.eth, "ETH") : nil)
         }
-        return HoldingsTreemap(total: account.usd.map(WalletValue.exactMoney) ?? WalletValue.token(reading.eth, "ETH"),
+        // Public TAC is a tile of its own: in dollars beside ETH, or alone
+        // by its own amount when it has no price (user, 2026-11-24: "mine
+        // doesn't even show the treemap").
+        if let tac = reading.tac, tac > 0 {
+            if let usd = account.tacUSD {
+                tiles.append(.init(id: "TAC", usd: usd, route: nil))
+            } else if tiles.isEmpty {
+                tiles.append(.init(id: "TAC", usd: tac, route: nil, display: WalletValue.token(tac, "TAC")))
+            }
+        }
+        return HoldingsTreemap(total: Self.figure(account, reading),
                                holdings: tiles, showsShares: tiles.count > 1)
             .frame(minHeight: DSRoomChassis.leadBox, maxHeight: DSRoomChassis.leadBox)
+            .environment(\.holdingsDayMoves, account.tacMove.map { [HoldingMoves.key("TAC"): $0] } ?? [:])
+    }
+
+    /// The page's one figure, over the map and beside Balance: dollars when
+    /// everything held has a price; else the TAC of an account holding only
+    /// TAC, never "$0.00" over a row of it (user, 2026-11-24: "i'm still
+    /// seeing zeroes"); else the ETH.
+    static func figure(_ account: TacitAccount, _ reading: TacitAccount.Reading) -> String {
+        if let usd = account.pageUSD { return WalletValue.exactMoney(usd) }
+        if reading.eth == 0, let tac = reading.tac, tac > 0 { return WalletValue.token(tac, "TAC") }
+        return account.usd.map(WalletValue.exactMoney) ?? WalletValue.token(reading.eth, "ETH")
     }
 
     // MARK: - Open, reading, closed
@@ -70,9 +91,9 @@ struct TacitAccountRows: View {
         case .closed, .failed:
             VStack(alignment: .leading, spacing: 0) {
                 if case .failed(let why) = account.phase {
-                    Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
+                    Text(verbatim: why).dsText(.fact15).foregroundStyle(DS.destructiveInk)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .walletRowPitch()
+                        .frame(minHeight: WalletCardStyle.ledgerHead)
                 }
                 if let reading = account.reading {
                     Text("as of \(AccountPageShape.ago(reading.asOf))")
@@ -87,28 +108,49 @@ struct TacitAccountRows: View {
     private func waiting(_ words: String) -> some View {
         HStack(spacing: DS.Space.s2) {
             DSSpinner()
-            Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textSecondary)
+            Text(verbatim: words).dsText(.fact15).foregroundStyle(DS.textSecondary)
             Spacer(minLength: 0)
         }
-        .walletRowPitch()
+        .frame(minHeight: WalletCardStyle.ledgerHead)
     }
 
     // MARK: - The lists
 
     @ViewBuilder private func balance(_ reading: TacitAccount.Reading) -> some View {
         Section {
-            head(String(localized: "Balance"),
-                 figure: account.usd.map(WalletValue.exactMoney) ?? WalletValue.token(reading.eth, "ETH"))
+            head(String(localized: "Balance"), figure: Self.figure(account, reading))
                 .walletListRow()
             // Public, as Tacit counts it: TAC in the co-signer's own wallet.
+            // Not read is said, never left out: a missing row and an empty
+            // wallet are different answers.
             if let tac = reading.publicTAC {
-                line("TAC", fact: String(localized: "Ethereum · Public"),
-                     figure: WalletValue.token(tac, "TAC"))
+                // In dollars, as every row under it is; the amount moves
+                // into the line (user, 2026-11-24: "the tac just shows tac
+                // but not the dollar amount").
+                line("TAC", fact: account.tacPrice == nil ? String(localized: "Ethereum · Public")
+                        : String(localized: "Public · \(WalletValue.token(tac, "TAC"))"),
+                     figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
+                    .walletListRow()
+            } else {
+                line("TAC", fact: String(localized: "Public · not read"), figure: "")
                     .walletListRow()
             }
-            // Tacit keeps private TAC in two places Casberi does not read.
-            line("TAC", fact: String(localized: "Private · not read yet"), figure: "")
-                .walletListRow()
+            // Private TAC on the Tacit chain: shares of one pool, at what
+            // they are worth now, so what the pool has earned is in the
+            // figure. Tacit's pool on Bitcoin is not read.
+            if let tac = reading.privateTAC {
+                line("TAC", fact: String(localized: "Tacit chain · \(WalletValue.token(tac, "TAC"))"),
+                     figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
+                    .walletListRow()
+                if reading.privateElsewhere == true {
+                    line("TAC", fact: String(localized: "More under a passkey, not read"),
+                         factInk: DS.attentionInk, figure: "")
+                        .walletListRow()
+                }
+            } else {
+                line("TAC", fact: String(localized: "Tacit chain · not read"), figure: "")
+                    .walletListRow()
+            }
             ForEach(reading.held) { held in
                 line("ETH", fact: String(localized: "\(held.network) · Private"),
                      figure: account.usd(held).map(WalletValue.exactMoney) ?? WalletValue.token(held.eth, "ETH"),
@@ -159,7 +201,7 @@ struct TacitAccountRows: View {
                     let share = TacitAccount.share(held)
                     let thin = (share ?? 0) >= TacitAccount.thinShare
                     line(held.network,
-                         fact: String(localized: "\((held.pool ?? 0).formatted(.number.precision(.significantDigits(2...3)))) ETH in the pool"),
+                         fact: String(localized: "of \((held.pool ?? 0).formatted(.number.precision(.significantDigits(2...3)))) ETH"),
                          factInk: thin ? DS.attentionInk : DS.textTertiary,
                          figure: share.map { String(localized: "\(Int(($0 * 100).rounded()))% yours") } ?? "",
                          figureInk: thin ? DS.attentionInk : DS.textSecondary)
@@ -176,7 +218,7 @@ struct TacitAccountRows: View {
             // the row states the wallet and offers no verb (§83).
             words(String(localized: "Your co-signer"), fact: AddressTail.short(YourAccountDemo.signer))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .walletRowPitch()
+                .frame(minHeight: WalletCardStyle.ledgerHead)
         } else if let coSigner {
             let busy = account.phase == .connecting || account.phase == .signing || account.phase == .reading
             Button {
@@ -187,10 +229,10 @@ struct TacitAccountRows: View {
                     words(walletName ?? String(localized: "Your co-signer"), fact: AddressTail.short(coSigner))
                     Spacer(minLength: DS.Space.s2)
                     Text(account.phase == .open ? "Close" : "Open")
-                        .dsText(.body17)
+                        .dsText(.fact15)
                         .foregroundStyle(busy ? DS.textTertiary : DS.pickInk)
                 }
-                .walletRowPitch()
+                .frame(minHeight: WalletCardStyle.ledgerHead)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -198,7 +240,7 @@ struct TacitAccountRows: View {
         } else {
             words(String(localized: "No co-signer yet"), fact: String(localized: "Your account's second key opens Tacit"))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .walletRowPitch()
+                .frame(minHeight: WalletCardStyle.ledgerHead)
         }
     }
 
@@ -213,7 +255,7 @@ struct TacitAccountRows: View {
                 Text(verbatim: figure).dsText(.stat24).monospacedDigit().foregroundStyle(DS.textPrimary).lineLimit(1)
             }
         }
-        .walletRowPitch()
+        .frame(minHeight: DSFeed.headHeight)
     }
 
     /// A name and its grey fact on one line (prd §1954).
@@ -224,14 +266,24 @@ struct TacitAccountRows: View {
         }
     }
 
-    private func line(_ name: String, fact: String, factInk: Color = DS.textTertiary,
+    /// One line at the ledger's 40pt pitch (prd §1954): `walletListRow` adds
+    /// the air, so the row holds the head alone (user, 2026-11-24: "the rows
+    /// don't seem the same 40 point that our other rows on other pages are").
+    ///
+    /// It leads with its token's or network's mark, as a Holdings row does
+    /// (user, 2026-11-24: "we need to have the token icons for the balances
+    /// in tacit").
+    private func line(_ name: String, mark: String? = nil, fact: String, factInk: Color = DS.textTertiary,
                       figure: String, figureInk: Color = DS.textPrimary) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+            AssetMark(name: mark ?? name, size: DS.Mark.row)
+                .frame(width: DSRoomChassis.headGlyph)
+                .accessibilityHidden(true)
             words(name, fact: fact, factInk: factInk)
             Spacer(minLength: DS.Space.s2)
             Text(verbatim: figure).dsText(.price17).monospacedDigit().foregroundStyle(figureInk).lineLimit(1)
         }
-        .walletRowPitch()
+        .frame(minHeight: WalletCardStyle.ledgerHead)
     }
 
     /// An address, by name and tail; a tap copies it and says so.
@@ -257,7 +309,7 @@ struct TacitAccountRows: View {
                 Spacer(minLength: DS.Space.s2)
                 Text(copied == value ? "Copied" : "Copy").dsText(.body17).foregroundStyle(DS.pickInk)
             }
-            .walletRowPitch()
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

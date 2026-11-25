@@ -179,6 +179,8 @@ struct SlabTile: Equatable {
     static let importFile = SlabTile(label: String(localized: "Import"), glyph: "square.and.arrow.down")
     static let follow  = SlabTile(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch)
     static let connect = SlabTile(label: String(localized: "Connect"), glyph: "link")
+    /// A connected app whose page is elsewhere in Casberi: the door to it.
+    static let open    = SlabTile(label: String(localized: "Open"), glyph: "arrow.up.forward.app")
     static let reconnect = SlabTile(label: String(localized: "Reconnect"), glyph: "arrow.clockwise")
     static let turnOn  = SlabTile(label: String(localized: "Turn on"), glyph: "power")
     static let ask     = SlabTile(label: String(localized: "Ask"), glyph: "sparkles")

@@ -152,6 +152,13 @@ final class TacitEngine: NSObject {
         try await call(.read, Wire.Read(chainId: chainId), as: Wire.Reading.self)
     }
 
+    /// Your private TAC on the Tacit chain: the chain's notes tried with the
+    /// open account's key. About ten seconds on a Mac for 3,200 notes.
+    func chain() async throws -> Wire.ChainReading {
+        try await call(.chain, Wire.Chain(rpcUrl: TacitNetwork.ethereum.rpcUrl, blocks: TacitChain.blocks,
+                                          leader: TacitChain.leader), as: Wire.ChainReading.self)
+    }
+
     func close() async {
         _ = try? await call(.close, Wire.Empty(), as: Wire.Empty.self)
         isOpen = false

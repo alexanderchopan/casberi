@@ -63,6 +63,17 @@ final class TacitAccount {
         /// TAC the co-signer's wallet holds in public, as Tacit's own page
         /// counts Public; nil when it was not read.
         var publicTAC: Double? = nil
+        /// TAC held privately on the Tacit chain, as shares of one pool, at
+        /// what they were worth when read; nil when the chain was not read.
+        var privateTAC: Double? = nil
+        /// True when the key's record names a PQ ID: its notes are under a
+        /// passkey this phone does not hold, so `privateTAC` may be short.
+        var privateElsewhere: Bool? = nil
+
+        /// Public and private TAC together; nil when neither was read.
+        var tac: Double? {
+            publicTAC == nil && privateTAC == nil ? nil : (publicTAC ?? 0) + (privateTAC ?? 0)
+        }
 
         var eth: Double { held.map(\.eth).reduce(0, +) }
     }
@@ -70,6 +81,8 @@ final class TacitAccount {
     private var livePhase: Phase = .closed
     private var liveReading: Reading?
     private var livePrice: Double?
+    private var liveTacPrice: Double?
+    private var liveTacMove: Double?
 
     /// The demo's Tacit account: sample money on both networks, open, read
     /// from nowhere (the demo reaches no host). Its pool sizes are the real
@@ -80,8 +93,9 @@ final class TacitAccount {
         receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
         held: [Held(chainId: 1, network: "Ethereum", eth: 0.42, waiting: 0, pool: 14.7, reached: true),
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
-        asOf: .now, publicTAC: 240)
+        asOf: .now, publicTAC: 240, privateTAC: 310)
     static let demoPrice = 3_850.0
+    static let demoTacPrice = 0.78
 
     var phase: Phase { DemoMode.isActive ? .open : livePhase }
     var reading: Reading? { DemoMode.isActive ? Self.demoReading : liveReading }
@@ -90,6 +104,32 @@ final class TacitAccount {
 
     private static let readingKey = "tacit.reading.v1"
     private static let priceKey = "tacit.ethPrice.v1"
+    private static let tacPriceKey = "tacit.tacPrice.v1"
+
+    /// Dollars per TAC, as DeFiLlama last priced the token; nil until it has.
+    var tacPrice: Double? { DemoMode.isActive ? Self.demoTacPrice : liveTacPrice }
+
+    /// TAC's move over the last day, as a fraction (0.02 is 2% up); nil until
+    /// DeFiLlama has said. Not kept between launches: a day's move goes stale.
+    var tacMove: Double? { DemoMode.isActive ? 0.024 : liveTacMove }
+
+    /// Public and private TAC in dollars; nil when none was read or TAC has
+    /// no price.
+    var tacUSD: Double? {
+        guard let tac = reading?.tac, let tacPrice else { return nil }
+        return tac * tacPrice
+    }
+
+    /// What the PAGE adds up: private ETH and public TAC. The Wallet's totals
+    /// keep `usd`, the private ETH alone: the public TAC sits in your
+    /// co-signer's own wallet, which a followed wallet may already count.
+    var pageUSD: Double? {
+        guard let reading else { return nil }
+        let tac = reading.tac ?? 0
+        if reading.eth > 0, usd == nil { return nil }
+        if tac > 0, tacUSD == nil { return nil }
+        return (usd ?? 0) + (tacUSD ?? 0)
+    }
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.readingKey),
@@ -98,6 +138,8 @@ final class TacitAccount {
         }
         let price = UserDefaults.standard.double(forKey: Self.priceKey)
         if price > 0 { livePrice = price }
+        let tac = UserDefaults.standard.double(forKey: Self.tacPriceKey)
+        if tac > 0 { liveTacPrice = tac }
     }
 
     var isOpen: Bool { phase == .open || phase == .reading }
@@ -109,7 +151,7 @@ final class TacitAccount {
     /// What the Wallet's totals add: the last reading's dollars while it is
     /// recent and its co-signer is still this account's; nil otherwise.
     var countedUSD: Double? {
-        guard let reading, let usd else { return nil }
+        guard let reading, let usd = privateUSD else { return nil }
         if DemoMode.isActive { return usd }
         guard Date.now.timeIntervalSince(reading.asOf) < Self.countsFor,
               YourAccountFacts.coSigners.contains(where: { $0.caseInsensitiveCompare(reading.coSigner) == .orderedSame })
@@ -123,7 +165,22 @@ final class TacitAccount {
         if livePhase == .open || livePhase == .reading { livePhase = .closed }
     }
 
-    /// What the account is worth in dollars at the last reading; nil with no
+    /// The private TAC on the Tacit chain, in dollars; nil when it was not
+    /// read or TAC has no price.
+    var privateTacUSD: Double? {
+        guard let tac = reading?.privateTAC, let tacPrice else { return nil }
+        return tac * tacPrice
+    }
+
+    /// The account's PRIVATE money in dollars, what the Wallet's Private
+    /// total counts: private ETH and private TAC. Public TAC is left out: it
+    /// is in your co-signer's own wallet. nil when nothing held has a price.
+    var privateUSD: Double? {
+        guard reading != nil, usd != nil || privateTacUSD != nil else { return nil }
+        return (usd ?? 0) + (privateTacUSD ?? 0)
+    }
+
+    /// The account's private ETH in dollars at the last reading; nil with no
     /// reading or no price.
     var usd: Double? {
         guard let reading, let ethPrice else { return nil }
@@ -199,7 +256,11 @@ final class TacitAccount {
             let publicTAC = await TacitPocket.publicTAC(of: coSigner)
             keep(Reading(coSigner: coSigner.lowercased(), address: overview.address, receive: receive,
                          held: held, asOf: .now,
-                         publicTAC: publicTAC ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.publicTAC : nil }))
+                         publicTAC: publicTAC ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.publicTAC : nil },
+                         privateTAC: overview.chain.flatMap { TacitEngineWire.tac($0.worth) }
+                            .map { NSDecimalNumber(decimal: $0).doubleValue }
+                            ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.privateTAC : nil },
+                         privateElsewhere: overview.chain?.elsewhere))
             livePhase = .open
             await readPrice()
         } catch {
@@ -224,9 +285,23 @@ final class TacitAccount {
     }
 
     func readPrice() async {
-        guard let price = await MainnetPrices.prices(for: ["ETH"])["ETH"], price > 0 else { return }
-        livePrice = price
-        UserDefaults.standard.set(price, forKey: Self.priceKey)
+        if let price = await MainnetPrices.prices(for: ["ETH"])["ETH"], price > 0 {
+            livePrice = price
+            UserDefaults.standard.set(price, forKey: Self.priceKey)
+        }
+        // TAC by its contract, at DeFiLlama, and only a price it stands behind.
+        let mint = (network: "eth-mainnet", contract: TacitPocket.tacToken)
+        if let tac = await DefiLlamaPrices.prices(for: [mint])["\(mint.network)|\(mint.contract)"],
+           tac.confidence >= DefiLlamaPrices.confidenceFloor {
+            liveTacPrice = tac.price
+            UserDefaults.standard.set(tac.price, forKey: Self.tacPriceKey)
+            let id = "ethereum:\(mint.contract)"
+            if let root = await IngestSupport.getJSON("https://coins.llama.fi/percentage/\(id)") as? [String: Any],
+               let coins = root["coins"] as? [String: Any],
+               let percent = (coins[id] as? NSNumber)?.doubleValue, percent.isFinite {
+                liveTacMove = percent / 100
+            }
+        }
     }
 
     #if DEBUG
@@ -243,6 +318,17 @@ final class TacitAccount {
                           asOf: raw == "closed" ? Date.now.addingTimeInterval(-3 * 3600) : .now,
                           publicTAC: 23.85)
         livePrice = 2044
+        liveTacPrice = 0.78
+        liveTacMove = 0.115
+        if raw == "tac" {
+            // A TAC-only account, as the user's own reads: no private ETH.
+            liveReading = Reading(coSigner: "0x2c7536e3605d9c16a7a3d7b1898e529396a65c23",
+                                  address: "bp1qff6cr0pdghsamplesamplesamplesamplesamplex9k2",
+                                  receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
+                                  held: [Held(chainId: 1, network: "Ethereum", eth: 0, waiting: 0, pool: 14.7, reached: true),
+                                         Held(chainId: 4663, network: "Robinhood", eth: 0, waiting: 0, pool: 0.10, reached: true)],
+                                  asOf: .now, publicTAC: 23.85, privateTAC: 10.02)
+        }
         livePhase = raw == "closed" ? .closed : .open
     }
     #endif

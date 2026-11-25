@@ -211,34 +211,46 @@ extension FeedScreen {
         TacitAccount.shared.countedUSD ?? 0
     }
 
-    /// Your Tacit account's ETH, one row: the place, and the door to its page.
+    /// Your Tacit account in Holdings › Private: a row for its private ETH
+    /// and one for its private TAC on the Tacit chain, each the door to its
+    /// page. An account holding only TAC had no row and so no door here
+    /// (user, 2026-11-24: "we don't have a way for someone to get to their
+    /// tacit page").
     @ViewBuilder
     func walletTacitRow(mask: String?) -> some View {
         let tacit = TacitAccount.shared
-        if let reading = tacit.reading, reading.eth > 0, tacit.countedUSD != nil {
-            let figure = mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH")
-            Button {
-                DSHaptic.selection()
-                chrome.landWallet(on: .tacit)
-            } label: {
-                HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                    AssetMark(name: "ETH", size: DS.Mark.row)
-                        .frame(width: DSRoomChassis.headGlyph)
-                        .accessibilityHidden(true)
-                    walletLedgerWords("ETH", fact: TacitAccount.name)
-                    Spacer(minLength: DS.Space.s2)
-                    walletRowFigure(figure)
-                }
-                .frame(minHeight: WalletCardStyle.ledgerHead)
-                .contentShape(Rectangle())
+        if let reading = tacit.reading, tacit.countedUSD != nil {
+            if reading.eth > 0 {
+                walletTacitLine("ETH", figure: mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH"))
             }
-            .buttonStyle(RowPress())
-            .dsHover()
-            .accessibilityElement(children: .ignore)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityLabel(Text(verbatim: ["ETH", TacitAccount.name, figure].joined(separator: ". ")))
-            .walletListRow()
+            if let tac = reading.privateTAC, tac > 0 {
+                walletTacitLine("TAC", figure: mask ?? tacit.privateTacUSD.map(WalletValue.money) ?? WalletValue.token(tac, "TAC"))
+            }
         }
+    }
+
+    private func walletTacitLine(_ symbol: String, figure: String) -> some View {
+        Button {
+            DSHaptic.selection()
+            chrome.landWallet(on: .tacit)
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                AssetMark(name: symbol, size: DS.Mark.row)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                walletLedgerWords(symbol, fact: TacitAccount.name)
+                Spacer(minLength: DS.Space.s2)
+                walletRowFigure(figure)
+            }
+            .frame(minHeight: WalletCardStyle.ledgerHead)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: [symbol, TacitAccount.name, figure].joined(separator: ". ")))
+        .walletListRow()
     }
 
     private func walletRailgunRow(_ h: RailgunHoldings.Held, units: String, line: String, pending: Bool, mask: String?) -> some View {

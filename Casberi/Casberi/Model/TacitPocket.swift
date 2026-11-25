@@ -22,6 +22,8 @@ enum TacitPocket {
         /// The address others pay the account privately at: one for every network.
         let address: String
         let networks: [NetworkReading]
+        /// Private TAC on the Tacit chain; nil when it could not be read.
+        var chain: TacitEngineWire.ChainReading? = nil
     }
 
     /// The key of the Tacit account `coSigner` opens: your co-signer's own
@@ -68,7 +70,14 @@ enum TacitPocket {
                 readings.append(NetworkReading(network: network, receive: receive, reading: nil, error: why))
             }
         }
-        return Overview(address: address, networks: readings)
+        // The Tacit chain last: it is the slow read, and a failure there
+        // leaves the rest standing.
+        var chain: TacitEngineWire.ChainReading?
+        do { chain = try await engine.chain() } catch {
+            let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
+            NSLog("tacitEngine| chain | FAILED %@", why)
+        }
+        return Overview(address: address, networks: readings, chain: chain)
     }
 
     // MARK: - Public TAC

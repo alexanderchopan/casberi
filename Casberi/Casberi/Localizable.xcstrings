@@ -1795,34 +1795,6 @@
         }
       }
     },
-    "%@ ETH in the pool" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%@ ETH en el fondo"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "プールに%@ ETH"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "풀에 %@ ETH"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "池中有 %@ ETH"
-          }
-        }
-      }
-    },
     "%@ ETH in your account" : {
       "localizations" : {
         "es" : {
@@ -123590,6 +123562,34 @@
         }
       }
     },
+    "More under a passkey, not read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hay más bajo una llave de acceso, no leído"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パスキー管理分は未読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "패스키 아래 더 있음, 읽지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通行密钥下还有，未读取"
+          }
+        }
+      }
+    },
     "More videos" : {
       "localizations" : {
         "es" : {
@@ -160965,34 +160965,6 @@
         }
       }
     },
-    "Private · not read yet" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privado · aún no se lee"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プライベート · まだ読み取りません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "비공개 · 아직 읽지 않음"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "私密 · 尚未读取"
-          }
-        }
-      }
-    },
     "Private — nothing routes through us" : {
       "localizations" : {
         "es" : {
@@ -162123,26 +162095,54 @@
       "localizations" : {
         "es" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "Público · %@"
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "公開 · %@"
+            "state" : "translated",
+            "value" : "パブリック · %@"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "공개 · %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "needs_review",
+            "state" : "translated",
             "value" : "公开 · %@"
+          }
+        }
+      }
+    },
+    "Public · not read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Público · no leído"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パブリック · 未読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개 · 읽지 못함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公开 · 未读取"
           }
         }
       }
@@ -198989,6 +198989,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "TLS 证书"
+          }
+        }
+      }
+    },
+    "Tacit chain · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cadena Tacit · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーン · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链 · %@"
+          }
+        }
+      }
+    },
+    "Tacit chain · not read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cadena Tacit · no leída"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーン · 未読み取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인 · 읽지 못함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链 · 未读取"
           }
         }
       }
@@ -240886,6 +240942,34 @@
         }
       }
     },
+    "Your co-signer connects · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu cofirmante conecta · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共同署名者が接続します · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공동 서명자가 연결합니다 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由你的联署人连接 · %@"
+          }
+        }
+      }
+    },
     "Your co-signer could not be reached" : {
       "localizations" : {
         "es" : {
@@ -260278,6 +260362,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "共 %@"
+          }
+        }
+      }
+    },
+    "of %@ ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "de %@ ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ETH中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ETH 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共 %@ ETH"
           }
         }
       }

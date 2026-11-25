@@ -3,10 +3,62 @@
   "commit": "8738946f0b52428fa8973ac63e9d29c48ac3ee82",
   "license": "MIT",
   "files": {
+    "vendor/dapp/adaptor-signature.js": {
+      "from": "dapp/adaptor-signature.js",
+      "sha256": "c65337143289ba1ce08062478844e63693320db69909004f060a372499675ebe"
+    },
+    "vendor/dapp/amm-bjj.js": {
+      "from": "dapp/amm-bjj.js",
+      "sha256": "c614361e75de2e86f3f236f968b5d7fb5b871d1eefaa71d9f1926e570954b616"
+    },
+    "vendor/dapp/btc-pool-zk.js": {
+      "from": "dapp/btc-pool-zk.js",
+      "sha256": "5ce0a001d4ddab4ccdadabe60ae3282d00377bcf9bbd84bbed8db858cad32c32"
+    },
+    "vendor/dapp/bulletproofs-plus.js": {
+      "from": "dapp/bulletproofs-plus.js",
+      "sha256": "a8bafb985169aef08cdd60bf40596fa500ff32b5f1157d00aef95f6bc38b0479"
+    },
+    "vendor/dapp/bulletproofs.js": {
+      "from": "dapp/bulletproofs.js",
+      "sha256": "132d364822d7c64f466f1bc7bfe993bda47310aeffcfd0e7f0a1ba623108c831"
+    },
+    "vendor/dapp/tacit-chain-lane.js": {
+      "from": "dapp/tacit-chain-lane.js",
+      "sha256": "25b2f372fe9b5ef5cc3217a5228ab78f5a467912eb0e61274d43c4654d53ae3a"
+    },
+    "vendor/dapp/tacit-chain-lock.js": {
+      "from": "dapp/tacit-chain-lock.js",
+      "sha256": "6c2e56352c9b728995c6ef933507f5cb44a3590cacdb1c2f603230fcff5c398b"
+    },
+    "vendor/dapp/tacit-chain-memo.js": {
+      "from": "dapp/tacit-chain-memo.js",
+      "sha256": "e3dcf958bae2d9bc117711c0fd58eed091aca7d8f46c4b5f427103d4605cfe0f"
+    },
+    "vendor/dapp/tacit-chain-root.js": {
+      "from": "dapp/tacit-chain-root.js",
+      "sha256": "0a891bbb6cf5f0f64ee0953999f75213f2f14bd9a1dafaef0c65d3c64c978b2e"
+    },
+    "vendor/dapp/tacit-chain-wallet.js": {
+      "from": "dapp/tacit-chain-wallet.js",
+      "sha256": "29ec53af7bc0c4ad628acc90c4f80ab807ec92357749e5b855b4e14a9938b34b"
+    },
+    "vendor/dapp/vendor/tacit-deps.min.js": {
+      "from": "dapp/vendor/tacit-deps.min.js",
+      "sha256": "97254d69fbde8ef54c107f9e1326ac3ab296d14cf4912c5ff0aa438f6a6e81fe"
+    },
+    "vendor/dapp/vendor/tacit-poseidon.min.js": {
+      "from": "dapp/vendor/tacit-poseidon.min.js",
+      "sha256": "b1f540d09d3732b5cd792e024b1bc36e612914c653d84317dd47990b0f7040ac"
+    },
+    "vendor/dapp/vendor/tacit-pq.min.js": {
+      "from": "dapp/vendor/tacit-pq.min.js",
+      "sha256": "feb038a52d2961de84794c1637bc0d4ad600b65167b555f6fb9ee4fed91708aa"
+    },
     "vendor/tacit-evm-pool-wallet.js": {
       "from": "dapp/evm-pool/tacit-evm-pool-wallet.js",
       "sha256": "72ce234e09a81298f08731b9376845569da54243acad4b060bc27f1cbc8e22f4"
     }
   },
-  "note": "Tacit builds this one file from dapp/evm-pool-wallet.js with build/build-evm-pool-wallet.mjs; it carries Poseidon and snarkjs 0.7.6 (in its prove worker, which the read-only engine never starts). build.mjs refuses a vendor file whose hash is not the one above."
+  "note": "Tacit builds this one file from dapp/evm-pool-wallet.js with build/build-evm-pool-wallet.mjs; it carries Poseidon and snarkjs 0.7.6 (in its prove worker, which the read-only engine never starts). build.mjs refuses a vendor file whose hash is not the one above. The files under vendor/dapp/ are Tacit's chain wallet and what it imports, at the same commit, kept at their own relative paths so their imports resolve: the engine uses its key derivation and its note scan only, and calls nothing in it that spends."
 }

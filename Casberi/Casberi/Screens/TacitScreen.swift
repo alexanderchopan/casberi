@@ -19,6 +19,8 @@ struct TacitScreen: View {
                                        connected: added, store: store),
             mode: .signIn,
             lands: false,
+            connectLine: coSigner.map { String(localized: "Your co-signer connects · \(AddressTail.short($0))") }
+                ?? String(localized: "Your account needs a co-signer first"),
             teardown: { TacitAccount.shared.forget() },
             sheet: $sheet,
             act: { actBlock },
@@ -30,6 +32,12 @@ struct TacitScreen: View {
     /// Your account's co-signer: the wallet that signs in to Tacit.
     private var coSigner: String? { YourAccountFacts.coSigners.first }
 
+    /// **THE PAGE IS PRIVY'S (user, 2026-11-24, of a canvas, "Build A"):
+    /// tiles under the name and nothing else.** A sentence under the tile
+    /// raised a "Connect" card round it mid-page ("it has connect in the
+    /// middle of the page is that how our others are? i don't think so");
+    /// that the account is only read is said on its Wallet page.
+    ///
     /// One tile, Connect, the word Tacit's own site uses (user: "their website
     /// is connect", "not sign in"). Here connecting is your co-signer's wallet signing Tacit's own message, so
     /// connecting and opening the account are one step (user, 2026-11-24, of
@@ -38,9 +46,9 @@ struct TacitScreen: View {
     @ViewBuilder private var actBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if added {
-                DSSlabButton(title: String(localized: "Open Tacit"),
+                DSSlabButton(tile: .open, title: String(localized: "Open Tacit"),
                              detail: String(localized: "In your Wallet"),
-                             systemImage: "arrow.right") {
+                             systemImage: "arrow.up.forward.app") {
                     DSHaptic.tap()
                     chrome.sourceRequest = TacitAccount.name
                 }
@@ -50,7 +58,6 @@ struct TacitScreen: View {
                              systemImage: "link",
                              enabled: coSigner != nil || DemoMode.isActive, action: signIn)
             }
-            DSFootnote("Casberi reads a Tacit account you already have. It cannot move its money.")
         }
     }
 

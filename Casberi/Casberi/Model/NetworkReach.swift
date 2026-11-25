@@ -569,8 +569,9 @@ enum NetworkReach {
         // so the reads go through Tor.
         Endpoint(service: "Tacit engine",
                  reach: .whenConnected(bridge: "Tacit"),
-                 purpose: "Reads Tacit's private pool on Ethereum and Robinhood for your Tacit account: the pool's history from Tacit's public feeds, checked against the pool itself before any of it is kept, and the pool's state and what your receive address holds from MEV Blocker's public node and Robinhood's own. Carries your receive address, never a key or a note's secret. Sends nothing.",
+                 purpose: "Reads Tacit's private pool on Ethereum and Robinhood for your Tacit account: the pool's history from Tacit's public feeds, checked against the pool itself before any of it is kept, and the pool's state and what your receive address holds from MEV Blocker's public node and Robinhood's own. Reads the Tacit chain's notes from Tacit's server for it, the same list for every wallet, to find your private TAC; it then asks that server whether each note of yours is spent, and for your key's public record. Carries your receive address, never a key or a note's secret. Sends nothing.",
                  hosts: ["tacit-evm-pool-keeper.onrender.com", "tacit-evm-pool-keeper-robinhood.onrender.com",
+                         "tacit-chain-leader.onrender.com",
                          "rpc.mevblocker.io", "rpc.mainnet.chain.robinhood.com"],
                  credentialed: false,
                  throughTor: true),
