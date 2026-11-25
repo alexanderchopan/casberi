@@ -40,6 +40,9 @@ ALLOW = {
                                               "a Move row's lead on its disc, never a section name (prd §1892)",
     "Casberi/Casberi/Design/DSSeenStamp.swift": "Risks' state line (\"N new\", \"All seen\"): its shield is the "
                                                 "stamp the user picked, a fact over the findings, not a section name (prd §1919)",
+    "Casberi/Casberi/Screens/TacitAccountRows.swift": "`actionRow`, a verb row (Make private, Buy TAC) at `body17` "
+                                                      "with its glyph in the rows' lead column; the window reached "
+                                                      "`head`, the next function, whose section name draws no glyph (prd §1971)",
 }
 
 
