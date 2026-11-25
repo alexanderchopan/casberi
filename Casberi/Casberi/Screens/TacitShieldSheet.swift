@@ -39,6 +39,8 @@ struct TacitShieldSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsPageBackground()
         .presentationDetents([.large])
+        // A full-height page on the Mac too (mac-sheet-audit.py).
+        .dsPageSheet()
         .task(id: amount) {
             // A quote follows the amount, a beat after the last keystroke.
             try? await Task.sleep(for: .milliseconds(500))
