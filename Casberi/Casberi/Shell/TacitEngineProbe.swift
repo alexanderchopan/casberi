@@ -15,6 +15,7 @@ import Security
 /// - `open`   open the account on Ethereum and Robinhood
 /// - `read`   find its notes on each network and add them up
 /// - `chain`  try the Tacit chain's notes with its key: private TAC
+/// - `prove`  quote and prove a deposit of 1 TAC, never handed
 /// - `resume` a chain scan, then one resumed from where it stopped
 /// - `defi`   read Tacit's DeFi pool with its key: private TAC there
 /// - `all`    identity, load, open, read, chain, defi
@@ -76,6 +77,29 @@ enum TacitEngineProbe {
                         let r = try await TacitEngine.shared.chain()
                         let worth = TacitEngineWire.tac(r.worth).map { "\($0)" } ?? r.worth
                         log("chain", ms(t), "worth \(worth) TAC · \(r.notes) notes, \(r.spent) spent · \(r.leaves) tried · elsewhere \(r.elsewhere) · page \(r.ms) ms")
+                    case "both":
+                        // The chain and the DeFi pool at once, as opening
+                        // Tacit reads them (`TacitAccount.open`).
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        async let c: String = {
+                            do { let r = try await TacitEngine.shared.chain(); return "chain \(r.next) tried in \(r.ms) ms" }
+                            catch { return "chain FAILED \(describe(error))" }
+                        }()
+                        async let d: String = {
+                            do { let r = try await TacitEngine.shared.defi(); return "defi whole \(r.whole) errors \(r.errors.joined(separator: ",")) in \(r.ms) ms" }
+                            catch { return "defi FAILED \(describe(error))" }
+                        }()
+                        let (cs, ds) = await (c, d)
+                        log("both", ms(t), "\(cs) · \(ds)")
+                    case "prove":
+                        // A deposit of 1 TAC quoted and proved, never handed:
+                        // `shieldHand` is not called, nothing is signed.
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        let q = try await TacitEngine.shared.shieldQuote(units: 100_000_000)
+                        let p = try await TacitEngine.shared.shieldProve(units: 100_000_000)
+                        log("prove", ms(t), "fee \(q.sweepFee) arrives \(q.arrives) · proved in \(p.proveMs) ms · inbox \(p.inbox) · value \(p.value) · index \(p.index)")
                     case "resume":
                         // A scan, then one resumed from where it stopped:
                         // the second tries only what came after.

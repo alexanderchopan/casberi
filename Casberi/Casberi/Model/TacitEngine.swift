@@ -165,6 +165,29 @@ final class TacitEngine: NSObject {
         try await call(.defi, Wire.Empty(), as: Wire.DefiReading.self)
     }
 
+    // MARK: - Making TAC private
+
+    private func shieldAsk(_ units: UInt64) -> Wire.ShieldAsk {
+        Wire.ShieldAsk(rpcUrl: TacitNetwork.ethereum.rpcUrl, blocks: TacitChain.blocks, leader: TacitChain.leader,
+                       units: "0x" + String(units, radix: 16))
+    }
+
+    func shieldQuote(units: UInt64) async throws -> Wire.ShieldQuote {
+        try await call(.shieldQuote, shieldAsk(units), as: Wire.ShieldQuote.self)
+    }
+
+    func shieldProve(units: UInt64) async throws -> Wire.ShieldProved {
+        try await call(.shieldProve, shieldAsk(units), as: Wire.ShieldProved.self)
+    }
+
+    func shieldHand(_ permit: Wire.ShieldHand) async throws -> Wire.ShieldHanded {
+        try await call(.shieldHand, permit, as: Wire.ShieldHanded.self)
+    }
+
+    func shieldStatus(id: String) async throws -> Wire.ShieldStatus {
+        try await call(.shieldStatus, Wire.ShieldStatusAsk(leader: TacitChain.leader, id: id), as: Wire.ShieldStatus.self)
+    }
+
     func close() async {
         _ = try? await call(.close, Wire.Empty(), as: Wire.Empty.self)
         isOpen = false
@@ -281,6 +304,18 @@ final class TacitEngineScheme: NSObject, WKURLSchemeHandler {
         switch path {
         case "index.html":
             answer(task, 200, Data(TacitEngine.page.utf8), type: "text/html")
+        // Tacit's prover's own files (`tools/tacit-engine/build.mjs`): read by
+        // the page, never by the network.
+        case "btc-pool/btc_pool_halo2_bg.wasm", "btc-pool/params-k13.bin", "btc-pool/vk.bin":
+            let name = ["btc-pool/btc_pool_halo2_bg.wasm": ("tacit-halo2", "wasm"),
+                        "btc-pool/params-k13.bin": ("tacit-halo2-params", "bin"),
+                        "btc-pool/vk.bin": ("tacit-halo2-vk", "bin")][path]!
+            guard let url = Bundle.main.url(forResource: name.0, withExtension: name.1),
+                  let data = try? Data(contentsOf: url) else {
+                answer(task, 404, Data("no prover".utf8), type: "text/plain")
+                return
+            }
+            answer(task, 200, data, type: name.1 == "wasm" ? "application/wasm" : "application/octet-stream")
         case "tacit-engine.js":
             guard let url = Bundle.main.url(forResource: "tacit-engine", withExtension: "js"),
                   let data = try? Data(contentsOf: url) else {

@@ -24,7 +24,24 @@ for (const [path, { sha256 }] of Object.entries(upstream.files)) {
   if (got !== sha256) { console.error(`${path} is not the pinned file:\n  pinned ${sha256}\n  found  ${got}`); process.exit(1); }
 }
 
+// Tacit's prover imports its wasm-bindgen glue at run time from a URL beside
+// itself (`import(GLUE_URL)`). The one script has nothing beside it, so the
+// import is made static here and the glue bundled in; the vendored file on
+// disk stays Tacit's, byte for byte (its hash is checked above).
+const glueStatic = {
+  name: 'tacit-glue-static',
+  setup(b) {
+    b.onLoad({ filter: /btc-pool-halo2-prover\.js$/ }, async (args) => {
+      const src = readFileSync(args.path, 'utf8');
+      const out = src.replace('await import(GLUE_URL)', "await import('./btc-pool/btc_pool_halo2.js')");
+      if (out === src) throw new Error('btc-pool-halo2-prover.js no longer imports its glue as expected');
+      return { contents: out, loader: 'js' };
+    });
+  },
+};
+
 const r = await build({
+  plugins: [glueStatic],
   entryPoints: [join(here, 'src/engine.js')],
   bundle: true, format: 'iife', platform: 'browser', target: 'safari17', minify: true,
   // Tacit's wallet is MIT; the snarkjs it carries for its prove worker is
@@ -36,9 +53,28 @@ const r = await build({
   // policy allows none, so the library's workers fail to start and it
   // reads in the page, its own fallback.
   define: { 'import.meta.url': '"casberi-tacit://engine/tacit-engine.js"' },
-  logLevel: 'warning', write: false,
+  logLevel: 'error', write: false,
+  loader: { '.json': 'json' },
 });
 const bytes = r.outputFiles[0].contents;
+
+// Tacit's prover reads three files at run time: its wasm, its parameters and
+// its verifying key (whose hash the prover checks against Tacit's pin before
+// it proves). The app serves them to the page over its own scheme.
+const prover = [
+  ['vendor/dapp/btc-pool/btc_pool_halo2_bg.wasm', 'tacit-halo2.wasm'],
+  ['vendor/dapp/btc-pool/params-k13.bin', 'tacit-halo2-params.bin'],
+  ['vendor/dapp/btc-pool/vk.bin', 'tacit-halo2-vk.bin'],
+];
+const res = join(here, '../../Casberi/Casberi/Resources');
+for (const [from, to] of prover) {
+  const want = readFileSync(join(here, from));
+  if (check) {
+    let have = null;
+    try { have = readFileSync(join(res, to)); } catch {}
+    if (!have || sha(have) !== sha(want)) { console.error(`${to} is not ${from}`); process.exit(1); }
+  } else writeFileSync(join(res, to), want);
+}
 
 if (check) {
   const committed = sha(readFileSync(out));

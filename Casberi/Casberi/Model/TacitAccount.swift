@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Observation
 
@@ -96,6 +97,10 @@ final class TacitAccount {
     }
 
     private var livePhase: Phase = .closed
+    /// SHA-256 of the key the open account was made from, in memory only,
+    /// while it is open: a second signature must make the same key before
+    /// money is sent to it (`TacitShield`). Never the key itself.
+    private var keyPrint: [UInt8]?
     private var liveReading: Reading?
     private var livePrice: Double?
     private var liveTacPrice: Double?
@@ -181,6 +186,7 @@ final class TacitAccount {
     /// The engine dropped its page (iOS reclaimed it, or it failed): the key
     /// went with it, so the account is closed.
     func engineStopped() {
+        keyPrint = nil
         if livePhase == .open || livePhase == .reading { livePhase = .closed }
     }
 
@@ -254,6 +260,7 @@ final class TacitAccount {
             return
         }
         defer { for i in key.indices { key[i] = 0 } }
+        keyPrint = Array(SHA256.hash(data: key))
         livePhase = .reading
         do {
             let opened = try await TacitPocket.open(key: key)
@@ -306,6 +313,17 @@ final class TacitAccount {
         }
     }
 
+    /// Whether `key` is the key the open account was made from.
+    func isKey(_ key: [UInt8]) -> Bool {
+        guard let keyPrint, livePhase == .open || livePhase == .reading else { return false }
+        return Array(SHA256.hash(data: key)) == keyPrint
+    }
+
+    /// A Tacit chain read made after the account opened (a deposit landed).
+    func applyChain(_ chain: TacitEngineWire.ChainReading, coSigner: String) {
+        update(coSigner.lowercased()) { Self.apply(chain, to: &$0) }
+    }
+
     /// A Tacit chain reading into a reading: what is held, the address, and
     /// what the shares earned since the last reading on the same shares.
     static func apply(_ chain: TacitEngineWire.ChainReading, to r: inout Reading) {
@@ -336,6 +354,7 @@ final class TacitAccount {
     /// last reading stays.
     func close() {
         guard !DemoMode.isActive else { return }
+        keyPrint = nil
         TacitEngine.shared.stop()
         livePhase = .closed
     }

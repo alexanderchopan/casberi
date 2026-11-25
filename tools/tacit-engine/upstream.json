@@ -23,9 +23,37 @@
       "from": "dapp/bridge-mint-recovery.js",
       "sha256": "84e3a42821381e033de5d16b4f8d9510e67afd73e01e87e54ced2a11501ec1c9"
     },
+    "vendor/dapp/btc-pool-halo2-prover.js": {
+      "from": "dapp/btc-pool-halo2-prover.js",
+      "sha256": "7d62feffef92dc8cf9b8a4e17cd015cead6af9d8007a2dc07d9bd346086f5322"
+    },
+    "vendor/dapp/btc-pool-zk-boundary.js": {
+      "from": "dapp/btc-pool-zk-boundary.js",
+      "sha256": "8b5772acccba8fbdaa8b6af90179d13e678ff36d5907940a81e7409fdc99ca83"
+    },
     "vendor/dapp/btc-pool-zk.js": {
       "from": "dapp/btc-pool-zk.js",
       "sha256": "5ce0a001d4ddab4ccdadabe60ae3282d00377bcf9bbd84bbed8db858cad32c32"
+    },
+    "vendor/dapp/btc-pool/btc_pool_halo2.js": {
+      "from": "dapp/btc-pool/btc_pool_halo2.js",
+      "sha256": "a274981375bd5c3bb1eafebed6d3cb2784d3b7e026e43a8f6417505569e214a4"
+    },
+    "vendor/dapp/btc-pool/btc_pool_halo2_bg.wasm": {
+      "from": "dapp/btc-pool/btc_pool_halo2_bg.wasm",
+      "sha256": "9eb5c0402da84378b4b55d8c797ece0aefc4265aeb93725d7942c178b9df65b3"
+    },
+    "vendor/dapp/btc-pool/params-k13.bin": {
+      "from": "dapp/btc-pool/params-k13.bin",
+      "sha256": "24807dc26cf87ee2700cb330e284f587335cebc1b5784867f60c236d67624bce"
+    },
+    "vendor/dapp/btc-pool/pin.json": {
+      "from": "dapp/btc-pool/pin.json",
+      "sha256": "31f66eecc160f3dc93ea8d1d143de1e0ac54a341508b0a5d2afafca4ba35094b"
+    },
+    "vendor/dapp/btc-pool/vk.bin": {
+      "from": "dapp/btc-pool/vk.bin",
+      "sha256": "81ec8357ff3e27901d27524f0207c464a3fc44dfb08c17caa201a7f027700cdc"
     },
     "vendor/dapp/bulletproofs-plus.js": {
       "from": "dapp/bulletproofs-plus.js",
@@ -74,6 +102,14 @@
     "vendor/dapp/confidential-cdp.js": {
       "from": "dapp/confidential-cdp.js",
       "sha256": "18e05c3d16c3a3f97410299141ddb4997d52d56945f87d86e5aa00a51877ffa8"
+    },
+    "vendor/dapp/confidential-chain-memo-worker.js": {
+      "from": "dapp/confidential-chain-memo-worker.js",
+      "sha256": "7c03ff7611c385326763e2e6fdba2fcd76d995543f45090df59597506ae96264"
+    },
+    "vendor/dapp/confidential-chain-memo-workers.js": {
+      "from": "dapp/confidential-chain-memo-workers.js",
+      "sha256": "ef96a420d9474466c92647b818d576b11a7b8a8fd87e3291fc798db45efb07a6"
     },
     "vendor/dapp/confidential-defi-actions.js": {
       "from": "dapp/confidential-defi-actions.js",
@@ -234,6 +270,10 @@
     "vendor/dapp/tac-airdrop.js": {
       "from": "dapp/tac-airdrop.js",
       "sha256": "6a6bb45f51a2a7aa575f29cb661286ad7d5186f55644838c03465d55702858f3"
+    },
+    "vendor/dapp/tacit-chain-client.js": {
+      "from": "dapp/tacit-chain-client.js",
+      "sha256": "523a269a4b4a867e0f59ced2691b1ec0d9c5c1ad2999040d853e38ebab6f0256"
     },
     "vendor/dapp/tacit-chain-lane.js": {
       "from": "dapp/tacit-chain-lane.js",

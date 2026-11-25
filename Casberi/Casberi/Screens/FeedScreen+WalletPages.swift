@@ -943,7 +943,7 @@ extension FeedScreen {
         case .tacit:
             // Its map by network leads the page, in its first row: no box
             // of the room's (prd §1969's rule for a page with its own figure).
-            TacitAccountRows(openPage: { feedSheet = .web($0) })
+            TacitAccountRows(makePrivate: { feedSheet = .tacitShield })
         case .following:
             walletFollowingPage
         case .needsYou:

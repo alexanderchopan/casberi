@@ -1790,9 +1790,9 @@
   },
   {
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#web"
+    "Screens/FeedScreen+Sheets.swift:feedSheet#tacitShield"
    ],
-   "why": "A service's own page in `DSWebSheet` (prd §1971 item 16: Tacit's, from \"Make private on Tacit\"): Safari's own controller, the same sheet every account page's door raises, whose content the sweep cannot read for an anchor; opened and closed by hand on a simulator 2026-11-24."
+   "why": "Make TAC private (prd §1971 item 20), from Tacit's page: its form needs an open Tacit account, which a co-signer's wallet opens and a simulator has none; opened by hand on a simulator 2026-11-25 with the demo's account."
   }
  ]
 }

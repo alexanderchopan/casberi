@@ -31,8 +31,8 @@ KNOWN_NON_REACH=(
   hyperevmscan.io monadscan.com worldscan.org explorer.arc.io explore.tempo.xyz
   # A Twitch channel page, opened by a stream's Play tile (prd §1363).
   www.twitch.tv
-  # Tacit's own TAC page, opened in the Safari sheet by "Make private on
-  # Tacit" (prd §1971 item 16); the app fetches nothing from it.
+  # Tacit's own site, opened in the Safari sheet by Tacit's Website tile;
+  # the app fetches nothing from it.
   tacit.finance
   # A made-up scam origin (prd §1514): the text `-pairVerifyProbe scam`
   # draws in "Really is", DEBUG only, never fetched.

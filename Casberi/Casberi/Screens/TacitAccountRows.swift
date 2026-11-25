@@ -11,16 +11,19 @@ struct TacitAccountRows: View {
     /// The wallet app that holds each co-signer key, once a session names it.
     @State private var walletName: String?
     @State private var copied: String?
-    @Environment(\.openURL) private var openURL
+    @Bindable private var shield = TacitShield.shared
     @Environment(ShellChrome.self) private var chrome
-    /// Raises a web page beside this page, through the screen's one sheet
-    /// (`FeedSheetRoute.web`): a row here cannot present one itself.
-    var openPage: ((URL) -> Void)? = nil
-
-    /// Tacit's own page for TAC, where public TAC is made private.
-    static let shieldPage = URL(string: "https://tacit.finance/tac/")!
+    /// Raises Make private, Tacit's own Send (`FeedSheetRoute.tacitShield`).
+    var makePrivate: (() -> Void)? = nil
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
+
+    /// While a read is under way, a row not read yet says so, never "not
+    /// read" (user, 2026-11-25, on build 1075: "tacit chain says not read",
+    /// then "it's reading now").
+    private var reading_: Bool {
+        account.phase == .reading || account.phase == .connecting || account.phase == .signing
+    }
 
     var body: some View {
         let reading = account.reading
@@ -166,58 +169,29 @@ struct TacitAccountRows: View {
                      figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
                     .walletListRow()
             } else {
-                line("TAC", fact: String(localized: "Not read"), figure: "")
+                line("TAC", fact: reading_ ? String(localized: "Reading") : String(localized: "Not read"), figure: "")
                     .walletListRow()
             }
-            // **THE DOOR TO TACIT'S SITE (user, 2026-11-24: "for sure do the
-            // door").** Casberi reads and cannot move this money: making
-            // public TAC private is done on Tacit's own page, with the wallet
-            // that holds it, and shows here at the next reading. In the
-            // app's own Safari sheet, as every door here opens (user: "why
-            // doesn't it show a sheet inside casberi"); the Mac has no such
-            // sheet and opens its browser.
-            // **BUY TAC (user, 2026-11-24, "do all").** With none public,
-            // Swap opens to buy it, on your account, on the pool Swap pins.
-            if reading.publicTAC == 0, YourAccountDemo.shownAddress != nil {
-                actionRow(String(localized: "Buy TAC"), glyph: "arrow.left.arrow.right") {
-                    Task { @MainActor in
-                        guard let draft = await MoveSentence.watchedDraft(id: "ethereum:\(TacitPocket.tacToken.lowercased())", symbol: "TAC") else { return }
-                        chrome.moveDraft = draft
-                        chrome.moveTray = true
-                    }
-                }
-                .walletListRow()
-            }
-            if let tac = reading.publicTAC, tac > 0 {
-                // The rows' own columns, so its words start where theirs do;
-                // `DSDoorRow`'s 18pt glyph column would start them short.
-                Button {
-                    DSHaptic.selection()
-                    #if targetEnvironment(macCatalyst)
-                    openURL(Self.shieldPage)
-                    #else
-                    if let openPage { openPage(Self.shieldPage) } else { openURL(Self.shieldPage) }
-                    #endif
-                } label: {
-                    HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                        Image(systemName: "arrow.up.right")
-                            .dsGlyph(.body, weight: .medium)
-                            .foregroundStyle(DS.brandInk)
-                            .frame(width: DSRoomChassis.headGlyph)
-                            .accessibilityHidden(true)
-                        Text("Make private on Tacit").dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                    .frame(minHeight: WalletCardStyle.ledgerHead)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .walletListRow()
+            // **MAKE PRIVATE, IN CASBERI (prd §1971 item 20; user: "i thought
+            // we were going to make tacit option to make private is not in
+            // tacit website").** Tacit's own Send, in a sheet; the website
+            // door it replaced is deleted.
+            if let tac = reading.publicTAC, tac > 0, let makePrivate {
+                actionRow(String(localized: "Make private"), glyph: "lock") { makePrivate() }
+                    .walletListRow()
             }
         }
         Section {
             head(String(localized: "Private"), figure: privateFigure(reading))
                 .walletListRow()
+            // A deposit handed and not yet taken: amber, as Railgun's and
+            // Privacy Pools' waiting rows are.
+            ForEach(TacitShield.shared.arriving) { a in
+                line("TAC", fact: "\(Self.amount(a.tac)) · \(String(localized: "Arriving"))", factInk: DS.attentionInk,
+                     figure: account.tacPrice.map { WalletValue.exactMoney(a.tac * $0) } ?? WalletValue.token(a.tac, "TAC"),
+                     figureInk: DS.textSecondary)
+                    .walletListRow()
+            }
             // Private TAC on the Tacit chain: shares of one pool, at what
             // they are worth now, so what the pool has earned is in the
             // figure. Tacit's pool on Bitcoin is not read.
@@ -240,7 +214,7 @@ struct TacitAccountRows: View {
                         .walletListRow()
                 }
             } else {
-                line("TAC", fact: String(localized: "Tacit chain · not read"), figure: "")
+                line("TAC", fact: reading_ ? String(localized: "Tacit chain · reading") : String(localized: "Tacit chain · not read"), figure: "")
                     .walletListRow()
             }
             // Tacit's DeFi pool, its private pool on Ethereum, where a
@@ -253,7 +227,7 @@ struct TacitAccountRows: View {
                         .walletListRow()
                 }
             } else {
-                line("TAC", fact: String(localized: "DeFi pool · not read"), figure: "")
+                line("TAC", fact: reading_ ? String(localized: "DeFi pool · reading") : String(localized: "DeFi pool · not read"), figure: "")
                     .walletListRow()
             }
             // Only what is held, as Holdings lists it: a network at zero

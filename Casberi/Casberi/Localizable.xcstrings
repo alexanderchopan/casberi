@@ -59848,6 +59848,34 @@
         }
       }
     },
+    "Arriving" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Llegando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到着中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "도착 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到账中"
+          }
+        }
+      }
+    },
     "Arriving on %@" : {
       "localizations" : {
         "es" : {
@@ -84546,6 +84574,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "DeFi 池 · 未读取"
+          }
+        }
+      }
+    },
+    "DeFi pool · reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pool DeFi · leyendo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeFiプール · 読み取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeFi 풀 · 읽는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeFi 池 · 读取中"
           }
         }
       }
@@ -110349,6 +110405,34 @@
         }
       }
     },
+    "In a minute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En un minuto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1分ほどで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1분 이내"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "约一分钟"
+          }
+        }
+      }
+    },
     "In about 20 seconds" : {
       "localizations" : {
         "es" : {
@@ -123646,6 +123730,34 @@
         }
       }
     },
+    "More than Tacit takes in one deposit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más de lo que Tacit acepta en un depósito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1回の預け入れ上限を超えています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번 입금 한도를 넘었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超过 Tacit 单次存入上限"
+          }
+        }
+      }
+    },
     "More than you have" : {
       "localizations" : {
         "es" : {
@@ -123670,6 +123782,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "超过你的持有量"
+          }
+        }
+      }
+    },
+    "More than your wallet holds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más de lo que tiene tu billetera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウォレットの残高を超えています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지갑 잔액보다 많음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "超过钱包余额"
           }
         }
       }
@@ -149877,6 +150017,34 @@
         }
       }
     },
+    "Opening Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abriendo Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitを開いています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 여는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在打开 Tacit"
+          }
+        }
+      }
+    },
     "Opening your docs…" : {
       "localizations" : {
         "es" : {
@@ -161671,6 +161839,34 @@
         }
       }
     },
+    "Proved" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "証明済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "증명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已证明"
+          }
+        }
+      }
+    },
     "Proved on this Mac" : {
       "localizations" : {
         "es" : {
@@ -165896,6 +166092,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取链上数据…"
+          }
+        }
+      }
+    },
+    "Reading the fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leyendo la comisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手数料を読み取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수수료 읽는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在读取费用"
           }
         }
       }
@@ -199245,6 +199469,62 @@
         }
       }
     },
+    "Tacit chain · reading" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cadena Tacit · leyendo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーン · 読み取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인 · 읽는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链 · 读取中"
+          }
+        }
+      }
+    },
+    "Tacit could not be reached" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo contactar a Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitに接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接 Tacit"
+          }
+        }
+      }
+    },
     "Tacit could not be read" : {
       "localizations" : {
         "es" : {
@@ -199269,6 +199549,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取 Tacit"
+          }
+        }
+      }
+    },
+    "Tacit takes it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit lo recibe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitが受け取り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit이 받음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 接收"
+          }
+        }
+      }
+    },
+    "Tacit's chain didn't take it. It goes back to your DeFi pool." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La cadena de Tacit no lo aceptó. Vuelve a tu pool DeFi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーンが受け取りませんでした。DeFiプールに戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인이 받지 않았습니다. DeFi 풀로 돌아갑니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链未接收，将退回你的 DeFi 池。"
+          }
+        }
+      }
+    },
+    "Tacit's fee rose. Try again for a new quote" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La comisión de Tacit subió. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitの手数料が上がりました。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 수수료가 올랐습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 费用上涨，请重试"
           }
         }
       }
@@ -210465,6 +210829,34 @@
         }
       }
     },
+    "This deposit didn't check out, so nothing was asked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este depósito no cuadró, así que no se pidió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この預け入れは確認できなかったため、何も求めていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 입금이 확인되지 않아 요청하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此存入未通过检查，未发出任何请求"
+          }
+        }
+      }
+    },
     "This device can't use it" : {
       "localizations" : {
         "es" : {
@@ -217142,6 +217534,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "输入网站地址即可关注。保存过两次的网站会显示在这里。"
+          }
+        }
+      }
+    },
+    "Type an amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribe un monto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "金額を入力"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "금액 입력"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "输入金额"
           }
         }
       }
@@ -246116,6 +246536,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包共享了 1 个地址。关注为只读 — 永远无法交易或转移资金。"
+          }
+        }
+      }
+    },
+    "Your wallet signs" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu billetera firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウォレットが署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지갑이 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的钱包签名"
+          }
+        }
+      }
+    },
+    "Your wallet signs %@ TAC to Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu billetera firma %@ TAC a Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウォレットが%@ TACをTacitへ署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지갑이 %@ TAC를 Tacit으로 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的钱包签署 %@ TAC 至 Tacit"
+          }
+        }
+      }
+    },
+    "Your wallet signs differently each time, so it can't hold a Tacit key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu billetera firma distinto cada vez, así que no puede tener una clave de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ウォレットの署名が毎回異なるため、Tacitの鍵を保てません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지갑 서명이 매번 달라 Tacit 키를 보관할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的钱包每次签名不同，无法持有 Tacit 密钥"
           }
         }
       }

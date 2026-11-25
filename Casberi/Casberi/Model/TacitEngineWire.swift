@@ -14,6 +14,7 @@ enum TacitEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, read, chain, defi, close
+        case shieldQuote, shieldProve, shieldHand, shieldStatus
     }
 
     typealias Failure = PrivacyEngineWire.Failure
@@ -115,6 +116,80 @@ enum TacitEngineWire {
         let kept: [KeptNote]
         /// Your Tacit chain address (`tc1…`): what a sender of private TAC pays.
         let chainAddress: String
+    }
+
+    // MARK: - Making TAC private
+
+    struct ShieldAsk: Encodable {
+        let rpcUrl: String
+        let blocks: String
+        let leader: String
+        /// TAC, 8 decimals, 0x-hex.
+        let units: String
+    }
+
+    struct ShieldQuote: Decodable, Equatable {
+        /// The chain's fee, in its 8-decimal units, taken from the shares.
+        let fee: String
+        /// What lands, in TAC (8 decimals).
+        let arrives: String
+        /// The most one deposit may be, in TAC (8 decimals); nil for none.
+        let cap: String?
+        /// The leader's fee for sweeping the permit, in TAC wei (18 decimals).
+        let sweepFee: String
+    }
+
+    struct Deposit: Codable, Equatable {
+        let shares: String
+        let amount: String
+        let cx: String
+        let cy: String
+        let body: String
+    }
+
+    struct ShieldProved: Decodable, Equatable {
+        /// What the permit lets take the TAC: the deposit's inbox.
+        let inbox: String
+        /// The return path: a deposit the chain does not take goes back to
+        /// Tacit's DeFi pool under your key, at this commitment.
+        let back: String
+        let index: Int
+        /// The permit's deadline, seconds since 1970.
+        let deadline: Int
+        /// The permit's value, TAC wei: the amount and the leader's fee.
+        let value: String
+        let sweepFee: String
+        let fee: String
+        let shares: String
+        let units: String
+        let proveMs: Int
+        let deposit: Deposit
+    }
+
+    struct ShieldHand: Encodable {
+        let owner: String
+        let v: Int
+        let r: String
+        let s: String
+    }
+
+    struct ShieldHanded: Decodable, Equatable {
+        let id: String
+        /// The handed deposit as the chain client keeps it, to hand again.
+        let kept: String
+    }
+
+    struct ShieldStatusAsk: Encodable {
+        let leader: String
+        let id: String
+    }
+
+    struct ShieldStatus: Decodable, Equatable {
+        let ok: Bool
+        let http: Int
+        let status: String?
+        let error: String?
+        let height: Int?
     }
 
     /// Your private TAC in Tacit's DeFi pool, its private pool on Ethereum.

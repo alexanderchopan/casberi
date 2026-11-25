@@ -20,6 +20,14 @@ import { secp, keccak_256, sha256, hexToBytes, bytesToHex } from '../vendor/dapp
 import { makeConfidentialPoolUx } from '../vendor/dapp/confidential-pool-ux.js';
 import { setActiveNetwork } from '../vendor/dapp/confidential-deployments.js';
 import { poseidon2, poseidon3, poseidon4, poseidon5 } from '../vendor/dapp/vendor/tacit-poseidon.min.js';
+// Making TAC private (prd §1971 item 20): Tacit's own chain client proves a
+// deposit with Tacit's own prover on this phone, and hands it, with the
+// permit your co-signer signs, to the Tacit chain's leader. The engine never
+// signs and never sends a transaction: the permit is the wallet's, checked
+// by the app before it is asked for (`TacitShield`).
+import { makeChainClient } from '../vendor/dapp/tacit-chain-client.js';
+import { makeHalo2System } from '../vendor/dapp/btc-pool-halo2-prover.js';
+import pin from '../vendor/dapp/btc-pool/pin.json';
 
 const POSEIDON = { 2: poseidon2, 3: poseidon3, 4: poseidon4, 5: poseidon5 };
 const poseidon = (xs) => POSEIDON[xs.length](xs);
@@ -37,7 +45,28 @@ let nodes = new Map();
 // (`chainSeed`). Zeroed and dropped by `close`.
 let identity = null;
 let pool = null;
-function forget() { identity?.fill(0); identity = null; }
+// The chain client for a deposit, and the one deposit being made: proved,
+// waiting for the co-signer's permit. Both go with `close`.
+let client = null;
+let pending = null;
+// The return path's next free slot, asked for as soon as a deposit is
+// quoted: reading it takes about a minute, the proof about ten seconds.
+let backIndex = null;
+function forget() { identity?.fill(0); identity = null; client = null; pending = null; backIndex = null; }
+
+function poolUx() {
+  setActiveNetwork('mainnet');
+  return (pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet' }));
+}
+
+function nextBackIndex() {
+  if (!backIndex) {
+    const key = Uint8Array.from(identity);
+    backIndex = poolUx().nextWrapIndex({ walletPriv: key, ticker: 'TAC' }).finally(() => key.fill(0));
+    backIndex.catch(() => { backIndex = null; });
+  }
+  return backIndex;
+}
 
 function wallet(chainId) {
   const w = wallets.get(Number(chainId));
@@ -180,6 +209,63 @@ const methods = {
     } finally { key.fill(0); }
   },
 
+  // What a deposit of `units` (TAC, 8 decimals) costs and lands as now.
+  async shieldQuote({ rpcUrl, blocks, leader, units }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    nextBackIndex();
+    const q = await c.quote('shield', BigInt(units));
+    return { fee: hex(q.fee), arrives: hex(q.arrives), cap: q.cap == null ? null : hex(q.cap), sweepFee: hex(q.sweepFee ?? 0n) };
+  },
+
+  // Proves a deposit of `units` on this phone and works out where it goes:
+  // the inbox the permit names, and the return path ("back") a deposit the
+  // chain does not take is given back to, in Tacit's DeFi pool under your
+  // key. Nothing leaves the phone but reads.
+  async shieldProve({ rpcUrl, blocks, leader, units }) {
+    if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    const t = now();
+    const s = await c.shield(BigInt(units));
+    const proveMs = Math.round(now() - t);
+    const index = await nextBackIndex();
+    backIndex = null;
+    const key = Uint8Array.from(identity);
+    let back;
+    try {
+      back = '0x' + strip(poolUx().buildWrap({ walletPriv: key, amountWei: (BigInt(units) * 10n ** 10n).toString(), ticker: 'TAC', index }).commit).toLowerCase();
+    } finally { key.fill(0); }
+    const inbox = await s.inbox(back);
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const sweepFee = BigInt(s.sweepFee ?? 0n);
+    pending = { s, back, inbox, deadline, sweepFee, units: BigInt(units) };
+    return {
+      inbox, back, index, deadline: Number(deadline), value: hex(s.permitValue(sweepFee)), sweepFee: hex(sweepFee),
+      fee: hex(s.fee ?? 0n), shares: hex(s.deposit.shares), units: hex(BigInt(units)), proveMs,
+      // The deposit's own words, so the app can ask the chain itself which
+      // inbox they make before the permit names it.
+      deposit: { shares: hex(s.deposit.shares), amount: hex(s.deposit.amount), cx: s.deposit.cx, cy: s.deposit.cy, body: s.deposit.body },
+    };
+  },
+
+  // Hands the proved deposit to the leader with your co-signer's permit.
+  // The leader sweeps exactly the permit's value into the inbox and puts
+  // the deposit in a block; `kept` is what to ask again with if it is lost.
+  async shieldHand({ owner, v, r, s: sig }) {
+    if (!pending) throw Object.assign(new Error('nothing is proved'), { name: 'NothingProved' });
+    const p = pending;
+    const permit = { owner: String(owner).toLowerCase(), fee: String(p.sweepFee), deadline: String(p.deadline), v: Number(v), r, s: sig, back: p.back };
+    const { id, kept } = await p.s.offer({ back: p.back, permit, meta: { inbox: p.inbox, src: 'casberi' } });
+    pending = null;
+    return { id, kept: JSON.stringify(kept) };
+  },
+
+  // A handed deposit's state at the leader: queued, landed or refused.
+  async shieldStatus({ leader, id }) {
+    const r = await fetch(leader.replace(/\/$/, '') + '/receipt/' + encodeURIComponent(id));
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok, http: r.status, status: j.status ?? null, error: j.error ?? null, height: Number.isSafeInteger(j.height) ? j.height : null };
+  },
+
   async close() {
     for (const w of wallets.values()) w.terminate();
     wallets = new Map();
@@ -188,6 +274,26 @@ const methods = {
     return {};
   },
 };
+
+// Tacit's chain client, made once per open account. Its prover loads its
+// wasm, parameters and key from the app's own scheme; the key is checked
+// against Tacit's pinned hash before it proves anything.
+async function chainClient({ rpcUrl, blocks, leader }) {
+  if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+  if (client) return client;
+  const bytes = async (name) => new Uint8Array(await (await fetch('casberi-tacit://engine/btc-pool/' + name)).arrayBuffer());
+  const system = () => makeHalo2System({ wasm: () => bytes(pin.wasm), params: () => bytes(pin.params), vk: () => bytes(pin.vk), pinnedVkHash: pin.vk_hash, worker: null });
+  const rpcCall = async (method, params) => {
+    const r = await fetch(rpcUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.message || 'rpc error');
+    return j.result;
+  };
+  const mem = new Map();
+  const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  client = makeChainClient({ cfg: { blocks, leader }, rpcCall, priv: Uint8Array.from(identity), system, storage });
+  return client;
+}
 
 const bigintSafe = (_, v) => (typeof v === 'bigint' ? hex(v) : v);
 globalThis.casberiEngine = {
