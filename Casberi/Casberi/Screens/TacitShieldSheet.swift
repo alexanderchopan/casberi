@@ -142,7 +142,8 @@ struct TacitShieldSheet: View {
             value()
             Spacer(minLength: 0)
         }
-        .frame(minHeight: DS.Hit.min + DS.Space.s2)
+        // One finger's height, the Wallet's row (prd §1957), never a number.
+        .walletTwoLineHead()
     }
 
     // MARK: - Sending
@@ -261,7 +262,8 @@ struct TacitShieldSheet: View {
                 }
             }
         }
-        .frame(minHeight: 76)
+        // Move's foot, as every Move sheet's (`MoveDeck.footHeight`).
+        .frame(minHeight: MoveDeck.footHeight)
         .padding(.bottom, DS.Space.s4)
     }
 
