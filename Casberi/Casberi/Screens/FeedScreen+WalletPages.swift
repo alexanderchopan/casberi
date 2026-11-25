@@ -806,14 +806,15 @@ extension FeedScreen {
     func walletTokenPreview(_ tokens: [WalletPortfolio.Position], mask: String?,
                             act: @escaping (WalletPortfolio.Position) -> Void) -> some View {
         ForEach(tokens) { token in
-            // One line (prd §1954): the symbol, how many you hold, the day,
-            // the dollars. The networks are the token's page's (its places).
+            // Two lines (user, 2026-11-25, amends §1954): the symbol and how
+            // many you hold over the networks it sits on; the dollars over
+            // the day.
             // Ethereum disagreeing twice in a row (prd §1825) still takes a
             // line of its own in amber: a warning is never folded away.
             let differs = HoldingsCheckStore.shared.mismatched(token)
             walletPreviewRow(token.symbol,
-                             line: differs ? String(localized: "Doesn't match Ethereum") : nil,
-                             lineInk: DS.attentionInk,
+                             line: differs ? String(localized: "Doesn't match Ethereum") : token.networksLine,
+                             lineInk: differs ? DS.attentionInk : DS.textSecondary,
                              held: token.amount.map { WalletValue.held($0) },
                              figure: mask ?? WalletValue.money(token.usd),
                              move: walletHoldingMoves[HoldingMoves.key(token.symbol)], act: { act(token) }) {

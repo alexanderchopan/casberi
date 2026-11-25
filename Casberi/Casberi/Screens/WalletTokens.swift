@@ -34,9 +34,9 @@ struct WalletTokenFold {
 }
 
 /// A token, as the all-tokens tray draws it — Holdings' row (prd §1954): its
-/// mark, its symbol and how many you hold on one line, then the day's move
-/// (or its share) beside the dollars, which pin to the edge. Where it sits is
-/// the token's page's; Ethereum disagreeing (§1825) still takes a line.
+/// mark, its symbol and how many you hold, the networks it sits on under them
+/// (2026-11-25), then the day's move (or its share) beside the dollars, which
+/// pin to the edge; Ethereum disagreeing (§1825) takes the line in amber.
 struct WalletTokenRowLabel: View {
     let position: WalletPortfolio.Position
     let total: Double
@@ -44,7 +44,7 @@ struct WalletTokenRowLabel: View {
 
     /// A row with a line under it keeps the Wallet's 52pt pitch; a one-line
     /// row is the ledger's 40 (prd §1954).
-    var twoLine: Bool { HoldingsCheckStore.shared.mismatched(position) }
+    var twoLine: Bool { HoldingsCheckStore.shared.mismatched(position) || position.networksLine != nil }
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
@@ -64,9 +64,15 @@ struct WalletTokenRowLabel: View {
                             .lineLimit(1)
                     }
                 }
-                if twoLine {
+                // Where it sits, under it (user, 2026-11-25, amends §1954);
+                // Ethereum disagreeing (§1825) takes the line in amber.
+                if HoldingsCheckStore.shared.mismatched(position) {
                     Text("Doesn't match Ethereum")
                         .dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                        .lineLimit(1)
+                } else if let networks = position.networksLine {
+                    Text(verbatim: networks)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -394,3 +400,4 @@ struct TokenHideMenu: View {
         return BalancePrivacy.shared.withheld ? place : "\(place) · \(WalletValue.money(contract.usd))"
     }
 }
+

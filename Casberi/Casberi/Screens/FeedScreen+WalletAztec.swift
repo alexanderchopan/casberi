@@ -114,7 +114,6 @@ extension FeedScreen {
                              ?? Self.aztecFigure(holding, units: units),
                          // Grey, as every Tokens row's figure is.
                          mark: gas ? "AZTEC" : holding.name, tone: DS.textSecondary,
-                         ledger: true,
                          // The gas row opens Gas on Aztec (prd §1761).
                          act: gas ? { feedSheet = .aztecGas } : nil)
             }
@@ -128,12 +127,12 @@ extension FeedScreen {
                     // §1886): gas you hold, never None.
                     aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state),
                              figure: mask ?? Self.gasFigure(carried), mark: "AZTEC", tone: DS.textSecondary,
-                             ledger: true, act: { feedSheet = .aztecGas })
+                             act: { feedSheet = .aztecGas })
                 } else {
                     // The figure says None; the line does not say it twice.
                     aztecRow(title: "Fee Juice", line: Self.gasLine(AztecGas.state == .none ? .enough : AztecGas.state),
                              figure: String(localized: "None"), mark: "AZTEC", tone: DS.attentionInk,
-                             ledger: true, act: { feedSheet = .aztecGas })
+                             act: { feedSheet = .aztecGas })
                 }
             }
         }
@@ -217,7 +216,7 @@ extension FeedScreen {
 
     @ViewBuilder
     private func aztecRow(title: String, line: String, figure: String, mark: String?, tone: Color,
-                          arriving: Bool = false, page: WalletHolding? = nil, ledger: Bool = true,
+                          arriving: Bool = false, page: WalletHolding? = nil, ledger: Bool = false,
                           act: (() -> Void)? = nil) -> some View {
         if let act {
             Button {

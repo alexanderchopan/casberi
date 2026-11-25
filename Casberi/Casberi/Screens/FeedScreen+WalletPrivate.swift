@@ -175,7 +175,7 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: DS.textSecondary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
+            .walletTwoLineHead()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -221,15 +221,17 @@ extension FeedScreen {
         let tacit = TacitAccount.shared
         if let reading = tacit.reading, tacit.countedUSD != nil {
             if reading.eth > 0 {
-                walletTacitLine("ETH", figure: mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH"))
+                walletTacitLine("ETH", fact: tacitEthLine(reading),
+                                figure: mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH"))
             }
             if let tac = reading.privateTACAll, tac > 0 {
-                walletTacitLine("TAC", figure: mask ?? tacit.privateTacUSD.map(WalletValue.money) ?? WalletValue.token(tac, "TAC"))
+                walletTacitLine("TAC", fact: String(localized: "Tacit chain · Tacit"),
+                                figure: mask ?? tacit.privateTacUSD.map(WalletValue.money) ?? WalletValue.token(tac, "TAC"))
             }
         }
     }
 
-    private func walletTacitLine(_ symbol: String, figure: String) -> some View {
+    private func walletTacitLine(_ symbol: String, fact: String, figure: String) -> some View {
         Button {
             DSHaptic.selection()
             chrome.landWallet(on: .tacit)
@@ -238,18 +240,18 @@ extension FeedScreen {
                 AssetMark(name: symbol, size: DS.Mark.row)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
-                walletLedgerWords(symbol, fact: TacitAccount.name)
+                walletLedgerWords(symbol, fact: fact)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead)
+            .walletTwoLineHead()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .dsHover()
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(Text(verbatim: [symbol, TacitAccount.name, figure].joined(separator: ". ")))
+        .accessibilityLabel(Text(verbatim: [symbol, fact, figure].joined(separator: ". ")))
         .walletListRow()
     }
 
@@ -285,12 +287,11 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                // The place alone (prd §1956); the network is the page's.
-                walletLedgerWords(h.symbol, fact: pending ? line : String(localized: "Railgun"))
+                walletLedgerWords(h.symbol, fact: line)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: pending ? DS.textSecondary : DS.textPrimary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
+            .walletTwoLineHead()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -326,7 +327,7 @@ extension FeedScreen {
                 walletLedgerWords(name, fact: line)
                 Spacer(minLength: DS.Space.s2)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
+            .walletTwoLineHead()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -364,7 +365,7 @@ extension FeedScreen {
                         .lineLimit(1)
                     Spacer(minLength: DS.Space.s2)
                 }
-                .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
+                .frame(minHeight: WalletCardStyle.ledgerHead)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -400,7 +401,7 @@ extension FeedScreen {
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(percent, tone: DS.textPrimary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
+            .walletTwoLineHead()
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: [String(localized: "Savings goal"), line, percent].compactMap { $0 }.joined(separator: ". ")))
             .walletListRow()
@@ -583,13 +584,6 @@ extension FeedScreen {
             .filter { $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId }.map(\.at).min()), DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
-        let fact: String = switch row.kind {
-        case .held where PrivateMoneyStore.shared.mismatched: String(localized: "Doesn't match")
-        // Its rate then its place, as a lent row's "5.1% · Aave" (prd §1960).
-        case .held: PrivateMoneyStore.shared.heldFact(row)
-        case .waiting: String(localized: "Being checked")
-        case .refused: state
-        }
         // Its page, Send on it (user, 2026-11-21), as every holding's.
         let holding = WalletHolding(id: "private:" + row.id, symbol: row.symbol, title: row.title, figure: figure,
                                     usd: mask == nil ? PrivateMoney.rowUSD(row, prices: prices) : nil,
@@ -622,14 +616,12 @@ extension FeedScreen {
                 }
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
-                // One line (prd §1956): the place alone, or a short state;
-                // the whole line ("Ethereum · 1.5% on Aave · Privacy Pools",
-                // "since Nov 18") is the row's page's.
-                walletLedgerWords(row.title, fact: fact, factInk: stateInk)
+                // The whole line: "Ethereum · 1.5% on Aave · Privacy Pools".
+                walletLedgerWords(row.title, fact: state, factInk: stateInk)
                 Spacer(minLength: DS.Space.s2)
                 walletRowFigure(figure, tone: row.kind == .held ? DS.textPrimary : DS.textSecondary)
             }
-            .frame(minHeight: WalletCardStyle.ledgerHead) // the List row carries the air (prd §1956)
+            .walletTwoLineHead()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -799,18 +791,39 @@ extension FeedScreen {
     /// fact is cut at its tail.
     func walletLedgerWords(_ name: String, fact: String?, factInk: Color = DS.textTertiary,
                            nameInk: Color = DS.textPrimary) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+        // **TWO LINES (user, 2026-11-25: "i just don't think we have room
+        // with it all on one line if we want to show the full information";
+        // amends §1954, §1956): the name over the whole line, network · fact
+        // · place (§1718).**
+        VStack(alignment: .leading, spacing: 2) {
             Text(verbatim: name)
                 .dsText(.body17)
                 .foregroundStyle(nameInk)
                 .lineLimit(1)
-                .layoutPriority(1)
             if let fact, !fact.isEmpty {
                 Text(verbatim: fact)
-                    .dsText(.fact15)
-                    .foregroundStyle(factInk)
+                    .dsText(.subhead12)
+                    .foregroundStyle(factInk == DS.textTertiary ? DS.textSecondary : factInk)
                     .lineLimit(1)
             }
         }
+    }
+}
+
+extension View {
+    /// **A Holdings row of two lines (user, 2026-11-25; amends §1954):** the
+    /// name over its line, at the Wallet's 52pt pitch, as a preview row with
+    /// a line has always stood.
+    func walletTwoLineHead() -> some View {
+        frame(minHeight: DSFeed.headHeight).padding(.vertical, FeedScreen.rowAir)
+    }
+}
+
+extension FeedScreen {
+    /// Where your Tacit account's private ETH sits: "Ethereum · Robinhood ·
+    /// Tacit", by network, most first; "Tacit" alone with no split read.
+    func tacitEthLine(_ reading: TacitAccount.Reading) -> String {
+        let names = reading.held.filter { $0.eth > 0 }.sorted { $0.eth > $1.eth }.map(\.network)
+        return (names + [TacitAccount.name]).joined(separator: " · ")
     }
 }
