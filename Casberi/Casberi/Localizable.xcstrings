@@ -199497,6 +199497,34 @@
         }
       }
     },
+    "Tacit chain · Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cadena Tacit · Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit チェーン · Tacit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인 · Tacit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链 · Tacit"
+          }
+        }
+      }
+    },
     "Tacit chain · not read" : {
       "localizations" : {
         "es" : {
