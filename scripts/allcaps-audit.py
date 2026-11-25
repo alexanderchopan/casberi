@@ -125,6 +125,9 @@ KNOWN_ACRONYMS: set[str] = {
     "DAI",
     # Robinhood's dollar, which Privacy Pools takes (prd §1929).
     "USDG",
+    # Tacit's token, spelled as its contract's symbol, the unit beside an
+    # amount on Make private (prd §1971). "Tac" is no one's spelling.
+    "TAC",
     # Graphics Interchange Format — the word X and Instagram both use for an
     # animated picture, and what a live DM transcript names one (prd §1244).
     "GIF",

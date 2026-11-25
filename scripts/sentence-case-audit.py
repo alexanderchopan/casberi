@@ -229,6 +229,9 @@ KNOWN_PROPER: set[str] = {
     "AZTEC", "Shield", "Human", "Passport",
     # Nymis, the privacy scanner whose reading Threats shows (prd §1701).
     "Nymis",
+    # Olla, the AZTEC lending protocol Earn deposits to and claims from
+    # (prd §1970), and TAC, Tacit's token by its contract's symbol (prd §1971).
+    "Olla", "TAC",
     # Move, the tab (prd §1422): the verb word's VoiceOver label names the
     # place, "change what Move does" (prd §1681), as Wallet names its tab.
     "Move",
