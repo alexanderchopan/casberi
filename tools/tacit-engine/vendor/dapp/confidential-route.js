@@ -1,0 +1,162 @@
+// Confidential multihop route (OP_SWAP_ROUTE) witness assembler for the EVM confidential AMM.
+//
+// Routes one input note through up to MAX_ROUTE_HOPS constant-product pools to one output note. The
+// intermediate amounts flow as VALUES (only the route's start input + final output are notes), so the
+// path stays private and atomic in one proof. Each hop is a constant-product exact-in swap
+// (getAmountOut, fee-charged) and stages a SwapSettlement the settle swap-loop applies — so the route
+// reuses the existing on-chain machinery (no new contract surface). The trader is protected by the
+// final minOut, the LPs by each hop's constant-product non-decrease. Mirrors the guest's OP_SWAP_ROUTE
+// in contracts/sp1/confidential/src/main.rs exactly; `pool` is a makeConfidentialPool instance.
+
+const ZERO32 = '0x' + '00'.repeat(32);
+const MAX_ROUTE_HOPS = 4;
+
+export function makeConfidentialRoute({ keccak256, pool, kernelSign, rangeProve }) {
+  const { leaf, nullifier, nkToOwner, nativeNu, commitXY, openingSigma, verifyOpeningSigma, openingPokBlind, verifyOpeningPokBlind, deriveOpeningNonce, intentContext } = pool;
+
+  // The nullifier the guest records for a spent native note: leaf-bound for a bearer note (owner 0), otherwise
+  // native_nu, which binds the spender's nk. It cannot be derived from public data, so this throws when no nk
+  // is supplied, and also throws when a supplied nk does not hash to the note's owner (the guest rejects that witness).
+  function spentNullifier(asset, note, fail) {
+    const lf = leaf(asset, note.cx, note.cy, note.owner);
+    if (BigInt(note.owner ?? 0) === 0n) return nullifier(lf);
+    if (note.nk == null) fail('input note requires nk to derive its nullifier');
+    if (String(nkToOwner(note.nk)).toLowerCase() !== String(note.owner).toLowerCase()) fail('input nk does not commit to the note owner');
+    return nativeNu(note.owner, note.nk, lf);
+  }
+  const enc = new TextEncoder();
+  const hexToBytes = (h) => { h = (h || '').replace(/^0x/, ''); const o = new Uint8Array(h.length / 2); for (let i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; };
+  const bytesToHex = (b) => '0x' + Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  const concat = (arr) => { const t = arr.reduce((s, x) => s + x.length, 0); const o = new Uint8Array(t); let p = 0; for (const x of arr) { o.set(x, p); p += x.length; } return o; };
+  const be32 = (n) => { const o = new Uint8Array(32); let v = BigInt(n); for (let i = 31; i >= 0; i--) { o[i] = Number(v & 0xffn); v >>= 8n; } return o; };
+  const bigOf = (h) => BigInt('0x' + h.replace(/^0x/, ''));
+  // poolId binds the CANONICAL pair + fee tier (matches the guest pool_id + the contract).
+  const poolId = (a, b, feeBps) => {
+    const [lo, hi] = bigOf(a) <= bigOf(b) ? [a, b] : [b, a];
+    return bytesToHex(keccak256(concat([hexToBytes(lo), hexToBytes(hi), be32(feeBps)])));
+  };
+  // Constant-product exact-in hop output: floor(R_out·in·(10000−fee) / (R_in·10000 + in·(10000−fee))).
+  const getAmountOut = (amountIn, rIn, rOut, feeBps) => {
+    const gamma = BigInt(10000 - Number(feeBps));
+    const ainG = BigInt(amountIn) * gamma;
+    return (BigInt(rOut) * ainG) / (BigInt(rIn) * 10000n + ainG);
+  };
+
+  const routeCtx = (op) => intentContext('tacit-route-intent-v1', op.chainBinding, op.asset0, op.assetFinal,
+    [[op.in.cx, op.in.cy, op.in.owner], [op.out.cx, op.out.cy, op.out.owner]],
+    [op.amountIn, op.amountOut, op.minOut, BigInt(op.hops.length), op.deadline ?? 0n, op.fee ?? 0n]);
+
+  // Walk the hops: compute each pool's exact-in output, thread it into the next hop, and stage a
+  // SwapSettlement per hop (canonical reserveA/B orientation). Returns {amountOut, assetFinal, swaps}.
+  function walk(asset0, amountIn, hops) {
+    let curAsset = asset0, curAmount = BigInt(amountIn);
+    const swaps = [];
+    for (const h of hops) {
+      if (curAsset === h.assetNext) throw new Error('route: hop maps an asset to itself');
+      const pid = poolId(curAsset, h.assetNext, h.feeBps);
+      const curIsLo = bigOf(curAsset) <= bigOf(h.assetNext); // flow is low→high ⇒ in=reserveA, out=reserveB
+      const rIn = curIsLo ? BigInt(h.reserveAPre) : BigInt(h.reserveBPre);
+      const rOut = curIsLo ? BigInt(h.reserveBPre) : BigInt(h.reserveAPre);
+      if (!(rIn > 0n && rOut > 0n)) throw new Error('route: hop pool not initialized');
+      const out = getAmountOut(curAmount, rIn, rOut, h.feeBps);
+      if (!(out > 0n)) throw new Error('route: hop output rounds to zero');
+      const rInPost = rIn + curAmount, rOutPost = rOut - out;
+      if (!(rInPost * rOutPost >= rIn * rOut)) throw new Error('route: constant-product decreased');
+      const [aPost, bPost] = curIsLo ? [rInPost, rOutPost] : [rOutPost, rInPost];
+      swaps.push({ poolId: pid, reserveAPre: BigInt(h.reserveAPre), reserveBPre: BigInt(h.reserveBPre), reserveAPost: aPost, reserveBPost: bPost });
+      curAsset = h.assetNext; curAmount = out;
+    }
+    return { amountOut: curAmount, assetFinal: curAsset, swaps };
+  }
+
+  // hops: [{ assetNext, feeBps, reserveAPre, reserveBPre }] in route order. rIn/rOut are the input/output
+  // note blindings (stay CLIENT-SIDE; only the opening sigmas reach the witness).
+  // `noteValue`: the spent note's own value, when it exceeds `amountIn` (a partial spend): the remainder is `change` ([{ value, blinding, owner }]), in
+  // the route's start asset, and `rIn` is the note's own blinding. Omitted, the whole note is spent (`noteValue` = `amountIn`).
+  function buildRoute({ asset0, chainBinding, inNote, amountIn, rIn, hops, minOut, outOwner, rOut, deadline, fee = 0n, change = [], noteValue = null }) {
+    if (!(hops.length >= 1 && hops.length <= MAX_ROUTE_HOPS)) throw new Error('route: hop count out of range');
+    const feeBig = BigInt(fee);
+    if (!(feeBig < BigInt(amountIn))) throw new Error('route: fee >= input (note too small for a gasless route — self-settle)');
+    // Only amountIn − fee routes; the relay is paid `fee` in the input asset (asset0) as a public
+    // FeePayment. The input note still commits to the gross amountIn (its opening binds that).
+    const { amountOut, assetFinal } = walk(asset0, BigInt(amountIn) - feeBig, hops);
+    const total = noteValue == null ? BigInt(amountIn) : BigInt(noteValue);
+    if (total < BigInt(amountIn)) throw new Error('route: amountIn exceeds the note');
+    if (total !== BigInt(amountIn) + change.reduce((a, c) => a + BigInt(c.value), 0n)) throw new Error('route: the note is not the amount plus its change');
+    const inC = commitXY(total, rIn), outC = commitXY(amountOut, rOut);
+    const op = {
+      asset0, assetFinal, chainBinding, deadline: BigInt(deadline ?? 0), fee: feeBig,
+      // nk accompanies the spent note: the guest re-derives its leaf and asserts nk_to_owner(nk) == owner.
+      in: { cx: inC.cx, cy: inC.cy, owner: inNote.owner, nk: inNote.secret, leafIndex: inNote.leafIndex, path: inNote.path },
+      amountIn: BigInt(amountIn), amountOut, minOut: BigInt(minOut),
+      out: { cx: outC.cx, cy: outC.cy, owner: outOwner },
+      hops: hops.map(h => ({ assetNext: h.assetNext, feeBps: Number(h.feeBps), reserveAPre: BigInt(h.reserveAPre), reserveBPre: BigInt(h.reserveBPre) })),
+    };
+    const ctx = routeCtx(op);
+    // Value-HIDING input opening (blind PoK), matching the guest; output amount is public (sigma).
+    op.inPok = openingPokBlind(total, rIn, ctx, deriveOpeningNonce(rIn, ctx, 'route-in-v'), deriveOpeningNonce(rIn, ctx, 'route-in-r'));
+    op.outSig = openingSigma(op.amountOut, rOut, ctx, deriveOpeningNonce(rOut, ctx, 'route-out'));
+    // The box harness (exec-route.rs) reads the input's blind PoK nested under `in` (in.pokR/pokZv/pokZr),
+    // not the flat `inPok` verifyRoute checks locally — mirror both so the wire shape matches the harness
+    // while the JS self-check above keeps working unchanged.
+    op.in.pokR = op.inPok.R; op.in.pokZv = op.inPok.zV; op.in.pokZr = op.inPok.zR;
+
+    // Change back to the trader, in the ROUTE'S START asset (asset0) — never asset_final. `change` is
+    // [{ value, blinding, owner }]; empty for a whole-note route (amountIn == the note's full value).
+    // The guest's OP_SWAP_ROUTE ALWAYS reads a change-kernel (m_c may be 0, but change_kernel_r/z are
+    // unconditional) proving `note_value == amount_in + Σ change` via the same Σr_in − Σr_out Schnorr
+    // kernel every other op's change leg uses (mirrors confidential-lp.js buildAdd's aKernel/bKernel).
+    if (typeof kernelSign !== 'function') throw new Error('route: kernelSign dependency required (the change kernel is mandatory even with no change)');
+    // A partial spend: the kernel's `inputs` leg carries the NOTE's own {value, blinding} (`total`, `rIn`), which for a whole-note route are
+    // amountIn and rIn, and the change gets one aggregated range proof (a legal size: 1, 2, 4 or 8 outputs).
+    if (change.length && typeof rangeProve !== 'function') throw new Error('route: rangeProve dependency required for a change output');
+    const changeOut = change.map((c) => {
+      const cc = commitXY(BigInt(c.value), BigInt(c.blinding));
+      return { cx: cc.cx, cy: cc.cy, owner: c.owner, value: BigInt(c.value), blinding: BigInt(c.blinding) };
+    });
+    op.change = changeOut;
+    const changeLeaves = changeOut.map((c) => leaf(asset0, c.cx, c.cy, c.owner));
+    const k = kernelSign({ inputs: [{ value: total, blinding: BigInt(rIn) }], outputs: changeOut, fee: BigInt(amountIn), outLeaves: changeLeaves });
+    op.changeKernelR = bytesToHex(k.R.toRawBytes(true));
+    op.changeKernelZ = bytesToHex(be32(k.z));
+    if (changeOut.length) op.changeRangeProof = bytesToHex(rangeProve(changeOut.map((c) => c.value), changeOut.map((c) => c.blinding)).proof);
+    return op;
+  }
+
+  function verifyRoute(op, { merkleRootFrom, spendRoot }) {
+    const fail = (m) => { throw new Error('route: ' + m); };
+    if (spendRoot === ZERO32 || !spendRoot) fail('membership requires a non-zero spend root');
+    if (!(op.hops.length >= 1 && op.hops.length <= MAX_ROUTE_HOPS)) fail('hop count out of range');
+    if (merkleRootFrom(leaf(op.asset0, op.in.cx, op.in.cy, op.in.owner), op.in.leafIndex, op.in.path) !== spendRoot) fail('membership');
+    const fee = BigInt(op.fee ?? 0n);
+    if (!(fee < op.amountIn)) fail('fee >= input');
+    const { amountOut, assetFinal, swaps } = walk(op.asset0, op.amountIn - fee, op.hops);
+    if (assetFinal !== op.assetFinal) fail('asset_final mismatch');
+    if (amountOut !== op.amountOut) fail('amount_out mismatch');
+    if (!(op.amountOut >= op.minOut)) fail('min_out');
+    const ctx = routeCtx(op);
+    if (!verifyOpeningPokBlind(op.in.cx, op.in.cy, op.inPok.R, op.inPok.zV, op.inPok.zR, ctx)) fail('input opening');
+    if (!verifyOpeningSigma(op.out.cx, op.out.cy, op.amountOut, op.outSig.R, op.outSig.z, ctx)) fail('output opening');
+    return {
+      swaps,
+      nullifiers: [spentNullifier(op.asset0, op.in, fail)],
+      // The routed output, then change in the route's START asset — the guest's leaf order.
+      leaves: [leaf(assetFinal, op.out.cx, op.out.cy, op.out.owner), ...(op.change || []).map((c) => leaf(op.asset0, c.cx, c.cy, c.owner))],
+      fees: fee > 0n ? [{ assetId: op.asset0, value: fee }] : [],
+    };
+  }
+
+  // Relay-fee quote for a gasless route — mirrors confidential-pool-ux.js quoteUnwrapFee (30 bps + an
+  // optional per-asset floor covering the settle gas). The fee is carved from the INPUT asset; net =
+  // amountIn − fee is what actually routes. net ≤ 0 ⇒ the note is too small to relay (self-settle, fee = 0).
+  const ROUTE_FEE_BPS = 30n;
+  function quoteRouteFee(amountIn, { feeBps = ROUTE_FEE_BPS, minFee = 0n } = {}) {
+    const v = BigInt(amountIn);
+    const floor = BigInt(minFee);
+    const pct = (v * BigInt(feeBps) + 9999n) / 10000n; // ceil
+    const fee = pct > floor ? pct : floor;
+    return { fee, net: v - fee, value: v };
+  }
+
+  return { poolId, getAmountOut, buildRoute, verifyRoute, quoteRouteFee, MAX_ROUTE_HOPS };
+}

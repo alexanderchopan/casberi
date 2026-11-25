@@ -223,7 +223,7 @@ extension FeedScreen {
             if reading.eth > 0 {
                 walletTacitLine("ETH", figure: mask ?? tacit.usd.map(WalletValue.money) ?? WalletValue.token(reading.eth, "ETH"))
             }
-            if let tac = reading.privateTAC, tac > 0 {
+            if let tac = reading.privateTACAll, tac > 0 {
                 walletTacitLine("TAC", figure: mask ?? tacit.privateTacUSD.map(WalletValue.money) ?? WalletValue.token(tac, "TAC"))
             }
         }

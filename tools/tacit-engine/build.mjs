@@ -30,6 +30,12 @@ const r = await build({
   // Tacit's wallet is MIT; the snarkjs it carries for its prove worker is
   // GPL-3.0. Resources/Licenses.md names both.
   legalComments: 'eof',
+  // Tacit's pool library makes its worker URLs from `import.meta.url`,
+  // which a single script has none of. Pointing it at the engine's own
+  // scheme makes each URL valid; the page serves no worker there and its
+  // policy allows none, so the library's workers fail to start and it
+  // reads in the page, its own fallback.
+  define: { 'import.meta.url': '"casberi-tacit://engine/tacit-engine.js"' },
   logLevel: 'warning', write: false,
 });
 const bytes = r.outputFiles[0].contents;

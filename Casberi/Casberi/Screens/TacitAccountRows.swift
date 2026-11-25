@@ -52,25 +52,30 @@ struct TacitAccountRows: View {
 
     /// Your money by network: Holdings' own map, a tile per network.
     private func map(_ reading: TacitAccount.Reading) -> some View {
-        let price = account.ethPrice
-        var tiles = reading.held.filter { $0.eth > 0 }.map { held in
-            HoldingsTreemap.Holding(id: held.network, usd: price.map { held.eth * $0 } ?? held.eth, route: nil,
-                                    display: price == nil ? WalletValue.token(held.eth, "ETH") : nil)
-        }
-        // Public TAC is a tile of its own: in dollars beside ETH, or alone
-        // by its own amount when it has no price (user, 2026-11-24: "mine
-        // doesn't even show the treemap").
-        if let tac = reading.tac, tac > 0 {
-            if let usd = account.tacUSD {
-                tiles.append(.init(id: "TAC", usd: usd, route: nil))
-            } else if tiles.isEmpty {
-                tiles.append(.init(id: "TAC", usd: tac, route: nil, display: WalletValue.token(tac, "TAC")))
-            }
-        }
-        return HoldingsTreemap(total: Self.figure(account, reading),
-                               holdings: tiles, showsShares: tiles.count > 1)
-            .frame(minHeight: DSRoomChassis.leadBox, maxHeight: DSRoomChassis.leadBox)
-            .environment(\.holdingsDayMoves, account.tacMove.map { [HoldingMoves.key("TAC"): $0] } ?? [:])
+        // **NO MAP, THE FIGURE (user, 2026-11-24: "that treemap doesn't
+        // work for us bc user only holds tac", "we should get rid of it").**
+        // A Tacit account holds TAC and maybe ETH, so a map was one tile
+        // that said what Public and Private below already say. The page
+        // leads with its total and the day, as Home's head does.
+        let caption = Self.todayCaption(account, reading)
+        return DSFigureReading(number: Self.figure(account, reading), caption: caption?.words ?? "",
+                               captionInk: caption?.ink ?? DS.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The day's move over what the account holds, by dollars (Holdings'
+    /// own sum, `HoldingMoves.dayChange`): only TAC has a move read here.
+    /// nil when no move was read.
+    static func todayCaption(_ account: TacitAccount, _ reading: TacitAccount.Reading) -> (words: String, ink: Color)? {
+        var held: [(usd: Double, move: Double?)] = []
+        if let usd = account.tacUSD { held.append((usd, account.tacMove)) }
+        if let usd = account.usd, usd > 0 { held.append((usd, nil)) }
+        guard let change = HoldingMoves.dayChange(held) else { return nil }
+        let tenths = (abs(change) * 1000).rounded() / 10
+        guard tenths > 0 else { return (String(localized: "Flat today"), DS.textSecondary) }
+        let figure = tenths.formatted(.number.precision(.fractionLength(1)))
+        return change > 0 ? (String(localized: "+\(figure)% today"), DS.confirmInk)
+            : (String(localized: "-\(figure)% today"), DS.destructiveInk)
     }
 
     /// An amount as Holdings' rows say it: the number alone, the symbol
@@ -214,6 +219,19 @@ struct TacitAccountRows: View {
                 }
             } else {
                 line("TAC", fact: String(localized: "Tacit chain · not read"), figure: "")
+                    .walletListRow()
+            }
+            // Tacit's DeFi pool, its private pool on Ethereum, where a
+            // Tacit-chain deposit the chain does not take goes back to. A
+            // row only when something is there; not read is said.
+            if let tac = reading.defiTAC {
+                if tac > 0 {
+                    line("TAC", fact: "\(Self.amount(tac)) · \(String(localized: "DeFi pool"))",
+                         figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
+                        .walletListRow()
+                }
+            } else {
+                line("TAC", fact: String(localized: "DeFi pool · not read"), figure: "")
                     .walletListRow()
             }
             // Only what is held, as Holdings lists it: a network at zero

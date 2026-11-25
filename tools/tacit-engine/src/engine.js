@@ -13,7 +13,12 @@ import { makeEvmPoolWallet, CHAINS, POOL, ROUTER } from '../vendor/tacit-evm-poo
 // `spend`, `publish` or `makeNote`.
 import { makeChainWallet, worthOf } from '../vendor/dapp/tacit-chain-wallet.js';
 import { chainSeed } from '../vendor/dapp/tacit-chain-lane.js';
-import { secp, keccak_256, hexToBytes, bytesToHex } from '../vendor/dapp/vendor/tacit-deps.min.js';
+import { secp, keccak_256, sha256, hexToBytes, bytesToHex } from '../vendor/dapp/vendor/tacit-deps.min.js';
+// Tacit's DeFi pool, its private pool on Ethereum: Tacit's own pool library
+// (vendor/dapp/confidential-pool-ux.js, MIT), for its `balance` read ONLY.
+// It is where a Tacit-chain deposit the chain does not take goes back to.
+import { makeConfidentialPoolUx } from '../vendor/dapp/confidential-pool-ux.js';
+import { setActiveNetwork } from '../vendor/dapp/confidential-deployments.js';
 import { poseidon2, poseidon3, poseidon4, poseidon5 } from '../vendor/dapp/vendor/tacit-poseidon.min.js';
 
 const POSEIDON = { 2: poseidon2, 3: poseidon3, 4: poseidon4, 5: poseidon5 };
@@ -31,6 +36,7 @@ let nodes = new Map();
 // The key, for the chain read: the chain's keys are made from it
 // (`chainSeed`). Zeroed and dropped by `close`.
 let identity = null;
+let pool = null;
 function forget() { identity?.fill(0); identity = null; }
 
 function wallet(chainId) {
@@ -144,6 +150,28 @@ const methods = {
       leaves: Number(found.next), pool: hex(rate.pool), allShares: hex(rate.shares), elsewhere,
       ms: Math.round(now() - t),
     };
+  },
+
+  // Your private TAC in Tacit's DeFi pool (cTAC), as Tacit's own page reads
+  // it: the pool's notes tried with your key, in passes until the library
+  // says it has read them all. 8 decimals, as on the Tacit chain.
+  async defi() {
+    if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+    const t = now();
+    setActiveNetwork('mainnet');
+    pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet' });
+    const key = Uint8Array.from(identity);
+    try {
+      let r = await pool.balance(key, { spent: true, positions: false, recent: 150 });
+      let passes = 1;
+      while (r.reading && passes < 6) { r = await pool.balance(key, { spent: true, positions: false, recent: 0 }); passes++; }
+      const id = String(pool.assetByTicker.cTAC?.assetId || '').toLowerCase();
+      const held = id ? r.byAsset?.[id] : null;
+      return {
+        worth: hex(held ? held.value : 0n), notes: held?.notes?.length ?? 0, leaves: Number(r.leafCount ?? 0),
+        whole: !r.reading, errors: Object.keys(r.diag?.errors || {}), passes, ms: Math.round(now() - t),
+      };
+    } finally { key.fill(0); }
   },
 
   async close() {

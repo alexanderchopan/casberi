@@ -69,10 +69,17 @@ final class TacitAccount {
         /// True when the key's record names a PQ ID: its notes are under a
         /// passkey this phone does not hold, so `privateTAC` may be short.
         var privateElsewhere: Bool? = nil
+        /// TAC held privately in Tacit's DeFi pool; nil when not read whole.
+        var defiTAC: Double? = nil
 
-        /// Public and private TAC together; nil when neither was read.
+        /// Private TAC in both places; nil when neither was read.
+        var privateTACAll: Double? {
+            privateTAC == nil && defiTAC == nil ? nil : (privateTAC ?? 0) + (defiTAC ?? 0)
+        }
+
+        /// Public and private TAC together; nil when none was read.
         var tac: Double? {
-            publicTAC == nil && privateTAC == nil ? nil : (publicTAC ?? 0) + (privateTAC ?? 0)
+            publicTAC == nil && privateTACAll == nil ? nil : (publicTAC ?? 0) + (privateTACAll ?? 0)
         }
 
         var eth: Double { held.map(\.eth).reduce(0, +) }
@@ -168,7 +175,7 @@ final class TacitAccount {
     /// The private TAC on the Tacit chain, in dollars; nil when it was not
     /// read or TAC has no price.
     var privateTacUSD: Double? {
-        guard let tac = reading?.privateTAC, let tacPrice else { return nil }
+        guard let tac = reading?.privateTACAll, let tacPrice else { return nil }
         return tac * tacPrice
     }
 
@@ -260,7 +267,10 @@ final class TacitAccount {
                          privateTAC: overview.chain.flatMap { TacitEngineWire.tac($0.worth) }
                             .map { NSDecimalNumber(decimal: $0).doubleValue }
                             ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.privateTAC : nil },
-                         privateElsewhere: overview.chain?.elsewhere))
+                         privateElsewhere: overview.chain?.elsewhere,
+                         defiTAC: overview.defi.flatMap { TacitEngineWire.tac($0.worth) }
+                            .map { NSDecimalNumber(decimal: $0).doubleValue }
+                            ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.defiTAC : nil }))
             livePhase = .open
             await readPrice()
         } catch {
@@ -327,7 +337,7 @@ final class TacitAccount {
                                   receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
                                   held: [Held(chainId: 1, network: "Ethereum", eth: 0, waiting: 0, pool: 14.7, reached: true),
                                          Held(chainId: 4663, network: "Robinhood", eth: 0, waiting: 0, pool: 0.10, reached: true)],
-                                  asOf: .now, publicTAC: 23.85, privateTAC: 10.02)
+                                  asOf: .now, publicTAC: 23.85, privateTAC: 10.02, defiTAC: 0)
         }
         livePhase = raw == "closed" ? .closed : .open
     }

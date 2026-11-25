@@ -159,6 +159,11 @@ final class TacitEngine: NSObject {
                                           leader: TacitChain.leader), as: Wire.ChainReading.self)
     }
 
+    /// Your private TAC in Tacit's DeFi pool. About 20 to 40 seconds.
+    func defi() async throws -> Wire.DefiReading {
+        try await call(.defi, Wire.Empty(), as: Wire.DefiReading.self)
+    }
+
     func close() async {
         _ = try? await call(.close, Wire.Empty(), as: Wire.Empty.self)
         isOpen = false

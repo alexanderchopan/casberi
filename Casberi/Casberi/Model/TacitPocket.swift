@@ -24,6 +24,9 @@ enum TacitPocket {
         let networks: [NetworkReading]
         /// Private TAC on the Tacit chain; nil when it could not be read.
         var chain: TacitEngineWire.ChainReading? = nil
+        /// Private TAC in Tacit's DeFi pool; nil when it could not be read
+        /// whole.
+        var defi: TacitEngineWire.DefiReading? = nil
     }
 
     /// The key of the Tacit account `coSigner` opens: your co-signer's own
@@ -70,14 +73,33 @@ enum TacitPocket {
                 readings.append(NetworkReading(network: network, receive: receive, reading: nil, error: why))
             }
         }
-        // The Tacit chain last: it is the slow read, and a failure there
-        // leaves the rest standing.
-        var chain: TacitEngineWire.ChainReading?
-        do { chain = try await engine.chain() } catch {
-            let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
-            NSLog("tacitEngine| chain | FAILED %@", why)
-        }
-        return Overview(address: address, networks: readings, chain: chain)
+        // The Tacit chain and the DeFi pool last, side by side: they are the
+        // slow reads, and a failure in either leaves the rest standing.
+        async let chainRead: TacitEngineWire.ChainReading? = {
+            do { return try await engine.chain() } catch {
+                let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
+                NSLog("tacitEngine| chain | FAILED %@", why)
+                return nil
+            }
+        }()
+        // Tacit's DeFi pool, where a chain deposit the chain does not take
+        // goes back to. A read that stopped part way is not a reading;
+        // `cbtc` is the pool's Bitcoin, read off Bitcoin explorers the
+        // engine does not reach, and its error says nothing about TAC.
+        async let defiRead: TacitEngineWire.DefiReading? = {
+            do {
+                let read = try await engine.defi()
+                if read.whole, read.errors.allSatisfy({ $0 == "cbtc" }) { return read }
+                NSLog("tacitEngine| defi | partial, errors %@", read.errors.joined(separator: ","))
+                return nil
+            } catch {
+                let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
+                NSLog("tacitEngine| defi | FAILED %@", why)
+                return nil
+            }
+        }()
+        let (chain, defi) = await (chainRead, defiRead)
+        return Overview(address: address, networks: readings, chain: chain, defi: defi)
     }
 
     // MARK: - Public TAC

@@ -13,7 +13,7 @@ import Foundation
 enum TacitEngineWire {
 
     enum Method: String, CaseIterable {
-        case info, open, read, chain, close
+        case info, open, read, chain, defi, close
     }
 
     typealias Failure = PrivacyEngineWire.Failure
@@ -95,6 +95,19 @@ enum TacitEngineWire {
         /// The key's record names another chain address: a PQ ID, whose notes
         /// are under a passkey's root this phone does not hold.
         let elsewhere: Bool
+        let ms: Int
+    }
+
+    /// Your private TAC in Tacit's DeFi pool, its private pool on Ethereum.
+    struct DefiReading: Decodable, Equatable {
+        /// 0x-hex, 8 decimals: your unspent cTAC.
+        let worth: String
+        let notes: Int
+        let leaves: Int
+        /// False when the library stopped before reading every note.
+        let whole: Bool
+        let errors: [String]
+        let passes: Int
         let ms: Int
     }
 
