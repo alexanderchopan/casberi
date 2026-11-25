@@ -18,17 +18,6 @@ enum TacitPocket {
         let error: String?
     }
 
-    struct Overview: Equatable {
-        /// The address others pay the account privately at: one for every network.
-        let address: String
-        let networks: [NetworkReading]
-        /// Private TAC on the Tacit chain; nil when it could not be read.
-        var chain: TacitEngineWire.ChainReading? = nil
-        /// Private TAC in Tacit's DeFi pool; nil when it could not be read
-        /// whole.
-        var defi: TacitEngineWire.DefiReading? = nil
-    }
-
     /// The key of the Tacit account `coSigner` opens: your co-signer's own
     /// wallet signs Tacit's message once, over a pairing of its own that asks
     /// for that one method (`YourAccountSignerLink.signForApp`), and the
@@ -54,52 +43,63 @@ enum TacitPocket {
         return try TacitIdentity.key(fromSignature: signature)
     }
 
-    /// Opens the account `key` belongs to and reads every network, one after
-    /// another. A network that does not answer is reported, not thrown.
-    static func overview(key: [UInt8], networks: [TacitNetwork] = TacitNetwork.all) async throws -> Overview {
-        let engine = TacitEngine.shared
-        let opened = try await engine.open(key: key, networks: networks)
-        guard let address = opened.address else {
+    /// Opens the account `key` belongs to on every network.
+    static func open(key: [UInt8], networks: [TacitNetwork] = TacitNetwork.all) async throws -> TacitEngineWire.Opened {
+        let opened = try await TacitEngine.shared.open(key: key, networks: networks)
+        guard opened.address != nil else {
             throw TacitEngineWire.Failure(name: "NotOpen", message: "no network opened")
         }
+        return opened
+    }
+
+    /// Each network's private ETH, one after another. A network that does
+    /// not answer is reported, not thrown.
+    static func networks(_ opened: TacitEngineWire.Opened, networks: [TacitNetwork] = TacitNetwork.all) async -> [NetworkReading] {
         var readings: [NetworkReading] = []
         for network in networks {
             let receive = opened.networks.first { $0.chainId == network.chainId }?.receive ?? ""
             do {
-                let reading = try await engine.read(chainId: network.chainId)
+                let reading = try await TacitEngine.shared.read(chainId: network.chainId)
                 readings.append(NetworkReading(network: network, receive: receive, reading: reading, error: nil))
             } catch {
-                let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
-                readings.append(NetworkReading(network: network, receive: receive, reading: nil, error: why))
+                readings.append(NetworkReading(network: network, receive: receive, reading: nil, error: describe(error)))
             }
         }
-        // The Tacit chain and the DeFi pool last, side by side: they are the
-        // slow reads, and a failure in either leaves the rest standing.
-        async let chainRead: TacitEngineWire.ChainReading? = {
-            do { return try await engine.chain() } catch {
-                let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
-                NSLog("tacitEngine| chain | FAILED %@", why)
-                return nil
-            }
-        }()
-        // Tacit's DeFi pool, where a chain deposit the chain does not take
-        // goes back to. A read that stopped part way is not a reading;
-        // `cbtc` is the pool's Bitcoin, read off Bitcoin explorers the
-        // engine does not reach, and its error says nothing about TAC.
-        async let defiRead: TacitEngineWire.DefiReading? = {
-            do {
-                let read = try await engine.defi()
-                if read.whole, read.errors.allSatisfy({ $0 == "cbtc" }) { return read }
-                NSLog("tacitEngine| defi | partial, errors %@", read.errors.joined(separator: ","))
-                return nil
-            } catch {
-                let why = (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
-                NSLog("tacitEngine| defi | FAILED %@", why)
-                return nil
-            }
-        }()
-        let (chain, defi) = await (chainRead, defiRead)
-        return Overview(address: address, networks: readings, chain: chain, defi: defi)
+        return readings
+    }
+
+    /// The Tacit chain, from where the last scan stopped (`TacitChainScan`);
+    /// what it found is kept for the next. nil when it could not be read.
+    static func chain(coSigner: String) async -> TacitEngineWire.ChainReading? {
+        let kept = TacitChainScan.load(coSigner)
+        do {
+            let read = try await TacitEngine.shared.chain(from: kept?.next ?? 0, known: kept?.notes ?? [])
+            TacitChainScan.save(.init(next: read.next, notes: read.kept), for: coSigner)
+            return read
+        } catch {
+            NSLog("tacitEngine| chain | FAILED %@", describe(error))
+            return nil
+        }
+    }
+
+    /// Tacit's DeFi pool, where a chain deposit the chain does not take goes
+    /// back to. A read that stopped part way is not a reading; `cbtc` is the
+    /// pool's Bitcoin, read off Bitcoin explorers the engine does not reach,
+    /// and its error says nothing about TAC.
+    static func defi() async -> TacitEngineWire.DefiReading? {
+        do {
+            let read = try await TacitEngine.shared.defi()
+            if read.whole, read.errors.allSatisfy({ $0 == "cbtc" }) { return read }
+            NSLog("tacitEngine| defi | partial, errors %@", read.errors.joined(separator: ","))
+            return nil
+        } catch {
+            NSLog("tacitEngine| defi | FAILED %@", describe(error))
+            return nil
+        }
+    }
+
+    private static func describe(_ error: Error) -> String {
+        (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
     }
 
     // MARK: - Public TAC

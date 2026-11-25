@@ -15,6 +15,7 @@ import Security
 /// - `open`   open the account on Ethereum and Robinhood
 /// - `read`   find its notes on each network and add them up
 /// - `chain`  try the Tacit chain's notes with its key: private TAC
+/// - `resume` a chain scan, then one resumed from where it stopped
 /// - `defi`   read Tacit's DeFi pool with its key: private TAC there
 /// - `all`    identity, load, open, read, chain, defi
 enum TacitEngineProbe {
@@ -75,6 +76,15 @@ enum TacitEngineProbe {
                         let r = try await TacitEngine.shared.chain()
                         let worth = TacitEngineWire.tac(r.worth).map { "\($0)" } ?? r.worth
                         log("chain", ms(t), "worth \(worth) TAC · \(r.notes) notes, \(r.spent) spent · \(r.leaves) tried · elsewhere \(r.elsewhere) · page \(r.ms) ms")
+                    case "resume":
+                        // A scan, then one resumed from where it stopped:
+                        // the second tries only what came after.
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        let first = try await TacitEngine.shared.chain()
+                        let t2 = Date()
+                        let again = try await TacitEngine.shared.chain(from: first.next, known: first.kept)
+                        log("resume", ms(t), "first \(first.next) tried in \(first.ms) ms · resumed from \(first.next) to \(again.next) in \(Int(Date().timeIntervalSince(t2) * 1000)) ms · address \(again.chainAddress.prefix(10))… (\(again.chainAddress.count) chars)")
                     case "defi":
                         guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
                         let t = Date()

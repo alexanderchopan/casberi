@@ -36,6 +36,20 @@ enum TacitEngineWire {
         let rpcUrl: String
         let blocks: String
         let leader: String
+        /// Where the last scan stopped, and the notes it found: the scan
+        /// tries only what came after, and asks again whether these are spent.
+        var from: Int = 0
+        var known: [KeptNote] = []
+    }
+
+    /// One note of yours on the Tacit chain, as a scan found it: its place in
+    /// the chain's list, its shares, its secret and its leaf, 0x-hex. Kept on
+    /// this phone only (`TacitChainScan`), never sent but back to the engine.
+    struct KeptNote: Codable, Equatable {
+        let index: Int
+        let value: String
+        let s: String
+        let leaf: String
     }
 
     // MARK: - Answers
@@ -96,6 +110,11 @@ enum TacitEngineWire {
         /// are under a passkey's root this phone does not hold.
         let elsewhere: Bool
         let ms: Int
+        /// The next entry a scan should try, and your unspent notes.
+        let next: Int
+        let kept: [KeptNote]
+        /// Your Tacit chain address (`tc1…`): what a sender of private TAC pays.
+        let chainAddress: String
     }
 
     /// Your private TAC in Tacit's DeFi pool, its private pool on Ethereum.

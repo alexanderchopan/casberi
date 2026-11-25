@@ -134,7 +134,7 @@ has "Casberi/Casberi/Model/NetworkReach.swift" 'Endpoint(service: "Tacit engine"
 # The Tacit chain: read with Tacit's own wallet, given no prover, at the
 # contract and server Tacit's own config names.
 has "$JS" "makeChainWallet({ poseidon, prover: null," "the chain wallet is handed a prover: with one it could spend"
-has "$JS" "{ from: 0, keep: false }" "the chain scan keeps a tree it has no use for"
+has "$JS" "keep: false, known:" "the chain scan keeps a tree it has no use for"
 # The DeFi pool: Tacit's pool library, its balance read and nothing else.
 has "$JS" "pool.balance(key, { spent: true, positions: false" "the DeFi pool is no longer read by its balance"
 [[ "$(grep -o "pool\.[a-zA-Z]*(" "$JS" | sort -u | tr -d '\n')" == "pool.balance(" ]] || fail "the engine calls the DeFi pool library for something other than its balance"

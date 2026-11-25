@@ -12,6 +12,7 @@ struct TacitAccountRows: View {
     @State private var walletName: String?
     @State private var copied: String?
     @Environment(\.openURL) private var openURL
+    @Environment(ShellChrome.self) private var chrome
     /// Raises a web page beside this page, through the screen's one sheet
     /// (`FeedSheetRoute.web`): a row here cannot present one itself.
     var openPage: ((URL) -> Void)? = nil
@@ -175,6 +176,18 @@ struct TacitAccountRows: View {
             // app's own Safari sheet, as every door here opens (user: "why
             // doesn't it show a sheet inside casberi"); the Mac has no such
             // sheet and opens its browser.
+            // **BUY TAC (user, 2026-11-24, "do all").** With none public,
+            // Swap opens to buy it, on your account, on the pool Swap pins.
+            if reading.publicTAC == 0, YourAccountDemo.shownAddress != nil {
+                actionRow(String(localized: "Buy TAC"), glyph: "arrow.left.arrow.right") {
+                    Task { @MainActor in
+                        guard let draft = await MoveSentence.watchedDraft(id: "ethereum:\(TacitPocket.tacToken.lowercased())", symbol: "TAC") else { return }
+                        chrome.moveDraft = draft
+                        chrome.moveTray = true
+                    }
+                }
+                .walletListRow()
+            }
             if let tac = reading.publicTAC, tac > 0 {
                 // The rows' own columns, so its words start where theirs do;
                 // `DSDoorRow`'s 18pt glyph column would start them short.
@@ -212,6 +225,15 @@ struct TacitAccountRows: View {
                 line("TAC", fact: "\(Self.amount(tac)) · \(String(localized: "Tacit chain"))",
                      figure: account.tacPrice.map { WalletValue.exactMoney(tac * $0) } ?? WalletValue.token(tac, "TAC"))
                     .walletListRow()
+                // What the chain's fees added to your shares, since the
+                // first reading that knew the rate (user: "should we show
+                // rewards too a user is earning?").
+                if let earned = reading.earnedTAC, earned >= 0.0001, let since = reading.earnedSince {
+                    line("TAC", fact: "\(Self.amount(earned)) · \(String(localized: "Earned since \(AccountPageShape.day(since))"))",
+                         figure: "+" + (account.tacPrice.map { WalletValue.exactMoney(earned * $0) } ?? WalletValue.token(earned, "TAC")),
+                         figureInk: DS.confirmInk)
+                        .walletListRow()
+                }
                 if reading.privateElsewhere == true {
                     line("TAC", fact: String(localized: "More under a passkey, not read"),
                          factInk: DS.attentionInk, figure: "")
@@ -258,23 +280,32 @@ struct TacitAccountRows: View {
     /// own wallet, as on Tacit's page; the pool's deposit address is its own
     /// row, because ETH sent to it goes private (user, 2026-11-24: "tacit has
     /// two addresses it gives users you need to check. public and private").
+    /// Every address, named for who pays it (user, 2026-11-24: "what's the
+    /// difference in how the deposit address and private address work?"),
+    /// the tail being what is checked.
     @ViewBuilder private func receive(_ reading: TacitAccount.Reading) -> some View {
         Section {
             head(String(localized: "Receive"), figure: nil).walletListRow()
+            if let chain = reading.chainAddress, !chain.isEmpty {
+                copyRow(String(localized: "Tacit chain address"),
+                        fact: String(localized: "Private TAC · \(AddressTail.short(chain))"),
+                        value: chain)
+                    .walletListRow()
+            }
             copyRow(String(localized: "Private address"),
-                    fact: String(localized: "From a Tacit account · \(AddressTail.short(reading.address))"),
+                    fact: String(localized: "Private ETH, Tacit to Tacit · \(AddressTail.short(reading.address))"),
                     value: reading.address)
-                .walletListRow()
-            copyRow(String(localized: "Public address"),
-                    fact: String(localized: "Your co-signer's wallet · \(AddressTail.short(reading.coSigner))"),
-                    value: reading.coSigner)
                 .walletListRow()
             if !reading.receive.isEmpty {
                 copyRow(String(localized: "Deposit address"),
-                        fact: String(localized: "ETH sent here goes private · \(AddressTail.short(reading.receive))"),
+                        fact: String(localized: "ETH from an exchange · \(AddressTail.short(reading.receive))"),
                         value: reading.receive)
                     .walletListRow()
             }
+            copyRow(String(localized: "Public address"),
+                    fact: String(localized: "Your wallet · \(AddressTail.short(reading.coSigner))"),
+                    value: reading.coSigner)
+                .walletListRow()
         }
     }
 
@@ -333,6 +364,27 @@ struct TacitAccountRows: View {
     }
 
     // MARK: - The parts
+
+    /// A verb in the rows' own columns: its glyph where a row's mark stands.
+    private func actionRow(_ words: String, glyph: String, act: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.selection()
+            act()
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                Image(systemName: glyph)
+                    .dsGlyph(.body, weight: .medium)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                Text(verbatim: words).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: WalletCardStyle.ledgerHead)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+    }
 
     /// A section's name at the section rung, its figure trailing (prd §1496).
     private func head(_ name: String, figure: String?) -> some View {

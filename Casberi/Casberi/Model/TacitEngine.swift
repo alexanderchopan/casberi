@@ -154,9 +154,10 @@ final class TacitEngine: NSObject {
 
     /// Your private TAC on the Tacit chain: the chain's notes tried with the
     /// open account's key. About ten seconds on a Mac for 3,200 notes.
-    func chain() async throws -> Wire.ChainReading {
+    func chain(from: Int = 0, known: [Wire.KeptNote] = []) async throws -> Wire.ChainReading {
         try await call(.chain, Wire.Chain(rpcUrl: TacitNetwork.ethereum.rpcUrl, blocks: TacitChain.blocks,
-                                          leader: TacitChain.leader), as: Wire.ChainReading.self)
+                                          leader: TacitChain.leader, from: from, known: known),
+                       as: Wire.ChainReading.self)
     }
 
     /// Your private TAC in Tacit's DeFi pool. About 20 to 40 seconds.

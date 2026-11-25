@@ -108,7 +108,10 @@ const methods = {
   // The leader is believed for which notes exist and which are spent: this
   // read does not rebuild the chain's note tree to check it. A read, so a
   // lying leader could show a wrong figure and could move nothing.
-  async chain({ rpcUrl, blocks, leader }) {
+  // `from` and `known` resume a scan where the last one stopped: the notes it
+  // found, kept by the app on this phone, and the next entry to try. Each
+  // known note is asked again whether it is spent.
+  async chain({ rpcUrl, blocks, leader, from = 0, known = [] }) {
     if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
     if (!/^0x[0-9a-fA-F]{40}$/.test(blocks ?? '') || !/^https:\/\//.test(leader ?? '')) throw Object.assign(new Error('the chain is not named'), { name: 'BadChain' });
     const t = now();
@@ -135,7 +138,7 @@ const methods = {
     const found = await w.scan(k, {
       notes: (from, limit) => get(`/notes?from=${from}&limit=${limit}`),
       spent: async (nullifier) => (await get(`/spent/${nullifier}`)).spent === true,
-    }, { from: 0, keep: false });
+    }, { from: Number(from) || 0, keep: false, known: (known || []).map((n) => ({ index: Number(n.index), value: BigInt(n.value), s: hexToBytes(strip(n.s)), leaf: BigInt(n.leaf) })) });
     const held = found.notes.reduce((a, n) => a + BigInt(n.value), 0n);
     const rate = { pool: BigInt('0x' + pool), shares: BigInt('0x' + shares) };
     // A PQ ID: the key's own record names another chain address, whose notes
@@ -147,6 +150,9 @@ const methods = {
     } catch {}
     return {
       shares: hex(held), worth: hex(worthOf(held, rate)), notes: found.notes.length, spent: found.spent.length,
+      next: Number(found.next),
+      kept: found.notes.map((n) => ({ index: n.index, value: hex(n.value), s: '0x' + bytesToHex(n.s), leaf: hex(n.leaf) })),
+      chainAddress: w.encodeAddress(w.address(k)),
       leaves: Number(found.next), pool: hex(rate.pool), allShares: hex(rate.shares), elsewhere,
       ms: Math.round(now() - t),
     };

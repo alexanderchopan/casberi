@@ -71,6 +71,16 @@ final class TacitAccount {
         var privateElsewhere: Bool? = nil
         /// TAC held privately in Tacit's DeFi pool; nil when not read whole.
         var defiTAC: Double? = nil
+        /// Your Tacit chain address (`tc1…`), for a sender of private TAC.
+        var chainAddress: String? = nil
+        /// Your Tacit chain shares and what one share was worth in TAC at
+        /// this reading: the next reading's rise on the same shares is earned.
+        var chainShares: Double? = nil
+        var chainRate: Double? = nil
+        /// TAC the Tacit chain's fees have added to your shares since
+        /// `earnedSince`, the first reading that knew a rate.
+        var earnedTAC: Double? = nil
+        var earnedSince: Date? = nil
 
         /// Private TAC in both places; nil when neither was read.
         var privateTACAll: Double? {
@@ -100,7 +110,9 @@ final class TacitAccount {
         receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
         held: [Held(chainId: 1, network: "Ethereum", eth: 0.42, waiting: 0, pool: 14.7, reached: true),
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
-        asOf: .now, publicTAC: 240, privateTAC: 310)
+        asOf: .now, publicTAC: 240, privateTAC: 310, defiTAC: 0,
+        chainAddress: "tc1" + String(repeating: "3f", count: 40) + "c91d",
+        earnedTAC: 2.1, earnedSince: Date.now.addingTimeInterval(-21 * 86_400))
     static let demoPrice = 3_850.0
     static let demoTacPrice = 0.78
 
@@ -244,39 +256,80 @@ final class TacitAccount {
         defer { for i in key.indices { key[i] = 0 } }
         livePhase = .reading
         do {
-            let overview = try await TacitPocket.overview(key: key)
+            let opened = try await TacitPocket.open(key: key)
+            let me = coSigner.lowercased()
+            let prior = liveReading.flatMap { $0.coSigner == me ? $0 : nil }
+            let networks = await TacitPocket.networks(opened)
             // Nothing answered: that is an outage, never a reading. The last
             // one stands, with its own date.
-            guard overview.networks.contains(where: { $0.reading != nil }) else {
+            guard networks.contains(where: { $0.reading != nil }) else {
                 TacitEngine.shared.stop()
                 livePhase = .failed(String(localized: "Tacit could not be read"))
                 return
             }
-            let held = overview.networks.map { n in
+            let held = networks.map { n in
                 Held(chainId: n.network.chainId, network: n.network.name,
-                     eth: n.reading.flatMap { Self.eth($0.balance) } ?? liveReading?.held.first { $0.chainId == n.network.chainId }?.eth ?? 0,
+                     eth: n.reading.flatMap { Self.eth($0.balance) } ?? prior?.held.first { $0.chainId == n.network.chainId }?.eth ?? 0,
                      waiting: n.reading.flatMap { Self.eth($0.waiting) } ?? 0,
                      pool: n.reading.flatMap { $0.pool }.flatMap { Self.eth($0) },
                      reached: n.reading != nil)
             }
-            let receive = overview.networks.first { !$0.receive.isEmpty }?.receive ?? ""
-            let publicTAC = await TacitPocket.publicTAC(of: coSigner)
-            keep(Reading(coSigner: coSigner.lowercased(), address: overview.address, receive: receive,
-                         held: held, asOf: .now,
-                         publicTAC: publicTAC ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.publicTAC : nil },
-                         privateTAC: overview.chain.flatMap { TacitEngineWire.tac($0.worth) }
-                            .map { NSDecimalNumber(decimal: $0).doubleValue }
-                            ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.privateTAC : nil },
-                         privateElsewhere: overview.chain?.elsewhere,
-                         defiTAC: overview.defi.flatMap { TacitEngineWire.tac($0.worth) }
-                            .map { NSDecimalNumber(decimal: $0).doubleValue }
-                            ?? liveReading.flatMap { $0.coSigner == coSigner.lowercased() ? $0.defiTAC : nil }))
-            livePhase = .open
+            // **ROWS FILL IN AS EACH READ LANDS (user, 2026-11-24, "do all",
+            // of "open instantly, then refresh").** The networks first, the
+            // last reading's TAC standing until its own read replaces it.
+            var reading = prior ?? Reading(coSigner: me, address: "", receive: "", held: [], asOf: .now)
+            reading = Reading(coSigner: me, address: opened.address ?? reading.address,
+                              receive: networks.first { !$0.receive.isEmpty }?.receive ?? reading.receive,
+                              held: held, asOf: .now, publicTAC: reading.publicTAC, privateTAC: reading.privateTAC,
+                              privateElsewhere: reading.privateElsewhere, defiTAC: reading.defiTAC,
+                              chainAddress: reading.chainAddress, chainShares: reading.chainShares,
+                              chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, earnedSince: reading.earnedSince)
+            keep(reading)
+            if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
             await readPrice()
+            // The Tacit chain and the DeFi pool, side by side: each is kept
+            // the moment it answers.
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { @MainActor in
+                    guard let chain = await TacitPocket.chain(coSigner: coSigner) else { return }
+                    self.update(me) { Self.apply(chain, to: &$0) }
+                }
+                group.addTask { @MainActor in
+                    guard let defi = await TacitPocket.defi() else { return }
+                    self.update(me) { $0.defiTAC = TacitEngineWire.tac(defi.worth).map { NSDecimalNumber(decimal: $0).doubleValue } }
+                }
+            }
+            livePhase = .open
         } catch {
             TacitEngine.shared.stop()
             livePhase = .failed(Self.words(error))
         }
+    }
+
+    /// A Tacit chain reading into a reading: what is held, the address, and
+    /// what the shares earned since the last reading on the same shares.
+    static func apply(_ chain: TacitEngineWire.ChainReading, to r: inout Reading) {
+        let tac = { (hex: String) in TacitEngineWire.tac(hex).map { NSDecimalNumber(decimal: $0).doubleValue } }
+        r.privateTAC = tac(chain.worth)
+        r.privateElsewhere = chain.elsewhere
+        r.chainAddress = chain.chainAddress
+        guard let shares = tac(chain.shares), let pool = tac(chain.pool), let all = tac(chain.allShares) else { return }
+        // Tacit's own rate: a share is the pool over the shares, each with
+        // the contract's virtual 1 TAC (`VIRTUAL`, 1e8 units).
+        let rate = (pool + 1) / (all + 1)
+        if let before = r.chainShares, let was = r.chainRate, before > 0, rate > was {
+            r.earnedTAC = (r.earnedTAC ?? 0) + before * (rate - was)
+        }
+        if r.earnedSince == nil { r.earnedSince = .now }
+        r.chainShares = shares
+        r.chainRate = rate
+    }
+
+    /// Changes the kept reading in place, if it is still this co-signer's.
+    private func update(_ coSigner: String, _ change: (inout Reading) -> Void) {
+        guard var r = liveReading, r.coSigner == coSigner else { return }
+        change(&r)
+        keep(r)
     }
 
     /// Closes the account: the page, and the key with it, are dropped. The
@@ -290,6 +343,7 @@ final class TacitAccount {
     /// Removing the app forgets the reading too.
     func forget() {
         close()
+        if let coSigner = liveReading?.coSigner { TacitChainScan.forget(coSigner) }
         liveReading = nil
         UserDefaults.standard.removeObject(forKey: Self.readingKey)
     }
@@ -337,7 +391,9 @@ final class TacitAccount {
                                   receive: "0x9c4C4932dcc0911951fD4E2d77e3cb07FaB441c4",
                                   held: [Held(chainId: 1, network: "Ethereum", eth: 0, waiting: 0, pool: 14.7, reached: true),
                                          Held(chainId: 4663, network: "Robinhood", eth: 0, waiting: 0, pool: 0.10, reached: true)],
-                                  asOf: .now, publicTAC: 23.85, privateTAC: 10.02, defiTAC: 0)
+                                  asOf: .now, publicTAC: 23.85, privateTAC: 10.02, defiTAC: 0,
+                                  chainAddress: "tc1" + String(repeating: "5a", count: 40) + "7e2c",
+                                  earnedTAC: 0.04, earnedSince: Date.now.addingTimeInterval(-6 * 86_400))
         }
         livePhase = raw == "closed" ? .closed : .open
     }
