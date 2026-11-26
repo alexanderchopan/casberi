@@ -75,7 +75,7 @@ struct MoveLendSentence<Head: View>: View {
 
     @ViewBuilder private var sentence: some View {
         if move.stage == .reading {
-            MovePhrase(String(localized: "Reading Aave…"), ink: DS.textSecondary)
+            MovePhrase(String(localized: "Reading…"), ink: DS.textSecondary)
         } else {
             let done = doneHash != nil
             let glue: String = switch (move.mode, done) {
@@ -239,7 +239,7 @@ struct MoveLendSentence<Head: View>: View {
             }
             if move.stage == .reading {
                 MoveReceiptLine(label: "") {
-                    Text("Reading Aave…").dsText(.body17).foregroundStyle(DS.textSecondary)
+                    Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
                 .padding(.top, MoveReceipt.gap)
             } else {
