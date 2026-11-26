@@ -64,17 +64,15 @@
    "launch": [
     "demo",
     "-subscriptionTrack",
-    "Hulu:15.99"
+    "Hulu:15.99",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "spending"
    ],
    "steps": [
     {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Spending, "
+     "wait": 8
     },
     {
      "tap": "button:^Subscriptions. "
@@ -1070,14 +1068,15 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscription"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "spending"
    ],
    "steps": [
     {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Spending, "
+     "wait": 8
     },
     {
      "tap": "button:^Subscriptions. "
@@ -1094,14 +1093,15 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#delegation"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "permissions"
    ],
    "steps": [
     {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Permissions"
+     "wait": 8
     },
     {
      "tap": "button:^Metamask Delegator"
@@ -1136,14 +1136,15 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscriptionAdd"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "spending"
    ],
    "steps": [
     {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Spending, "
+     "wait": 8
     },
     {
      "tap": "button:^Subscriptions. "
@@ -1160,14 +1161,13 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#savingsGoal"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openSettings",
+    "YES"
    ],
    "steps": [
     {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Account"
+     "wait": 4
     },
     {
      "tap": "button:^Savings goal"
@@ -1181,17 +1181,13 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#ownNodes"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openSettings",
+    "YES"
    ],
    "steps": [
     {
      "wait": 2
-    },
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:=Account"
     },
     {
      "tap": "button:^Nodes"
@@ -1273,17 +1269,15 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletToken"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "holdings"
    ],
    "steps": [
     {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Holdings"
+     "wait": 8
     },
     {
      "maybe": "button:=All"
@@ -1300,17 +1294,18 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "home"
    ],
    "steps": [
     {
-     "wait": 2
+     "wait": 8
     },
     {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:=Following"
+     "tap": "button:^Following, "
     },
     {
      "tap": "button:^Follow an account"
@@ -1418,14 +1413,13 @@
     "Screens/MoveSecurity.swift:roundUpsTray"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openSettings",
+    "YES"
    ],
    "steps": [
     {
      "wait": 2
-    },
-    {
-     "tap": "button:=Account"
     },
     {
      "tap": "button:^Round-ups"
@@ -1460,14 +1454,13 @@
     "Screens/MoveSecurity.swift:guideOpen"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openSettings",
+    "YES"
    ],
    "steps": [
     {
      "wait": 2
-    },
-    {
-     "tap": "button:=Account"
     },
     {
      "tap": "button:^How your accounts work"
