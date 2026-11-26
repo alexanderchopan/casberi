@@ -202670,6 +202670,34 @@
         }
       }
     },
+    "That isn't an address or a name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Eso no es una dirección ni un nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスでも名前でもありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소나 이름이 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这不是地址或名称"
+          }
+        }
+      }
+    },
     "That isn't an address — it should be 0x and 40 more characters." : {
       "localizations" : {
         "es" : {

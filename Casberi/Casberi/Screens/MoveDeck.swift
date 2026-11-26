@@ -755,6 +755,14 @@ struct MoveTokenGrid: View {
         // so a place is one grid in the order its caller gives (by worth).
         // A place's title only where there are two places.
         let titled = shown.count > 1
+        // **ONE FLIGHT KEY, ONE ROW (2026-11-25, user: "some of the tokens
+        // are also not showing").** ETH on Ethereum stands under your public
+        // account AND under Privacy Pools; two marks under one matched key
+        // hid one of them. The first row with a key keeps the flight.
+        var seen = Set<String>()
+        let flies: Set<String> = Set(shown.flatMap(\.choices).compactMap { c in
+            seen.insert(MoveFlight.key(symbol: c.symbol, network: c.network)).inserted ? c.id : nil
+        })
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(shown.enumerated()), id: \.element.id) { n, place in
                 if titled, let title = place.title {
@@ -775,7 +783,7 @@ struct MoveTokenGrid: View {
                         c.act()
                         DSHaptic.selection()
                     } label: {
-                        Self.row(c)
+                        Self.row(c, flies: flies.contains(c.id))
                     }
                     .buttonStyle(RowPress())
                     .disabled(c.dim)
@@ -794,7 +802,7 @@ struct MoveTokenGrid: View {
     /// vertical rows").** The network is a word under the symbol, never a
     /// badge three ETHs differ by; dollars trail in bold. A line that is not
     /// a figure (a seller, "Unlisted") joins the network's line.
-    static func row(_ c: MoveTokenChoice) -> TokenRowLabel {
+    static func row(_ c: MoveTokenChoice, flies: Bool = true) -> TokenRowLabel {
         let sub = c.sub ?? ""
         let figure = sub.first.map { $0 == "$" || $0.isNumber } ?? false
         let line = c.place != nil ? [c.rate, c.place].compactMap { $0 }.joined(separator: " · ")
@@ -803,7 +811,7 @@ struct MoveTokenGrid: View {
                              lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
                              figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,
                              picked: c.picked, grid: true, badge: c.place != nil ? c.badge : nil,
-                             flightKey: MoveFlight.key(symbol: c.symbol, network: c.network))
+                             flightKey: flies ? MoveFlight.key(symbol: c.symbol, network: c.network) : nil)
     }
 }
 

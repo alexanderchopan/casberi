@@ -75441,3 +75441,9 @@ Not built here: a place's own page (the canvas's rule 12); a token's page alread
 3. **Measured.** The read (notes scanned, the quote, `owed`) 37 s through Tor on a simulator with a random key: Tacit's fee 0.0105 TAC for 1 TAC, the most 0, nothing owed.
 4. **The engine guard moves with it.** `tacit-engine-selftest.sh` held the engine to one way money moves; it now holds it to two: the deposit as before, and one withdrawal, proved only in `outProve` to the address asked and handed only in `outHand`. A pay to someone's Tacit address (`preparePay`) is refused by the guard: not built.
 5. **Not yet.** Sending privately to another Tacit address (its `tc1`/`bp1q` address decoded to a recipient); the DeFi pool's TAC out; private ETH. Inside Move, Tacit's Make private and this sheet keep their Chip rows rather than Move's choice rows.
+
+## §1978 — A private send's To lists your public account and your addresses and takes a name; a token held in two places shows its mark in both (user, 2026-11-25, sending out of Privacy Pools to swap: "when i try and click choose it doesn't show my addresses", "ya it doesn't even take my ENS", over Send's token list: "some of the tokens are also not showing") — BUILT
+
+1. **To from your private balance** lists "Your public account" first, then the address book's Ethereum-style addresses, newest first, above the field (`MovePrivate.recipientChoices`). Sending out to yourself is how what Privacy Pools holds gets swapped.
+2. **A name is taken:** the field says "Name, ENS or address"; a name is resolved through `NameResolve.resolve` and taken as its address, or "That isn't an address or a name".
+3. **One flight key, one row** (`MoveTokenGrid`): ETH, USDC or DAI on Ethereum stands under your public account and again under Privacy Pools or Railgun; both marks wore one matched-geometry key and one was hidden. The first row with a key keeps the flight, the rest draw their mark plainly.

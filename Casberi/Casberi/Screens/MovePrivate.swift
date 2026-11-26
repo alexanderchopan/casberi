@@ -539,11 +539,23 @@ struct MovePrivateSentence<Head: View>: View {
     /// Switch on: an address, typed or pasted, and nothing else (a book
     /// entry is Send's list, before the switch).
     @ViewBuilder private var recipients: some View {
+        // **YOUR OWN ACCOUNT AND YOUR ADDRESSES (2026-11-25, user: "when i
+        // try and click choose it doesn't show my addresses").** The field
+        // alone left sending out to yourself, the way to swap what Privacy
+        // Pools holds, a paste away.
+        ForEach(recipientChoices, id: \.address) { choice in
+            Button { take(choice.address) } label: {
+                listRow(choice.title, picked: move.recipient?.lowercased() == choice.address.lowercased()) {
+                    WalletFace(address: choice.address, size: MoveSentence.listMark, circular: true)
+                }
+            }
+            .buttonStyle(RowPress())
+        }
         if notAnAddress {
-            Text("That isn't an address").dsText(.body17).foregroundStyle(DS.attentionInk)
+            Text("That isn't an address or a name").dsText(.body17).foregroundStyle(DS.attentionInk)
                 .padding(.top, DS.Space.s2)
         }
-        TextField(text: $typed, prompt: Text("0x…").foregroundStyle(DS.textTertiary)) { Text("Address") }
+        TextField(text: $typed, prompt: Text("Name, ENS or address").foregroundStyle(DS.textTertiary)) { Text("Address") }
             .dsText(.body17)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
@@ -559,6 +571,20 @@ struct MovePrivateSentence<Head: View>: View {
         .buttonStyle(RowPress())
     }
 
+    /// Your public account first, then the book's Ethereum-style addresses,
+    /// newest first.
+    private var recipientChoices: [(title: String, address: String)] {
+        var out: [(title: String, address: String)] = []
+        if let mine = PrivateOnEthereum.owner {
+            out.append((String(localized: "Your public account"), mine))
+        }
+        for entry in AddressBook.shared.all where PrivateMoney.isAddress(entry.address)
+            && !out.contains(where: { $0.address.lowercased() == entry.address.lowercased() }) {
+            out.append((entry.name.isEmpty ? YourAccount.short(entry.address) : entry.name, entry.address))
+        }
+        return out
+    }
+
     private func take(_ raw: String) {
         let address = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         // A zk.money tag typed here pays as Send's To does (prd §1874).
@@ -570,6 +596,21 @@ struct MovePrivateSentence<Head: View>: View {
             }
             DSHaptic.selection()
             if failed { Task { await move.read() } }
+            return
+        }
+        // A name (vitalik.eth and the other families Send takes) is
+        // resolved, then taken as the address it names (2026-11-25, user:
+        // "it doesn't even take my ENS").
+        if !PrivateMoney.isAddress(address), address.contains(".") {
+            typed = address
+            Task {
+                if let resolved = await NameResolve.resolve(address), PrivateMoney.isAddress(resolved) {
+                    take(resolved)
+                } else {
+                    DSHaptic.failure()
+                    withAnimation(DS.Motion.standard) { notAnAddress = true }
+                }
+            }
             return
         }
         guard PrivateMoney.isAddress(address) else {
