@@ -163,6 +163,7 @@ Privacy, Reddit, Hegotá Frames (§1206) and Aztec's testnet room (§1688). Logo
 - A private send goes on behind its sheet once every ask is answered: a send within Aztec (Face ID and the co-signer) and a Railgun send to someone (Face ID). A capsule over the tab bar says the step under way; landed, it goes and a plain toast says so ("Sent to Aztec", "Sent privately"); failed, it says "Not sent" and its tap opens the sentence again. One at a time; a move-in, taking back, an exit and every Privacy Pools move stay in their sheet (§1777, §1806, §1700w).
 - A one-time private address moves a token first while the ETH beside it pays its gas, then the ETH; money waiting there that will not move by itself is a row under Private in Holdings, amber, opening Receive (§1778, §1567).
 - Move opens on its menu every time: every verb, A–Z, at one size, under Move's own name. The sentence takes no touch in any verb: every choice is a row under it, read off the sentence, and a card in the foot's leading corner goes back to the menu. Amount and Add are rows. Private is a place in To and From, never a verb (§1781). A row leads with its answer, the next list opens by itself after a pick, and the token is never chosen for you (§1782). On Base a send short of ETH for its fee pays it from the account's USDC through Circle's paymaster, by a permit capped at $5 (§1780). Receive shows its private doors as rows. Your private balance is Ethereum's, your private account is Aztec, in its own ink (`DS.aztecInk`), with "Aztec to Aztec only." wherever its address stands. A token waiting for gas offers Pay the gas from your account, and says it links the address to you (§1779).
+- A typed figure is the open chip stretched into a field: figure large, its unit grey, `$ | token` inside it, and a half line under it saying what you have, the other unit, or in amber that it is over. When's custom price types on Move's keys, Now and the presets their top row, + / − and `% | $` in the field, amber when the market already meets it (§1989).
 - Swap and Sweep go straight to the exchanges (§1539, §1542): the phone asks every pinned pool in one Multicall3 call through the account's own node (Uniswap v3 on Base, Ethereum and Robinhood Chain; Aerodrome's three Slipstream deployments and v2 on Base), takes the best output, and writes the calls itself — an exact approval to the router that swaps, one router call with a deadline, the minimum the quote less 0.5% (Base, Robinhood) or 0.3% (Ethereum) — then simulates before the key signs (Face ID itself is asked at the tap, §1687). The foot says the exchange: "On Uniswap · 0.05% pool fee", no "powered by", no fee but the network's. Tokens come from Uniswap's open list ("Not on Uniswap's list"). Relay carries only Receive from another network and a round-up's buy.
 - Swap reaches another network through Across (§1555, §1556): ETH or the network's dollar arrives ("0.01 ETH on Base for USDC on Ethereum"; the last network opens "Get USDC on"), anything else swapped first on the pools; the phone writes the SpokePool deposit itself (the account depositor and recipient, ETH through Across's handler so it arrives as ETH), asks Across only its fee, checks every field and simulates both sides before Face ID; it goes alone. The foot: "Through Across · 0.11% fee · about 7 seconds"; the print line has no ≈ (Across's output is exact). The fill is read off the receiving pool; the crossing is one row in Activity: arriving (amber), swapped, or refunded (in WETH for ETH, which Move then lists). Activity's swap rows read "0.5 ETH for 1,240 USDC" (VoiceOver keeps "Swapped"). Move's Details draws one line a row, no subtext: "Swaps · Uniswap · 0.01%", "Approves · 22.99 USDC to Across".
 - Round-ups round to the next $1 or $5, picked in the walk and the tray; the walk says "Save your change, earn interest, privately." (§1741). Round-ups are set aside as you go (§1690, amending §1572, §1574, §1578): every buy, send and swap rounds up (§1830; a swap the dollars it sells, a buy its price, §1561; never a limit order, an unpriced token or a wrap), and the change to the next dollar goes to Round-ups — a buy's is owed to the next send — (USDC on Aave on Base, the account's own; from Ethereum or Robinhood through Across, change under ~$0.50 owed to the next send), shown in Holdings as a lent row is worded, never offered as lent; once Round-ups holds $10 (or 0xBow's minimum) the next send moves it into the private balance, on another network as a second operation on Base under the tap's Face ID (§1687).
@@ -263,12 +264,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2169 of 2243 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2170 of 2244 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
 - §4 — Persona variables (amended by §1126, §1344, §1567, §1677, §1701b, §1965a)
-- §5 — How it works today — Bob (amended by §1208c, §1680, §1700f, §1932)
+- §5 — How it works today — Bob (amended by §1208c, §1680, §1700f, §1932, §1989)
 - §6 — How it works today — Alice (amended by §1113, §1568, §1719, §1741a, §1916, §1944)
 - §7 — Outcomes — Bob (amended by §1100, §1498, §1666, §1904, §1931, §1932)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163, §1568, §1931)
@@ -2075,7 +2076,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1671 — Yours is always on the switch: with no account it opens Move to make one; the demo's own account is in the demo's hol…
 - §1672 — A Holdings tile opens its token's sheet in one tap, every token, and the sheet draws the token's price chart; every t…
 - §1673 — Limit orders are Swap's last word: the sentence ends "when", Now or a price, and a price is a CoW order (amended by §1754)
-- §1673a — When's two rows are Move's list rows: a glyph in the mark's circle, the title, its line, the figure (amends §1673 ite…
+- §1673a — When's two rows are Move's list rows: a glyph in the mark's circle, the title, its line, the figure (amends §1673 ite… (amended by §1989)
 - §1673b — §1673 built: Swap ends "when", a price is a CoW order this phone builds and pre-signs, "Powered by CoW Swap" (builds…
 - §1673c — Until is a word: a day, a week, a month (builds §1673 item 5; closes §1673b item 7's expiry)
 - §1673d — "When" stands at rest, before the tokens are picked (closes the gap between §1673 item 2 and §1673b item 1)
@@ -2090,7 +2091,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1681a — A verb in the list has no line under it (amends §1681 item 1)
 - §1681b — Once the sheet grows it stays grown (amends §1681 item 6)
 - §1682 — A swap that moves the price says so: "Moves the price 6.4%" in the attention ink under the exchange's credit, from 1%…
-- §1683 — Swap's last word is "now." at rest, and tapping it opens Now, +5% · +10% · +25%, Custom with % | $ (amends §1673 item… (amended by §1754)
+- §1683 — Swap's last word is "now." at rest, and tapping it opens Now, +5% · +10% · +25%, Custom with % | $ (amends §1673 item… (amended by §1754, §1989)
 - §1684 — Act where you look: a held token's sheet sends and swaps it, and a signature row in Needs you opens the transaction i…
 - §1685 — A protocol's mark rides the corner of what the row did, never leads it: Activity and history rows that a protocol car… (amended by §1700f; part superseded by §1754)
 - §1686 — The Wallet's tiles read Home · Holdings · Activity · Spending, in that order, never A–Z (amends §995 for the Wallet;…
@@ -2376,8 +2377,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945, §1963)
 - §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946, §1973, §1976)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
-- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934, §1970)
-- §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933)
+- §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934, §1970, §1989)
+- §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933, §1989)
 - §1933 — Move's delight: every address wears its face and a lookalike says who it is not, the pick flies into its chip, too mu…
 - §1934 — Move's title is the Type: a verb with two kinds names both at the title's size, the one you are in white, the other g…
 - §1935 — Move's keys and its end: a refused key knocks, holding delete clears, and Done folds the receipt into Activity
@@ -2428,12 +2429,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1976 — Send's To lists every private place that takes the token, Tacit among them, and the Safes you sign for stand under th…
 - §1977 — Back to public: private TAC on the Tacit chain goes back to your Casberi account or your co-signer, from Move's From (amended by §1982)
 - §1978 — A private send's To lists your public account and your addresses and takes a name; a token held in two places shows i…
-- §1979 — A private send takes any amount, in the token or in dollars, and keeps its lines while it goes (amended by §1980)
+- §1979 — A private send takes any amount, in the token or in dollars, and keeps its lines while it goes (amended by §1980, §1989)
 - §1980 — Railgun's and Aztec's sends keep their lines while they go, as public Send and Privacy Pools do
 - §1981 — Tacit's page is deleted: its money stands in Holdings › Private, its verbs in Move, its addresses on Receive, and Rea…
 - §1982 — Send privately: private TAC to another Tacit account from Send's To; Tacit named in Activity; what TAC earned on Hold…
 - §1983 — Tacit as Railgun and Aztec are: saved addresses, On its way, notices, Move's deck, Again
 - §1987 — Activity's verbs are glyphs: an own act leads with what it did, its name says where or who, its amount stands on the…
+- §1989 — Move's typed figures: the open chip is the field, its unit inside it, what it means under it, and a custom price on M…
 
 ## Dead rulings → what replaced them (generated)
 

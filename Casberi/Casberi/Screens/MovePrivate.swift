@@ -429,8 +429,17 @@ struct MovePrivateSentence<Head: View>: View {
         }
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), on: open == .token, answered: true,
                                 value: "\(move.symbol) · \(move.network.name)", mark: token) { toggle(.token) })
-        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
-                                answered: !move.amount.isEmpty, value: move.amount.isEmpty ? nil : figure) { toggle(.amount) })
+        // **THE OPEN CHIP IS THE FIELD (prd §1989):** the figure in the unit
+        // it is typed in, $ | token at its end, what it means under it.
+        let typing = open == .amount
+        let typingDollars = typing && inDollars
+        let flips = price != nil && move.symbol != "USDC"
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: typing,
+                                answered: typingDollars ? !dollars.isEmpty : !move.amount.isEmpty,
+                                value: typingDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
+                                    : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil) : figure),
+                                accessory: flips ? AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { setDollars($0) }) : nil,
+                                fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { toggle(.amount) })
         return out
     }
 
@@ -605,29 +614,6 @@ struct MovePrivateSentence<Head: View>: View {
         VStack(spacing: MoveReceipt.gap) {
             let keys = quickKeys
             if !keys.isEmpty { MoveQuickKeys(keys: keys) }
-            HStack {
-                Text(verbatim: amountLine.words).dsText(.body17).foregroundStyle(amountLine.ink)
-                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
-                Spacer(minLength: DS.Space.s2)
-                if price != nil, move.symbol != "USDC" {
-                    Button {
-                        withAnimation(DS.Motion.standard) {
-                            inDollars.toggle()
-                            if inDollars, let price, let units = Decimal(string: move.amount) {
-                                var d = units * Decimal(price), r = Decimal()
-                                NSDecimalRound(&r, &d, 2, .plain)
-                                dollars = NSDecimalNumber(decimal: r).stringValue
-                            }
-                        }
-                    } label: {
-                        Text(verbatim: inDollars ? move.symbol : "$").dsText(.heading17).foregroundStyle(DS.pickInk)
-                            .frame(minWidth: DS.Hit.min, minHeight: DS.Hit.min)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityLabel(Text(inDollars ? "Type in \(move.symbol)" : "Type in dollars"))
-                }
-            }
             MoveKeypad(text: inDollars ? Binding(get: { dollars }, set: { new in
                 dollars = new
                 guard let price, price > 0, let usd = Decimal(string: new) else { move.amount = ""; return }
@@ -639,8 +625,21 @@ struct MovePrivateSentence<Head: View>: View {
         }
     }
 
-    /// The line over the keys: the other unit's figure and the most it can
-    /// move, or what is wrong with the figure, in amber.
+    /// $ | token, in the field (prd §1989): the same money in the other unit.
+    private func setDollars(_ on: Bool) {
+        guard on != inDollars else { return }
+        withAnimation(DS.Motion.standard) {
+            inDollars = on
+            if inDollars, let price, let units = Decimal(string: move.amount) {
+                var d = units * Decimal(price), r = Decimal()
+                NSDecimalRound(&r, &d, 2, .plain)
+                dollars = NSDecimalNumber(decimal: r).stringValue
+            }
+        }
+    }
+
+    /// The line under the field (prd §1989, was over the keys): the other
+    /// unit's figure and the most it can move, or what is wrong, in amber.
     private var amountLine: (words: String, ink: Color) {
         let typedFigure = inDollars ? "$\(dollars.isEmpty ? "0" : dollars)" : "\(move.amount.isEmpty ? "0" : move.amount) \(move.symbol)"
         let other: String? = {

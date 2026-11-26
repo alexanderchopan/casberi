@@ -51,8 +51,12 @@ grep -q 'if limiting { placeOrder(); return }' "$MOVE" \
 # The presets and the unit (prd §1683).
 grep -q 'static let whenPresets = \[5, 10, 25\]' "$MOVE" \
   || { echo "✗ the presets are no longer +5% +10% +25% (prd §1683)"; exit 1; }
-grep -q 'unitChip("%", on: priceInPercent' "$MOVE" && grep -q 'unitChip("\$", on: !priceInPercent' "$MOVE" \
-  || { echo "✗ the list no longer offers % and $ (prd §1683)"; exit 1; }
+# The unit is the price field's own % | $ (prd §1989, was the list's two chips).
+grep -q 'MoveUnitSwitch(symbol: "\$", dollars: priceInPercent, disabled: stage != nil, first: "%")' "$MOVE" \
+  || { echo "✗ the price field no longer offers % and $ (prd §1989)"; exit 1; }
+# Typed on Move's keys, never the iPhone's keyboard (prd §1989).
+grep -q 'MoveKeypad(text: priceDigits' "$MOVE" \
+  || { echo "✗ a custom price is no longer typed on Move's keys (prd §1989)"; exit 1; }
 
 # At rest the sentence says nothing of when (prd §1754): the ledger's When
 # row is the door, there before the tokens are picked (prd §1673d), and the

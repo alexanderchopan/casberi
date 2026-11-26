@@ -1460,8 +1460,12 @@ struct MoveRailgunSentence<Head: View>: View {
         }
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
                                 answered: !move.amount.isEmpty,
-                                value: move.amount.isEmpty ? (open == .amount ? "0" : nil)
-                                    : "\(move.amount) \(move.holding?.symbol ?? "")") { toggle(.amount) })
+                                value: move.amount.isEmpty ? (open == .amount ? "0 \(move.holding?.symbol ?? "")" : nil)
+                                    : "\(move.amount) \(move.holding?.symbol ?? "")",
+                                fieldNote: move.holding.flatMap { h in
+                                    MoveFieldNote.against(typed: move.amount, have: MoveFieldNote.plain(units: h.units, decimals: h.decimals),
+                                                          symbol: h.symbol)
+                                }) { toggle(.amount) })
         if move.toPrivate {
             out.append(MoveDeckStep(id: "note", word: String(localized: "Note"), on: open == .note,
                                     answered: !move.note.isEmpty, value: move.note.isEmpty ? nil : move.note) { toggle(.note) })

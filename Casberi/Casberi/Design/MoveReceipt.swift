@@ -292,18 +292,154 @@ struct MoveChip: View {
     var glyph: String?
     var trail: String?
     var disabled = false
+    /// Nothing typed yet: the field's figure is a grey "0" (prd §1989).
+    var placeholder = false
+    /// Inside the open field, before the figure: a price's + / − (prd §1989).
+    var lead: AnyView? = nil
+    /// Inside the open field, at its end: the unit it is typed in (prd §1989).
+    var accessory: AnyView? = nil
     let action: () -> Void
 
     var body: some View {
-        Button {
-            action()
-            DSHaptic.selection()
-        } label: {
-            MoveChipLabel(text: text, mark: mark, face: face, tone: tone, caret: caret, compact: compact, glyph: glyph, trail: trail)
+        if caret {
+            MoveField(text: text, tone: tone, placeholder: placeholder, lead: lead, accessory: accessory,
+                      disabled: disabled, action: action)
+        } else {
+            Button {
+                action()
+                DSHaptic.selection()
+            } label: {
+                MoveChipLabel(text: text, mark: mark, face: face, tone: tone, caret: caret, compact: compact, glyph: glyph, trail: trail)
+            }
+            .buttonStyle(PressSpring())
+            .disabled(disabled)
+            .accessibilityAddTraits(tone == .open || tone == .aztecOpen ? [.isSelected] : [])
         }
-        .buttonStyle(PressSpring())
-        .disabled(disabled)
-        .accessibilityAddTraits(tone == .open || tone == .aztecOpen ? [.isSelected] : [])
+    }
+}
+
+/// **THE OPEN CHIP IS THE FIELD (prd §1989, user picked A on the canvas
+/// "Move custom input").** A figure being typed stretches its chip across
+/// the line, as To's search does: the figure at `heading24`, its unit a step
+/// down and grey, a blinking caret, and the unit it is typed in at the
+/// field's end, beside the number it changes. Tapped, it closes.
+struct MoveField: View {
+    let text: String
+    var tone: MoveChipTone = .open
+    var placeholder = false
+    var lead: AnyView? = nil
+    var accessory: AnyView? = nil
+    var disabled = false
+    let action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if let lead { lead.padding(.trailing, DS.Space.s2) }
+            Button {
+                action()
+                DSHaptic.selection()
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text(verbatim: parts.figure)
+                        .dsText(.heading24)
+                        .monospacedDigit()
+                        .foregroundStyle(figureInk)
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .layoutPriority(1)
+                    MoveCaret(ink: tone == .warn ? DS.attentionInk : DS.pickInk, width: 2, height: 24)
+                        .alignmentGuide(.firstTextBaseline) { d in d[.bottom] - 5 }
+                        .padding(.leading, 2)
+                    if let unit = parts.unit {
+                        Text(verbatim: unit)
+                            .dsText(.heading17)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                            .padding(.leading, 6)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: MoveReceipt.chipHeight, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .disabled(disabled)
+            .accessibilityLabel(Text(verbatim: placeholder ? "0" : text))
+            .accessibilityHint(Text("Closes the keys"))
+            if let accessory { accessory }
+        }
+        .padding(.leading, lead == nil ? 16 : 5)
+        .padding(.trailing, accessory == nil ? 16 : 2)
+        .frame(maxWidth: .infinity, minHeight: MoveReceipt.chipHeight, maxHeight: MoveReceipt.chipHeight, alignment: .leading)
+        .background(tone == .aztecOpen ? DS.aztecInk.opacity(0.18) : DS.fillStrong, in: Capsule())
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isSelected)
+    }
+
+    /// "0.05 ETH" is a figure and its unit; "$50" and "12.5" are a figure.
+    private var parts: (figure: String, unit: String?) {
+        if placeholder {
+            if let space = text.lastIndex(of: " ") { return ("0", String(text[text.index(after: space)...])) }
+            return (text.hasPrefix("$") ? "$0" : "0", nil)
+        }
+        guard let space = text.lastIndex(of: " ") else { return (text, nil) }
+        let unit = String(text[text.index(after: space)...])
+        guard unit.contains(where: \.isLetter) || unit == "%" else { return (text, nil) }
+        return (String(text[..<space]), unit)
+    }
+
+    private var figureInk: Color {
+        if placeholder { return DS.textTertiary }
+        switch tone {
+        case .warn: return DS.attentionInk
+        case .aztec, .aztecOpen: return DS.aztecInk
+        default: return DS.textPrimary
+        }
+    }
+}
+
+/// **WHAT THE FIGURE MEANS, UNDER IT (prd §1989).** The line under an open
+/// field, with no word: what you have before a digit, the figure in the
+/// other unit while you type, the balance in amber once it is over (the foot
+/// says by how much). Where the field's figure starts.
+struct MoveFieldNote: View {
+    let text: String
+    var ink: Color = DS.textSecondary
+
+    var body: some View {
+        // It belongs to the field over it: half the line's height, and the
+        // gap between them taken back, so it reads as the field's caption.
+        Text(verbatim: text)
+            .dsText(.fact15)
+            .foregroundStyle(ink)
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .contentTransition(.numericText())
+            .padding(.leading, MoveReceipt.labelWidth + 16)
+            .frame(maxWidth: .infinity, minHeight: MoveReceipt.lineHeight / 2, alignment: .leading)
+            .padding(.top, -MoveReceipt.gap / 2)
+            .animation(DS.Motion.standard, value: text)
+            .transition(.opacity)
+    }
+
+    /// Base units as a plain figure, rounded down to `places`: "1.25".
+    static func plain(units: String?, decimals: Int, places: Int = 6) -> String? {
+        guard let units, var d = Decimal(string: units) else { return nil }
+        d /= pow(10, decimals)
+        var r = Decimal()
+        NSDecimalRound(&r, &d, places, .down)
+        return NSDecimalNumber(decimal: r).stringValue
+    }
+
+    /// What a plain typed figure says against a plain balance in one unit
+    /// ("0.25" of "1.5"): what you have, what is left of it, or amber once over.
+    static func against(typed: String, have: String?, symbol: String) -> (text: String, ink: Color)? {
+        guard let have, let h = Decimal(string: have) else { return nil }
+        let haveWords = "\(MoveSentence.grouped(have)) \(symbol)"
+        guard let t = Decimal(string: typed), t > 0 else { return (String(localized: "You have \(haveWords)"), DS.textSecondary) }
+        if t > h { return (String(localized: "You have \(haveWords)"), DS.attentionInk) }
+        return (String(localized: "of \(haveWords)"), DS.textSecondary)
     }
 }
 
@@ -375,11 +511,13 @@ struct MoveUnitSwitch: View {
     let symbol: String
     let dollars: Bool
     var disabled = false
+    /// The first segment's word: "$", or a price's "%" (prd §1989).
+    var first = "$"
     let pick: (Bool) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            segment("$", on: dollars) { pick(true) }
+            segment(first, on: dollars) { pick(true) }
             segment(symbol, on: !dollars) { pick(false) }
         }
         .padding(3)
@@ -406,7 +544,7 @@ struct MoveUnitSwitch: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(word == "$" ? Text("Dollars") : Text(verbatim: word))
+        .accessibilityLabel(word == "$" ? Text("Dollars") : word == "%" ? Text("Percent") : Text(verbatim: word))
         .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 }

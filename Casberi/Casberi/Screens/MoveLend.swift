@@ -330,7 +330,14 @@ struct MoveLendSentence<Head: View>: View {
             }
             MoveReceiptLine(label: String(localized: "Amount")) {
                 MoveChip(text: move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
-                         caret: open == .amount, disabled: !live) { toggle(.amount) }
+                         caret: open == .amount, disabled: !live, placeholder: move.units == nil) { toggle(.amount) }
+            }
+            // What the figure means, under the field (prd §1989).
+            if open == .amount, let m = market,
+               let n = MoveFieldNote.against(typed: typed.wrappedValue,
+                                             have: MoveFieldNote.plain(units: move.available(m), decimals: m.decimals),
+                                             symbol: m.symbol) {
+                MoveFieldNote(text: n.text, ink: n.ink)
             }
         }
     }

@@ -76,6 +76,10 @@ struct MoveDeckStep: Identifiable {
     /// An × at the line's end that takes it out: a payment Add another
     /// kept (prd §1952).
     var remove: (() -> Void)? = nil
+    /// The open amount's unit, at the field's end (prd §1989).
+    var accessory: AnyView? = nil
+    /// The line under the open amount: what the figure means (prd §1989).
+    var fieldNote: (text: String, ink: Color)? = nil
     let act: () -> Void
 }
 
@@ -90,9 +94,11 @@ struct MoveReceiptSteps: View {
             ForEach(steps) { s in
                 MoveReceiptLine(label: s.word) {
                     HStack(spacing: DS.Space.s2) {
-                        MoveChip(text: s.value ?? String(localized: "Choose"), mark: s.mark,
-                                 tone: tone(s), caret: s.on && s.id == "amount", glyph: s.glyph,
-                                 disabled: disabled, action: s.act)
+                        let typing = s.on && s.id == "amount"
+                        MoveChip(text: s.value ?? (typing ? "0" : String(localized: "Choose")), mark: s.mark,
+                                 tone: tone(s), caret: typing, glyph: s.glyph,
+                                 disabled: disabled, placeholder: typing && !s.answered,
+                                 accessory: typing ? s.accessory : nil, action: s.act)
                         if let remove = s.remove {
                             Spacer(minLength: 0)
                             Button {
@@ -109,6 +115,9 @@ struct MoveReceiptSteps: View {
                             .accessibilityLabel(Text("Remove"))
                         }
                     }
+                }
+                if s.on, s.id == "amount", let n = s.fieldNote {
+                    MoveFieldNote(text: n.text, ink: n.ink)
                 }
                 if let note = s.note {
                     MoveReceiptLine(label: "") {
@@ -831,13 +840,17 @@ struct MoveDeckGrid<Content: View>: View {
 /// The keys' caret in the sentence (prd §1904 item 3): the pick's ink, the
 /// figure's height, blinking unless Reduce Motion is on.
 struct MoveCaret: View {
+    var ink: Color = DS.pickInk
+    /// The sentence's, or the field's smaller one (prd §1989).
+    var width: CGFloat = 3
+    var height: CGFloat = 34
     @Environment(\.accessibilityReduceMotion) private var still
     @State private var on = true
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 1.5)
-            .fill(DS.pickInk)
-            .frame(width: 3, height: 34)
+        RoundedRectangle(cornerRadius: width / 2)
+            .fill(ink)
+            .frame(width: width, height: height)
             .opacity(still || on ? 1 : 0.15)
             .accessibilityHidden(true)
             .task {

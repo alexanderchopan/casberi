@@ -1441,7 +1441,12 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                                 aztec: move.mode == .send) { toggle(.token) })
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
                                 answered: !move.amount.isEmpty,
-                                value: move.amount.isEmpty ? (open == .amount ? "0" : nil) : "\(move.amount) \(move.symbol)") { toggle(.amount) })
+                                value: move.amount.isEmpty ? (open == .amount ? "0 \(move.symbol)" : nil) : "\(move.amount) \(move.symbol)",
+                                // Its own line, "$25.00 · you have $120.00" (§1700y), under the field (§1989).
+                                fieldNote: move.amountLine.map { line in
+                                    let over = (Decimal(string: move.units ?? "0") ?? 0) > (Decimal(string: move.available ?? "0") ?? 0)
+                                    return (text: line, ink: over ? DS.attentionInk : DS.textSecondary)
+                                }) { toggle(.amount) })
         return out
     }
 

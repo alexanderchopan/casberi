@@ -75497,3 +75497,17 @@ Confirming, proving and sending keep the receipt's lines (From · To · Token ·
 **Mac half (§1402).** The same rows on Catalyst.
 
 **Checks.** `wallet-row-words-selftest.sh` (every act's name, figure, sign and glyph; seven new mutations; the Aztec and approval title shapes guarded), `wallet-action-mark-selftest.sh` (the key, the three new marks, the stamp never returning them), `followed-since-selftest.sh`.
+
+## §1989 — Move's typed figures: the open chip is the field, its unit inside it, what it means under it, and a custom price on Move's keys (amends §1931 items 4 and 5, §1932 item 2, §1979 item 1's line over the keys, §1683's Custom row, §1673a's typed price) (user, 2026-11-26: "i'd like to imrpve the custom input experience for move actions. it needs to be designed, smooth, clear"; of the canvas "Move custom input" https://claude.ai/artifact/BZ6CexUvNqkbj1s7evqm4N, A · The chip is the field, B · The figure leads: "Build A") — BUILT
+
+**Ruling.**
+
+1. **The open chip is the field** (`MoveField`, drawn by `MoveChip(caret: true)`, so every Move amount takes it: Send, Swap, Earn, Privacy Pools, Railgun, Aztec, Tacit). Like To's search, it stretches across its line: the figure at `heading24`, its unit a step down and grey, a blinking caret (`MoveCaret`), a grey "0" before a digit. Tapped, it closes. Today's figure was the smallest number on the page, 17pt in a chip over 40pt keys.
+2. **The unit is inside the field, beside the number it changes:** `$ | ETH` moves off the Token line into the open Amount field (Send, Swap) and Privacy Pools' flip off the line over its keys. A dollar token still has none (§1932 item 4).
+3. **What the figure means, under it** (`MoveFieldNote`, half a line, taken back against the field): "You have $324.17 · 0.0842 ETH" before a digit; "≈ 0.0026 ETH · of $324.17" while typing; once over, "You have …" in amber, the foot still saying by how much. Every verb says it now; only the private sends did (§1979). Aztec keeps its own words ("$25.00 · you have $120.00", §1700y).
+4. **A custom price is typed on Move's keys.** When raises the keys, never a list and never the iPhone's keyboard: Now and the three presets are their top row (in % or in dollars, as the field types), typing a figure is the custom price, so the Custom row is gone. The field holds + / − before a percent (the punctuation keyboard's minus is gone) and `% | $` at its end. Under it: today's price before a digit; "$4,235 · swaps when ETH reaches it"; a price the market already meets says in amber "Not over today's $3,850, so it fills at once".
+5. **A limit with no price yet keeps its When line**, the price word reporting itself as a blank; before, the line vanished until a price was typed.
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Swap's amount empty and typed in dollars, When with +10%, −10% (amber), and in dollars; Send over its balance. **Not seen:** Earn, Privacy Pools, Railgun, Aztec and Tacit fields (built through the same chip), Dynamic Type, iPad.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

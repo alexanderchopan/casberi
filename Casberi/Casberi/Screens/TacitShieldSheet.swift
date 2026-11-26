@@ -95,7 +95,8 @@ struct TacitShieldSheet: View {
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
                                 value: "TAC · Ethereum", mark: MoveRowMark(token: "TAC")) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
-                                value: amount.isEmpty ? (open == .amount ? "0" : nil) : "\(amount) TAC") { toggle(.amount) })
+                                value: amount.isEmpty ? (open == .amount ? "0 TAC" : nil) : "\(amount) TAC",
+                                fieldNote: MoveFieldNote.against(typed: amount, have: Self.maxText(held), symbol: "TAC")) { toggle(.amount) })
         return out
     }
 

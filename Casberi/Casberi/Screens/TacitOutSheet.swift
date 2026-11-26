@@ -117,7 +117,8 @@ struct TacitOutSheet: View {
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
                                 value: payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain", mark: mark) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
-                                value: amount.isEmpty ? (open == .amount ? "0" : nil) : "\(amount) TAC") { toggle(.amount) })
+                                value: amount.isEmpty ? (open == .amount ? "0 TAC" : nil) : "\(amount) TAC",
+                                fieldNote: MoveFieldNote.against(typed: amount, have: TacitShieldSheet.maxText(most), symbol: "TAC")) { toggle(.amount) })
         return out
     }
 

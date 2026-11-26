@@ -3893,7 +3893,8 @@ struct MoveSentence: View {
         case .depositCoin: depositCoinList
         // One list for both (prd §1910).
         case .depositNetwork: depositCoinList
-        case .when: whenList
+        // When raises the keys (prd §1989), never a list.
+        case .when: EmptyView()
         case .until: untilList
         case .under: underList
         case .from: fromList
@@ -5552,18 +5553,6 @@ struct MoveSentence: View {
         return Self.money(Op.dollars(units ?? "0", decimals: h.token.decimals, price: price))
     }
 
-    /// A two-way unit chip: the When list's % · $ (the token's $ · ETH is
-    /// `MoveUnitSwitch` on its line, prd §1931).
-    private func unitChip(_ text: String, on: Bool, label: Text, act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Chip(text: text, selected: on)
-        }
-        .buttonStyle(PressSpring())
-        .disabled(stage != nil)
-        .accessibilityLabel(label)
-        .accessibilityAddTraits(on ? [.isSelected] : [])
-    }
-
     private func setDollars(_ dollars: Bool, _ h: Tokens.Held) {
         guard dollars != inDollars else { return }
         guard h.price != nil else {
@@ -6806,6 +6795,10 @@ struct MoveSentence: View {
                 Text(verbatim: ".").dsText(rung).foregroundStyle(DS.textPrimary)
             }
         }
+        // The price being typed is still a word with a line (prd §1989): with
+        // none, a limit without its price had no When line to type it on.
+        .preference(key: MoveSentenceBlanksKey.self,
+                    value: [MoveSentenceBlank(opens: .when, names: .when, text: priceFieldText, empty: limitPrice == nil)])
         .accessibilityLabel(Text(priceInPercent ? "Percent from today's price" : "Price in dollars"))
     }
 
@@ -6819,53 +6812,10 @@ struct MoveSentence: View {
     /// fall: the presets carry that sign.
     private var presetSign: Int { with?.token.symbol == pricedToken?.symbol ? 1 : -1 }
 
-    /// "when"'s choices, Move's list rows (prd §1683, amending §1673a): Now,
-    /// the three presets, Custom; a header with today's price and the unit
-    /// the presets read in, % or $ (the price is the same either way).
-    private var whenList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: DS.Space.s2) {
-                if let nowPrice, let t = pricedToken {
-                    Text("\(t.symbol) now").dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-                    Text(verbatim: Self.dollarWords(nowPrice)).dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit().lineLimit(1)
-                }
-                Spacer(minLength: DS.Space.s2)
-                HStack(spacing: DS.Space.s1) {
-                    unitChip("%", on: priceInPercent, label: Text("Prices in percent")) { setPriceUnit(percent: true) }
-                    unitChip("$", on: !priceInPercent, label: Text("Prices in dollars")) { setPriceUnit(percent: false) }
-                }
-            }
-            .frame(minHeight: DSFeed.headHeight)
-            let figure: String? = buy.flatMap { b in buyTotal.map { "≈ " + Self.short($0, decimals: b.token.decimals) + " " + b.token.symbol } }
-            listRow(String(localized: "Now"), trailing: figure, symbol: "bolt.fill", picked: when == .now) {
-                pick {
-                    whenPick = .now
-                    whenFor = limitPair
-                }
-            }
-            ForEach(Self.whenPresets, id: \.self) { pct in
-                let signed = pct * presetSign
-                let percentWords = (signed < 0 ? "−" : "+") + "\(pct)%"
-                let dollarWords = nowPrice.map { Self.dollarWords($0 * (1 + Double(signed) / 100)) }
-                listRow(priceInPercent ? percentWords : (dollarWords ?? percentWords),
-                        trailing: priceInPercent ? dollarWords : percentWords,
-                        symbol: "clock", picked: limiting && whenPreset == signed) { pickPreset(signed) }
-            }
-            listRow(String(localized: "Custom"), symbol: "pencil", picked: limiting && whenPreset == nil) {
-                pick {
-                    whenPick = .price
-                    whenFor = limitPair
-                    whenPreset = nil
-                    priceText = ""
-                }
-                focus = .price
-            }
-        }
-    }
-
-    /// A preset: the price it names, in the unit the list reads in.
-    private func pickPreset(_ signed: Int) {
-        pick {
+    /// A preset: the price it names, in the unit the price is typed in;
+    /// the keys stay up, so it can be typed over (prd §1989).
+    private func setPreset(_ signed: Int) {
+        withAnimation(DS.Motion.standard) {
             whenPick = .price
             whenFor = limitPair
             whenPreset = signed
@@ -7034,7 +6984,7 @@ struct MoveSentence: View {
         if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
         guard let draft = limitDraft else {
             say(limitPrice == nil ? String(localized: "Type a price first") : String(localized: "Pick an amount first"))
-            if limitPrice == nil { focus = .price }
+            if limitPrice == nil { withAnimation(DS.Motion.standard) { open = .when } }
             return
         }
         focus = nil
@@ -7294,6 +7244,9 @@ struct MoveSentence: View {
                 receiptLine(r)
                     .environment(\.moveHoldSlot, (n, holdLines))
                     .animation(DS.Motion.standard.delay(Double(n) * 0.09), value: receipt?.id)
+                if let note = fieldNote(for: r) {
+                    MoveFieldNote(text: note.text, ink: note.ink)
+                }
             }
             if let word = stageWord {
                 MoveStatusLine(word: word)
@@ -7338,22 +7291,28 @@ struct MoveSentence: View {
         MoveReceiptLine(label: which.map { $0 == .from ? Self.rowName(.from, verb: verb) : deckWord($0) } ?? r.name) {
             if on, let which, Self.searchesInChip(which) {
                 MoveChipField { chipField(for: which) }
+            } else if on, which == .when, receipt == nil {
+                // **A CUSTOM PRICE IS TYPED ON MOVE'S KEYS (prd §1989,
+                // retiring §1683's Custom row and the iPhone's keyboard):**
+                // the When chip is the field, + / − before a percent, % | $
+                // at its end.
+                MoveChip(text: priceFieldText, tone: limitMet ? .warn : .open, caret: true, disabled: stage != nil,
+                         placeholder: priceDigits.wrappedValue.isEmpty,
+                         lead: priceInPercent ? AnyView(priceSign) : nil,
+                         accessory: AnyView(MoveUnitSwitch(symbol: "$", dollars: priceInPercent, disabled: stage != nil, first: "%") {
+                             setPriceUnit(percent: $0)
+                         })) { lineTap(r) }
             } else {
+                let typing = on && which == .amount
                 MoveChip(text: chipText(r, on: on), mark: r.mark, face: chipFace(r),
                          tone: receipt != nil ? .done : chipTone(r, on: on),
-                         caret: on && which == .amount, disabled: stage != nil || receipt != nil) { lineTap(r) }
+                         caret: typing, disabled: stage != nil || receipt != nil,
+                         placeholder: typing && amount.isEmpty,
+                         accessory: typing ? amountSwitch : nil) { lineTap(r) }
                     // **TOO MUCH SAYS SO IN THE CHIP (prd §1933):** amber and
                     // one shake as it goes over; the foot says by how much.
                     .shake(on: which == .amount ? overShakes : 0)
                     .moveFlight(flightKey(r), in: flight)
-
-                if which == .with, flips, let with, stage == nil, !Self.isDollar(with.token) {
-                    // **$ | TOKEN ON THE TOKEN'S LINE (prd §1931), ONLY WHERE
-                    // IT CHANGES SOMETHING (prd §1932):** a dollar token's
-                    // figure is its dollars.
-                    Spacer(minLength: 0)
-                    MoveUnitSwitch(symbol: with.token.symbol, dollars: inDollars) { setDollars($0, with) }
-                }
             }
         }
     }
@@ -7376,6 +7335,144 @@ struct MoveSentence: View {
     private func chipText(_ r: LedgerRow, on: Bool) -> String {
         if r.opens == .amount, on { return amountChipText }
         return r.value == Self.unpicked ? String(localized: "Choose") : r.value
+    }
+
+    /// **$ | TOKEN IN THE FIELD, BESIDE THE NUMBER IT CHANGES (prd §1989,
+    /// moving §1931's switch off the Token line), only where it changes
+    /// something (§1932):** a dollar token's figure is its dollars.
+    private var amountSwitch: AnyView? {
+        guard flips, let with, stage == nil, !Self.isDollar(with.token) else { return nil }
+        return AnyView(MoveUnitSwitch(symbol: with.token.symbol, dollars: inDollars) { setDollars($0, with) })
+    }
+
+    /// The line under an open field (prd §1989): the Amount's, or When's.
+    private func fieldNote(for r: LedgerRow) -> (text: String, ink: Color)? {
+        guard receipt == nil, stage == nil else { return nil }
+        if r.opens == .amount, focus == .amount { return amountNote }
+        if r.opens == .when, deckOpen == .when { return priceNote }
+        return nil
+    }
+
+    /// **WHAT THE FIGURE MEANS (prd §1989).** What you have before a digit;
+    /// the figure in the other unit and what it is out of while you type;
+    /// once over, what you have, in amber (the foot says by how much).
+    private var amountNote: (text: String, ink: Color)? {
+        guard let with, verb == .send || verb == .swap else { return nil }
+        let token = Op.spoken(left(with), decimals: with.token.decimals) + " " + with.token.symbol
+        let dollars = with.price != nil ? with.usd.map { Self.money($0) } : nil
+        let both = dollars.map { Self.isDollar(with.token) ? token : $0 + " · " + token } ?? token
+        if amount.isEmpty || units == nil { return (String(localized: "You have \(both)"), DS.textSecondary) }
+        if over { return (String(localized: "You have \(both)"), DS.attentionInk) }
+        let other = Self.isDollar(with.token) ? nil : otherUnit(with).map { "≈ " + $0 }
+        let of = String(localized: "of \(amountInDollars ? (dollars ?? token) : token)")
+        return ([other, of].compactMap { $0 }.joined(separator: " · "), DS.textSecondary)
+    }
+
+    /// The price as typed, in its unit: "5 %", "$3,700"; "0 %" before a digit.
+    private var priceFieldText: String {
+        let digits = priceDigits.wrappedValue
+        if priceInPercent { return (digits.isEmpty ? "0" : digits) + " %" }
+        return digits.isEmpty ? "$0" : "$" + Self.grouped(digits)
+    }
+
+    /// The price's digits, its sign apart: the keys type only digits and a
+    /// point, and the sign is the field's own + / −.
+    private var priceDigits: Binding<String> {
+        Binding(get: { String(priceText.drop { $0 == "-" || $0 == "+" || $0 == "−" }) },
+                set: { new in
+                    let negative = priceInPercent && (priceText.hasPrefix("-") || (priceText.isEmpty && presetSign < 0))
+                    whenPick = .price
+                    whenFor = limitPair
+                    whenPreset = nil
+                    priceText = (negative ? "-" : "") + new
+                })
+    }
+
+    /// The price falls or rises from today's: a percent's sign, in the field.
+    private var priceNegative: Bool {
+        priceText.hasPrefix("-") || (priceDigits.wrappedValue.isEmpty && !priceText.hasPrefix("+") && presetSign < 0)
+    }
+
+    private var priceSign: some View {
+        Button {
+            let digits = priceDigits.wrappedValue
+            withAnimation(DS.Motion.standard) {
+                whenPick = .price
+                whenFor = limitPair
+                whenPreset = nil
+                priceText = (priceNegative ? "+" : "-") + digits
+                if priceText.hasPrefix("+"), !digits.isEmpty { priceText.removeFirst() }
+            }
+            DSHaptic.selection()
+        } label: {
+            Text(verbatim: priceNegative ? "−" : "+")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: 30, height: 30)
+                .background(DS.fillFaint, in: Circle())
+                .dsTapTarget()
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .disabled(stage != nil)
+        .accessibilityLabel(priceNegative ? Text("Below today's price") : Text("Above today's price"))
+        .accessibilityHint(Text("Changes it"))
+    }
+
+    /// A price the market already meets fills at once: selling the priced
+    /// token at or under today's, buying it at or over.
+    private var limitMet: Bool {
+        guard let nowPrice, let p = limitPrice.flatMap(YourAccountOrder.value) else { return false }
+        return presetSign > 0 ? p <= nowPrice : p >= nowPrice
+    }
+
+    /// Under the price: today's before a digit, the price in the other unit
+    /// and when it swaps, or in amber that it fills at once.
+    private var priceNote: (text: String, ink: Color)? {
+        guard let nowPrice, let t = pricedToken else { return nil }
+        let now = Self.dollarWords(nowPrice)
+        guard let p = limitPrice.flatMap(YourAccountOrder.value) else {
+            return (String(localized: "\(t.symbol) is \(now) now"), DS.textSecondary)
+        }
+        if limitMet {
+            return (presetSign > 0 ? String(localized: "Not over today's \(now), so it fills at once")
+                                   : String(localized: "Not under today's \(now), so it fills at once"), DS.attentionInk)
+        }
+        let price = priceInPercent ? Self.dollarWords(p)
+            : (YourAccountOrder.percentWords(p, from: nowPrice).map { String(localized: "\($0) from today") } ?? now)
+        return (String(localized: "\(price) · swaps when \(t.symbol) reaches it"), DS.textSecondary)
+    }
+
+    /// When's keys: Now and the presets as the top row, then the digits.
+    private var priceKeys: some View {
+        VStack(spacing: MoveReceipt.gap) {
+            Spacer(minLength: 0)
+            MoveQuickKeys(keys: whenQuickKeys, disabled: stage != nil)
+            MoveKeypad(text: priceDigits, presets: [],
+                       places: priceInPercent ? 2 : ((nowPrice ?? 1) < 1 ? 6 : 2),
+                       disabled: stage != nil,
+                       keyHeight: Self.bigKeyHeight, big: true)
+        }
+        .transition(.opacity)
+    }
+
+    /// Now, then the three presets in the unit the price is typed in.
+    private var whenQuickKeys: [MoveQuickKeys.Key] {
+        var keys = [MoveQuickKeys.Key(id: "now", word: String(localized: "Now"), on: when == .now) {
+            pick {
+                whenPick = .now
+                whenFor = limitPair
+                whenPreset = nil
+                priceText = ""
+            }
+        }]
+        for pct in Self.whenPresets {
+            let signed = pct * presetSign
+            let percentWords = (signed < 0 ? "−" : "+") + "\(pct)%"
+            let word = priceInPercent ? percentWords : (nowPrice.map { Self.dollarWords($0 * (1 + Double(signed) / 100)) } ?? percentWords)
+            keys.append(MoveQuickKeys.Key(id: "\(signed)", word: word, on: limiting && whenPreset == signed) { setPreset(signed) })
+        }
+        return keys
     }
 
     private func chipTone(_ r: LedgerRow, on: Bool) -> MoveChipTone {
@@ -7620,6 +7717,10 @@ struct MoveSentence: View {
             // The receipt's lines and its Status line say it (prd §1931).
             factsOver { EmptyView() }
                 .transition(.opacity)
+        } else if deckOpen == .when {
+            // **WHEN RAISES THE KEYS (prd §1989):** Now and the presets on
+            // their top row; typing a price is the custom one.
+            priceKeys
         } else if let o = deckOpen {
             // **NO SEARCH BAR OVER THE LIST (prd §1931):** the open chip is
             // the search; the list starts under the receipt.
