@@ -6510,6 +6510,34 @@
         }
       }
     },
+    "%@ from today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ desde hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日から%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 기준 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "较今天 %@"
+          }
+        }
+      }
+    },
     "%@ from your next launch" : {
       "localizations" : {
         "es" : {
@@ -17950,6 +17978,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%1$@ · 第 %2$lld 步，共 %3$lld 步"
+          }
+        }
+      }
+    },
+    "%@ · swaps when %@ reaches it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · se cambia cuando %@ llegue a ese precio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@がその価格になるとスワップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@이(가) 그 가격에 도달하면 스왑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · %@ 达到该价格时兑换"
           }
         }
       }
@@ -48759,6 +48815,34 @@
         }
       }
     },
+    "Above today's price" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima del precio de hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の価格より上"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 가격보다 높음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "高于今天的价格"
+          }
+        }
+      }
+    },
     "Accent" : {
       "localizations" : {
         "es" : {
@@ -65215,6 +65299,34 @@
         }
       }
     },
+    "Below today's price" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por debajo del precio de hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の価格より下"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘 가격보다 낮음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于今天的价格"
+          }
+        }
+      }
+    },
     "Bid %@" : {
       "localizations" : {
         "es" : {
@@ -74184,6 +74296,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关闭应用"
+          }
+        }
+      }
+    },
+    "Closes the keys" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cierra el teclado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "キーを閉じる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키패드 닫기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "收起键盘"
           }
         }
       }
@@ -137509,6 +137649,34 @@
         }
       }
     },
+    "Not over today's %@, so it fills at once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No supera el %@ de hoy, así que se ejecuta al momento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の%@を超えないため、すぐに約定します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘의 %@보다 높지 않아 바로 체결됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不高于今天的 %@，因此会立即成交"
+          }
+        }
+      }
+    },
     "Not paid" : {
       "localizations" : {
         "es" : {
@@ -138485,6 +138653,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未上市，无可关注"
+          }
+        }
+      }
+    },
+    "Not under today's %@, so it fills at once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No está por debajo del %@ de hoy, así que se ejecuta al momento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今日の%@を下回らないため、すぐに約定します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "오늘의 %@보다 낮지 않아 바로 체결됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不低于今天的 %@，因此会立即成交"
           }
         }
       }
@@ -157954,6 +158150,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "按资产列出，并附各自藏身其中的集合。"
+          }
+        }
+      }
+    },
+    "Percent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Porcentaje"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パーセント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "퍼센트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "百分比"
           }
         }
       }
@@ -208856,6 +209080,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在执行之前，所有者可以取消。"
+          }
+        }
+      }
+    },
+    "The payment may have gone. Check your Activity before buying again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede que el pago se haya enviado. Revisa tu actividad antes de volver a comprar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支払いが送信された可能性があります。もう一度購入する前にアクティビティを確認してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "결제가 이미 처리되었을 수 있습니다. 다시 구매하기 전에 활동을 확인하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "付款可能已发出。再次购买前请查看你的动态"
           }
         }
       }

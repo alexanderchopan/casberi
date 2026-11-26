@@ -614,7 +614,9 @@ grep -q 'case .created: String(localized: "Done")' "$WALK" && grep -q 'done(.clo
 grep -q 'if ending == .close, inTray { chrome.moveTray = false }' Casberi/Casberi/Screens/MoveScreen.swift \
   || { echo "✗ Done no longer closes Move (prd §1501)"; exit 1; }
 grep -q 'case created' "$SENTENCE" && { echo "✗ Move's Created arrival is back beside the walk's Created page (prd §1501, §723)"; exit 1; }
-grep -q 'Self.short($0, decimals: b.token.decimals)' "$SENTENCE" || { echo "✗ what you get draws the exact quote again, not its short form (prd §1479, §1794)"; exit 1; }
+# The When list's Now row and its figure went with §1989's custom price;
+# the short form stands in what you get's figure while it is read again.
+grep -q 'Self.short(total, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ what you get draws the exact quote again, not its short form (prd §1479, §1794, §1989)"; exit 1; }
 # WETH and ETH, one for one (prd §1559): asked before any pool, checked
 # before Face ID, said on the foot.
 grep -q 'if let w = YourAccountSwap.wrap(sell: sell, buy: buy, chainId: net.chainId) {' "Casberi/Casberi/Model/YourAccountChain+Swap.swift" \
@@ -634,7 +636,7 @@ grep -q 'return (exact ? "" : "≈ ") + Self.figure(back, decimals: token.decima
 # Since §1896 a single swap's quote is its To token's line ("You get ≈ 38.38"); the ledger keeps it for kept lines.
 grep -q 'rows.append(LedgerRow(id: "get", name: String(localized: "You get"), value: back, valueInk: DS.textPrimary))' "$SENTENCE" \
   && grep -q 'name: String(localized: "You get \\(back)")' "$SENTENCE" \
-  && grep -q 'rows.append(LedgerRow(id: "fee", name: String(localized: "Fee"), value: fee))' "$SENTENCE" \
+  && grep -q 'rows.append(LedgerRow(id: "fee", name: rideMoves ? String(localized: "Fee, before Round-ups") : String(localized: "Fee"), value: fee))' "$SENTENCE" \
   || { echo "✗ the swap dropped the exact quote from its To row or its ledger, or the whole fee (prd §1479, §1509, §1754, §1896)"; exit 1; }
 # One ledger, one size: its last row opens Details, and no figure is pushed in by a chevron (prd §1754).
 grep -q 'ledger(door: offersDetails)' "$SENTENCE" || { echo "✗ the ledger's last row no longer opens Details (prd §1754)"; exit 1; }

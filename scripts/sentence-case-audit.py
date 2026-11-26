@@ -223,6 +223,8 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Permit2, Uniswap's approval contract an Activity row names (prd §1987).
+    "Permit2",
     # Your Aztec account (prd §1700): AZTEC is the network's token, spelled as
     # its contract's symbol; Shield is human.tech's bridge, and Human Passport
     # its proof-of-personhood score (passport.xyz), both their own names.
