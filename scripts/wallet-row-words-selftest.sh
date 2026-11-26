@@ -5,8 +5,11 @@
 #
 # Every failure reads as a cut row or a wrong word:
 #   • "Swapped 0.0136 ETH → 32.55 USDC on…" — the sentence drawn as the name;
-#     the row reads "Swapped 0.0136 ETH for 32.55 USDC" (prd §1805, verb
-#     first as a send's row; §1555 had left it to the glyph), venue on the line
+#     the row reads "ETH → USDC", the verb left to the lead's glyph (prd §1987,
+#     amending §1805's verb first), amounts and venue on the line
+#   • "Received 5.214713 USDC privately on Aztec" — an own act's sentence as
+#     the name; the place is the name, the signed amount on the right, the
+#     glyph the verb (prd §1987); an approval names who holds the key
 #   • a swap's venue lost, or its verb gone from VoiceOver
 #   • "1 of 2 signatures collected on deposit e t h" — the count as the name,
 #     the act split on every capital
@@ -18,6 +21,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SRC="Casberi/Casberi/Model/WalletRowWords.swift"
+MARK="Casberi/Casberi/Model/WalletActionMark.swift"
 SEAM="Casberi/Casberi/Model/TitleSeam.swift"
 SAFE="Casberi/Casberi/Model/SafeBridge.swift"
 INGEST="Casberi/Casberi/Model/WalletIngest.swift"
@@ -37,32 +41,83 @@ func check(_ ok: Bool, _ what: String) {
 }
 typealias W = WalletRowWords.Words
 
-// A swap: the trade as it reads, "for" for the arrow, its verb left to the
-// glyph and kept for VoiceOver, the venue on the line (prd §1555).
+// A swap: the pair is the name, its verb left to the lead's two-way arrow
+// and kept for VoiceOver, the amounts and venue on the line (prd §1987).
 check(WalletRowWords.read("Swapped 0.0136 ETH → 32.55 USDC on Uniswap")
-      == W(name: "Swapped ETH for USDC", clause: "0.0136 ETH → 32.55 USDC on Uniswap",
-           spoken: "Swapped 0.0136 ETH for 32.55 USDC on Uniswap"),
+      == W(name: "ETH → USDC", clause: "0.0136 ETH → 32.55 USDC on Uniswap",
+           spoken: "Swapped 0.0136 ETH for 32.55 USDC on Uniswap", act: .exchanged),
       "an EVM swap names the pair, the amounts and venue on the line, the whole sentence spoken (prd §1863)")
 check(WalletRowWords.read("Swapped 1,240 USDC → 0.4962 ETH on Uniswap")?.clause == "1,240 USDC → 0.4962 ETH on Uniswap",
       "a grouped amount stays whole")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")
-      == W(name: "Swapped ETH for USDC", clause: "0.5 ETH → 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      == W(name: "ETH → USDC", clause: "0.5 ETH → 1,240 USDC", spoken: "Swapped 0.5 ETH for 1,240 USDC", act: .exchanged),
       "no venue: the amounts alone on the line")
 check(WalletRowWords.read("Swapped ETH → USDC")
-      == W(name: "Swapped ETH for USDC", spoken: "Swapped ETH for USDC"),
+      == W(name: "ETH → USDC", spoken: "Swapped ETH for USDC", act: .exchanged),
       "bare symbols, no line clause")
 check(WalletRowWords.read("Swapped 2 SOL → 310 USDC on Jupiter")
-      == W(name: "Swapped SOL for USDC", clause: "2 SOL → 310 USDC on Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter"),
+      == W(name: "SOL → USDC", clause: "2 SOL → 310 USDC on Jupiter", spoken: "Swapped 2 SOL for 310 USDC on Jupiter", act: .exchanged),
       "a Solana swap reads the same")
-check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "Swapped ETH for ÚЅDС",
+check(WalletRowWords.read("Swapped 0.05 ETH → 160 ÚЅDС")?.name == "ETH → ÚЅDС",
       "a look-alike symbol is drawn as it is; the row's flag picks the ink")
 check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC — on Base")
-      == W(name: "Swapped ETH for USDC", clause: "0.5 ETH → 1,240 USDC", qualifier: "on Base",
-           spoken: "Swapped 0.5 ETH for 1,240 USDC"),
+      == W(name: "ETH → USDC", clause: "0.5 ETH → 1,240 USDC", qualifier: "on Base",
+           spoken: "Swapped 0.5 ETH for 1,240 USDC", act: .exchanged),
       "a seam after a swap rides as the qualifier")
-check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.hasPrefix("Swapped ") == true
-      && WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.contains("→") == false,
-      "the drawn name leads with its verb and carries no arrow")
+check(WalletRowWords.read("Swapped 0.5 ETH → 1,240 USDC")?.name.hasPrefix("Swapped ") == false,
+      "the drawn name leaves its verb to the glyph (prd §1987)")
+
+// An own act (prd §1987): the verb is the lead's glyph, where or who the
+// name, the amount on the right, signed only when it left you or came in.
+check(WalletRowWords.read("Received 5.214713 USDC privately on Aztec")
+      == W(name: "Aztec", figure: "+5.214713 USDC", clause: "Privately",
+           spoken: "Received 5.214713 USDC privately on Aztec", act: .received, received: true),
+      "a private receive names where it landed, privately on the line, the amount in")
+check(WalletRowWords.read("Received 0.4 ETH from vitalik.eth")
+      == W(name: "vitalik.eth", figure: "+0.4 ETH", spoken: "Received 0.4 ETH from vitalik.eth",
+           act: .received, received: true),
+      "a receive names who it came from")
+check(WalletRowWords.read("Sent 1,200 USDC to payroll.eth")
+      == W(name: "payroll.eth", figure: "−1,200 USDC", spoken: "Sent 1,200 USDC to payroll.eth", act: .sent),
+      "a send names who it went to, the amount out in the primary ink")
+check(WalletRowWords.read("Deposited 0.5 ETH into Aave")
+      == W(name: "Aave", figure: "0.5 ETH", spoken: "Deposited 0.5 ETH into Aave", stayed: true, act: .deposited),
+      "a deposit names where it went, the amount unsigned: still yours")
+check(WalletRowWords.read("Deposited 132.23 AZTEC")
+      == W(name: "AZTEC", figure: "132.23 AZTEC", spoken: "Deposited 132.23 AZTEC", stayed: true, act: .deposited),
+      "no venue: the asset is the name")
+check(WalletRowWords.read("Withdrew 2 ETH from Morpho")
+      == W(name: "Morpho", figure: "2 ETH", spoken: "Withdrew 2 ETH from Morpho", stayed: true, act: .withdrew),
+      "a withdrawal names where it came back from")
+check(WalletRowWords.read("Burned 121.18 stAZTEC")
+      == W(name: "stAZTEC", figure: "−121.18 stAZTEC", spoken: "Burned 121.18 stAZTEC", act: .burned),
+      "a burn names the asset, the amount gone")
+check(WalletRowWords.read("Burned an NFT")
+      == W(name: "NFT", spoken: "Burned an NFT", act: .burned),
+      "a burn with no amount names the thing")
+check(WalletRowWords.read("Minted 40 OP on Optimism")?.figure == "+40 OP",
+      "a mint is money in")
+check(WalletRowWords.acted("Sent · £820.00 → €961.00 · Rent") == nil
+      && WalletRowWords.acted("Received · €50.00") == nil,
+      "a Wise stage is not an act: the move row keeps its words")
+check(WalletRowWords.acted("Received $12,000 (12,000 USDC) from Acme Labs")?.name == "Acme Labs",
+      "a dollar amount with no token amount still names who it came from")
+check(WalletRowWords.acted("Sent ETH") == nil, "nothing to name: the sentence stays")
+check(WalletRowWords.read("Approved …187a to spend 132.23 AZTEC")
+      == W(name: "…187a", figure: "132.23 AZTEC", spoken: "Approved …187a to spend 132.23 AZTEC",
+           stayed: true, act: .granted),
+      "an approval names who holds the key, what it opens on the right, unsigned")
+check(WalletRowWords.read("Approved Uniswap to spend unlimited USDC through Permit2")
+      == W(name: "Uniswap", figure: "Unlimited USDC", clause: "Through Permit2",
+           spoken: "Approved Uniswap to spend unlimited USDC through Permit2", stayed: true, act: .granted),
+      "an unlimited grant says so on the right, Permit2 on the line")
+check(WalletRowWords.read("Approved OpenSea to manage all Doodles")?.figure == "All Doodles",
+      "a collection grant opens all of it")
+check(WalletRowWords.read("Revoked 1inch's USDC approval")
+      == W(name: "1inch", clause: "USDC", spoken: "Revoked 1inch's USDC approval", act: .revoked),
+      "a revoke names who lost the key")
+check(WalletRowWords.read("Revoked OpenSea's access to all Doodles")?.clause == "All Doodles",
+      "a collection revoke")
 
 // A Wise row (prd §1863): the stage and amounts are the name, the reference
 // the line; "Needs attention · " stays for the Needs-you trim.
@@ -125,11 +180,11 @@ check(WalletRowWords.read("Spent with care") == nil, "no figure, no rewrite")
 check(WalletRowWords.read("Spent a lot with Visa") == nil, "a word is not a figure")
 
 // Anything else is nil: the row keeps its seam.
-for other in ["Received 0.4 ETH from vitalik.eth", "Deposited 0.5 ETH into Aave",
+for other in ["Staked 1 ETH with Lido", "Claimed 12 OP from Optimism", "Wrapped 0.5 ETH",
               "Executed after 2h — a transfer went through",
               "Replaced — a transfer never executed; a rival transaction went through at the same nonce instead",
               "Fully signed", "x of y signatures collected on z", "Swapped nothing",
-              "Approved Uniswap to manage all Doodles", "Rent — Needs attention · later"] {
+              "Approved Uniswap", "Revoked everything", "Rent — Needs attention · later"] {
     check(WalletRowWords.read(other) == nil, "left alone: \(other)")
 }
 
@@ -145,7 +200,7 @@ for (method, words) in methods {
 if failures > 0 { print("\(failures) failed"); exit(1) }
 SWIFT
 
-swiftc -O -o "$work/t" "$SRC" "$SEAM" "$work/main.swift" 2>"$work/err" || { cat "$work/err"; fail "wallet-row-words did not compile"; }
+swiftc -O -o "$work/t" "$SRC" "$MARK" "$SEAM" "$work/main.swift" 2>"$work/err" || { cat "$work/err"; fail "wallet-row-words did not compile"; }
 "$work/t" || fail "wallet-row-words cases failed"
 
 # Mutations: the harness must catch the shipped defects. Each builds a
@@ -159,7 +214,7 @@ s = open(src).read()
 assert s.count(a) == 1, f"mutation anchor not found once: {a!r}"
 open(dst, "w").write(s.replace(a, b))
 PY
-    swiftc -O -o "$work/m" "$work/mut.swift" "$SEAM" "$work/main.swift" 2>"$work/merr" || { cat "$work/merr"; fail "mutation '$what' did not compile"; }
+    swiftc -O -o "$work/m" "$work/mut.swift" "$MARK" "$SEAM" "$work/main.swift" 2>"$work/merr" || { cat "$work/merr"; fail "mutation '$what' did not compile"; }
     if "$work/m" >/dev/null 2>&1; then fail "mutation '$what' passed — the harness catches nothing there"; fi
 }
 mutate "split on every capital (the shipped 'deposit e t h')" \
@@ -168,15 +223,33 @@ mutate "split on every capital (the shipped 'deposit e t h')" \
 mutate "a swap keeps its sentence" \
     'swap(title) ?? safe(title)' \
     'safe(title)'
-mutate "the verb leaves the drawn name (prd §1805)" \
-    'let name = "Swapped \(out.symbol) for \(inn.symbol)"' \
-    'let name = "\(out.symbol) for \(inn.symbol)"'
+mutate "the verb back in the drawn name (prd §1987)" \
+    'let name = "\(out.symbol) → \(inn.symbol)"' \
+    'let name = "Swapped \(out.symbol) for \(inn.symbol)"'
 mutate "the amounts back in the name, the row cut again (prd §1863)" \
-    'let name = "Swapped \(out.symbol) for \(inn.symbol)"' \
-    'let name = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"'
+    'let name = "\(out.symbol) → \(inn.symbol)"' \
+    'let name = "\(Self.amounted(out)) → \(Self.amounted(inn))"'
+mutate "an own act keeps its sentence (prd §1987)" \
+    '?? wise(title) ?? acted(title)' \
+    '?? wise(title)'
+mutate "a deposit signed as though it left you" \
+    '("Deposited ", " into ", .deposited, "")' \
+    '("Deposited ", " into ", .deposited, "−")'
+mutate "a private receive loses where it landed" \
+    'v.act == .received ? " on " : nil' \
+    'nil'
+mutate "a send in the received green" \
+    'received: v.sign == "+")' \
+    'received: true)'
+mutate "a Wise stage read as an act (\"· £820 → €961\")" \
+    'what.amount != nil || place != nil || v.act == .minted || v.act == .burned' \
+    'true'
+mutate "an approval loses its key" \
+    'spoken: seam.name, stayed: true, act: .granted)' \
+    'spoken: seam.name, stayed: true, act: nil)'
 mutate "VoiceOver loses the amounts" \
-    'spoken: said + (on.map { " on \($0)" } ?? ""))' \
-    'spoken: name)'
+    'spoken: said + (on.map { " on \($0)" } ?? ""),' \
+    'spoken: name,'
 mutate "the amounts and venue leave the line" \
     '                     clause: clause,' \
     '                     clause: nil,'
@@ -233,7 +306,13 @@ grep -q 'if let figure = words?.figure {' "$ROWS" \
     || fail "BandRow no longer draws the words' figure on the right"
 grep -q '?? words?.spoken' "$ROWS" \
     || fail "BandRow no longer speaks a swap's verb (prd §1555)"
-grep -q 'foregroundStyle(words?.stayed == true || words?.spent == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)' "$ROWS" \
-    || fail "BandRow draws a move between your own accounts in the received green (prd §1550)"
+grep -q 'foregroundStyle(words?.received == true && !thing.hasSecurityFlag("symbol") ? DS.confirmInk : DS.textPrimary)' "$ROWS" \
+    || fail "BandRow draws money that did not come in in the received green (prd §1550, §1987)"
+grep -q 'moneyColumn ? WalletRowWords.read(titleText)?.act : nil' "$ROWS" && grep -q 'return .act(act)' "$ROWS" \
+    || fail "BandRow no longer leads an own act with its glyph — the verb left the name and nothing says it (prd §1987)"
+grep -qF 'Received \(figure) privately on Aztec' "Casberi/Casberi/Model/Aztec/AztecAccountStore.swift" \
+    || fail "AztecAccountStore no longer titles a private receive \"Received <figure> privately on Aztec\" — WalletRowWords.acted must follow it"
+grep -qF 'Approved \(spender) to spend \(amount) \(asset)\(via)' "Casberi/Casberi/Model/WalletApprovals.swift" \
+    || fail "WalletApprovals no longer titles a grant \"Approved <spender> to spend <amount> <asset>\" — WalletRowWords.granted must follow it"
 
 print "✓ wallet-row-words self-test passed"

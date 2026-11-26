@@ -43,11 +43,122 @@ enum WalletRowWords {
         /// The figure is what a card paid out: unsigned, in the primary ink,
         /// as a shop's row reads ("Blue Bottle · $6.50").
         var spent = false
+        /// What the row did, when its verb left the name for the lead's
+        /// glyph (prd §1987). nil: the verb, if any, is still in the name.
+        var act: WalletActionMark.Action? = nil
+        /// The figure is money that came in: signed, in the received green.
+        var received = false
     }
 
     /// The row's words off a stored title; nil for a title in another shape.
     static func read(_ title: String) -> Words? {
-        swap(title) ?? safe(title) ?? moved(title) ?? spent(title) ?? wise(title)
+        swap(title) ?? safe(title) ?? moved(title) ?? spent(title) ?? wise(title) ?? acted(title)
+    }
+
+    // MARK: - The verb is the glyph
+
+    /// **THE GLYPH SAYS THE VERB (prd §1987, user, 2026-11-26: "if we were
+    /// using an icon for in vs out we wouldn't need to see 'received' would
+    /// we? same for swap and all the other verbs").** "Received 5.214713 USDC
+    /// privately on Aztec" ran off its row. Every own act whose verb has a
+    /// glyph (`WalletActionMark.Action`) drops the verb: where it went or
+    /// who it was is the name, the amount stands on the right, signed only
+    /// when the money left you or came in. A verb with no glyph (Staked,
+    /// Claimed, Wrapped) keeps its sentence and its row reads nil here.
+    /// VoiceOver keeps the sentence (`spoken`).
+    static func acted(_ title: String) -> Words? {
+        let seam = TitleSeam.split(title)
+        let s = seam.name
+        if s.hasPrefix("Approved ") { return granted(seam) }
+        if s.hasPrefix("Revoked ") { return revoked(seam) }
+        // The verb, the clause that names where or who, and the sign.
+        let verbs: [(verb: String, joint: String?, act: WalletActionMark.Action, sign: String)] = [
+            ("Received ", " from ", .received, "+"), ("Sent ", " to ", .sent, "−"),
+            ("Deposited ", " into ", .deposited, ""), ("Withdrew ", " from ", .withdrew, ""),
+            ("Minted ", " on ", .minted, "+"), ("Burned ", nil, .burned, "−"),
+        ]
+        guard let v = verbs.first(where: { s.hasPrefix($0.verb) }) else { return nil }
+        var rest = String(s.dropFirst(v.verb.count))
+        // A private receive says where it landed with " on ": "Received 5 USDC
+        // privately on Aztec" (`AztecAccountStore`).
+        var place: String?
+        for joint in [v.joint, v.act == .received ? " on " : nil].compactMap({ $0 }) {
+            guard place == nil, let r = rest.range(of: joint, options: .backwards) else { continue }
+            let named = rest[r.upperBound...].trimmingCharacters(in: .whitespaces)
+            guard !named.isEmpty else { continue }
+            place = named
+            rest = String(rest[..<r.lowerBound])
+        }
+        var privately = false
+        if rest.hasSuffix(" privately") {
+            privately = true
+            rest = String(rest.dropLast(" privately".count))
+        }
+        let what = leg(rest)
+        // Something to name: an amount, a place, or a piece a mint or a burn
+        // made ("Burned an NFT"). A Wise stage ("Sent · £820 → €961 · Rent")
+        // has none of them and keeps its words.
+        guard let lead = what.symbol.first, lead.isLetter || lead.isNumber || lead.isCurrencySymbol,
+              what.amount != nil || place != nil || v.act == .minted || v.act == .burned
+        else { return nil }
+        // "Burned an NFT": no amount, the thing itself is the name.
+        let thing = what.amount == nil ? actName(what.symbol) : what.symbol
+        return Words(name: place ?? thing,
+                     figure: what.amount.map { "\(v.sign)\($0) \(what.symbol)" },
+                     clause: privately ? String(localized: "Privately") : nil,
+                     qualifier: seam.line,
+                     spoken: s,
+                     stayed: v.sign.isEmpty,
+                     act: v.act,
+                     received: v.sign == "+")
+    }
+
+    /// "Approved <spender> to spend <amount | unlimited> <asset>[ through
+    /// Permit2]" and "Approved <spender> to manage all <asset>"
+    /// (`WalletApprovals.title`, `SolanaActivity`): who holds the key is the
+    /// name, what it opens stands on the right, unsigned, because nothing
+    /// has moved yet; the key is Permissions' (prd §1987).
+    private static func granted(_ seam: (name: String, line: String?)) -> Words? {
+        var rest = String(seam.name.dropFirst("Approved ".count))
+        var via: String?
+        if rest.hasSuffix(" through Permit2") {
+            via = String(localized: "Through Permit2")
+            rest = String(rest.dropLast(" through Permit2".count))
+        }
+        for (joint, all) in [(" to spend ", false), (" to manage all ", true)] {
+            guard let r = rest.range(of: joint) else { continue }
+            let spender = rest[..<r.lowerBound].trimmingCharacters(in: .whitespaces)
+            let opens = rest[r.upperBound...].trimmingCharacters(in: .whitespaces)
+            guard !spender.isEmpty, !opens.isEmpty else { return nil }
+            var figure = all ? String(localized: "All \(opens)") : opens
+            if figure.hasPrefix("unlimited ") { figure = "Unlimited" + figure.dropFirst("unlimited".count) }
+            return Words(name: spender, figure: figure, clause: via, qualifier: seam.line,
+                         spoken: seam.name, stayed: true, act: .granted)
+        }
+        return nil
+    }
+
+    /// "Revoked <spender>'s <asset> approval[ through Permit2]" and "Revoked
+    /// <spender>'s access to all <asset>": who lost the key is the name, what
+    /// it no longer opens the line.
+    private static func revoked(_ seam: (name: String, line: String?)) -> Words? {
+        var rest = String(seam.name.dropFirst("Revoked ".count))
+        var via: String?
+        if rest.hasSuffix(" through Permit2") {
+            via = String(localized: "Through Permit2")
+            rest = String(rest.dropLast(" through Permit2".count))
+        }
+        guard let r = rest.range(of: "'s ") else { return nil }
+        let spender = rest[..<r.lowerBound].trimmingCharacters(in: .whitespaces)
+        var what = String(rest[r.upperBound...])
+        if what.hasPrefix("access to all ") {
+            what = String(localized: "All \(what.dropFirst("access to all ".count))")
+        } else if what.hasSuffix(" approval") {
+            what = String(what.dropLast(" approval".count))
+        } else { return nil }
+        guard !spender.isEmpty, !what.isEmpty else { return nil }
+        return Words(name: spender, clause: [what, via].compactMap { $0 }.joined(separator: " · "),
+                     qualifier: seam.line, spoken: seam.name, act: .revoked)
     }
 
     // MARK: - Card spending
@@ -140,7 +251,10 @@ enum WalletRowWords {
         // §1805's whole sentence):** "Swapped 1,240 USDC for 0.4962 E…" ran
         // off the row. The name keeps the verb and says what for what
         // ("Swapped USDC for ETH"); the amounts and the venue are the line.
-        let name = "Swapped \(out.symbol) for \(inn.symbol)"
+        // **THE GLYPH SAYS "SWAPPED" AGAIN (prd §1987, amending §1805 item
+        // 8):** the pair is the name ("ETH → TAC"), the lead's two-way arrow
+        // the verb; `FollowedSince`, a line with no glyph, keeps the word.
+        let name = "\(out.symbol) → \(inn.symbol)"
         let said = "Swapped \(Self.amounted(out)) for \(Self.amounted(inn))"
         let on = venue.flatMap { $0.isEmpty ? nil : $0 }
         let amounts = out.amount == nil && inn.amount == nil
@@ -149,7 +263,8 @@ enum WalletRowWords {
         return Words(name: name,
                      clause: clause,
                      qualifier: seam.line,
-                     spoken: said + (on.map { " on \($0)" } ?? ""))
+                     spoken: said + (on.map { " on \($0)" } ?? ""),
+                     act: .exchanged)
     }
 
     // MARK: - Wise

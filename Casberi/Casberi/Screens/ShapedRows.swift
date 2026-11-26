@@ -500,6 +500,12 @@ struct BandRow: View {
         return cp
     }
 
+    /// What the row did, when its words dropped the verb for the glyph
+    /// (`WalletRowWords`, prd §1987); the money column's rows only.
+    private var wordsAct: WalletActionMark.Action? {
+        moneyColumn ? WalletRowWords.read(titleText)?.act : nil
+    }
+
     /// The watched wallet a Wallet row wears the face of — the twin of its
     /// label, shown only when more than one wallet is watched.
     private var walletFaceAddress: String? {
@@ -613,6 +619,8 @@ struct BandRow: View {
         /// A move a protocol carried: what it did, the protocol on the
         /// corner (`ProtocolMark`, prd §1685).
         case carried(String)
+        /// An own act whose verb left the name: its glyph (prd §1987).
+        case act(WalletActionMark.Action)
         case publisher(String)
         case thumb(String, perishable: Bool, circular: Bool)
         case screenshot
@@ -672,7 +680,15 @@ struct BandRow: View {
             return .brand(mark)
         } else if let mark = carrier {
             return .carried(mark)
-        } else if let addr = counterpartyFaceAddress ?? walletFaceAddress {
+        } else if let addr = counterpartyFaceAddress {
+            return .wallet(addr)
+        } else if let act = wordsAct {
+            // **THE LEAD SAYS WHAT YOU DID (prd §1987).** The Wallet's mark on
+            // the Wallet's own page said nothing; the act's glyph says the
+            // verb the name gave up. Someone on the other side keeps their
+            // face (above); your own wallet's face yields, the line names it.
+            return .act(act)
+        } else if let addr = walletFaceAddress {
             return .wallet(addr)
         } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
             return .initial(sender)
@@ -859,14 +875,14 @@ struct BandRow: View {
                 // The words' figure leads (prd §1810): a card's row would
                 // draw the transfer's own beside the sentence's.
                 if let figure = words?.figure {
-                    // A swap's incoming leg (prd §1414), in the received ink
-                    // unless the symbol is flagged a look-alike; a move
-                    // between your own accounts in the primary ink (§1550),
-                    // and what a card paid out (§1810).
+                    // Money that came in (prd §1987) in the received ink
+                    // unless the symbol is flagged a look-alike; everything
+                    // else in the primary ink: what left you, a move between
+                    // your own accounts (§1550), a card's spend (§1810).
                     Text(figure)
                         .dsText(.fact15).fontWeight(.semibold)
                         .monospacedDigit()
-                        .foregroundStyle(words?.stayed == true || words?.spent == true || thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
+                        .foregroundStyle(words?.received == true && !thing.hasSecurityFlag("symbol") ? DS.confirmInk : DS.textPrimary)
                         .lineLimit(1)
                 } else if let money = moneyAmount {
                     Text(money.text)
@@ -996,11 +1012,15 @@ struct BandRow: View {
         case .brand(let mark):
             BridgeIcon(name: mark, size: DS.Face.rowCircle, circular: true)
         case .carried(let mark):
-            // The row's own flag outranks the badge on that corner.
-            let act = WalletActionMark.action(direction: thing.transferDirection,
-                                              sourceRef: thing.sourceRef)
+            // The row's own flag outranks the badge on that corner. Its
+            // words name a deposit or a withdrawal the stamp cannot (§1987).
+            let act = wordsAct ?? WalletActionMark.action(direction: thing.transferDirection,
+                                                          sourceRef: thing.sourceRef)
             WalletMarkView(mark: .kind(thing.kind, symbol: act.symbol, tint: Color(hex: act.hex),
                                        badge: thing.isFlagged ? nil : mark),
+                           size: DS.Face.rowCircle)
+        case .act(let act):
+            WalletMarkView(mark: .kind(thing.kind, symbol: act.symbol, tint: Color(hex: act.hex)),
                            size: DS.Face.rowCircle)
         case .publisher(let publisher):
             RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)

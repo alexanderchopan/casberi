@@ -16,6 +16,7 @@ cd "$(dirname "$0")/.."
 
 SRC="Casberi/Casberi/Model/FollowedSince.swift"
 WORDS="Casberi/Casberi/Model/WalletRowWords.swift"
+MARK="Casberi/Casberi/Model/WalletActionMark.swift"
 SEAM="Casberi/Casberi/Model/TitleSeam.swift"
 NEWS="Casberi/Casberi/Model/FollowedNews.swift"
 DERIV="Casberi/Casberi/Screens/FeedScreen+Derivations.swift"
@@ -84,7 +85,7 @@ check(FollowedSince.change(s, since: t0.addingTimeInterval(200)) == nil, "nothin
 if failures > 0 { print("\(failures) failed"); exit(1) }
 SWIFT
 
-swiftc -O -o "$work/t" "$SRC" "$WORDS" "$SEAM" "$work/main.swift" 2>"$work/err" || { cat "$work/err"; fail "followed-since did not compile"; }
+swiftc -O -o "$work/t" "$SRC" "$WORDS" "$MARK" "$SEAM" "$work/main.swift" 2>"$work/err" || { cat "$work/err"; fail "followed-since did not compile"; }
 "$work/t" || fail "followed-since cases failed"
 
 # A harness that cannot fail certifies nothing: each mutation breaks one rule
@@ -98,7 +99,7 @@ s = open(src).read()
 assert s.count(a) == 1, f"mutation anchor not found once: {a!r}"
 open(out, "w").write(s.replace(a, b))
 PY
-    swiftc -O -o "$work/m" "$work/mut.swift" "$WORDS" "$SEAM" "$work/main.swift" 2>"$work/merr" || { cat "$work/merr"; fail "mutation '$what' did not compile"; }
+    swiftc -O -o "$work/m" "$work/mut.swift" "$WORDS" "$MARK" "$SEAM" "$work/main.swift" 2>"$work/merr" || { cat "$work/merr"; fail "mutation '$what' did not compile"; }
     if "$work/m" >/dev/null 2>&1; then fail "mutation '$what' passed — the harness catches nothing there"; fi
 }
 mutate "the amount stays in the phrase" 'words.remove(at: 1)' '_ = words'

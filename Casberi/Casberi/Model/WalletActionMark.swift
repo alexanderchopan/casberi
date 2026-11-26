@@ -108,6 +108,11 @@ enum WalletActionMark {
     /// that arrow says.
     enum Action: String, CaseIterable {
         case sent, received, exchanged, minted, burned, granted
+        /// Read off the row's own words, never a stamped field (prd §1987):
+        /// `WalletRowWords.acted` names them when it drops the verb, so the
+        /// glyph is what says it. `action(direction:sourceRef:)` never
+        /// returns these; a row whose words do not parse keeps `exchanged`.
+        case deposited, withdrew, revoked
 
         /// The SF Symbol. `exchanged` returns `ThingKind.transaction`'s own,
         /// spelled here rather than left to the caller so this file states the
@@ -121,7 +126,16 @@ enum WalletActionMark {
             // `sparkles` is already this app's word for that (`ThingKind.skill`).
             case .minted:    return "sparkles"
             case .burned:    return "flame"
-            case .granted:   return "hand.raised"
+            // **AN APPROVAL WEARS PERMISSIONS' KEY (prd §1987, user: "what do
+            // we use for approvals in Risks").** It wore a raised hand; the
+            // grant is the key Permissions wears (`ScopeTileGlyph.permissions`),
+            // so the row and the page that lists it say one thing.
+            case .granted:   return "key"
+            // Money put in and taken back from a protocol: it stays yours.
+            case .deposited: return "tray.and.arrow.down"
+            case .withdrew:  return "tray.and.arrow.up"
+            // The Revoked card's own mark (`FeedScreen+WalletSecurity`).
+            case .revoked:   return "checkmark.shield"
             }
         }
 
@@ -151,6 +165,11 @@ enum WalletActionMark {
             // the send's red, which is why the grant is the one mark whose
             // SHAPE carries it — a raised hand is unmistakable at any size.
             case .granted:   return "#ff375f"
+            // Not named by the 2026-08-29 ruling, so stated (prd §1987):
+            // system indigo, teal and mint, each apart from the six above.
+            case .deposited: return "#5e5ce6"
+            case .withdrew:  return "#40c8e0"
+            case .revoked:   return "#63e6e2"
             }
         }
     }

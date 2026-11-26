@@ -1600,9 +1600,15 @@ extension FeedScreen {
         // $12.40 with MetaMask Card" beside "−12.40 USDC": the amount twice and
         // the card cut off. Its who is the card; the dollars stand on the
         // right; the token's quantity moves to the line under the name.
+        // A move named only in its title ("Received 12.40 USDC", "Received
+        // $12,000 (12,000 USDC) from Acme Labs") drops its verb as every
+        // own act does (prd §1987): the sign on the right says which way.
+        let acted = thing.transferCounterparty?.isEmpty == false || thing.counterpartyAddress != nil
+            || WalletCards.isSpend(thing) ? nil : WalletRowWords.acted(thing.title)
         let named = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
             ?? thing.counterpartyAddress.map(WalletStore.shortAddress)
-            ?? (WalletCards.isSpend(thing) ? BridgeCatalog.seatName(forSource: thing.source) : thing.title)
+            ?? (WalletCards.isSpend(thing) ? BridgeCatalog.seatName(forSource: thing.source)
+                : acted?.name ?? thing.title)
         // Under "Needs you" a stuck Wise transfer leads with its amounts, not
         // the heading's own words (prd §1378).
         let who = underNeedsYou ? NeedsYouWords.name(named) : named
@@ -1721,8 +1727,8 @@ extension FeedScreen {
         .dsHover()
         .modifier(rowEntrance(index))
         // Read as drawn for a folded app's row, never "Sent to £200".
-        .accessibilityLabel(Text(verbatim: (folded
-            ? [who, line, trailing]
+        .accessibilityLabel(Text(verbatim: (folded || acted != nil
+            ? [acted?.spoken ?? who, line, trailing]
             : ["\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who)", trailing])
             .filter { !$0.isEmpty }.joined(separator: ", ")))
         .walletListRow()

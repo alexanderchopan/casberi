@@ -179,7 +179,7 @@ expect("a burn destroys it, in orange",
 
 print("the grant, which is not an exchange:")
 expect("an approval is read off its namespace",
-       mark(nil, "wallet:approval:eth-mainnet:0xabc:3"), "granted hand.raised #ff375f")
+       mark(nil, "wallet:approval:eth-mainnet:0xabc:3"), "granted key #ff375f")
 expect("a Permit2 grant is the same event",
        act(nil, "wallet:permit2:base-mainnet:0xdef:1").rawValue, "granted")
 // The namespace is the stronger fact: it says what the row IS.
@@ -188,6 +188,18 @@ expect("the namespace beats a direction that arrives beside it",
 // A PREFIX, never a contains — a ref that merely mentions the word is not one.
 expect("the namespace must LEAD the ref",
        act(nil, "wallet:eth-mainnet:wallet:approval:0xabc").rawValue, "exchanged")
+
+print("the acts only a row's words name (prd §1987), never a stamp:")
+expect("a deposit goes into the tray", "\(WalletActionMark.Action.deposited.symbol) \(WalletActionMark.Action.deposited.hex)",
+       "tray.and.arrow.down #5e5ce6")
+expect("a withdrawal comes out of it", WalletActionMark.Action.withdrew.symbol, "tray.and.arrow.up")
+expect("a revoke wears the Revoked card's shield", WalletActionMark.Action.revoked.symbol, "checkmark.shield")
+// No stamped fact separates these, so the stamp path never returns them.
+for d in [nil, "sent", "received", "minted", "burned", "deposited", "withdrew", "revoked"] {
+    let a = act(d, "wallet:eth-mainnet:0x1:2")
+    expect("the stamp never says \(a.rawValue) for \(d ?? "nil")",
+           [.deposited, .withdrew, .revoked].contains(a) ? "yes" : "no", "no")
+}
 
 print("everything it deliberately refuses to guess, in purple:")
 // Each of these is genuinely two-legged, which is what ⇄ says. None of them is

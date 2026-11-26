@@ -33,7 +33,11 @@ enum FollowedSince {
     /// One move in a few words, its amount left to its row: "Swapped ETH for
     /// USDC", "Deposited USDC into Morpho", "Received ETH from Mom".
     static func phrase(_ title: String) -> String? {
-        if let swap = WalletRowWords.swap(title) { return swap.name }
+        // The row's name left its verb to the glyph (prd §1987); a line has
+        // no glyph, so the phrase says it: "Swapped ETH for USDC".
+        if let swap = WalletRowWords.swap(title) {
+            return "Swapped " + swap.name.replacingOccurrences(of: " → ", with: " for ")
+        }
         let name = TitleSeam.split(title).name.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return nil }
         // "Moved 2 ETH · Main → Cold": two of their accounts, said as a move.
