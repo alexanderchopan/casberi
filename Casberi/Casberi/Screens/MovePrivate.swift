@@ -676,6 +676,7 @@ struct MovePrivateSentence<Head: View>: View {
                 }
             }
             .buttonStyle(RowPress())
+            .dsTapTarget()
         }
         if notAnAddress {
             Text("That isn't an address or a name").dsText(.body17).foregroundStyle(DS.attentionInk)
