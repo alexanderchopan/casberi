@@ -2587,7 +2587,7 @@ struct MoveSentence: View {
             // place it would have (user, 2026-11-21); its copy says the demo
             // acts later.
             let poolsRow = PrivateMove.freshAvailable || DemoMode.isActive
-            // Tacit's addresses, from its last reading (prd §1978).
+            // Tacit's addresses, from its last reading (prd §1981).
             let tacit = TacitAccount.shared.reading
             if poolsRow || RailgunPocket.available || aztec != nil || tacit != nil {
                 receiveGroup(String(localized: "Private"))

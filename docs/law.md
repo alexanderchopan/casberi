@@ -283,7 +283,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §19 — Thing sheet
 - §20 — Tags
 - §21 — Projects
-- §22 — Marks (amended by §1978)
+- §22 — Marks (amended by §1981)
 - §23 — Generative UI
 - §24 — Composer
 - §25 — Apps spec (amended by §1973)
@@ -2419,7 +2419,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1968 — A watched token's page swaps for it
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 - §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
-- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973, §1976, §1977, §1978)
+- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973, §1976, §1977, §1981)
 - §1972 — Earn's From list names the rate and the place, and the network moves to the badge
 - §1973 — How money is listed: one row is one token in one place, Holdings is Home's cut with the tokens under it (Public by ne…
 - §1974 — Apps is Recent, the Wallet, then the Feed A–Z; Holdings ends in Add to Wallet; Testnets and Logos are retired (supers… (amended by §1974a)
@@ -2428,9 +2428,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1976 — Send's To lists every private place that takes the token, Tacit among them, and the Safes you sign for stand under th…
 - §1977 — Back to public: private TAC on the Tacit chain goes back to your Casberi account or your co-signer, from Move's From
 - §1978 — A private send's To lists your public account and your addresses and takes a name; a token held in two places shows i…
-- §1978 — Tacit's page is deleted: its money stands in Holdings › Private, its verbs in Move, its addresses on Receive, and Rea…
 - §1979 — A private send takes any amount, in the token or in dollars, and keeps its lines while it goes (amended by §1980)
 - §1980 — Railgun's and Aztec's sends keep their lines while they go, as public Send and Privacy Pools do
+- §1981 — Tacit's page is deleted: its money stands in Holdings › Private, its verbs in Move, its addresses on Receive, and Rea…
 
 ## Dead rulings → what replaced them (generated)
 

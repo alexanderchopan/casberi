@@ -5,7 +5,7 @@ import SwiftUI
 /// Adding takes one tap and pastes nothing. It opens an account you already
 /// have on Tacit when your co-signer's wallet signs for it; its money then
 /// stands in Holdings › Private, its verbs in Move and its addresses on
-/// Receive (prd §1978: its own Wallet page is deleted). The key is never
+/// Receive (prd §1981: its own Wallet page is deleted). The key is never
 /// kept, so a fresh reading is your co-signer signing again: Read again.
 struct TacitScreen: View {
     @Environment(BridgeStore.self) private var store

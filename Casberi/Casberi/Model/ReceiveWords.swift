@@ -112,7 +112,7 @@ enum ReceiveWords {
         case .pools: "Privacy Pools"
         case .railgun: "Railgun"
         case .aztec: "Aztec"
-        // Tacit's three addresses (prd §1978, from its deleted page).
+        // Tacit's three addresses (prd §1981, from its deleted page).
         case .tacit: "Tacit"
         case .tacitETH: String(localized: "Tacit, private ETH")
         case .tacitDeposit: String(localized: "Tacit, from an exchange")

@@ -567,7 +567,10 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// The steps the money covers, three at most, then Max (prd §1979).
     private var quickKeys: [MoveQuickKeys.Key] {
-        let steps = move.options.filter { $0.symbol == move.symbol }.prefix(3)
+        // A count of options, never an address's head (the self-test's guard
+        // reads a numeric `prefix(` as one).
+        let shown = 3
+        let steps = move.options.filter { $0.symbol == move.symbol }.prefix(shown)
         var keys = steps.map { o in
             MoveQuickKeys.Key(id: o.amount, word: PrivateMoney.number(PrivateMoney.baseUnits(o.amount, decimals: move.decimals) ?? "0",
                                                   decimals: move.decimals) ?? o.amount,

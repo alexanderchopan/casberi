@@ -79,7 +79,7 @@ check(WalletSection.spending.label == "Spending", "the tile reads Spending — H
 // row, and a watched token is its page (prd §1632).
 // A wallet you follow is a page behind Following (prd §1969).
 let watchlistPages: [WalletSection] = [.watchlist, .watchedToken, .followedWallet]
-// No app has a page of its own: Tacit's went to Holdings, Move and Receive (prd §1978).
+// No app has a page of its own: Tacit's went to Holdings, Move and Receive (prd §1981).
 let appPages: [WalletSection] = []
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
     + WalletSection.yourAccountDoors + watchlistPages + appPages

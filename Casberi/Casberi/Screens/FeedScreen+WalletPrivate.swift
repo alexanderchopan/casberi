@@ -92,7 +92,7 @@ extension FeedScreen {
 
     /// Where a private place's header goes: a send to Privacy Pools or
     /// Aztec; nil for a place with no such door (Tacit's page is deleted,
-    /// prd §1978).
+    /// prd §1981).
     func walletPlaceDoor(_ id: String) -> (() -> Void)? {
         switch id {
         case Self.homePoolsPlace where PrivateMove.available: {
@@ -291,7 +291,7 @@ extension FeedScreen {
                                 move: tacit.usd == nil ? nil : walletHoldingMoves[HoldingMoves.key("ETH")])
             }
             // A deposit handed and not yet taken: amber, as Railgun's and
-            // Privacy Pools' waiting rows are (was on Tacit's page, §1978).
+            // Privacy Pools' waiting rows are (was on Tacit's page, §1981).
             ForEach(TacitShield.shared.arriving) { a in
                 walletTacitLine("TAC", held: WalletValue.held(a.tac), fact: String(localized: "Arriving"),
                                 figure: tacit.tacPrice.map { mask ?? WalletValue.exactMoney(a.tac * $0) }, move: nil,
@@ -306,7 +306,7 @@ extension FeedScreen {
     }
 
     /// A Tacit row states what is held; its verbs are Move's (Make private,
-    /// back to public, prd §1976, §1977), so it opens nothing (§1978).
+    /// back to public, prd §1976, §1977), so it opens nothing (§1981).
     private func walletTacitLine(_ symbol: String, held: String, fact: String, figure: String?, move: Double?,
                                  factInk: Color = DS.textSecondary) -> some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {

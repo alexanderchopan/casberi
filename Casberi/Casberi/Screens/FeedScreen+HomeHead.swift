@@ -520,7 +520,7 @@ extension FeedScreen {
         let empty = (place.usd ?? 0) < 0.01
         return Button {
             DSHaptic.selection()
-            // Every place's money is in Holdings, Tacit's too (prd §1978).
+            // Every place's money is in Holdings, Tacit's too (prd §1981).
             homeOpen(.holdings)
         } label: {
             // **NO MARK (prd §1929, user: "i don't think we can show these
