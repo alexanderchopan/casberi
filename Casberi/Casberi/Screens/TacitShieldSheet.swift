@@ -14,6 +14,10 @@ struct TacitShieldSheet: View {
     @State private var amount = ""
     @State private var source: TacitShield.Source?
     @FocusState private var typing: Bool
+    /// Drawn inside Move, over Send's sentence (prd §1976), not as a sheet:
+    /// its foot leads with Move's way back, and Done goes back to Move.
+    var inMove = false
+    var leave: (() -> Void)? = nil
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
     private var walletHeld: Double { account.reading?.publicTAC ?? 0 }
@@ -38,9 +42,7 @@ struct TacitShieldSheet: View {
         .padding(.top, DS.Space.s6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsPageBackground()
-        .presentationDetents([.large])
-        // A full-height page on the Mac too (mac-sheet-audit.py).
-        .dsPageSheet()
+        .modifier(TacitSheetChrome(asSheet: !inMove))
         .task(id: amount) {
             // A quote follows the amount, a beat after the last keystroke.
             try? await Task.sleep(for: .milliseconds(500))
@@ -233,6 +235,8 @@ struct TacitShieldSheet: View {
 
     @ViewBuilder private var foot: some View {
         HStack {
+            // Move's way back, where Move mounted this (none as a sheet).
+            MoveBackCard()
             Spacer(minLength: 0)
             switch shield.step {
             case .ready:
@@ -243,7 +247,7 @@ struct TacitShieldSheet: View {
                     Task { await shield.send(coSigner: coSigner, from: from) }
                 }
             case .arriving, .landed:
-                MoveFootWord(word: String(localized: "Done")) { dismiss() }
+                MoveFootWord(word: String(localized: "Done")) { if let leave { leave() } else { dismiss() } }
             case .failed:
                 MoveFootWord(word: String(localized: "Try again")) {
                     shield.reset()
@@ -292,5 +296,18 @@ struct TacitShieldSheet: View {
         default: break
         }
         return String(localized: "Reading the fee")
+    }
+}
+
+/// A full-height page as a sheet, on the Mac too (mac-sheet-audit.py); none
+/// inside Move, which is already the page.
+private struct TacitSheetChrome: ViewModifier {
+    let asSheet: Bool
+    func body(content: Content) -> some View {
+        if asSheet {
+            content.presentationDetents([.large]).dsPageSheet()
+        } else {
+            content
+        }
     }
 }

@@ -80,6 +80,7 @@ extension FeedScreen {
                 let followed = walletFollowingSlots
                 MoveSecurity(account: account, openGoal: { feedSheet = .savingsGoal },
                              publicLines: AnyView(WalletUnsignedSection(part: .lines, onOpenSafe: walletOpenSafe,
+                                                                        onSignForAnother: { route.pushBridge(.safe) },
                                                                         queueKey: Self.safeQueueKey(visible))),
                              following: AnyView(
                                 // None yet, Follow is the line's verb; else the count opens the list.

@@ -100,6 +100,8 @@ struct MoveSentence: View {
     /// Your private balance on Ethereum for any token but ETH and USDC:
     /// Railgun's sentence, in or back (prd §1713, §1721).
     @State private var railgunOpen = false
+    /// TAC into Tacit (prd §1976): Tacit's own Send, mounted over this one.
+    @State private var tacitOpen = false
     @State private var railgunMove: RailgunMove
 
     /// `recipient`: out to someone else through a broadcaster (prd §1721
@@ -1513,6 +1515,10 @@ struct MoveSentence: View {
                 }) { verbWord(title(railgunMove.mode == .swap ? .swap : .send)) }
                 .transition(.opacity)
             }
+            if tacitOpen, privateMode == nil, open != .verb {
+                TacitShieldSheet(inMove: true, leave: { withAnimation(DS.Motion.standard) { tacitOpen = false } })
+                    .transition(.opacity)
+            }
             if aztecMode != nil, privateMode == nil, open != .verb {
                 MoveAztecPrivateSentence(move: aztecMove, inTray: inTray, leave: { why in
                     withAnimation(DS.Motion.standard) {
@@ -1545,6 +1551,7 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: privateMode)
         .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: railgunOpen)
+        .animation(DS.Motion.standard, value: tacitOpen)
         .animation(DS.Motion.standard, value: verb)
     }
 
@@ -3314,9 +3321,10 @@ struct MoveSentence: View {
             open = nil
             // Receive opens on its three addresses, every time (prd §1803).
             receiveOther = false
-            guard v != verb || receipt != nil || privateMode != nil || aztecMode != nil || railgunOpen else { return }
+            guard v != verb || receipt != nil || privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen else { return }
             privateMode = nil
             railgunOpen = false
+            tacitOpen = false
             aztecMode = nil
             verb = v
             receipt = nil
@@ -3884,7 +3892,7 @@ struct MoveSentence: View {
     /// Another sentence is mounted over this page (Lend, a private send,
     /// Receive privately): this one is hidden and takes no touch.
     private var coveredByAnother: Bool {
-        (privateMode != nil || aztecMode != nil || railgunOpen || verb == .lend) && open != .verb
+        (privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || verb == .lend) && open != .verb
     }
 
     /// Whether this row's menu is up; closed by a tap outside it, the list
@@ -4198,7 +4206,7 @@ struct MoveSentence: View {
         guard verb == .send || verb == .swap || verb == .buy || verb == .deposit, open == nil, focus == nil, receipt == nil, stage == nil else { return }
         // Never from under a sentence Move has mounted over this one (a
         // private send, Receive privately, Lend): its menu rose over theirs.
-        guard privateMode == nil, aztecMode == nil, !railgunOpen, chrome.moveLend == nil else { return }
+        guard privateMode == nil, aztecMode == nil, !railgunOpen, !tacitOpen, chrome.moveLend == nil else { return }
         let pick = Self.unpicked
         guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
         tapBlank(next == .amount && with == nil && verb != .deposit ? .with : next)
@@ -5983,6 +5991,9 @@ struct MoveSentence: View {
                 && (q.isEmpty || balanceWord.lowercased().contains(q) || privateNet.lowercased().contains(q))
             let aztecHere = (YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable
                 && (q.isEmpty || balanceWord.lowercased().contains(q) || "aztec".contains(q))
+            // TAC on Ethereum, sent, with a co-signer to open Tacit (prd §1976).
+            let takesTacit = verb == .send && network == Op.ethereum && YourAccountFacts.coSigners.first != nil
+                && with.map { $0.token.contract?.lowercased() == TacitPocket.tacToken.lowercased() } == true
             // **ONE SCROLL, EVERY SECTION TITLED (prd §1916, user, 2026-11-19:
             // "don't know what 'people' means, are these 'recent'? also they
             // aren't all 'people'"), YOURS FIRST (prd §1923, user, 2026-11-20:
@@ -6032,6 +6043,14 @@ struct MoveSentence: View {
                     network == Op.ethereum && RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract,
                                                                            chainId: network.chainId)
                 } ?? false
+                // **EVERY PLACE THAT TAKES IT (prd §1976):** TAC leads with
+                // Tacit, its own chain, then Railgun, which takes any token.
+                if takesTacit {
+                    toRow("Tacit", sub: String(localized: "Tacit chain"), image: "brand-tacit") {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { open = nil; tacitOpen = true }
+                    }
+                }
                 if toRailgun, let held = with {
                     toRow("Railgun", sub: String(localized: "Ethereum"), symbol: "lock.fill") {
                         goRailgun(.deposit, contract: held.token.contract)

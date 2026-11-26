@@ -263,7 +263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2160 of 2234 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2161 of 2235 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2374,7 +2374,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
 - §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945, §1963)
-- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946, §1973)
+- §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946, §1973, §1976)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
 - §1931 — Move is a receipt of chips: no sentence while choosing, no panel, no steps track; every verb's page is its name, one… (amended by §1932, §1933, §1934, §1970)
 - §1932 — Move's receipt, polished: lists on the receipt's grid, the quick amounts on the keys, Ready one receipt with Details… (amended by §1933)
@@ -2419,12 +2419,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1968 — A watched token's page swaps for it
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 - §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
-- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973)
+- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973, §1976)
 - §1972 — Earn's From list names the rate and the place, and the network moves to the badge
 - §1973 — How money is listed: one row is one token in one place, Holdings is Home's cut with the tokens under it (Public by ne…
 - §1974 — Apps is Recent, the Wallet, then the Feed A–Z; Holdings ends in Add to Wallet; Testnets and Logos are retired (supers… (amended by §1974a)
 - §1974a — Every category in Apps is one row of one height, the Wallet's too
-- §1975 — Safe, Privacy Pools and Railgun are no apps: they are built into Your account
+- §1975 — Safe, Privacy Pools and Railgun are no apps: they are built into Your account (amended by §1976)
+- §1976 — Send's To lists every private place that takes the token, Tacit among them, and the Safes you sign for stand under th…
 
 ## Dead rulings → what replaced them (generated)
 

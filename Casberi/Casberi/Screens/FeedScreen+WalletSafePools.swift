@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// **YOUR SAFES, ON YOUR ACCOUNT'S PAGE (prd §1738, was the Safe pick's,
-/// §1614).** Safe and Privacy Pools are no pick: the Wallet already shows
-/// their money. What only the Safe pick said stands under Your account's
-/// keys — "Your Safes" (who signs each) and "Without a signature" (what can
-/// move each with nobody signing). How hidden a private balance is, is said
+/// **SAFES YOU SIGN FOR, ON YOUR ACCOUNT'S PAGE (prd §1738, was the Safe
+/// pick's, §1614; named §1976).** Safe and Privacy Pools are no pick: the
+/// Wallet already shows their money. What only the Safe pick said stands on
+/// Account — "Safes you sign for" (who signs each) and "Without a signature"
+/// (what can move each with nobody signing). How hidden a private balance is, is said
 /// where you send from it (`MovePrivate`).
 extension FeedScreen {
 
@@ -48,9 +48,11 @@ struct WalletUnsignedSection: View {
     /// Account's, and only once you hold a key to a Safe besides your own:
     /// for your account alone it said the Keys above it again. What can move
     /// a Safe with nobody signing is a permission, and stands on Permissions.
-    enum Part { case safes, unsigned, lines }
+    enum Part { case unsigned, lines }
     var part: Part
     var onOpenSafe: (SafeRoster.Safe) -> Void
+    /// Sets this phone up to sign for another Safe; nil where it has no door.
+    var onSignForAnother: (() -> Void)? = nil
     /// The queue's rows, so a signature landing re-reads the roster.
     var queueKey: Int = 0
     /// Read from the first frame (stored reads, no network), so the header
@@ -60,32 +62,27 @@ struct WalletUnsignedSection: View {
     var body: some View {
         switch part {
         case .lines:
-            // **EACH SAFE A LINE ON MONEY'S PUBLIC (prd §1937, user: "Public
-            // is Safe"):** only once you hold a key to a Safe besides your own,
-            // as the section was.
-            if roster.safes.contains(where: { !$0.isYourAccount }) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(roster.safes) { safe in
-                        AccountLine(label: String(localized: "Safe"),
-                                    value: [safe.isYourAccount ? String(localized: "Yours") : safe.name,
-                                            SafeRoster.need(safe).map { String(localized: "\($0) signers") }]
-                                        .compactMap { $0 }.joined(separator: " · "),
-                                    end: .opens, action: { onOpenSafe(safe) })
-                    }
+            // **SAFES YOU SIGN FOR (user, 2026-11-25: "re 'your safes' should
+            // we call it 'external safes' or something i've always felt it is
+            // kind of confusing").** Your account is the Safe line above;
+            // it is never drawn again here ("Safe · Yours" said it twice).
+            // The Safes you hold a key to stand under their own words, each
+            // by its name, and the last line sets this phone up to sign for
+            // another (`SafeScreen`, whose door was the retired Safe tile,
+            // prd §1975).
+            VStack(alignment: .leading, spacing: 0) {
+                AccountSubhead(text: String(localized: "Safes you sign for"))
+                ForEach(roster.safes.filter { !$0.isYourAccount }) { safe in
+                    AccountLine(label: safe.name,
+                                value: SafeRoster.need(safe).map { String(localized: "\($0) signers") },
+                                end: .opens, action: { onOpenSafe(safe) })
                 }
-                .task(id: queueKey) { await read() }
-            } else {
-                Color.clear.frame(height: 0).task(id: queueKey) { await read() }
+                if let onSignForAnother {
+                    AccountLine(label: String(localized: "Sign for another Safe"), end: .opens,
+                                action: onSignForAnother)
+                }
             }
-        case .safes:
-            if roster.safes.contains(where: { !$0.isYourAccount }) { yourSafes.task(id: queueKey) { await read() } }
-            else {
-                // Read without a row: no separator, no ground (the app draws no lines).
-                Color.clear.frame(height: 0).task(id: queueKey) { await read() }
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            .task(id: queueKey) { await read() }
         case .unsigned:
             // **ONLY WHAT CAN MOVE ONE (prd §1919, user: "'without a
             // signature' 'none' is weird too. its like a double negative").**
@@ -110,50 +107,6 @@ struct WalletUnsignedSection: View {
         roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
         await SafeRosterReading.shared.refresh()
         roster = SafeRoomSource.roster(yours: SafeRosterReading.shared.yours)
-    }
-
-    private var yourSafes: some View {
-        SectionPanelGroup(anchor: nil) {
-            SectionPanelName(name: String(localized: "Your Safes"), glyph: "person.badge.key")
-        } rows: {
-            Section {
-                ForEach(roster.safes) { safe in
-                    Button {
-                        DSHaptic.selection()
-                        onOpenSafe(safe)
-                    } label: {
-                        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                            Image(systemName: safe.isYourAccount ? "person.crop.circle" : "person.2")
-                                .dsGlyph(.body)
-                                .foregroundStyle(DS.textSecondary)
-                                .frame(width: DSRoomChassis.headGlyph)
-                                .accessibilityHidden(true)
-                            Text(verbatim: safe.name)
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                            Spacer(minLength: DS.Space.s2)
-                            SafeFaces(faces: safe.faces)
-                            if let need = SafeRoster.need(safe) {
-                                Text(verbatim: need)
-                                    .dsText(.price17)
-                                    .monospacedDigit()
-                                    .foregroundStyle(DS.textSecondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .walletRowPitch()
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .dsHover()
-                    .accessibilityLabel(Text(verbatim: [safe.name, SafeRoster.line(safe), SafeRoster.need(safe)]
-                        .compactMap { $0 }.joined(separator: ", ")))
-                    .walletListRow()
-                }
-            }
-        }
-        .environment(\.feedSectionPanelFilled, false)
     }
 
     private var section: some View {

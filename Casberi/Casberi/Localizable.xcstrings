@@ -178169,6 +178169,34 @@
         }
       }
     },
+    "Safes you sign for" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safes que firmas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "あなたが署名するSafe"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 서명하는 Safe"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你签名的 Safe"
+          }
+        }
+      }
+    },
     "Sale" : {
       "localizations" : {
         "es" : {
@@ -189561,6 +189589,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "为 %@ 签名"
+          }
+        }
+      }
+    },
+    "Sign for another Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firmar para otro Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のSafeに署名する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 Safe에 서명하기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为另一个 Safe 签名"
           }
         }
       }
@@ -239890,34 +239946,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的Safe设置已更改：%@"
-          }
-        }
-      }
-    },
-    "Your Safes" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tus Safes"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "あなたの Safe"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "내 Safe"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的 Safe"
           }
         }
       }
