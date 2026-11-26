@@ -11,9 +11,13 @@ struct TacitOutSheet: View {
     var leave: () -> Void
     /// Another Tacit account (prd §1982): a private send, not back to public.
     var payTo: String? = nil
+    /// The amount Again fills in (prd §1983).
+    var startAmount: String? = nil
     @State private var amount = ""
     @State private var toCoSigner = false
-    @FocusState private var typing: Bool
+    /// The Tacit address being named after a send (prd §1983).
+    @State private var saving: String?
+    @State private var savingName = ""
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
     private var yourAccount: String? { YourAccountKey.address }
@@ -26,17 +30,52 @@ struct TacitOutSheet: View {
     }
     private var tac: Double? { Double(amount.replacingOccurrences(of: ",", with: ".")) }
 
+    @Environment(\.moveBack) private var moveBack
+    /// The step whose list or keys stand in the deck (prd §1931).
+    @State private var open: Open? = .amount
+    private enum Open { case amount, to }
+
+    /// **MOVE'S DECK, AS RAILGUN'S (prd §1983, §1927):** the lines are the
+    /// sentence's words as chips, the amount on Move's own keys, then the
+    /// receipt; while it goes, its steps; at the end, where it landed.
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if sending { steps } else { form }
-            Spacer(minLength: 0)
-            foot
+        MoveReceiptDeck(title: String(localized: "Send"), inTray: true, backDisabled: out.inFlight, back: {
+            withAnimation(DS.Motion.standard) { moveBack?() ?? leave() }
+        }, lines: {
+            if !sending { MoveReceiptSteps(steps: deckSteps) }
+        }, content: {
+            Group {
+                if open == .amount, !sending {
+                    VStack(spacing: MoveReceipt.gap) {
+                        Spacer(minLength: 0)
+                        MoveQuickKeys(keys: [MoveQuickKeys.Key(id: "max", word: String(localized: "Max"),
+                                                               on: amount == TacitShieldSheet.maxText(most)) {
+                            amount = TacitShieldSheet.maxText(most)
+                        }])
+                        MoveKeypad(text: $amount, places: 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
+                    }
+                    .transition(.opacity)
+                } else if open == .to, !sending {
+                    deckList { toChoices }
+                } else {
+                    deckList { if sending { steps } else { receipt } }
+                }
+            }
+        }, word: { foot })
+        .animation(DS.Motion.standard, value: open)
+        .alert("Save this Tacit address", isPresented: Binding(get: { saving != nil }, set: { if !$0 { saving = nil } })) {
+            TextField("Name", text: $savingName)
+            Button("Save") {
+                if let address = saving, !savingName.trimmingCharacters(in: .whitespaces).isEmpty {
+                    AddressBook.shared.setName(savingName, for: address, networks: ["tacit"])
+                    DSHaptic.success()
+                }
+                saving = nil
+            }
+            Button("Cancel", role: .cancel) { saving = nil }
+        } message: {
+            Text(verbatim: saving.map { AddressTail.short($0) } ?? "")
         }
-        // Move's own inset and top, as its sentences stand.
-        .padding(.horizontal, MoveSentence.sideInset(true))
-        .padding(.top, DS.Space.s2)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsPageBackground()
         .task(id: amount) {
             try? await Task.sleep(for: .milliseconds(500))
             guard !sending, let tac, tac > 0, tac <= held else { return }
@@ -48,6 +87,7 @@ struct TacitOutSheet: View {
         .onAppear {
             out.payTo = payTo
             out.reset()
+            if amount.isEmpty, let startAmount { amount = startAmount }
             if amount.isEmpty, held > 0 { amount = TacitShieldSheet.maxText(held) }
         }
     }
@@ -59,60 +99,78 @@ struct TacitOutSheet: View {
         }
     }
 
-    // MARK: - The form
+    // MARK: - The deck
 
-    @ViewBuilder private var form: some View {
-        Text("Send").dsText(.heading34).foregroundStyle(DS.textPrimary)
-        VStack(alignment: .leading, spacing: 0) {
-            row("From") { Chip(text: "Tacit", glyph: "lock.fill") }
-            if let payTo {
-                row("To") {
-                    Text("Their Tacit account · \(AddressTail.short(payTo))")
-                        .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                }
-            } else {
-            row("To") {
-                HStack(spacing: DS.Space.s2) {
-                    Button { pick(false) } label: { Chip(text: "Casberi", selected: !toCoSigner) }
-                        .buttonStyle(PressSpring())
-                    if coSigner != nil {
-                        Button { pick(true) } label: { Chip(text: String(localized: "Co-signer"), selected: toCoSigner) }
-                            .buttonStyle(PressSpring())
-                    }
-                }
-            }
-            }
-            row("Token") {
-                HStack(spacing: DS.Space.s2) {
-                    AssetMark(name: "TAC", size: 24)
-                    Text(payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain").dsText(.body17).foregroundStyle(DS.textPrimary)
-                }
-            }
-            row("Amount") {
-                HStack(spacing: DS.Space.s3) {
-                    TextField("0", text: $amount)
-                        .keyboardType(.decimalPad)
-                        .focused($typing)
-                        .dsText(.body17)
-                        .monospacedDigit()
-                        .fixedSize()
-                    Text("TAC").dsText(.body17).foregroundStyle(DS.textSecondary)
-                    Button {
-                        DSHaptic.selection()
-                        amount = TacitShieldSheet.maxText(most)
-                    } label: {
-                        Text("Max").dsText(.body17).foregroundStyle(DS.pickInk)
-                    }
-                    .buttonStyle(RowPress())
-                }
-            }
-            row("Fee") { Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary) }
-            row("Arrives") { Text(payTo == nil ? "In a few minutes" : "In about a minute").dsText(.body17).foregroundStyle(DS.textPrimary) }
+    private var deckSteps: [MoveDeckStep] {
+        let mark = MoveRowMark(token: "TAC")
+        var out: [MoveDeckStep] = [
+            MoveDeckStep(id: "from", word: String(localized: "From"), answered: true, value: "Tacit", glyph: "lock.fill") { leave() },
+        ]
+        if let payTo {
+            // A saved name keeps its tail, to check by (as Railgun's §1965a).
+            let name = AddressBook.shared.name(for: payTo).map { "\($0) · \(AddressTail.short(payTo))" } ?? AddressTail.short(payTo)
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: name) { leave() })
+        } else {
+            out.append(MoveDeckStep(id: "to", word: String(localized: "To"), on: open == .to, answered: true,
+                                    value: toCoSigner ? String(localized: "Co-signer") : "Casberi") { toggle(.to) })
         }
-        .padding(.top, DS.Space.s6)
-        if case .failed(let why) = out.step {
-            Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
-                .padding(.top, DS.Space.s4)
+        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
+                                value: payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain", mark: mark) {})
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
+                                value: amount.isEmpty ? (open == .amount ? "0" : nil) : "\(amount) TAC") { toggle(.amount) })
+        return out
+    }
+
+    private func toggle(_ o: Open) {
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) { open = open == o ? nil : o }
+    }
+
+    private func deckList<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        ScrollView { content().padding(.vertical, DS.Space.s2) }
+            .scrollIndicators(.hidden)
+            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+            .transition(.opacity)
+    }
+
+    /// Where back to public lands: your Casberi account or your co-signer.
+    @ViewBuilder private var toChoices: some View {
+        toRow("Casberi", picked: !toCoSigner) { pick(false) }
+        if coSigner != nil {
+            toRow(String(localized: "Co-signer"), picked: toCoSigner) { pick(true) }
+        }
+    }
+
+    private func toRow(_ name: String, picked: Bool, act: @escaping () -> Void) -> some View {
+        Button {
+            act()
+            withAnimation(DS.Motion.standard) { open = .amount }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text(verbatim: name).dsText(.body17).foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
+                if picked { Image(systemName: "checkmark").dsGlyph(.body, weight: .semibold).foregroundStyle(DS.pickInk) }
+            }
+            .frame(minHeight: MoveDeck.rowHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityAddTraits(picked ? [.isSelected] : [])
+    }
+
+    /// The receipt under the lines: Tacit's fee and when it lands.
+    @ViewBuilder private var receipt: some View {
+        VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            MoveReceiptLine(label: String(localized: "Fee")) {
+                Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+            }
+            MoveReceiptLine(label: String(localized: "Arrives")) {
+                Text(payTo == nil ? "In a few minutes" : "In about a minute").dsText(.body17).foregroundStyle(DS.textPrimary)
+            }
+            if case .failed(let why) = out.step {
+                Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -126,16 +184,6 @@ struct TacitOutSheet: View {
         let text = TacitShieldSheet.tacText(NSDecimalNumber(decimal: fee).doubleValue)
         // A pay stays on the Tacit chain: no Ethereum fee.
         return payTo == nil ? String(localized: "\(text) and network fee") : text
-    }
-
-    private func row<V: View>(_ name: LocalizedStringKey, @ViewBuilder _ value: () -> V) -> some View {
-        HStack(alignment: .center, spacing: DS.Space.s4) {
-            Text(name).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .frame(width: 92, alignment: .leading)
-            value()
-            Spacer(minLength: 0)
-        }
-        .frame(minHeight: DSFeed.headHeight + 2 * DS.Space.s2)
     }
 
     // MARK: - Sending
@@ -162,9 +210,27 @@ struct TacitOutSheet: View {
         // can't tell if it worked or not").** The amount paid out and the
         // place, and what that place now holds.
         if case .done = out.step, let paid = out.paidTAC, let payTo {
-            Text("\(TacitAccountRows.amount(paid)) TAC went to \(AddressTail.short(payTo)), privately")
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .padding(.top, DS.Space.s6)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("\(TacitAccountRows.amount(paid)) TAC went to \(AddressBook.shared.name(for: payTo) ?? AddressTail.short(payTo)), privately")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                // **SAVE WHO YOU PAID (prd §1983, as Railgun's §1965):** one
+                // field, the address under it; the book files it as Tacit's.
+                if AddressBook.shared.name(for: payTo) == nil {
+                    Button {
+                        savingName = ""
+                        saving = payTo
+                    } label: {
+                        HStack(spacing: DS.Space.s2) {
+                            Text("Save \(AddressTail.short(payTo))").dsText(.heading17).foregroundStyle(DS.pickInk)
+                            Spacer(minLength: DS.Space.s2)
+                        }
+                        .frame(minHeight: DSFeed.headHeight)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                }
+            }
+            .padding(.top, DS.Space.s6)
         } else if case .done = out.step, let paid = out.paidTAC {
             let place = toCoSigner ? String(localized: "your co-signer") : String(localized: "your Casberi account")
             let now = toCoSigner ? account.reading?.publicTAC : account.reading?.accountTAC
@@ -215,14 +281,11 @@ struct TacitOutSheet: View {
     // MARK: - The foot
 
     @ViewBuilder private var foot: some View {
-        HStack {
-            MoveBackCard()
-            Spacer(minLength: 0)
+        Group {
             switch out.step {
             case .ready:
                 MoveHoldWord(word: DemoMode.isActive ? String(localized: "Not in the demo") : String(localized: "Hold to send"),
                              enabled: canSend) {
-                    typing = false
                     guard let to else { return }
                     Task { await out.send(to: to) }
                 }
@@ -260,8 +323,6 @@ struct TacitOutSheet: View {
                 }
             }
         }
-        .frame(minHeight: MoveDeck.footHeight)
-        .padding(.bottom, DS.Space.s4)
     }
 
     private var canSend: Bool {

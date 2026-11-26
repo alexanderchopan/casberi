@@ -63,8 +63,22 @@ final class TacitOut {
     /// collect: the note is theirs once a block takes it.
     var payTo: String?
 
+    /// **AGAIN (prd §1983, as Send's §1904 item 5):** the last private send,
+    /// kept on this phone; Send's To leads with it.
+    struct Again: Codable, Equatable {
+        let to: String
+        let tac: Double
+    }
+    private static let againKey = "tacit.again.v1"
+    static var again: Again? {
+        UserDefaults.standard.data(forKey: againKey).flatMap { try? JSONDecoder().decode(Again.self, from: $0) }
+    }
+    private static func keepAgain(_ a: Again) {
+        if let data = try? JSONEncoder().encode(a) { UserDefaults.standard.set(data, forKey: againKey) }
+    }
+
     /// Whether `text` reads as a Tacit address a private send can take.
-    static func isTacitAddress(_ text: String) -> Bool {
+    nonisolated static func isTacitAddress(_ text: String) -> Bool {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if t.hasPrefix("tc1") { return t.count > 100 && t.dropFirst(3).allSatisfy(\.isHexDigit) }
         if t.hasPrefix("tacit1") { return t.count > 60 && t.dropFirst(6).allSatisfy { "023456789acdefghjklmnpqrstuvwxyz".contains($0) } }
@@ -135,6 +149,10 @@ final class TacitOut {
                 paidTAC = Double(units) / 1e8
                 handed = false
                 step = .done
+                Self.keepAgain(Again(to: payTo ?? "", tac: Double(units) / 1e8))
+                let sent = TacitAccountRows.amount(Double(units) / 1e8)
+                Task { await Notifications.outcome(.moveSent, id: "tacit:pay:" + ticket.id, place: TacitAccount.name,
+                                                   body: String(localized: "\(sent) TAC sent privately"), mark: TacitAccount.name) }
                 if let coSigner = YourAccountFacts.coSigners.first, let chain = await TacitPocket.chain(coSigner: coSigner) {
                     TacitAccount.shared.applyChain(chain, coSigner: coSigner)
                 }
@@ -146,9 +164,17 @@ final class TacitOut {
             step = .ready
         } catch let stop as Stop {
             step = .failed(stop.words)
+            notifyFailed(stop.words)
         } catch {
             step = .failed(TacitAccount.words(error))
+            notifyFailed(TacitAccount.words(error))
         }
+    }
+
+    /// A move of yours that stopped, said while you are away (prd §1881).
+    private func notifyFailed(_ words: String) {
+        Task { await Notifications.outcome(.moveFailed, id: "tacit:fail:\(Int(Date().timeIntervalSince1970))",
+                                           place: TacitAccount.name, body: words, mark: TacitAccount.name) }
     }
 
     /// Pays out what the contract owes `to`, from your Casberi account.
@@ -175,6 +201,11 @@ final class TacitOut {
         owedWei = 0
         handed = false
         step = .done
+        if let paid = paidTAC {
+            Task { await Notifications.outcome(.readyToUse, id: "tacit:out:\(Int(Date().timeIntervalSince1970))", place: TacitAccount.name,
+                                               body: String(localized: "\(TacitAccountRows.amount(paid)) TAC is public again"),
+                                               mark: TacitAccount.name) }
+        }
         // Your public TAC at once, then the chain's notes.
         await TacitAccount.shared.readPublic()
         if let coSigner = YourAccountFacts.coSigners.first, let chain = await TacitPocket.chain(coSigner: coSigner) {
@@ -200,6 +231,14 @@ final class TacitOut {
             if s.status == "refused" { throw Stop.refused }
         }
         throw Stop.slow
+    }
+
+    /// Proved, handed, landing or collecting: Holdings shows it on its way.
+    var inFlight: Bool {
+        switch step {
+        case .proving, .handing, .landing, .collecting: true
+        default: false
+        }
     }
 
     /// Done read and closed: the next open starts fresh.

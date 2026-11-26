@@ -22,6 +22,8 @@ enum OnItsWay {
         case railgun
         /// Deposited for Aztec, not handed over yet.
         case aztec
+        /// Into, out of or across Tacit's chain, not taken yet (prd §1983).
+        case tacit
     }
 
     struct Item: Identifiable, Equatable {
@@ -86,5 +88,23 @@ enum OnItsWay {
              steps: [String(localized: "Sent on Ethereum"), String(localized: "Aztec is carrying it"),
                      String(localized: "Claimed for you")],
              current: 1, needs: nil)
+    }
+
+    /// TAC made private, proved and handed, not taken by a block yet.
+    static func tacitIn(id: String, title: String, usd: Double?) -> Item {
+        Item(id: "tacit-in:" + id, trip: .tacit, title: title, usd: usd,
+             steps: [String(localized: "Proved on your iPhone"), String(localized: "Tacit is taking it"),
+                     String(localized: "Private on the Tacit chain")],
+             current: 1, needs: nil)
+    }
+
+    /// TAC going back to public: taken by a block, then collected by your
+    /// account; or, `paid`, sent privately to another Tacit account.
+    static func tacitOut(id: String, title: String, usd: Double?, collecting: Bool, paid: Bool) -> Item {
+        Item(id: "tacit-out:" + id, trip: .tacit, title: title, usd: usd,
+             steps: paid ? [String(localized: "Proved on your iPhone"), String(localized: "Tacit is taking it")]
+                : [String(localized: "Proved on your iPhone"), String(localized: "Tacit is taking it"),
+                   String(localized: "Collected by your account")],
+             current: collecting ? 2 : 1, needs: nil)
     }
 }

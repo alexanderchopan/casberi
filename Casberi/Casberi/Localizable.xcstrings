@@ -1935,6 +1935,90 @@
         }
       }
     },
+    "%@ TAC is private on the Tacit chain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC es privado en la cadena de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TACはTacitチェーンで非公開です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC가 Tacit 체인에서 비공개입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC 已在 Tacit 链上私密"
+          }
+        }
+      }
+    },
+    "%@ TAC is public again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC vuelve a ser público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TACは再び公開されています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC가 다시 공개되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC 已重新公开"
+          }
+        }
+      }
+    },
+    "%@ TAC sent privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC enviado en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TACを非公開で送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ TAC 비공개 전송"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已私密发送 %@ TAC"
+          }
+        }
+      }
+    },
     "%@ TAC went to %@, privately" : {
       "localizations" : {
         "es" : {
@@ -52940,6 +53024,34 @@
         }
       }
     },
+    "Again: %@ TAC to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otra vez: %1$@ TAC a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度: %1$@ TAC を %2$@ へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시: %1$@ TAC를 %2$@에게"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次：%1$@ TAC 至 %2$@"
+          }
+        }
+      }
+    },
     "Agent" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -63279,6 +63391,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "转回公开"
+          }
+        }
+      }
+    },
+    "Back to public · On its way" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De vuelta a público · En camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開に戻す · 移動中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개로 되돌리기 · 이동 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转回公开 · 途中"
           }
         }
       }
@@ -74800,6 +74940,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Uniswap 上收取了 %@ 手续费"
+          }
+        }
+      }
+    },
+    "Collected by your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recogido por tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントが受け取り済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 계정이 받음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已由你的账户领取"
           }
         }
       }
@@ -161805,6 +161973,34 @@
         }
       }
     },
+    "Private on the Tacit chain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privado en la cadena de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーンで非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인에서 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Tacit 链上私密"
+          }
+        }
+      }
+    },
     "Private · %@" : {
       "localizations" : {
         "es" : {
@@ -162479,6 +162675,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在此 iPhone 上证明"
+          }
+        }
+      }
+    },
+    "Proved on your iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probado en tu iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneで証明済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone에서 증명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在你的 iPhone 上证明"
           }
         }
       }
@@ -179492,6 +179716,34 @@
         }
       }
     },
+    "Save this Tacit address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar esta dirección de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このTacitアドレスを保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Tacit 주소 저장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存此 Tacit 地址"
+          }
+        }
+      }
+    },
     "Save to Casberi" : {
       "localizations" : {
         "es" : {
@@ -184909,6 +185161,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已私密发送 · %lld 秒"
+          }
+        }
+      }
+    },
+    "Sent privately · On its way" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviado en privado · En camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非公開で送信 · 移動中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비공개 전송 · 이동 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私密发送 · 途中"
           }
         }
       }
@@ -200449,6 +200729,34 @@
         }
       }
     },
+    "Tacit is taking it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit lo está tomando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitが受け取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit이 받는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 正在接收"
+          }
+        }
+      }
+    },
     "Tacit owes nothing to collect yet. Collect it later from here" : {
       "localizations" : {
         "es" : {
@@ -200529,6 +200837,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tacit 用时过长,请重试"
+          }
+        }
+      }
+    },
+    "Tacit · On its way" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit · En camino"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit · 移動中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit · 이동 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit · 途中"
           }
         }
       }
@@ -240842,6 +241178,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的来源"
+          }
+        }
+      }
+    },
+    "Your TAC is private on the Tacit chain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu TAC es privado en la cadena de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TACはTacitチェーンで非公開です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TAC가 Tacit 체인에서 비공개입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 TAC 已在 Tacit 链上私密"
           }
         }
       }

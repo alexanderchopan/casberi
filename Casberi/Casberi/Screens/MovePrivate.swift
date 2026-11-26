@@ -545,21 +545,18 @@ struct MovePrivateSentence<Head: View>: View {
     /// typed amount when it fits the new token, else its first step.
     @ViewBuilder private var tokenChoices: some View {
         let symbols = move.options.map(\.symbol).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
-        ForEach(symbols, id: \.self) { token in
-            Button {
+        // Move's one token list (prd §1910, `move-token-grid-audit.py`), as
+        // every other place's tokens are drawn.
+        MoveTokenGrid(places: [MoveTokenPlace(id: "private", choices: symbols.map { token in
+            MoveTokenChoice(id: token, symbol: token, network: move.network.name, picked: token == move.symbol) {
                 withAnimation(DS.Motion.standard) {
                     if let first = move.options.first(where: { $0.symbol == token }) { move.pick(first.amount, of: token) }
                     inDollars = false
                     open = nil
                 }
                 DSHaptic.selection()
-            } label: {
-                listRow("\(token) · \(move.network.name)", picked: token == move.symbol) {
-                    AssetMark(name: token, size: MoveSentence.listMark)
-                }
             }
-            .buttonStyle(RowPress())
-        }
+        })])
         if let short = move.usdcShort {
             usdcShortLine(short).padding(.top, DS.Space.s2)
         }

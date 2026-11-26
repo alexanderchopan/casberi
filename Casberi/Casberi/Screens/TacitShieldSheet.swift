@@ -13,10 +13,8 @@ struct TacitShieldSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var amount = ""
     @State private var source: TacitShield.Source?
-    @FocusState private var typing: Bool
     /// Drawn inside Move, over Send's sentence (prd §1976), not as a sheet:
     /// its foot leads with Move's way back, and Done goes back to Move.
-    var inMove = false
     var leave: (() -> Void)? = nil
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
@@ -28,22 +26,41 @@ struct TacitShieldSheet: View {
     private var held: Double { from == .account ? accountHeld : walletHeld }
     private var tac: Double? { Double(amount.replacingOccurrences(of: ",", with: ".")) }
 
+    @Environment(\.moveBack) private var moveBack
+    /// The step whose list or keys stand in the deck (prd §1931).
+    @State private var open: Open? = .amount
+    private enum Open { case amount, from }
+
+    /// **MOVE'S DECK, AS RAILGUN'S (prd §1983, §1927):** To, From, Token and
+    /// Amount as the sentence's chips, the amount on Move's own keys, then
+    /// the receipt; while it goes, its steps.
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if sending {
-                steps
-            } else {
-                form
+        MoveReceiptDeck(title: String(localized: "Send"), inTray: true, backDisabled: busy, back: {
+            withAnimation(DS.Motion.standard) {
+                if let moveBack { moveBack() } else if let leave { leave() } else { dismiss() }
             }
-            Spacer(minLength: 0)
-            foot
-        }
-        // Inside Move, Move's own inset and top, as its sentences stand.
-        .padding(.horizontal, inMove ? MoveSentence.sideInset(true) : DSRoomChassis.rowInset)
-        .padding(.top, inMove ? DS.Space.s2 : DS.Space.s6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .dsPageBackground()
-        .modifier(TacitSheetChrome(asSheet: !inMove))
+        }, lines: {
+            if !sending { MoveReceiptSteps(steps: deckSteps) }
+        }, content: {
+            Group {
+                if open == .amount, !sending {
+                    VStack(spacing: MoveReceipt.gap) {
+                        Spacer(minLength: 0)
+                        MoveQuickKeys(keys: [MoveQuickKeys.Key(id: "max", word: String(localized: "Max"),
+                                                               on: amount == Self.maxText(held)) {
+                            amount = Self.maxText(held)
+                        }])
+                        MoveKeypad(text: $amount, places: 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
+                    }
+                    .transition(.opacity)
+                } else if open == .from, !sending {
+                    deckList { fromChoices }
+                } else {
+                    deckList { if sending { steps } else { receipt } }
+                }
+            }
+        }, word: { foot })
+        .animation(DS.Motion.standard, value: open)
         .task(id: amount) {
             // A quote follows the amount, a beat after the last keystroke.
             try? await Task.sleep(for: .milliseconds(500))
@@ -52,7 +69,88 @@ struct TacitShieldSheet: View {
         }
         .onAppear {
             shield.reset()
-            if amount.isEmpty, held > 0 { amount = TacitAccountRows.amount(held) }
+            if amount.isEmpty, held > 0 { amount = Self.maxText(held) }
+        }
+    }
+
+    private var busy: Bool {
+        switch shield.step {
+        case .proving, .signing, .handing: true
+        default: false
+        }
+    }
+
+    // MARK: - The deck
+
+    private var deckSteps: [MoveDeckStep] {
+        var out: [MoveDeckStep] = [
+            MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: "Tacit", glyph: "lock.fill") {
+                if let leave { leave() }
+            },
+        ]
+        if walletHeld > 0, accountHeld > 0 {
+            out.append(MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .from, answered: true,
+                                    value: from == .account ? "Casberi" : String(localized: "Co-signer")) { toggle(.from) })
+        }
+        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
+                                value: "TAC · Ethereum", mark: MoveRowMark(token: "TAC")) {})
+        out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
+                                value: amount.isEmpty ? (open == .amount ? "0" : nil) : "\(amount) TAC") { toggle(.amount) })
+        return out
+    }
+
+    private func toggle(_ o: Open) {
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) { open = open == o ? nil : o }
+    }
+
+    private func deckList<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        ScrollView { content().padding(.vertical, DS.Space.s2) }
+            .scrollIndicators(.hidden)
+            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+            .transition(.opacity)
+    }
+
+    /// Where the TAC leaves from: your Casberi account or your co-signer.
+    @ViewBuilder private var fromChoices: some View {
+        fromRow("Casberi", detail: TacitAccountRows.amount(accountHeld) + " TAC", picked: from == .account) { pick(.account) }
+        fromRow(String(localized: "Co-signer"), detail: TacitAccountRows.amount(walletHeld) + " TAC", picked: from == .wallet) { pick(.wallet) }
+    }
+
+    private func fromRow(_ name: String, detail: String, picked: Bool, act: @escaping () -> Void) -> some View {
+        Button {
+            act()
+            withAnimation(DS.Motion.standard) { open = .amount }
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Text(verbatim: name).dsText(.body17).foregroundStyle(picked ? DS.pickInk : DS.textPrimary)
+                Spacer(minLength: DS.Space.s2)
+                Text(verbatim: detail).dsText(.body17).monospacedDigit().foregroundStyle(DS.textSecondary)
+                if picked { Image(systemName: "checkmark").dsGlyph(.body, weight: .semibold).foregroundStyle(DS.pickInk) }
+            }
+            .frame(minHeight: MoveDeck.rowHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityAddTraits(picked ? [.isSelected] : [])
+    }
+
+    /// The receipt under the lines: the fee, what lands and when.
+    @ViewBuilder private var receipt: some View {
+        VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            MoveReceiptLine(label: String(localized: "Fee")) {
+                Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+            }
+            MoveReceiptLine(label: String(localized: "You get")) {
+                Text(verbatim: arrivesWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+            }
+            MoveReceiptLine(label: String(localized: "Arrives")) {
+                Text("In a minute").dsText(.body17).foregroundStyle(DS.textPrimary)
+            }
+            if case .failed(let why) = shield.step {
+                Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -60,60 +158,6 @@ struct TacitShieldSheet: View {
         switch shield.step {
         case .proving, .signing, .handing, .arriving, .landed: return true
         default: return false
-        }
-    }
-
-    // MARK: - The form
-
-    @ViewBuilder private var form: some View {
-        Text("Send").dsText(.heading34).foregroundStyle(DS.textPrimary)
-        // **ONE ROW HEIGHT, ONE GAP (user, 2026-11-25: "row spacing looks
-        // uneven between fee and you get").** Every row, chips or words,
-        // stands a finger's height, the label in one column.
-        VStack(alignment: .leading, spacing: 0) {
-            row("To") { Chip(text: "Tacit", glyph: "lock.fill") }
-            if walletHeld > 0, accountHeld > 0 {
-                row("From") {
-                    HStack(spacing: DS.Space.s2) {
-                        Button { pick(.account) } label: { Chip(text: "Casberi", selected: from == .account) }
-                            .buttonStyle(PressSpring())
-                        Button { pick(.wallet) } label: { Chip(text: String(localized: "Co-signer"), selected: from == .wallet) }
-                            .buttonStyle(PressSpring())
-                    }
-                }
-            }
-            row("Token") {
-                HStack(spacing: DS.Space.s2) {
-                    AssetMark(name: "TAC", size: 24)
-                    Text("TAC · Ethereum").dsText(.body17).foregroundStyle(DS.textPrimary)
-                }
-            }
-            row("Amount") {
-                HStack(spacing: DS.Space.s3) {
-                    TextField("0", text: $amount)
-                        .keyboardType(.decimalPad)
-                        .focused($typing)
-                        .dsText(.body17)
-                        .monospacedDigit()
-                        .fixedSize()
-                    Text("TAC").dsText(.body17).foregroundStyle(DS.textSecondary)
-                    Button {
-                        DSHaptic.selection()
-                        amount = Self.maxText(held)
-                    } label: {
-                        Text("Max").dsText(.body17).foregroundStyle(DS.pickInk)
-                    }
-                    .buttonStyle(RowPress())
-                }
-            }
-            row("Fee") { Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary) }
-            row("You get") { Text(verbatim: arrivesWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary) }
-            row("Arrives") { Text("In a minute").dsText(.body17).foregroundStyle(DS.textPrimary) }
-        }
-        .padding(.top, DS.Space.s6)
-        if case .failed(let why) = shield.step {
-            Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
-                .padding(.top, DS.Space.s4)
         }
     }
 
@@ -146,18 +190,6 @@ struct TacitShieldSheet: View {
 
     static func tacText(_ v: Double) -> String {
         "\(v.formatted(.number.precision(.significantDigits(1...4)))) TAC"
-    }
-
-    private func row<V: View>(_ name: LocalizedStringKey, @ViewBuilder _ value: () -> V) -> some View {
-        HStack(alignment: .center, spacing: DS.Space.s4) {
-            Text(name).dsText(.body17).foregroundStyle(DS.textSecondary)
-                .frame(width: 92, alignment: .leading)
-            value()
-            Spacer(minLength: 0)
-        }
-        // One finger's height (prd §1971 item 22): the row's height with
-        // the air a List would give it, since this sheet stands in a stack.
-        .frame(minHeight: DSFeed.headHeight + 2 * DS.Space.s2)
     }
 
     // MARK: - Sending
@@ -235,15 +267,11 @@ struct TacitShieldSheet: View {
     // MARK: - The foot
 
     @ViewBuilder private var foot: some View {
-        HStack {
-            // Move's way back, where Move mounted this (none as a sheet).
-            MoveBackCard()
-            Spacer(minLength: 0)
+        Group {
             switch shield.step {
             case .ready:
                 MoveHoldWord(word: DemoMode.isActive ? String(localized: "Not in the demo") : String(localized: "Hold to send"),
                              enabled: canSend) {
-                    typing = false
                     guard let coSigner else { return }
                     Task { await shield.send(coSigner: coSigner, from: from) }
                 }
@@ -278,9 +306,6 @@ struct TacitShieldSheet: View {
                 }
             }
         }
-        // Move's foot, as every Move sheet's (`MoveDeck.footHeight`).
-        .frame(minHeight: MoveDeck.footHeight)
-        .padding(.bottom, DS.Space.s4)
     }
 
     private var canSend: Bool {
@@ -297,18 +322,5 @@ struct TacitShieldSheet: View {
         default: break
         }
         return String(localized: "Reading the fee")
-    }
-}
-
-/// A full-height page as a sheet, on the Mac too (mac-sheet-audit.py); none
-/// inside Move, which is already the page.
-private struct TacitSheetChrome: ViewModifier {
-    let asSheet: Bool
-    func body(content: Content) -> some View {
-        if asSheet {
-            content.presentationDetents([.large]).dsPageSheet()
-        } else {
-            content
-        }
     }
 }

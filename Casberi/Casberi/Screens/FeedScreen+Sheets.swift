@@ -64,8 +64,6 @@ extension FeedScreen {
         case savingsGoal
         /// Where each network is read from (prd §1517, a tray since §1803).
         case ownNodes
-        /// Make TAC private, Tacit's own Send (prd §1971 item 20).
-        case tacitShield
         /// Gas on Aztec, and Add gas (prd §1761).
         case aztecGas
         /// One thing on its way, its steps (prd §1779).
@@ -110,7 +108,6 @@ extension FeedScreen {
             case .walletTokens: "walletTokens"
             case .savingsGoal: "savingsGoal"
             case .ownNodes: "ownNodes"
-            case .tacitShield: "tacitShield"
             case .aztecGas: "aztecGas"
             case .onItsWay(let item): "onItsWay:\(item.id)"
             case .watchToken: "watchToken"
@@ -317,8 +314,6 @@ extension FeedScreen {
             SavingsGoalTray()
         case .ownNodes:
             OwnNodeTray()
-        case .tacitShield:
-            TacitShieldSheet()
         case .aztecGas:
             AztecGasTray()
         case .onItsWay(let item):

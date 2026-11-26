@@ -106,6 +106,7 @@ struct MoveSentence: View {
     @State private var tacitOutOpen = false
     /// A Tacit address typed in To (prd §1982): the private send's recipient.
     @State private var tacitPayTo: String?
+    @State private var tacitAgainAmount: String?
     @State private var railgunMove: RailgunMove
 
     /// `recipient`: out to someone else through a broadcaster (prd §1721
@@ -1520,12 +1521,12 @@ struct MoveSentence: View {
                 .transition(.opacity)
             }
             if tacitOutOpen, privateMode == nil, open != .verb {
-                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil } },
-                              payTo: tacitPayTo)
+                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil; tacitAgainAmount = nil } },
+                              payTo: tacitPayTo, startAmount: tacitAgainAmount)
                     .transition(.opacity)
             }
             if tacitOpen, privateMode == nil, open != .verb {
-                TacitShieldSheet(inMove: true, leave: { withAnimation(DS.Motion.standard) { tacitOpen = false } })
+                TacitShieldSheet(leave: { withAnimation(DS.Motion.standard) { tacitOpen = false } })
                     .transition(.opacity)
             }
             if aztecMode != nil, privateMode == nil, open != .verb {
@@ -6066,6 +6067,21 @@ struct MoveSentence: View {
                     goRailgun(.takeBack, contract: nil, recipient: q)
                 }
             }
+            // **AGAIN, PRIVATELY (prd §1983):** the last Tacit send, whole.
+            if q.isEmpty, verb == .send, let a = TacitOut.again, TacitOut.isTacitAddress(a.to),
+               (TacitAccount.shared.reading?.privateTAC ?? 0) >= a.tac {
+                let who = AddressBook.shared.name(for: a.to) ?? AddressTail.short(a.to)
+                toRow(String(localized: "Again: \(TacitAccountRows.amount(a.tac)) TAC to \(who)"),
+                      sub: "Tacit · " + AddressTail.short(a.to), symbol: "arrow.clockwise", bareSymbol: true) {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) {
+                        open = nil
+                        tacitPayTo = a.to
+                        tacitAgainAmount = TacitShieldSheet.maxText(a.tac)
+                        tacitOutOpen = true
+                    }
+                }
+            }
             // A Tacit address typed: a private send of TAC on the Tacit chain
             // (prd §1982), while the last reading holds some.
             if TacitOut.isTacitAddress(to), (TacitAccount.shared.reading?.privateTAC ?? 0) > 0 || DemoMode.isActive {
@@ -6161,8 +6177,19 @@ struct MoveSentence: View {
             let railgunSaved = RailgunPocket.available && !RailgunSwap.isPrivateAddress(q)
                 ? AddressBook.shared.railgunAccounts.filter { q.isEmpty || $0.name.lowercased().contains(q) || $0.address.lowercased().hasPrefix(q) }
                 : []
-            if !(book.isEmpty && tags.isEmpty && found.isEmpty && railgunSaved.isEmpty) {
+            // **THE TACIT ADDRESSES YOU SAVED (prd §1983)**, by name: a send
+            // to one stays on the Tacit chain, as a pasted one does.
+            let tacitSaved = !TacitOut.isTacitAddress(q) && ((TacitAccount.shared.reading?.privateTAC ?? 0) > 0 || DemoMode.isActive)
+                ? AddressBook.shared.tacitAccounts.filter { q.isEmpty || $0.name.lowercased().contains(q) || $0.address.lowercased().hasPrefix(q) }
+                : []
+            if !(book.isEmpty && tags.isEmpty && found.isEmpty && railgunSaved.isEmpty && tacitSaved.isEmpty) {
                 listHeader(String(localized: "Contacts"))
+            }
+            ForEach(Array(tacitSaved.prefix(8)), id: \.address) { e in
+                toRow(e.name, sub: "Tacit · " + AddressTail.short(e.address), image: "brand-tacit") {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { open = nil; tacitPayTo = e.address; tacitOutOpen = true }
+                }
             }
             ForEach(Array(railgunSaved.prefix(8)), id: \.address) { e in
                 toRow(e.name, sub: "Railgun · " + AddressTail.short(e.address), symbol: "eye.slash") {

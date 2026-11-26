@@ -290,6 +290,8 @@ final class AddressBook {
     static func key(for address: String) -> String {
         let canonical = resolvedForm(of: address)
         // An Aztec account is hex too, 32 bytes: case is not identity (prd §1964).
+        // A Tacit address (`tc1` hex, `tacit1` bech32m) is case-free too (prd §1983).
+        if TacitOut.isTacitAddress(canonical) { return canonical.lowercased() }
         return ENS.isHexAddress(canonical) || AztecAddressText.isAztec(canonical) ? canonical.lowercased() : canonical
     }
 
@@ -475,6 +477,11 @@ final class AddressBook {
     /// address today has no way to save it?").** The ones saved, newest first:
     /// Send from Aztec lists them before anything else.
     var aztecAccounts: [Entry] { all.filter { AztecAddressText.isAztec($0.address) } }
+
+    /// **TACIT ACCOUNTS, BY NAME (prd §1983, as Railgun's §1965):** the
+    /// Tacit addresses you saved after paying them; Send's To offers them in
+    /// Contacts.
+    var tacitAccounts: [Entry] { all.filter { TacitOut.isTacitAddress($0.address) } }
 
     /// **RAILGUN ADDRESSES, BY NAME (prd §1965):** the private balances you
     /// saved, newest first: Send's To list offers them in Contacts.

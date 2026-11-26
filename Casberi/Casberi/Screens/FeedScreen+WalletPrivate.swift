@@ -290,12 +290,25 @@ extension FeedScreen {
                                 figure: tacit.usd.map { mask ?? WalletValue.exactMoney($0) },
                                 move: tacit.usd == nil ? nil : walletHoldingMoves[HoldingMoves.key("ETH")])
             }
-            // A deposit handed and not yet taken: amber, as Railgun's and
-            // Privacy Pools' waiting rows are (was on Tacit's page, §1981).
+            // **ON ITS WAY, AS RAILGUN'S AND AZTEC'S (prd §1983):** a deposit
+            // handed and not yet taken, and TAC going back to public or to
+            // another Tacit account, each a grey row behind a clock whose tap
+            // opens its steps; a state, nobody waiting on you, never amber.
             ForEach(TacitShield.shared.arriving) { a in
-                walletTacitLine("TAC", held: WalletValue.held(a.tac), fact: String(localized: "Arriving"),
-                                figure: tacit.tacPrice.map { mask ?? WalletValue.exactMoney(a.tac * $0) }, move: nil,
-                                factInk: DS.attentionInk)
+                let usd = tacit.tacPrice.map { a.tac * $0 }
+                walletTacitWaitingRow(OnItsWay.tacitIn(id: a.id, title: "\(TacitAccountRows.amount(a.tac)) TAC", usd: usd),
+                                      line: String(localized: "Tacit · On its way"),
+                                      figure: usd.map { mask ?? WalletValue.exactMoney($0) })
+            }
+            let out = TacitOut.shared
+            if out.inFlight {
+                let tac = Double(out.units) / 1e8
+                let usd = tacit.tacPrice.map { tac * $0 }
+                walletTacitWaitingRow(OnItsWay.tacitOut(id: "now", title: "\(TacitAccountRows.amount(tac)) TAC", usd: usd,
+                                                        collecting: out.step == .collecting, paid: out.payTo != nil),
+                                      line: out.payTo == nil ? String(localized: "Back to public · On its way")
+                                          : String(localized: "Sent privately · On its way"),
+                                      figure: usd.map { mask ?? WalletValue.exactMoney($0) })
             }
             if let tac = reading.privateTACAll, tac > 0 {
                 // What the chain's fees added since the first reading that knew
@@ -309,6 +322,32 @@ extension FeedScreen {
                                 move: tacit.privateTacUSD == nil ? nil : walletHoldingMoves[HoldingMoves.key("TAC")])
             }
         }
+    }
+
+    /// A Tacit move still travelling: the clock, grey words, its steps on tap.
+    private func walletTacitWaitingRow(_ item: OnItsWay.Item, line: String, figure: String?) -> some View {
+        Button {
+            DSHaptic.selection()
+            feedSheet = .onItsWay(item)
+        } label: {
+            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                Image(systemName: "clock")
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                walletLedgerWords("TAC", fact: line)
+                Spacer(minLength: DS.Space.s2)
+                walletFigureOverDay(figure, tone: DS.textSecondary, move: nil)
+            }
+            .walletTwoLineHead()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text(verbatim: [item.title, line, figure].compactMap { $0 }.joined(separator: ". ")))
     }
 
     /// A Tacit row states what is held; its verbs are Move's (Make private,

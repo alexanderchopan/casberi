@@ -257,6 +257,12 @@ final class TacitShield {
             try? await Task.sleep(for: .seconds(5))
             guard let s = try? await TacitEngine.shared.shieldStatus(id: id) else { continue }
             if s.ok, s.status == "landed" {
+                // Said while you are away, as Railgun's and Aztec's are (prd §1983, §1881).
+                let tac = arriving.first { $0.id == id }?.tac
+                Task { await Notifications.outcome(.readyToUse, id: "tacit:in:" + id, place: TacitAccount.name,
+                                                   body: tac.map { String(localized: "\(TacitAccountRows.amount($0)) TAC is private on the Tacit chain") }
+                                                       ?? String(localized: "Your TAC is private on the Tacit chain"),
+                                                   mark: TacitAccount.name) }
                 finish(id)
                 if step == .arriving { step = .landed }
                 if TacitEngine.shared.isOpen, let chain = await TacitPocket.chain(coSigner: coSigner) {
@@ -265,6 +271,9 @@ final class TacitShield {
                 return
             }
             if s.status == "refused" {
+                Task { await Notifications.outcome(.moveFailed, id: "tacit:in:" + id, place: TacitAccount.name,
+                                                   body: String(localized: "Tacit's chain didn't take it. It goes back to your DeFi pool."),
+                                                   mark: TacitAccount.name) }
                 finish(id)
                 step = .failed(String(localized: "Tacit's chain didn't take it. It goes back to your DeFi pool."))
                 return
