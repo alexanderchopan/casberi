@@ -263,7 +263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2161 of 2235 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2162 of 2236 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2419,13 +2419,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1968 — A watched token's page swaps for it
 - §1969 — A wallet you follow is never your money: the switch is gone, Following is a page of news, each wallet a page of its own
 - §1970 — Earn takes AZTEC to Olla: the token decides the place, From and To say it, and taking back is a queue you claim
-- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973, §1976)
+- §1971 — Tacit is an app: an account you already have, opened by your co-signer and read (amended by §1973, §1976, §1977)
 - §1972 — Earn's From list names the rate and the place, and the network moves to the badge
 - §1973 — How money is listed: one row is one token in one place, Holdings is Home's cut with the tokens under it (Public by ne…
 - §1974 — Apps is Recent, the Wallet, then the Feed A–Z; Holdings ends in Add to Wallet; Testnets and Logos are retired (supers… (amended by §1974a)
 - §1974a — Every category in Apps is one row of one height, the Wallet's too
 - §1975 — Safe, Privacy Pools and Railgun are no apps: they are built into Your account (amended by §1976)
 - §1976 — Send's To lists every private place that takes the token, Tacit among them, and the Safes you sign for stand under th…
+- §1977 — Back to public: private TAC on the Tacit chain goes back to your Casberi account or your co-signer, from Move's From
 
 ## Dead rulings → what replaced them (generated)
 

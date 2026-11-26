@@ -3030,6 +3030,34 @@
         }
       }
     },
+    "%@ and network fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ y comisión de red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@とネットワーク手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 및 네트워크 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 及网络费"
+          }
+        }
+      }
+    },
     "%@ and remove what it brought in" : {
       "localizations" : {
         "es" : {
@@ -63087,6 +63115,34 @@
         }
       }
     },
+    "Back to public" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De vuelta a público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開に戻す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개로 되돌리기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转回公开"
+          }
+        }
+      }
+    },
     "Back to send" : {
       "localizations" : {
         "es" : {
@@ -74520,6 +74576,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "抵押品相对你的债务可下跌 %lld%%"
+          }
+        }
+      }
+    },
+    "Collect" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recoger"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受け取る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "领取"
+          }
+        }
+      }
+    },
+    "Collected" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recogido"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受け取り済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "받음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已领取"
           }
         }
       }
@@ -196336,6 +196448,34 @@
         }
       }
     },
+    "Still waiting on Tacit's chain. Collect it later from here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún esperando a la cadena de Tacit. Recógelo aquí más tarde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーンを待っています。後でここから受け取れます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 Tacit 체인을 기다리는 중입니다. 나중에 여기서 받으세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍在等待 Tacit 链。稍后可在此领取"
+          }
+        }
+      }
+    },
     "Stock" : {
       "localizations" : {
         "es" : {
@@ -200029,6 +200169,34 @@
         }
       }
     },
+    "Tacit owes nothing to collect yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit aún no debe nada que recoger"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受け取れるものはまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 받을 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无可领取的金额"
+          }
+        }
+      }
+    },
     "Tacit takes it" : {
       "localizations" : {
         "es" : {
@@ -200109,6 +200277,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tacit 链未接收，将退回你的 DeFi 池。"
+          }
+        }
+      }
+    },
+    "Tacit's chain didn't take it. Your TAC stays private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La cadena de Tacit no lo aceptó. Tu TAC sigue privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーンが受け付けませんでした。TACは非公開のままです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인이 받지 않았습니다. TAC는 비공개로 남습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链未接受。你的 TAC 仍是私密的"
           }
         }
       }

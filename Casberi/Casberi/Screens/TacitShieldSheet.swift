@@ -38,8 +38,9 @@ struct TacitShieldSheet: View {
             Spacer(minLength: 0)
             foot
         }
-        .padding(.horizontal, DSRoomChassis.rowInset)
-        .padding(.top, DS.Space.s6)
+        // Inside Move, Move's own inset and top, as its sentences stand.
+        .padding(.horizontal, inMove ? MoveSentence.sideInset(true) : DSRoomChassis.rowInset)
+        .padding(.top, inMove ? DS.Space.s2 : DS.Space.s6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsPageBackground()
         .modifier(TacitSheetChrome(asSheet: !inMove))

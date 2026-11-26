@@ -58,6 +58,7 @@ let backIndex = null;
 // the second never ended (user, 2026-11-25: "just stays on this screen
 // forever spinning").
 let defiRead = null;
+let outPending = null;
 // The pool's PUBLIC logs, kept by the app between launches (the page keeps
 // nothing: its store is non-persistent), so a read fetches only the blocks
 // after the last one. Tacit's library checks what it is handed against the
@@ -73,7 +74,7 @@ const logStore = (() => {
     del: (key) => ask({ op: 'del', key }),
   };
 })();
-function forget() { identity?.fill(0); identity = null; client = null; pending = null; backIndex = null; defiRead = null; }
+function forget() { identity?.fill(0); identity = null; client = null; pending = null; backIndex = null; defiRead = null; outPending = null; }
 
 function poolUx() {
   setActiveNetwork('mainnet');
@@ -280,6 +281,49 @@ const methods = {
     const { id, kept } = await p.s.offer({ back: p.back, meta: { inbox: p.inbox, src: 'casberi-account' } });
     pending = null;
     return { id, kept: JSON.stringify(kept) };
+  },
+
+  // BACK TO PUBLIC (prd §1977). Your private TAC on the Tacit chain, out to
+  // an Ethereum address: proved on this phone with the Tacit key, handed to
+  // the leader, and once it lands in a block the address is OWED it on
+  // Tacit's contract, which anyone may pay out with `withdraw(address)`.
+  // No wallet signs: the proof is the spend.
+  //
+  // What a withdrawal of `units` costs now, and the most that can go, after
+  // the account's notes are read (the client keeps its own, in memory).
+  async outQuote({ rpcUrl, blocks, leader, units }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    await c.scan();
+    const q = await c.quote('withdraw', BigInt(units || 0));
+    return { fee: hex(q.fee), holders: hex(q.holders ?? 0n), most: hex(q.most ?? 0n) };
+  },
+
+  // Proves the withdrawal of `units` to `to`; nothing leaves the phone.
+  async outProve({ rpcUrl, blocks, leader, to, units }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    const t = now();
+    outPending = await c.prepareWithdraw(String(to), BigInt(units));
+    return { proveMs: Math.round(now() - t) };
+  },
+
+  // Hands the proved withdrawal to the leader; answers once it is queued
+  // (the client keeps watching it land on its own).
+  async outHand() {
+    if (!outPending || !client) throw Object.assign(new Error('nothing is proved'), { name: 'NothingProved' });
+    const p = outPending;
+    outPending = null;
+    return await new Promise((resolve, reject) => {
+      let told = false;
+      client.send(p, { onStatus: (st) => {
+        if (!told && st && st.status === 'queued') { told = true; resolve({ id: String(st.id), kept: JSON.stringify(st.kept ?? null, (_, v) => (typeof v === 'bigint' ? v.toString() : v)) }); }
+      } }).catch((e) => { if (!told) { told = true; reject(e); } });
+    });
+  },
+
+  // TAC Tacit's contract owes `address`, in wei, waiting for `withdraw`.
+  async owed({ rpcUrl, blocks, leader, address }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    return { wei: hex(await c.owed(String(address))) };
   },
 
   // A handed deposit's state at the leader: queued, landed or refused.

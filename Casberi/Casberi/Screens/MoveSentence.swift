@@ -102,6 +102,8 @@ struct MoveSentence: View {
     @State private var railgunOpen = false
     /// TAC into Tacit (prd §1976): Tacit's own Send, mounted over this one.
     @State private var tacitOpen = false
+    /// Private TAC back to public (prd §1977): Tacit's other Send.
+    @State private var tacitOutOpen = false
     @State private var railgunMove: RailgunMove
 
     /// `recipient`: out to someone else through a broadcaster (prd §1721
@@ -1515,6 +1517,10 @@ struct MoveSentence: View {
                 }) { verbWord(title(railgunMove.mode == .swap ? .swap : .send)) }
                 .transition(.opacity)
             }
+            if tacitOutOpen, privateMode == nil, open != .verb {
+                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false } })
+                    .transition(.opacity)
+            }
             if tacitOpen, privateMode == nil, open != .verb {
                 TacitShieldSheet(inMove: true, leave: { withAnimation(DS.Motion.standard) { tacitOpen = false } })
                     .transition(.opacity)
@@ -1552,6 +1558,7 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: aztecMode)
         .animation(DS.Motion.standard, value: railgunOpen)
         .animation(DS.Motion.standard, value: tacitOpen)
+        .animation(DS.Motion.standard, value: tacitOutOpen)
         .animation(DS.Motion.standard, value: verb)
     }
 
@@ -3321,10 +3328,11 @@ struct MoveSentence: View {
             open = nil
             // Receive opens on its three addresses, every time (prd §1803).
             receiveOther = false
-            guard v != verb || receipt != nil || privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen else { return }
+            guard v != verb || receipt != nil || privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || tacitOutOpen else { return }
             privateMode = nil
             railgunOpen = false
             tacitOpen = false
+            tacitOutOpen = false
             aztecMode = nil
             verb = v
             receipt = nil
@@ -3892,7 +3900,7 @@ struct MoveSentence: View {
     /// Another sentence is mounted over this page (Lend, a private send,
     /// Receive privately): this one is hidden and takes no touch.
     private var coveredByAnother: Bool {
-        (privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || verb == .lend) && open != .verb
+        (privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || tacitOutOpen || verb == .lend) && open != .verb
     }
 
     /// Whether this row's menu is up; closed by a tap outside it, the list
@@ -4206,7 +4214,7 @@ struct MoveSentence: View {
         guard verb == .send || verb == .swap || verb == .buy || verb == .deposit, open == nil, focus == nil, receipt == nil, stage == nil else { return }
         // Never from under a sentence Move has mounted over this one (a
         // private send, Receive privately, Lend): its menu rose over theirs.
-        guard privateMode == nil, aztecMode == nil, !railgunOpen, !tacitOpen, chrome.moveLend == nil else { return }
+        guard privateMode == nil, aztecMode == nil, !railgunOpen, !tacitOpen, !tacitOutOpen, chrome.moveLend == nil else { return }
         let pick = Self.unpicked
         guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
         tapBlank(next == .amount && with == nil && verb != .deposit ? .with : next)
@@ -5779,6 +5787,9 @@ struct MoveSentence: View {
             MoveTokenPlace(id: "railgun", title: "Railgun", choices: privateChoices(railgunHeld, badge: badge)),
             MoveTokenPlace(id: "aztec", title: "Aztec", ink: DS.aztecInk, rule: Self.aztecSendRule,
                            choices: privateChoices(aztec) { _ in "brand-aztec" }),
+            // **TACIT, A PLACE OF ITS OWN (prd §1977):** its private TAC on
+            // the Tacit chain, sent back to public by Tacit's other Send.
+            MoveTokenPlace(id: "tacit", title: "Tacit", choices: tacitFromChoices),
         ]
         return VStack(alignment: .leading, spacing: 0) {
             MoveTokenGrid(places: places)
@@ -5791,6 +5802,21 @@ struct MoveSentence: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
         }
+    }
+
+    /// Your private TAC on the Tacit chain, a From on Send only, while the
+    /// last reading holds some (prd §1977).
+    private var tacitFromChoices: [MoveTokenChoice] {
+        guard verb == .send, YourAccountKey.address != nil || DemoMode.isActive,
+              let tac = TacitAccount.shared.reading?.privateTAC, tac > 0 else { return [] }
+        let q = search.trimmingCharacters(in: .whitespaces).lowercased()
+        guard q.isEmpty || "tac".contains(q) || "tacit".contains(q) else { return [] }
+        let usd = TacitAccount.shared.tacPrice.map { tac * $0 }
+        return [MoveTokenChoice(id: "tacit|TAC", symbol: "TAC", network: String(localized: "Tacit chain"), badge: "brand-tacit",
+                                sub: usd.map { Self.money($0, whole: true) } ?? "\(TacitAccountRows.amount(tac)) TAC") {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { open = nil; tacitOutOpen = true }
+        }]
     }
 
     /// A token picked off the one list: its network with it (prd §1909).

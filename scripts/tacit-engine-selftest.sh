@@ -128,7 +128,17 @@ hasnt "$JS" "provider:" "the engine hands the wallet a provider: a wallet with o
 [[ "$(grep -c "\.offer(" "$JS")" == "2" ]] || fail "the engine hands a deposit to the leader from somewhere new"
 grep -A12 "async shieldHand" "$JS" | grep -qF ".offer(" || fail "the permit hand-off is not in shieldHand"
 grep -A8 "async shieldOffer" "$JS" | grep -qF ".offer({ back: p.back, meta:" || fail "the account's hand-off carries something besides the return path"
-for verb in ".deposit(" ".send(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts" ".spend(" ".publish(" ".makeNote(" ".submit(" "sendTransaction" "eth_sendRawTransaction"; do
+# Back to public (prd §1977) is the second: a withdrawal the app names the
+# address of, proved with the Tacit key (`prepareWithdraw`, in `outProve`
+# only) and handed to the leader once (`client.send(`, in `outHand` only).
+# It pays out only to an Ethereum address; a pay to someone's Tacit address
+# is not here.
+[[ "$(grep -c "\.send(" "$JS")" == "1" ]] || fail "the engine hands a spend to the leader from somewhere new"
+grep -A10 "async outHand" "$JS" | grep -qF "client.send(p," || fail "the withdrawal hand-off is not in outHand"
+[[ "$(grep -c "prepareWithdraw(" "$JS")" == "1" ]] || fail "a withdrawal is proved from somewhere new"
+grep -A6 "async outProve" "$JS" | grep -qF "c.prepareWithdraw(String(to), BigInt(units))" || fail "the withdrawal is not proved in outProve to the address asked"
+hasnt "$JS" "preparePay(" "the engine pays to a Tacit address: not built"
+for verb in ".deposit(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts" ".spend(" ".publish(" ".makeNote(" ".submit(" "sendTransaction" "eth_sendRawTransaction"; do
   hasnt "$JS" "$verb" "the engine calls $verb: it reads only"
 done
 has "$ENGINE" '"connect-src \(scheme):",' "the page's Content-Security-Policy lets it reach a host"

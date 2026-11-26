@@ -122,6 +122,16 @@ enum TacitEngineProbe {
                         let t2 = Date()
                         let again = try await TacitEngine.shared.chain(from: first.next, known: first.kept)
                         log("resume", ms(t), "first \(first.next) tried in \(first.ms) ms · resumed from \(first.next) to \(again.next) in \(Int(Date().timeIntervalSince(t2) * 1000)) ms · address \(again.chainAddress.prefix(10))… (\(again.chainAddress.count) chars)")
+                    case "out":
+                        // Back to public (prd §1977), read only: the notes
+                        // scanned, the quote for 1 TAC, the most that can go,
+                        // and what the contract owes this key's own address.
+                        // A random key holds nothing, so nothing is proved.
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        let q = try await TacitEngine.shared.outQuote(units: 100_000_000)
+                        let owed = try await TacitEngine.shared.owed("0x000000000000000000000000000000000000dEaD")
+                        log("out", ms(t), "fee \(q.fee) · holders \(q.holders) · most \(q.most) · owed to 0x…dEaD \(owed.wei)")
                     case "defi":
                         guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
                         let t = Date()

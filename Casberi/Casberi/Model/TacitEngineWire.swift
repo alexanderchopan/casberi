@@ -15,6 +15,7 @@ enum TacitEngineWire {
     enum Method: String, CaseIterable {
         case info, open, read, chain, defi, close
         case shieldQuote, shieldProve, shieldHand, shieldOffer, shieldStatus
+        case outQuote, outProve, outHand, owed
     }
 
     typealias Failure = PrivacyEngineWire.Failure
@@ -126,6 +127,41 @@ enum TacitEngineWire {
         let leader: String
         /// TAC, 8 decimals, 0x-hex.
         let units: String
+    }
+
+    /// Back to public (prd §1977): `to` an Ethereum address, `units` TAC
+    /// at 8 decimals, 0x-hex; a quote reads with `to` empty.
+    struct OutAsk: Encodable {
+        let rpcUrl: String
+        let blocks: String
+        let leader: String
+        let to: String
+        let units: String
+    }
+
+    struct OutQuote: Decodable, Equatable {
+        /// The chain's fee, 8 decimals.
+        let fee: String
+        /// What the pool's holders keep of it, 8 decimals.
+        let holders: String
+        /// The most that can go back now, 8 decimals.
+        let most: String
+    }
+
+    struct OutProved: Decodable, Equatable {
+        let proveMs: Int
+    }
+
+    struct OwedAsk: Encodable {
+        let rpcUrl: String
+        let blocks: String
+        let leader: String
+        let address: String
+    }
+
+    struct Owed: Decodable, Equatable {
+        /// TAC wei (18 decimals), 0x-hex.
+        let wei: String
     }
 
     struct ShieldQuote: Decodable, Equatable {

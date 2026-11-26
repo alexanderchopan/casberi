@@ -190,6 +190,31 @@ final class TacitEngine: NSObject {
         try await call(.shieldOffer, Wire.Empty(), as: Wire.ShieldHanded.self)
     }
 
+    // MARK: Back to public (prd §1977)
+
+    private func outAsk(to: String, units: UInt64) -> Wire.OutAsk {
+        Wire.OutAsk(rpcUrl: TacitNetwork.ethereum.rpcUrl, blocks: TacitChain.blocks, leader: TacitChain.leader,
+                    to: to, units: "0x" + String(units, radix: 16))
+    }
+
+    func outQuote(units: UInt64) async throws -> Wire.OutQuote {
+        try await call(.outQuote, outAsk(to: "", units: units), as: Wire.OutQuote.self)
+    }
+
+    func outProve(to: String, units: UInt64) async throws -> Wire.OutProved {
+        try await call(.outProve, outAsk(to: to, units: units), as: Wire.OutProved.self)
+    }
+
+    /// Answers once the leader has queued it: its id, as a shield's.
+    func outHand() async throws -> Wire.ShieldHanded {
+        try await call(.outHand, Wire.Empty(), as: Wire.ShieldHanded.self)
+    }
+
+    func owed(_ address: String) async throws -> Wire.Owed {
+        try await call(.owed, Wire.OwedAsk(rpcUrl: TacitNetwork.ethereum.rpcUrl, blocks: TacitChain.blocks,
+                                           leader: TacitChain.leader, address: address), as: Wire.Owed.self)
+    }
+
     func shieldStatus(id: String) async throws -> Wire.ShieldStatus {
         try await call(.shieldStatus, Wire.ShieldStatusAsk(leader: TacitChain.leader, id: id), as: Wire.ShieldStatus.self)
     }
