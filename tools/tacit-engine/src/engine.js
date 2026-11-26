@@ -58,11 +58,26 @@ let backIndex = null;
 // the second never ended (user, 2026-11-25: "just stays on this screen
 // forever spinning").
 let defiRead = null;
+// The pool's PUBLIC logs, kept by the app between launches (the page keeps
+// nothing: its store is non-persistent), so a read fetches only the blocks
+// after the last one. Tacit's library checks what it is handed against the
+// chain's trees and drops a store that does not add up. No key, note or memo
+// passes through here.
+const logStore = (() => {
+  const h = globalThis.webkit?.messageHandlers?.engineLogs;
+  if (!h) return null;
+  const ask = async (m) => { const r = await h.postMessage(JSON.stringify(m)); return r ? JSON.parse(r) : undefined; };
+  return {
+    get: (key) => ask({ op: 'get', key }).catch(() => undefined),
+    put: (key, value) => ask({ op: 'put', key, value }),
+    del: (key) => ask({ op: 'del', key }),
+  };
+})();
 function forget() { identity?.fill(0); identity = null; client = null; pending = null; backIndex = null; defiRead = null; }
 
 function poolUx() {
   setActiveNetwork('mainnet');
-  return (pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet' }));
+  return (pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet', logStore }));
 }
 
 function nextBackIndex() {
@@ -308,7 +323,7 @@ async function chainClient({ rpcUrl, blocks, leader }) {
 async function readDefi() {
   const t = now();
   setActiveNetwork('mainnet');
-  pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet' });
+  pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet', logStore });
   const key = Uint8Array.from(identity);
   try {
     let r = await pool.balance(key, { spent: true, positions: false, recent: 150 });

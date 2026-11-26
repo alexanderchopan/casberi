@@ -1,5 +1,6 @@
 import Foundation
 import WebKit
+import CryptoKit
 
 /// THE TACIT ENGINE ON THE PHONE: YOUR TACIT ACCOUNT, READ-ONLY.
 ///
@@ -68,6 +69,7 @@ final class TacitEngine: NSObject {
             config.setURLSchemeHandler(TacitEngineScheme.shared, forURLScheme: Self.scheme)
             let controller = config.userContentController
             controller.addScriptMessageHandler(TacitEngineNet(), contentWorld: .page, name: "engineNet")
+            controller.addScriptMessageHandler(TacitEngineLogs(), contentWorld: .page, name: "engineLogs")
             controller.add(TacitEngineLog(engine: self), name: "engineLog")
             let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: config)
             #if DEBUG
@@ -242,6 +244,56 @@ private final class TacitEngineLog: NSObject, WKScriptMessageHandler {
 /// Every request the wallet makes arrives here as `{url, method, headers,
 /// body}`. A host the engine does not declare is refused; the rest go through
 /// `IngestSupport`'s funnel and come back as `{status, headers, body64}`.
+/// Tacit's pool logs, kept between launches (user, 2026-11-25: Make private
+/// took two minutes, most of it the DeFi read fetching every pool log again
+/// because the engine's page keeps nothing). Public chain logs only, one file
+/// per query in Caches, never backed up; Tacit's library checks them against
+/// the chain's trees before it trusts them, and deletes a set that fails.
+final class TacitEngineLogs: NSObject, WKScriptMessageHandlerWithReply {
+
+    static var folder: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("TacitPoolLogs", isDirectory: true)
+    }
+
+    static func file(_ key: String) -> URL {
+        let name = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
+        return folder.appendingPathComponent(name + ".json")
+    }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
+                               replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
+        guard let text = message.body as? String, let data = text.data(using: .utf8),
+              let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let op = body["op"] as? String, let key = body["key"] as? String else {
+            replyHandler(nil, "malformed")
+            return
+        }
+        let value = body["value"].flatMap { try? JSONSerialization.data(withJSONObject: $0) }
+        Task.detached(priority: .utility) {
+            let url = Self.file(key)
+            var reply: String?
+            switch op {
+            case "get":
+                reply = (try? Data(contentsOf: url)).flatMap { String(data: $0, encoding: .utf8) }
+            case "put":
+                if let value {
+                    try? FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
+                    try? value.write(to: url, options: .atomic)
+                    var keep = url
+                    var values = URLResourceValues()
+                    values.isExcludedFromBackup = true
+                    try? keep.setResourceValues(values)
+                }
+            case "del":
+                try? FileManager.default.removeItem(at: url)
+            default: break
+            }
+            await replyHandler(reply, nil)
+        }
+    }
+}
+
 private final class TacitEngineNet: NSObject, WKScriptMessageHandlerWithReply {
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage,
