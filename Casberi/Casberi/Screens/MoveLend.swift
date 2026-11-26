@@ -18,6 +18,9 @@ struct MoveLendSentence<Head: View>: View {
     var inTray = false
     /// The page's name over it (prd §1896); the verb word leads the sentence.
     var title: String = String(localized: "Earn")
+    /// **TACIT EARNS (prd §1986):** its row opens Make private on Deposit and
+    /// back to public on Withdraw, Tacit's own sheets.
+    var tacit: ((LendMove.Mode) -> Void)? = nil
     @ViewBuilder let head: () -> Head
 
     @State private var open: Blank?
@@ -192,9 +195,20 @@ struct MoveLendSentence<Head: View>: View {
         DSHaptic.selection()
     }
 
+    /// The transaction on its own network's explorer, the hosts Move's own
+    /// receipt links (`MoveSentence.explorer`); a network with none draws no
+    /// link, never another network's explorer (prd §1988: anything not
+    /// Ethereum was sent to Basescan).
     private func explorer(_ hash: String) -> (name: String, url: URL)? {
-        let (name, base) = move.chainId == 1 ? ("Etherscan", "https://etherscan.io/tx/") : ("Basescan", "https://basescan.org/tx/")
-        return URL(string: base + hash).map { (name, $0) }
+        let name: String, host: String
+        switch move.chainId {
+        case 1: (name, host) = ("Etherscan", "etherscan.io")
+        case 8453: (name, host) = ("Basescan", "basescan.org")
+        case 4663: (name, host) = ("Blockscout", "robinhoodchain.blockscout.com")
+        case 84532: (name, host) = ("Basescan", "sepolia.basescan.org")
+        default: return nil
+        }
+        return URL(string: "https://\(host)/tx/\(hash)").map { (name, $0) }
     }
 
     // MARK: - The blanks' choices
@@ -324,7 +338,7 @@ struct MoveLendSentence<Head: View>: View {
             // taking back, it says your account. Nothing to pick.
             if let m = market {
                 MoveReceiptLine(label: String(localized: "To")) {
-                    MoveChip(text: move.mode == .lend ? m.placeName : String(localized: "Your account"),
+                    MoveChip(text: move.mode == .lend ? m.placeName : String(localized: "Your public account"),
                              tone: .answered, disabled: true) {}
                 }
             }
@@ -418,11 +432,16 @@ struct MoveLendSentence<Head: View>: View {
     /// list (`MoveTokenGrid`, prd §1910): each network under its title.
     private var fromRows: some View {
         // Olla is offered only to someone with AZTEC there (prd §1970).
+        // By worth, richest first, as every Move list (prd §1986).
+        let worth: (AaveLend.Market) -> Double = { m in move.available(m).flatMap { move.dollars($0, in: m) } ?? 0 }
         let markets = AaveLend.markets.filter { m in
             !move.refused.contains(LendMove.key(m))
                 && (m.place != .olla || (Decimal(string: move.available(m) ?? "0") ?? 0) > 0 || move.anyOlla)
-        }
-        return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: markets.map { m in
+        }.sorted { worth($0) > worth($1) }
+        // Tacit stands where its worth puts it; last when there is no price.
+        let worths = markets.map(worth)
+        let tacitAt = tacitWorth.map { w in worths.firstIndex { $0 < w } ?? worths.count } ?? worths.count
+        let choices: [MoveTokenChoice] = markets.map { m in
             let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? ""
             let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
             let worth = move.available(m).flatMap { move.dollars($0, in: m) }
@@ -440,7 +459,36 @@ struct MoveLendSentence<Head: View>: View {
                     open = .amount
                 }
             }
-        })])
+        }
+        var all = choices
+        all.insert(contentsOf: tacitChoice, at: min(tacitAt, all.count))
+        return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: all)])
+    }
+
+    /// What Tacit's row is worth, to stand it among the rest.
+    private var tacitWorth: Double? {
+        guard let r = TacitAccount.shared.reading, let price = TacitAccount.shared.tacPrice else { return nil }
+        return (move.mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)) * price
+    }
+
+    /// **TACIT, BESIDE AAVE AND OLLA (prd §1986; user, 2026-11-26: "should
+    /// we put tacit in the Earn flow", "ok pls update earn").** Private TAC
+    /// earns a share of the Tacit chain's fees: Deposit is Make private (your
+    /// public TAC), Withdraw is back to public (your private TAC). No rate:
+    /// Tacit pays a share of fees, not a rate the app can read. Shown while
+    /// a Tacit account is connected, dimmed when empty (§1984).
+    private var tacitChoice: [MoveTokenChoice] {
+        guard let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading else { return [] }
+        let held = move.mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)
+        let usd = TacitAccount.shared.tacPrice.map { held * $0 }
+        let mode = move.mode
+        return [MoveTokenChoice(id: "tacit|TAC", symbol: "TAC", network: String(localized: "Tacit chain"),
+                                // Public TAC is on Ethereum; private TAC on the Tacit chain.
+                                badge: mode == .lend ? MoveSentence.networkMark(chainId: 1) : nil,
+                                sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
+                                place: "Tacit", dim: held <= 0) {
+            tacit(mode)
+        }]
     }
 
     /// Face ID has the act.

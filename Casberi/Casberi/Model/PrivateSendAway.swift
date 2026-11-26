@@ -35,6 +35,25 @@ enum PrivateSendAway {
         var symbol: String? = nil
         /// A dollar send's gas, withdrawn in ETH beside it.
         var gasWithdrawal: String? = nil
+        /// **WHAT ALREADY LEFT (prd §1988):** base units of the token that
+        /// left your private balance; nil for a send kept before it was.
+        var amount: String? = nil
+    }
+
+    /// **FINISHING SENDS WHAT ALREADY LEFT (prd §1988).** The earlier send to
+    /// `payee` on `chainId`, if one waits: finishing it never reads the new
+    /// amount, so the sentence takes this one's and Activity records it.
+    static func earlier(to chainId: Int, payee: String) -> Pending? {
+        guard let p = pending, p.chainId == chainId, p.payee.lowercased() == payee.lowercased() else { return nil }
+        return p
+    }
+
+    /// What a send did: the Across deposit, and the base units of `symbol`
+    /// that left your private balance for it (an earlier send's, finishing).
+    struct Sent: Equatable {
+        let hash: String
+        let symbol: String
+        let amount: String
     }
 
     private static let pendingKey = "privateAway.pending.v1"
@@ -79,9 +98,9 @@ enum PrivateSendAway {
 
     /// Sends `amount` (wei) of your private ETH to `payee` on `chainId`.
     /// Face ID for the withdrawal (`PrivateOnEthereum.send`). Returns the
-    /// sender's Across deposit.
+    /// sender's Across deposit and what left for it (prd §1988).
     static func send(amount: String, symbol: String = "ETH", to chainId: Int, payee: String,
-                     stage: @escaping @MainActor (String) -> Void) async throws -> String {
+                     stage: @escaping @MainActor (String) -> Void) async throws -> Sent {
         guard let network = PrivacyNetwork.forChain(FreshTx.homeChain),
               FreshTx.homeOrigins.contains(where: { $0.chainId == chainId }), PrivateMoney.isAddress(payee) else { throw Failure.notServed }
         if let p = pending, (p.symbol ?? "ETH") != symbol { throw Failure.earlierSend }
@@ -89,11 +108,14 @@ enum PrivateSendAway {
         guard symbol == "ETH" else { throw Failure.notServed }
         let sender: (index: UInt32, address: String, root: String)
         let withdrawn: String
+        // What left your private balance: the earlier send's, never `amount`.
+        var left: String? = amount
         if let p = pending {
             guard p.chainId == chainId, p.payee.lowercased() == payee.lowercased() else { throw Failure.earlierSend }
             sender = (p.index, p.address, p.root)
             withdrawn = p.withdrawal
-            NSLog("privateAway| finishing an earlier send | %@", YourAccount.short(p.address))
+            left = p.amount
+            NSLog("privateAway| finishing an earlier send | %@ | %@ wei", YourAccount.short(p.address), p.amount ?? "-")
         } else {
             sender = try RailgunPocket.senderAddress()
             // Ask first that Across will carry it, so nothing leaves for a route that is shut.
@@ -107,7 +129,7 @@ enum PrivateSendAway {
             withdrawn = try await PrivateOnEthereum.send(token: PrivateMove.eth, amount: amount, to: sender.address)
             RailgunPocket.senderUsed(sender)
             keep(Pending(index: sender.index, address: sender.address, root: sender.root, chainId: chainId, payee: payee,
-                         withdrawal: withdrawn))
+                         withdrawal: withdrawn, amount: amount))
             NSLog("privateAway| withdrawn to sender | %@ | %@ wei | %@", YourAccount.short(sender.address), amount, withdrawn)
         }
         await stage(String(localized: "Waiting for Ethereum…"))
@@ -140,7 +162,8 @@ enum PrivateSendAway {
             watch(sender, until: quote.fillDeadline)
         }
         NSLog("privateAway| sent | %@ | to %@ on %d", hash, YourAccount.short(payee), chainId)
-        return hash
+        // A send kept before its amount was: what the sender held is what left.
+        return Sent(hash: hash, symbol: "ETH", amount: left ?? held)
     }
 
     // MARK: - Refunds (prd §1882)
@@ -214,6 +237,15 @@ enum PrivateSendAway {
     static let dollarApproveGas = 80_000
     static let dollarDepositGas = 150_000
 
+    /// A dollar send's gas in ETH, base units: the approval and the deposit
+    /// at today's cap, half again (the Railgun sender's way, §1726). Its own
+    /// relayed withdrawal pays a second relayer fee beside it (prd §1988).
+    static func dollarGas(maxFee: UInt64) -> Decimal {
+        var gas = Decimal(dollarApproveGas + dollarDepositGas) * Decimal(maxFee) * Decimal(3) / Decimal(2), up = Decimal()
+        NSDecimalRound(&up, &gas, 0, .up)
+        return up
+    }
+
     /// Across's terms for `amount` of Ethereum's USDC to `payee` as the
     /// network's dollar, no message, through Tor.
     private static func quoteDollar(amount: String, to chainId: Int, sender: String, payee: String) async -> YourAccountAcross.Fees? {
@@ -238,14 +270,17 @@ enum PrivateSendAway {
     /// its deposit straight to `payee` as the network's dollar. What arrives
     /// is the amount less Across's fee.
     private static func sendDollar(amount: String, to chainId: Int, payee: String, network: PrivacyNetwork,
-                                   stage: @escaping @MainActor (String) -> Void) async throws -> String {
+                                   stage: @escaping @MainActor (String) -> Void) async throws -> Sent {
         let sender: (index: UInt32, address: String, root: String)
         var outs: [String]
+        // What left your private balance: the earlier send's, never `amount`.
+        var left: String? = amount
         if let p = pending {
             guard p.chainId == chainId, p.payee.lowercased() == payee.lowercased() else { throw Failure.earlierSend }
             sender = (p.index, p.address, p.root)
             outs = [p.withdrawal] + (p.gasWithdrawal.map { [$0] } ?? [])
-            NSLog("privateAway| finishing an earlier dollar send | %@", YourAccount.short(p.address))
+            left = p.amount
+            NSLog("privateAway| finishing an earlier dollar send | %@ | %@ units", YourAccount.short(p.address), p.amount ?? "-")
         } else {
             sender = try RailgunPocket.senderAddress()
             guard let first = await quoteDollar(amount: amount, to: chainId, sender: sender.address, payee: payee),
@@ -253,9 +288,12 @@ enum PrivateSendAway {
                 throw Failure.across(String(localized: "Across won't carry this amount"))
             }
             // Its gas, half again, in your private ETH (the Railgun sender's way, §1726).
+            // **WHAT GAS DOESN'T USE STAYS AT THE SENDER (prd §1988):** no
+            // sweep brings leftover ETH back yet; the sender signs only the
+            // approval, Across's deposit and a refund's token transfer
+            // (`FreshSigner`), and `lookRefunds` spends that ETH on its gas.
             let fees = try await PrivateRPC.fees(network)
-            var gas = Decimal(dollarApproveGas + dollarDepositGas) * Decimal(fees.maxFee) * Decimal(3) / Decimal(2), up = Decimal()
-            NSDecimalRound(&up, &gas, 0, .up)
+            let up = dollarGas(maxFee: fees.maxFee)
             guard let ethPool = network.yieldPool(for: PrivateMove.eth),
                   let fee = Decimal(string: await PrivateMove.relayerFee(ethPool, network: network, to: sender.address) ?? ""), fee > 0,
                   (Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "ETH")) ?? 0) >= up + fee else {
@@ -268,7 +306,7 @@ enum PrivateSendAway {
                          withdrawal: gasOut, symbol: "USDC", gasWithdrawal: nil))
             let usdc = try await PrivateOnEthereum.send(token: FreshTx.homeUSDC, amount: amount, to: sender.address)
             keep(Pending(index: sender.index, address: sender.address, root: sender.root, chainId: chainId, payee: payee,
-                         withdrawal: usdc, symbol: "USDC", gasWithdrawal: gasOut))
+                         withdrawal: usdc, symbol: "USDC", gasWithdrawal: gasOut, amount: amount))
             outs = [usdc, gasOut]
             NSLog("privateAway| dollar withdrawn to sender | %@ | %@ USDC units + %@ wei gas", YourAccount.short(sender.address),
                   amount, PrivateMoney.plain(up))
@@ -315,6 +353,6 @@ enum PrivateSendAway {
             watch(sender, until: quote.fillDeadline)
         }
         NSLog("privateAway| dollar sent | %@ | to %@ on %d", hash, YourAccount.short(payee), chainId)
-        return hash
+        return Sent(hash: hash, symbol: "USDC", amount: left ?? held)
     }
 }

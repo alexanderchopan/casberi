@@ -88,6 +88,10 @@ final class TacitAccount {
         /// crowd a send from it hides in (How hidden, prd §1983).
         var chainNotes: Int? = nil
         var earnedSince: Date? = nil
+        /// The network `receive` belongs to: each network has its own
+        /// deposit address, and Receive says which one it shows (prd §1988).
+        /// Nil on a reading kept before it was recorded.
+        var receiveNetwork: String? = nil
 
         /// Private TAC in both places; nil when neither was read.
         var privateTACAll: Double? {
@@ -130,12 +134,16 @@ final class TacitAccount {
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
         asOf: .now, publicTAC: 240, privateTAC: 310, accountTAC: 55, defiTAC: 0,
         chainAddress: "tc1" + String(repeating: "3f", count: 40) + "c91d",
-        earnedTAC: 2.1, chainNotes: 12_135, earnedSince: Date.now.addingTimeInterval(-21 * 86_400))
+        earnedTAC: 2.1, chainNotes: 12_135, earnedSince: Date.now.addingTimeInterval(-21 * 86_400),
+        receiveNetwork: "Ethereum")
     static let demoPrice = 3_850.0
     static let demoTacPrice = 0.78
 
     var phase: Phase { DemoMode.isActive ? .open : livePhase }
     var reading: Reading? { DemoMode.isActive ? Self.demoReading : liveReading }
+    /// **ONE RULE FOR "YOU HAVE TACIT" (prd §1984):** a reading, and a
+    /// co-signer to open it. Every Move list asks this, never its own.
+    var connected: Bool { reading != nil && (!YourAccountFacts.coSigners.isEmpty || DemoMode.isActive) }
     /// Dollars per ETH, as last priced; nil until a price has answered.
     var ethPrice: Double? { DemoMode.isActive ? Self.demoPrice : livePrice }
 
@@ -298,13 +306,15 @@ final class TacitAccount {
             // of "open instantly, then refresh").** The networks first, the
             // last reading's TAC standing until its own read replaces it.
             var reading = prior ?? Reading(coSigner: me, address: "", receive: "", held: [], asOf: .now)
+            let paidAt = networks.first { !$0.receive.isEmpty }
             reading = Reading(coSigner: me, address: opened.address ?? reading.address,
-                              receive: networks.first { !$0.receive.isEmpty }?.receive ?? reading.receive,
+                              receive: paidAt?.receive ?? reading.receive,
                               held: held, asOf: .now, publicTAC: reading.publicTAC, privateTAC: reading.privateTAC,
                               privateElsewhere: reading.privateElsewhere, defiTAC: reading.defiTAC,
                               chainAddress: reading.chainAddress, chainShares: reading.chainShares,
                               chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, chainNotes: reading.chainNotes,
-                              earnedSince: reading.earnedSince)
+                              earnedSince: reading.earnedSince,
+                              receiveNetwork: paidAt.map { $0.network.name } ?? reading.receiveNetwork)
             keep(reading)
             if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
             if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
@@ -427,7 +437,7 @@ final class TacitAccount {
                           held: [Held(chainId: 1, network: "Ethereum", eth: 0.42, waiting: 0, pool: 14.7, reached: true),
                                  Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
                           asOf: raw == "closed" ? Date.now.addingTimeInterval(-3 * 3600) : .now,
-                          publicTAC: 23.85)
+                          publicTAC: 23.85, receiveNetwork: "Ethereum")
         livePrice = 2044
         liveTacPrice = 0.78
         liveTacMove = 0.115
@@ -440,7 +450,8 @@ final class TacitAccount {
                                          Held(chainId: 4663, network: "Robinhood", eth: 0, waiting: 0, pool: 0.10, reached: true)],
                                   asOf: .now, publicTAC: 23.85, privateTAC: 10.02, defiTAC: 0,
                                   chainAddress: "tc1" + String(repeating: "5a", count: 40) + "7e2c",
-                                  earnedTAC: 0.04, earnedSince: Date.now.addingTimeInterval(-6 * 86_400))
+                                  earnedTAC: 0.04, earnedSince: Date.now.addingTimeInterval(-6 * 86_400),
+                                  receiveNetwork: "Ethereum")
         }
         livePhase = raw == "closed" ? .closed : .open
     }

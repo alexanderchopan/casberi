@@ -109,6 +109,14 @@ struct MovePrivateSentence<Head: View>: View {
             guard move.mode == .send else { return }
             await move.checkRecipient()
         }
+        // An earlier send to the same place is finished, so its amount is
+        // the sentence's (prd §1988).
+        .onChange(of: move.stage == .ready ? move.finishing : nil, initial: true) { _, earlier in
+            if earlier != nil { move.adoptFinishing() }
+        }
+        // A dollar send away: the private ETH its gas takes, once the
+        // relayer's fee is read (prd §1988).
+        .task(id: "\(move.away && move.symbol == "USDC") \(move.quotedFee ?? "")") { await move.readAwayGas() }
         // Done, the move lands in Activity as its own row (prd §1554).
         .onChange(of: doneHash) { _, hash in
             guard let hash else { return }
@@ -192,7 +200,7 @@ struct MovePrivateSentence<Head: View>: View {
             if !isDone { head() }
             MoveClause(glue: isDone ? String(localized: "Sent") : nil) {
                 Button {
-                    guard move.stage == .ready else { return }
+                    guard move.stage == .ready, move.finishing == nil else { return }
                     toggle(.amount)
                 } label: {
                     MoveWord(figure, ink: MoveSentence.settledInk)
@@ -357,23 +365,49 @@ struct MovePrivateSentence<Head: View>: View {
     /// 27 s on Sepolia, the proof a few more), as facts (prd §1896).
     private var sendFacts: [(name: String, value: String?)] {
         var facts: [(name: String, value: String?)] = []
+        // A Sepolia fee is a few hundred-millionths: it keeps its digits.
+        let fee: String? = move.symbol == "USDC"
+            ? move.fee.map { PrivateMoney.figure($0, decimals: 6, symbol: "USDC") }
+            : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { "\($0) ETH" }
         // The network is the sentence's last word (prd §1929).
         // To someone with a private account of their own, it stays private:
         // balance to balance (prd §1567), nothing paid out.
         if move.balanceToBalance == true, !move.away {
             facts.append((String(localized: "Arrives"), String(localized: "in their private balance")))
+            // **THE RELAYER IS PAID HERE TOO (prd §1988):** a transfer is
+            // relayed as a withdrawal is, and the line said nothing of it.
+            if let fee { facts.append((String(localized: "Relayer fee"), fee)) }
             facts.append((String(localized: "Takes"), String(localized: "about a minute")))
             return facts
         }
-        // A Sepolia fee is a few hundred-millionths: it keeps its digits.
-        let fee: String? = move.symbol == "USDC"
-            ? move.fee.map { PrivateMoney.figure($0, decimals: 6, symbol: "USDC") }
-            : move.fee.flatMap { PrivateMoney.number($0, decimals: 18, places: move.onEthereum ? 6 : 12) }.map { "\($0) ETH" }
-        if let fee { facts.append((String(localized: "Relayer fee"), fee)) }
+        // **FINISHING AN EARLIER SEND (prd §1988):** what goes is what
+        // already left, said once, above the rest.
+        if let earlier = move.finishing {
+            let left = earlier.amount.map { PrivateMoney.figure($0, decimals: earlier.symbol == "USDC" ? 6 : 18, symbol: earlier.symbol ?? "ETH") }
+            facts.append((left.map { String(localized: "Finishing your earlier send of \($0)") }
+                          ?? String(localized: "Finishing your earlier send"), nil))
+        }
+        if let fee, move.finishing == nil { facts.append((String(localized: "Relayer fee"), fee)) }
+        // Paid out: say where, as balance to balance does.
+        // Only once the check has answered: "their public account" must not
+        // flip to "private balance" a moment later (prd §1988).
+        if let to = move.recipient, move.tag == nil, !move.away, move.balanceToBalance == false {
+            facts.insert((String(localized: "Arrives"), PrivateMove.isYours(to)
+                ? String(localized: "in your public account") : String(localized: "in their public account")), at: 0)
+        }
         if move.away {
             // To Base or Robinhood, Across and a one-time sender's gas (prd §1879).
-            if move.symbol == "USDC" {
-                facts.append((String(localized: "Gas"), String(localized: "from your private ETH")))
+            if move.symbol == "USDC", move.finishing == nil {
+                // **ITS GAS IS A SECOND WITHDRAWAL (prd §1988):** your private
+                // ETH, the gas half again and its own relayer fee, as a figure.
+                if let gas = move.awayGas.flatMap({ PrivateMoney.numberUp($0, decimals: 18, places: 6) }) {
+                    facts.append((String(localized: "Gas from your private ETH, with its own relayer fee"),
+                                  String(localized: "about \(gas) ETH")))
+                } else {
+                    facts.append((String(localized: "Gas"), String(localized: "from your private ETH")))
+                }
+                facts.append((String(localized: "Across keeps"), String(localized: "about 0.1%")))
+            } else if move.symbol == "USDC" {
                 facts.append((String(localized: "Across keeps"), String(localized: "about 0.1%")))
             } else {
                 facts.append((String(localized: "Across and gas keep"), String(localized: "about 1–2%")))
@@ -427,8 +461,10 @@ struct MovePrivateSentence<Head: View>: View {
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true,
                                     value: "Privacy Pools", glyph: "lock.fill") { leave(.pickRecipient) })
         }
+        // Finishing an earlier send, its token and amount are fixed (prd §1988).
+        let fixed = move.finishing != nil
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), on: open == .token, answered: true,
-                                value: "\(move.symbol) · \(move.network.name)", mark: token) { toggle(.token) })
+                                value: "\(move.symbol) · \(move.network.name)", mark: token) { if !fixed { toggle(.token) } })
         // **THE OPEN CHIP IS THE FIELD (prd §1989):** the figure in the unit
         // it is typed in, $ | token at its end, what it means under it.
         let typing = open == .amount
@@ -439,7 +475,7 @@ struct MovePrivateSentence<Head: View>: View {
                                 value: typingDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
                                     : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil) : figure),
                                 accessory: flips ? AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { setDollars($0) }) : nil,
-                                fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { toggle(.amount) })
+                                fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { if !fixed { toggle(.amount) } })
         return out
     }
 
@@ -685,13 +721,13 @@ struct MovePrivateSentence<Head: View>: View {
             .dsText(.body17)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-            .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+            .frame(minHeight: MoveDeck.rowHeight)  // every Move row, 40pt (prd §1984)
             .onSubmit { take(typed) }
         Button {
             take(UIPasteboard.general.string ?? "")
         } label: {
             Text("Paste").dsText(.body17).foregroundStyle(DS.pickInk)
-                .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight + DS.Space.s3, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: MoveDeck.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -930,6 +966,10 @@ struct MovePrivateSentence<Head: View>: View {
     /// One Activity row for the move, by its transaction: the eye-slash
     /// lead, the words with no verb, Etherscan its door.
     private func land(_ hash: String) {
+        // **NO TRANSACTION, NO ROW (prd §1988):** a deposit Ethereum named
+        // no hash for wrote an empty row keyed on "", which every later one
+        // was deduped against. Holdings shows its note by its commitment.
+        guard !hash.isEmpty else { return }
         let title = PrivateMoney.activityTitle(figure: figure,
                                                to: move.mode == .send ? (move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short)) : nil)
         PrivateActivity.land(hash: hash, title: title, chainId: move.network.chainId, context: context)

@@ -59,6 +59,8 @@ enum RailgunPocket {
         case noPrivateGas
         /// The fresh sender's gas was sent and has not landed yet: try again.
         case gasOnItsWay
+        /// A private send to this wallet's own 0zk address (prd §1988 item 6).
+        case ownAddress
     }
 
     /// Ethereum's WETH: what a little ETH for broadcasters' fees becomes.
@@ -543,7 +545,8 @@ enum RailgunPocket {
         guard RailgunSwap.isPrivateAddress(to), let hexAmount = PrivateMoney.hex(amount),
               let wanted = Decimal(string: amount), wanted > 0 else { throw Failure.notWritten }
         let opened = try await open(reason: nil)
-        guard to.trimmingCharacters(in: .whitespacesAndNewlines) != opened.address else { throw Failure.notWritten }
+        // Your own 0zk address says so, never "could not be written" (prd §1988).
+        guard to.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != opened.address.lowercased() else { throw Failure.ownAddress }
         let synced = try await sync()
         var spendable: [String: Decimal] = [:]
         for b in synced.balances { spendable[b.token.lowercased()] = Decimal(string: PrivateMoney.decimal(hex: b.spendable)) ?? 0 }

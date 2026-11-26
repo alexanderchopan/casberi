@@ -78,6 +78,10 @@ enum YourAccountOrder {
 
     private static let dollarSymbols: Set<String> = ["USDC", "USDG", "USDT", "DAI", "USDBC", "USDS"]
 
+    /// A dollar by its symbol alone, for an order kept with no contract
+    /// for the token bought (prd §1988).
+    static func isDollarSymbol(_ symbol: String) -> Bool { dollarSymbols.contains(symbol.uppercased()) }
+
     /// A dollar: the network's own, or one of the common stablecoins.
     static func isDollar(_ token: Op.Token, on network: Op.Network) -> Bool {
         if let c = token.contract, c.lowercased() == network.dollar.lowercased() { return true }
@@ -148,6 +152,28 @@ enum YourAccountOrder {
         return text.isEmpty ? "0" : String(text)
     }
 
+    /// a + b, both non-negative decimal integers (prd §1988: the approval
+    /// is every open order's amount on the token, added digit by digit).
+    static func plus(_ a: String, _ b: String) -> String {
+        let x = a.reversed().compactMap(\.wholeNumberValue), y = b.reversed().compactMap(\.wholeNumberValue)
+        var out: [Int] = []
+        var carry = 0
+        for i in 0..<max(x.count, y.count) {
+            let v = (i < x.count ? x[i] : 0) + (i < y.count ? y[i] : 0) + carry
+            out.append(v % 10)
+            carry = v / 10
+        }
+        if carry > 0 { out.append(carry) }
+        let text = String(out.reversed().map { Character(String($0)) }).drop { $0 == "0" }
+        return text.isEmpty ? "0" : String(text)
+    }
+
+    /// a ≥ b, both non-negative decimal integers.
+    static func atLeast(_ a: String, _ b: String) -> Bool {
+        let x = String(a.drop { $0 == "0" }), y = String(b.drop { $0 == "0" })
+        return x.count != y.count ? x.count > y.count : x >= y
+    }
+
     /// a × 10^n.
     static func shiftUp(_ a: String, _ n: Int) -> String { a == "0" ? "0" : a + String(repeating: "0", count: max(0, n)) }
 
@@ -180,7 +206,9 @@ enum YourAccountOrder {
     /// token is at `price` dollars (prd §1673 item 3). When neither token is
     /// a dollar the price is of the token bought, and the sold token's dollar
     /// price NOW (`sellDollars`, kept to eight places) turns it into a rate:
-    /// the rate is fixed when the order is placed.
+    /// the rate is fixed when the order is placed, so the order's words say
+    /// the rate (`YourAccountOrders.rateWords`), never "when X is $P" as a
+    /// trigger it does not hold (prd §1988).
     static func buyUnits(sellUnits: String, sell: Op.Token, buy: Op.Token, on network: Op.Network,
                          price: Decimal, sellDollars: Double? = nil) -> String? {
         guard !price.isZero, !price.negative, sellUnits.allSatisfy(\.isDigitASCII), !sellUnits.isEmpty,
@@ -276,7 +304,16 @@ enum YourAccountOrder {
 
     /// Wrap exactly the ETH sold, approve exactly what is sold to the vault
     /// relayer, pre-sign the order. Nothing else, nowhere else.
-    static func calls(order: CowOrder.Order, uid: [UInt8], sellingETH: Bool, network: Op.Network) -> [(to: String, data: String, value: String)]? {
+    ///
+    /// **An approval is a SETTING, not an addition (prd §1988).** A second
+    /// order on the same token that approved only its own amount REPLACED the
+    /// first's allowance, so the first could no longer fill. `stillOpen` is
+    /// the other open orders' amounts on this token (`YourAccountOrders
+    /// .stillOpen`), and the approval is that plus this order's. When there
+    /// is one, the allowance goes to zero first: USDT on Ethereum refuses a
+    /// nonzero approval over a nonzero allowance.
+    static func calls(order: CowOrder.Order, uid: [UInt8], sellingETH: Bool, network: Op.Network,
+                      stillOpen: String = "0") -> [(to: String, data: String, value: String)]? {
         guard uid.count == 56, let wethAddress = weth(chainId: network.chainId) else { return nil }
         var out: [(to: String, data: String, value: String)] = []
         let sold = Op.decimal(order.sellAmount)
@@ -284,8 +321,17 @@ enum YourAccountOrder {
             guard order.sellToken.lowercased() == wethAddress.lowercased() else { return nil }
             out.append((wethAddress, SafeABI.hex(YourAccount.sel("deposit()")), sold))
         }
-        let approve = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + order.sellAmount
-        out.append((order.sellToken, SafeABI.hex(approve), "0"))
+        let others = stillOpen.isEmpty ? "0" : stillOpen
+        if others == "0" {
+            let approve = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + order.sellAmount
+            out.append((order.sellToken, SafeABI.hex(approve), "0"))
+        } else {
+            guard let zero = SafeABI.word(uint256: "0"), let total = SafeABI.word(uint256: plus(sold, others)) else { return nil }
+            let clear = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + zero
+            let approve = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + total
+            out.append((order.sellToken, SafeABI.hex(clear), "0"))
+            out.append((order.sellToken, SafeABI.hex(approve), "0"))
+        }
         out.append((CowOrder.settlement, SafeABI.hex(preSignature(uid)), "0"))
         return out
     }
@@ -295,10 +341,22 @@ enum YourAccountOrder {
     }
 
     /// Cancel: `invalidateOrder(uid)` on the settlement, the owner's own call.
-    static func cancelCalls(uid: [UInt8]) -> [(to: String, data: String, value: String)]? {
+    ///
+    /// **An ETH order cancelled hands back ETH, not WETH (prd §1988).**
+    /// Placing it wrapped the ETH; invalidating alone left the person holding
+    /// WETH they never asked for. `unwrap` is WETH's address and the order's
+    /// amount, given only when the account holds that WETH beyond what its
+    /// other open orders need (`YourAccountChain.cancelOrder` reads it), so
+    /// `withdraw` cannot fail the cancel.
+    static func cancelCalls(uid: [UInt8], unwrap: (weth: String, units: String)? = nil) -> [(to: String, data: String, value: String)]? {
         guard uid.count == 56 else { return nil }
         let data = YourAccount.sel("invalidateOrder(bytes)") + YourAccount.w(32) + YourAccount.dynamic(uid)
-        return [(CowOrder.settlement, SafeABI.hex(data), "0")]
+        var out: [(to: String, data: String, value: String)] = [(CowOrder.settlement, SafeABI.hex(data), "0")]
+        if let unwrap, unwrap.units != "0" {
+            guard let amount = SafeABI.word(uint256: unwrap.units) else { return nil }
+            out.append((unwrap.weth, SafeABI.hex(YourAccount.sel("withdraw(uint256)") + amount), "0"))
+        }
+        return out
     }
 }
 

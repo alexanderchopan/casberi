@@ -240,8 +240,50 @@ final class PrivateMove {
         return (symbol == "USDC" ? usdcMinimum : minimum) ?? "1"
     }
 
+    /// **AN EARLIER SEND TO THE SAME PLACE IS FINISHED, NOT SENT AGAIN (prd
+    /// §1988).** To Base or Robinhood, a send whose withdrawal went out and
+    /// whose deposit did not: the next send there goes from what already
+    /// left, so the sentence names that, never a new amount.
+    var finishing: PrivateSendAway.Pending? {
+        guard away, tag == nil, let to = recipient, PrivateMoney.isAddress(to) else { return nil }
+        return PrivateSendAway.earlier(to: destination, payee: to)
+    }
+
+    /// The earlier send's token and amount become the sentence's, so what
+    /// it says is what goes (an earlier send kept before its amount was
+    /// keeps the sentence's, and `runEthereum` records what went).
+    func adoptFinishing() {
+        guard let p = finishing else { return }
+        symbol = p.symbol ?? "ETH"
+        if let units = p.amount, let shown = Self.plain(units, decimals: decimals) { amount = shown }
+    }
+
+    /// **A DOLLAR SEND AWAY PAYS ITS GAS IN PRIVATE ETH (prd §1988).** About
+    /// what `PrivateSendAway.sendDollar` takes from your private ETH, base
+    /// units: the gas, half again, plus its own withdrawal's relayer fee.
+    /// Nil until read (`readAwayGas`), or where it is not that send.
+    private(set) var awayGas: String?
+
+    func readAwayGas() async {
+        guard away, symbol == "USDC", !DemoMode.isActive, let quotedFee, let fee = Decimal(string: quotedFee),
+              let home = PrivacyNetwork.forChain(FreshTx.homeChain), let fees = try? await PrivateRPC.fees(home) else {
+            awayGas = nil
+            return
+        }
+        awayGas = PrivateMoney.plain(PrivateSendAway.dollarGas(maxFee: fees.maxFee) + fee)
+    }
+
+    /// Base units as a typed figure ("0.0123"), every place kept.
+    static func plain(_ units: String, decimals: Int) -> String? {
+        guard var whole = Decimal(string: units) else { return nil }
+        for _ in 0..<decimals { whole /= 10 }
+        return NSDecimalNumber(decimal: whole).stringValue
+    }
+
     /// A typed amount the move can take.
     var amountFits: Bool {
+        // Finishing, nothing more leaves your private balance (prd §1988).
+        if finishing != nil { return true }
         guard let units = PrivateMoney.baseUnits(amount, decimals: decimals).flatMap({ Decimal(string: $0) }), units > 0,
               let top = most.flatMap({ Decimal(string: $0) }) else { return false }
         return units <= top && units >= (Decimal(string: least) ?? 1)
@@ -260,12 +302,25 @@ final class PrivateMove {
         // A deposit address is nobody's private account: paid out, always.
         if tag != nil { balanceToBalance = false; return }
         guard let to = recipient, PrivateMoney.isAddress(to), !DemoMode.isActive else { balanceToBalance = nil; return }
+        // **TO YOURSELF IS ALWAYS PAID OUT (user, 2026-11-26: "i just sent
+        // from privacy pools to my safe and it says arrives in private
+        // balance").** Your own account HAS a private account, so a transfer
+        // moved your ETH from your private balance into your private balance,
+        // a fee for nothing. Your public account or your co-signer is paid out.
+        if Self.isYours(to) { balanceToBalance = false; return }
         balanceToBalance = nil
         let has = await PrivateOnEthereum.hasPrivateAccount(to, on: network)
         guard recipient == to else { return }
         balanceToBalance = has
         NSLog("privateMove| recipient | %@ | %@", YourAccount.short(to),
               has.map { $0 ? "has a private account" : "no private account" } ?? "not answered")
+    }
+
+    /// Your public account, its private owner or your co-signer.
+    static func isYours(_ address: String) -> Bool {
+        let a = address.lowercased()
+        return [YourAccountKey.address, PrivateOnEthereum.owner].compactMap { $0?.lowercased() }.contains(a)
+            || YourAccountFacts.coSigners.contains { $0.lowercased() == a }
     }
 
     var choices: [String] {
@@ -565,7 +620,10 @@ final class PrivateMove {
             stage = .failed(YourAccountDemo.actsLater)
             return
         }
-        guard let value = PrivateMoney.baseUnits(amount, decimals: decimals) else { return }
+        // Finishing an earlier send kept before its amount was (prd §1988):
+        // nothing is typed and nothing new leaves, so no figure is needed.
+        guard let value = PrivateMoney.baseUnits(amount, decimals: decimals) ?? (mode == .send && away && finishing != nil ? "0" : nil)
+        else { return }
         let token = tokenId
         let started = Date()
         deposited = nil
@@ -592,11 +650,16 @@ final class PrivateMove {
                     to = r
                 }
                 if away {
+                    adoptFinishing()
                     stage = .opening
-                    let hash = try await PrivateSendAway.send(amount: value, symbol: symbol, to: destination, payee: to) { [weak self] _ in
+                    let sent = try await PrivateSendAway.send(amount: value, symbol: symbol, to: destination, payee: to) { [weak self] _ in
                         self?.stage = .sending
                     }
-                    stage = .done(hash)
+                    // **WHAT WENT IS WHAT ACTIVITY SAYS (prd §1988):** an
+                    // earlier send finished sends its own amount, not the typed one.
+                    symbol = sent.symbol
+                    if let shown = Self.plain(sent.amount, decimals: decimals) { amount = shown }
+                    stage = .done(sent.hash)
                     return
                 }
                 // Waiting on the engine (a background read may hold it) says so.
@@ -626,7 +689,9 @@ final class PrivateMove {
                     }
                 }, proving: { [weak self] in self?.stage = .proving })
                 // Kept whether or not Ethereum named its transaction (finding 2):
-                // the sentence follows the note by its commitment.
+                // the sentence follows the note by its commitment. **NO HASH,
+                // NO ACTIVITY ROW (prd §1988):** `.done("")` lands nothing
+                // (`MovePrivateSentence.land`), so no row is keyed on "".
                 deposited = made.commitment
                 stage = .done(made.tx ?? "")
                 await PrivateMoneyStore.shared.refresh(force: true)

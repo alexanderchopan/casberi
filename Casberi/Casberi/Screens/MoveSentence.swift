@@ -64,8 +64,10 @@ struct MoveSentence: View {
         // sentence Move opens on (prd §1806).
         // A send or a swap kept behind its sheet opens as it stands, its
         // reason and Try again included (prd §1806, §1885).
-        let keptRailgun = (railgun?.takeBack == true && railgun?.recipient != nil)
-            || (railgun?.swap == true && RailgunMove.kept?.mode == .swap) ? RailgunMove.kept : nil
+        // Only the kept send to THIS recipient (prd §1988): a failed send to
+        // Ana never opens under a new send to Ben.
+        let keptRailgun = railgun?.takeBack == true && railgun?.recipient != nil ? RailgunMove.kept(for: railgun?.recipient)
+            : railgun?.swap == true && RailgunMove.kept?.mode == .swap ? RailgunMove.kept : nil
         let railgunMove = keptRailgun ?? RailgunMove()
         if keptRailgun == nil {
             railgunMove.mode = railgun?.swap == true ? .swap : railgun?.takeBack == true ? .takeBack : .deposit
@@ -112,13 +114,16 @@ struct MoveSentence: View {
     /// `recipient`: out to someone else through a broadcaster (prd §1721
     /// item 3); nil or your own account is taking it back.
     private func goRailgun(_ mode: RailgunMove.Mode, contract: String?, recipient: String? = nil) {
-        if mode == .takeBack, recipient != nil, let kept = RailgunMove.kept {
-            // The one behind its sheet, as it stands (prd §1806).
+        if mode == .takeBack, recipient != nil, let kept = RailgunMove.kept(for: recipient) {
+            // The one behind its sheet, as it stands (prd §1806), only when
+            // it goes to this recipient (prd §1988).
             railgunMove = kept
             withAnimation(DS.Motion.standard) { open = nil; railgunOpen = true }
             DSHaptic.selection()
             return
         }
+        // Never write a new recipient onto the kept move, which may still be proving.
+        if railgunMove === RailgunMove.kept { railgunMove = RailgunMove() }
         railgunMove.mode = mode
         railgunMove.wanted = contract
         railgunMove.recipient = mode == .takeBack ? recipient : nil
@@ -144,12 +149,16 @@ struct MoveSentence: View {
 
     /// Into your private balance on Aztec, or from it to `recipient`.
     private func goAztec(_ mode: AztecMove.Mode, recipient: String? = nil) {
-        if mode == .send, let kept = AztecMove.kept {
-            // The one behind its sheet, as it stands (prd §1777).
+        if mode == .send, let kept = AztecMove.kept(for: recipient) {
+            // The one behind its sheet, as it stands (prd §1777), only when
+            // it goes to this recipient (prd §1988).
             aztecMove = kept
         } else {
+            var fresh = false
+            if aztecMove === AztecMove.kept { aztecMove = AztecMove(); fresh = true }
             aztecMove.mode = mode
             aztecMove.recipient = mode == .send ? recipient : nil
+            if fresh { let m = aztecMove; Task { await m.read() } }
         }
         withAnimation(DS.Motion.standard) { open = nil; aztecMode = mode }
         DSHaptic.selection()
@@ -565,6 +574,9 @@ struct MoveSentence: View {
     /// **"SWEPT 3 TOKENS FOR 0.0004 ETH ON BASE." (prd §1586).** A sweep's
     /// receipt counts what it took; the tokens are the list it just showed.
     static func swept(_ r: Receipt, count: Int) -> Receipt {
+        // Not yet seen stays "Sent, not yet seen" (prd §1988): never "Swept"
+        // over "Check before sending again".
+        if r.past == String(localized: "Sent,") { return r }
         let back = r.lines.first { $0.glue == String(localized: "for") }
         let on = r.lines.last
         let n = count == 1 ? String(localized: "1 token") : String(localized: "\(count) tokens")
@@ -1501,7 +1513,13 @@ struct MoveSentence: View {
             if verb == .lend, privateMode == nil, open != .verb {
                 // Its page is named as the menu names it (prd §1896): "Earn",
                 // where it said "Lend"; the sentence keeps the verb.
-                MoveLendSentence(move: lendMove, account: account, inTray: inTray, title: pageTitle(.lend)) { verbWord(lendWord) }
+                MoveLendSentence(move: lendMove, account: account, inTray: inTray, title: pageTitle(.lend), tacit: { mode in
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) {
+                        if mode == .lend { tacitOpen = true } else { tacitPayTo = nil; tacitOutOpen = true }
+                    }
+                }) { verbWord(lendWord) }
+                    .opacity(tacitOpen || tacitOutOpen ? 0 : 1)
                     .transition(.opacity)
             }
             if railgunOpen, privateMode == nil, open != .verb {
@@ -2596,6 +2614,19 @@ struct MoveSentence: View {
             if poolsRow || RailgunPocket.available || aztec != nil || tacit != nil {
                 receiveGroup(String(localized: "Private"))
             }
+            // A–Z under Private, as every Move list (prd §1985).
+            if let aztec {
+                // Aztec's words in its own ink (prd §1779): "From: Another
+                // Aztec account only" is its address's rule.
+                ReceivePlace(name: ReceiveWords.name(.aztec), facts: receiveFacts(.aztec), ink: DS.aztecInk,
+                             copied: copiedPlace == "aztec",
+                             copy: {
+                                 if DemoMode.isActive { say(YourAccountDemo.actsLater); return }
+                                 DSPasteboard.copy(aztec)
+                                 DSHaptic.tap()
+                                 markCopied("aztec")
+                             })
+            }
             if poolsRow {
                 // A one-time address; what arrives moves in by itself (prd §1560).
                 ReceivePoolsPlace(facts: receiveFacts(.pools), payGas: { address, eth in payGas(address, eth) })
@@ -2614,18 +2645,6 @@ struct MoveSentence: View {
                                      DSHaptic.tap()
                                      markCopied("railgun")
                                  }
-                             })
-            }
-            if let aztec {
-                // Aztec's words in its own ink (prd §1779): "From: Another
-                // Aztec account only" is its address's rule.
-                ReceivePlace(name: ReceiveWords.name(.aztec), facts: receiveFacts(.aztec), ink: DS.aztecInk,
-                             copied: copiedPlace == "aztec",
-                             copy: {
-                                 if DemoMode.isActive { say(YourAccountDemo.actsLater); return }
-                                 DSPasteboard.copy(aztec)
-                                 DSHaptic.tap()
-                                 markCopied("aztec")
                              })
             }
             if let tacit {
@@ -2653,7 +2672,8 @@ struct MoveSentence: View {
     }
 
     private func receiveFacts(_ place: ReceiveWords.Place) -> [ReceiveWords.Fact] {
-        ReceiveWords.facts(place, networks: receiveNetworkNames, poolsNetworks: ReceivePools.networks, pools: receivePools)
+        ReceiveWords.facts(place, networks: receiveNetworkNames, poolsNetworks: ReceivePools.networks, pools: receivePools,
+                           tacitNetwork: TacitAccount.shared.reading?.receiveNetwork)
     }
 
     /// **PAY THE GAS (prd §1779).** Send's own sentence, filled: a little ETH
@@ -2713,8 +2733,10 @@ struct MoveSentence: View {
 
     /// A group's name over its places (prd §1928): the section rung, at the edge.
     private func receiveGroup(_ name: String) -> some View {
+        // Public and Private wear every Move list's head (prd §1985).
         Text(verbatim: name)
-            .dsText(.heading24)
+            .dsText(.heading17)
+            .fontWeight(.bold)
             .foregroundStyle(DS.textPrimary)
             .padding(.top, DS.Space.s3)
             .frame(minHeight: DS.Hit.min, alignment: .bottomLeading)
@@ -2838,7 +2860,8 @@ struct MoveSentence: View {
     /// A choice's mark: the Wallet's list size (prd §1681, was 44).
     static let listMark: CGFloat = MoveDeck.lead
     /// A choice's row, at least: the word and its line with air (prd §1681).
-    static let listRowHeight: CGFloat = 48
+    /// Move's list rows, the Wallet's 40pt pitch (prd §1984).
+    static let listRowHeight: CGFloat = MoveDeck.rowHeight
     /// The space between a phrase's words, as a share of the size: Figtree's
     /// own space advance (measured 0.231em, Figtree Bold).
     static let wordSpace: CGFloat = 0.231
@@ -3985,7 +4008,7 @@ struct MoveSentence: View {
         var rows: [(rank: Int, row: LedgerRow)] = []
         // Where the money leaves from (prd §1779): the one visible place to
         // step into your private balance or your private account.
-        if verb == .send, sendsPrivately || sendsFromAztec {
+        if verb == .send, sendsPrivately || sendsFromAztec || sendsFromRailgun || sendsFromTacit {
             rows.append((Self.rowRank(.from), LedgerRow(id: "choiceFrom", name: Self.rowName(.from, verb: verb),
                                                         value: String(localized: "Your public account"), opens: .from)))
         }
@@ -4296,7 +4319,9 @@ struct MoveSentence: View {
     /// (paid out through Shield) it can.
     private var aztecCanPay: Bool {
         let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !toIsTag && !RailgunSwap.isPrivateAddress(typed) && items.isEmpty
+        return !toIsTag && !RailgunSwap.isPrivateAddress(typed) && !TacitOut.isTacitAddress(typed) && items.isEmpty
+            // A name not yet read would leave as an exit to nobody (prd §1988).
+            && (typed.isEmpty || AztecAddressText.isAztec(typed) || resolved != nil)
     }
 
     /// To holds a zk.money tag: proven, or typed and still being looked up.
@@ -4304,31 +4329,89 @@ struct MoveSentence: View {
         let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
         return paysZkMoney || ZkMoneyWire.tag(typed) != nil || ZkMoneyWire.atTag(typed) != nil
     }
+    /// **NEVER TO A ZK.MONEY TAG (prd §1988):** a tag's address is a
+    /// one-time deposit that takes DAI, USDC or USDT only; Railgun would
+    /// unshield any token to it, as Aztec is kept off tags (§1907).
+    private var sendsFromRailgun: Bool {
+        guard RailgunPocket.available, YourAccountKey.address != nil || DemoMode.isActive, !toIsTag else { return false }
+        // Only a To Railgun can pay (prd §1988): none (back to you), a 0zk
+        // address, or an Ethereum address read; never an Aztec or Tacit
+        // address, nor a name not yet read, which would go back to you.
+        let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        return typed.isEmpty || RailgunSwap.isPrivateAddress(typed) || resolved != nil
+    }
+    /// Who a From row pays: the Ethereum address read, or a typed 0zk one.
+    private var railgunPayee: String? {
+        let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        return resolved?.address ?? (RailgunSwap.isPrivateAddress(typed) ? typed : nil)
+    }
+    /// **TACIT ONLY GOES BACK TO YOU, OR TO ANOTHER TACIT ACCOUNT (prd §1988):**
+    /// with someone else's Ethereum address in To, From Tacit would quietly
+    /// send to your own public account instead, so it isn't offered.
+    private var sendsFromTacit: Bool {
+        guard verb == .send, YourAccountKey.address != nil || DemoMode.isActive, TacitAccount.shared.connected, !toIsTag else { return false }
+        let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        if TacitOut.isTacitAddress(typed) || typed.isEmpty { return true }
+        // Anything else must be you: a name not yet read, a 0zk or an Aztec
+        // address would quietly go back to your own account (prd §1988).
+        guard let someone = resolved?.address ?? (PrivateMoney.isAddress(typed) ? typed : nil) else { return false }
+        return PrivateMove.isYours(someone)
+    }
     private var sendsFromAztec: Bool { AztecProver.isAvailable && AztecAccountStore.shared.shown.address != nil }
 
-    /// **FROM (prd §1779).** Three places at most, each named as the Wallet
+    /// **FROM (prd §1779, §1976).** Every place you hold money, each named as the Wallet
     /// names it. Picking a private one opens its own sentence, which is
     /// where its rules are said; an Aztec address already typed goes along.
     private var fromList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            listRow(String(localized: "Your public account"), sub: String(localized: "Anyone can see it · \(network.name)"), symbol: "wallet.bifold", picked: true) {
+            // **PUBLIC, THEN PRIVATE (prd §1985), as Home, Holdings and
+            // Receive group money;** each place under its group, A–Z, its
+            // network beside it.
+            listHeader(String(localized: "Public"))
+            // Every network it is on, as Receive names them (user, 2026-11-26:
+            // "why does this say Base, when it is Base Ethereum and Robinhood").
+            listRow(String(localized: "Your public account"), sub: Op.networks.map(\.name).joined(separator: ", "),
+                    symbol: "wallet.bifold", picked: true) {
                 withAnimation(DS.Motion.standard) { open = nil }
                 DSHaptic.selection()
             }
-            if sendsPrivately {
-                listRow("Privacy Pools",
-                        sub: String(localized: "Only you can see it · \((PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name)"), symbol: "eye.slash") {
-                    goPrivate(.send)
-                }
+            if sendsPrivately || (sendsFromAztec && aztecCanPay) || sendsFromRailgun || sendsFromTacit {
+                listHeader(String(localized: "Private"))
             }
             // **NOT TO A TAG (prd §1907, user: "it still gives you the option to
             // choose aztec if you already entered a zkmoney tag").** Your
             // Aztec account cannot pay zk.money: a tag takes a deposit on
             // Ethereum, or 0xDAI from a zk.money account.
             if sendsFromAztec, aztecCanPay {
-                listRow("Aztec", sub: Self.aztecSendRule, symbol: "diamond") {
+                listRow("Aztec", sub: "Aztec", image: "brand-aztec") {
                     let typed = to.trimmingCharacters(in: .whitespaces)
-                    goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)
+                    // An Ethereum address read goes along too (prd §1988), so a
+                    // kept send to someone else never opens in its place.
+                    goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : resolved?.address)
+                }
+            }
+            if sendsPrivately {
+                listRow("Privacy Pools", sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
+                        image: "brand-privacy-pools") {
+                    goPrivate(.send)
+                }
+            }
+            // **ONE RULE FOR ALL FOUR (prd §1984):** a place you have shows,
+            // empty or not.
+            if sendsFromRailgun {
+                listRow("Railgun", sub: Op.ethereum.name, image: "brand-railgun") {
+                    goRailgun(.takeBack, contract: nil, recipient: railgunPayee)
+                }
+            }
+            if sendsFromTacit {
+                listRow("Tacit", sub: String(localized: "Tacit chain"), image: "brand-tacit") {
+                    DSHaptic.selection()
+                    let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
+                    withAnimation(DS.Motion.standard) {
+                        open = nil
+                        if TacitOut.isTacitAddress(typed) { tacitPayTo = typed }
+                        tacitOutOpen = true
+                    }
                 }
             }
         }
@@ -4439,7 +4522,7 @@ struct MoveSentence: View {
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text("Remove"))
         }
-        .frame(minHeight: 48)
+        .frame(minHeight: MoveDeck.rowHeight)  // every Move row, 40pt (prd §1984)
         .padding(.top, DS.Space.s4)
         .id(line == .current ? "moveCurrentLine" : "moveKeptLine")
     }
@@ -4583,7 +4666,7 @@ struct MoveSentence: View {
             Text("Paste link")
                 .dsText(.body17)
                 .foregroundStyle(DS.pickInk)
-                .frame(minHeight: 44, alignment: .leading)
+                .frame(minHeight: MoveDeck.rowHeight, alignment: .leading)
         }
         .buttonStyle(RowPress())
     }
@@ -4661,7 +4744,10 @@ struct MoveSentence: View {
             guard batch.count == 1, case .send(let p) = batch[0],
                   let units = Decimal(string: p.amount) else { return }
             let whole = units / pow(10, p.token.decimals)
-            let again = Again(to: p.toName ?? p.to, address: p.to, chainId: p.network.chainId, symbol: p.token.symbol,
+            // A tag keeps no address: its deposit address was for that one
+            // payment, and is spent (prd §1988).
+            let tagged = p.toName.map { ZkMoneyWire.tag($0) != nil || ZkMoneyWire.atTag($0) != nil } ?? false
+            let again = Again(to: p.toName ?? p.to, address: tagged ? "" : p.to, chainId: p.network.chainId, symbol: p.token.symbol,
                               tokenID: p.token.contract?.lowercased() ?? p.token.symbol,
                               amount: NSDecimalNumber(decimal: whole).stringValue, at: Date())
             if let data = try? JSONEncoder().encode(again) { DefaultsWrite.set(data, forKey: key(account)) }
@@ -4708,7 +4794,10 @@ struct MoveSentence: View {
                 amount = a.amount
             }
             to = a.to
-            resolved = Recipient(address: a.address, name: a.to == a.address ? nil : a.to, imitates: nil)
+            // **A TAG IS LOOKED UP AGAIN (prd §1988; Send again paid a spent
+            // zk.money deposit address):** never its old address.
+            let tag = ZkMoneyWire.tag(a.to) != nil || ZkMoneyWire.atTag(a.to) != nil
+            resolved = tag || a.address.isEmpty ? nil : Recipient(address: a.address, name: a.to == a.address ? nil : a.to, imitates: nil)
             open = nil
         }
         focus = nil
@@ -5092,7 +5181,7 @@ struct MoveSentence: View {
         if verb == .deposit, let seller = depositSeller {
             // **WHERE IT ARRIVES, AND WHO TAKES THE CARD (prd §1799).**
             rows.append(LedgerRow(id: "arrives", name: String(localized: "Arrives in"),
-                                  value: String(localized: "Your account \(AddressTail.short(account))")))
+                                  value: String(localized: "Your public account \(AddressTail.short(account))")))
             rows.append(LedgerRow(id: "card", name: String(localized: "Card taken by"), value: seller.name, marks: [seller.name]))
         }
         if verb == .send {
@@ -5119,7 +5208,10 @@ struct MoveSentence: View {
         }
         if let change { rows.append(LedgerRow(id: "rounds", name: String(localized: "Round-ups"), value: Self.money(change))) }
         if verb == .send || verb == .swap || verb == .sweep, !limiting, let fee = feeFigure {
-            rows.append(LedgerRow(id: "fee", name: String(localized: "Fee"), value: fee))
+            // The preview is read without Round-ups' move, which costs more
+            // gas when it rides along (prd §1988): said, not hidden.
+            let rideMoves = rounds && roundUpStep?.moves == true
+            rows.append(LedgerRow(id: "fee", name: rideMoves ? String(localized: "Fee, before Round-ups") : String(localized: "Fee"), value: fee))
         }
         for (n, line) in exchangeCredit.enumerated() {
             rows.append(line.pools
@@ -5724,7 +5816,9 @@ struct MoveSentence: View {
                 }
             }
             .accessibilityAddTraits(picked ? [.isSelected] : [])
-            .frame(minHeight: MoveReceipt.lineHeight + MoveReceipt.gap)
+            // **THE WALLET'S PITCH (user, 2026-11-26: "please fix moves
+            // rows"):** 40pt, as Home, Holdings and Activity (§1482).
+            .walletRowPitch()
             .contentShape(Rectangle())
             .opacity(dim ? 0.4 : 1)
         }
@@ -5762,14 +5856,27 @@ struct MoveSentence: View {
         // **BY WORTH, NOT BY NETWORK (prd §1916, user, 2026-11-19: "do you
         // think we need to say which networks … if we already have badges?"):**
         // one grid, biggest first; each face's badge says where it is.
-        let publicPlace = MoveTokenPlace(id: "public", title: String(localized: "Your public account"), choices: rows.map { row in
-            let h = row.held
-            return MoveTokenChoice(id: row.key, symbol: h.token.symbol, network: row.net.name, badge: Self.networkMark(row.net),
-                                   sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
-                                   picked: with?.id == h.id && networkPicked && row.net == network) {
-                pick { takeToken(h, on: row.net) }
-            }
-        })
+        // **PUBLIC BY NETWORK, AS HOLDINGS (prd §1988, amends §1916; user,
+        // 2026-11-26: "shouldn't your public account separate by network like
+        // we do in holdings?"):** each network a grey side head under Public,
+        // richest first, its tokens by worth, each row its amount.
+        let netOrder = Dictionary(grouping: rows, by: { $0.net.chainId })
+            .map { (id: $0.key, worth: $0.value.reduce(0.0) { $0 + ($1.held.usd ?? 0) }) }
+            .sorted { $0.worth > $1.worth }.map(\.id)
+        let publicPlaces = netOrder.compactMap { id -> MoveTokenPlace? in
+            let here = rows.filter { $0.net.chainId == id }
+            guard let net = here.first?.net else { return nil }
+            return MoveTokenPlace(id: "public|\(id)", title: net.name, group: String(localized: "Public"), choices: here.map { row in
+                let h = row.held
+                return MoveTokenChoice(id: row.key, symbol: h.token.symbol, network: row.net.name, badge: Self.networkMark(row.net),
+                                       sub: h.usd.map { Self.money($0, whole: true) } ?? Op.spoken(left(h), decimals: h.token.decimals),
+                                       // With no price the figure IS the amount: never said twice.
+                                       line: h.usd == nil ? nil : Op.spoken(left(h), decimals: h.token.decimals),
+                                       picked: with?.id == h.id && networkPicked && row.net == network) {
+                    pick { takeToken(h, on: row.net) }
+                }
+            })
+        }
         // **TWO PRIVATE PLACES, TWO TITLES (prd §1908):** your private balance
         // (Privacy Pools, Railgun) by network, then your private account on
         // Aztec in its own ink, only where Aztec can pay the To (§1907).
@@ -5777,8 +5884,9 @@ struct MoveSentence: View {
         func privateChoices(_ list: [(key: String, symbol: String, network: String, amount: String, usd: Double?, act: () -> Void)],
                             badge: (String) -> String?) -> [MoveTokenChoice] {
             list.map { p in
+                // The place's side head names it: the line is the amount (prd §1988).
                 MoveTokenChoice(id: p.key, symbol: p.symbol, network: p.network, badge: badge(p.network),
-                                sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount) {
+                                sub: p.usd.map { Self.money($0, whole: true) } ?? p.amount, line: p.amount) {
                     pick {}
                     p.act()
                 }
@@ -5790,15 +5898,14 @@ struct MoveSentence: View {
         let railgunHeld = privateRows.filter { !$0.key.hasPrefix("pools|") && !$0.key.hasPrefix("aztec|") }
         let aztec = aztecCanPay ? privateRows.filter { $0.key.hasPrefix("aztec|") } : []
         let badge: (String) -> String? = { name in Op.networks.first { $0.name == name }.flatMap { Self.networkMark($0) } }
-        let places = [
-            publicPlace,
-            MoveTokenPlace(id: "pools", title: "Privacy Pools", choices: privateChoices(pools, badge: badge)),
-            MoveTokenPlace(id: "railgun", title: "Railgun", choices: privateChoices(railgunHeld, badge: badge)),
-            MoveTokenPlace(id: "aztec", title: "Aztec", ink: DS.aztecInk, rule: Self.aztecSendRule,
+        let places = publicPlaces + [
+            MoveTokenPlace(id: "aztec", title: "Aztec", group: String(localized: "Private"),
                            choices: privateChoices(aztec) { _ in "brand-aztec" }),
+            MoveTokenPlace(id: "pools", title: "Privacy Pools", group: String(localized: "Private"), choices: privateChoices(pools, badge: badge)),
+            MoveTokenPlace(id: "railgun", title: "Railgun", group: String(localized: "Private"), choices: privateChoices(railgunHeld, badge: badge)),
             // **TACIT, A PLACE OF ITS OWN (prd §1977):** its private TAC on
             // the Tacit chain, sent back to public by Tacit's other Send.
-            MoveTokenPlace(id: "tacit", title: "Tacit", choices: tacitFromChoices),
+            MoveTokenPlace(id: "tacit", title: "Tacit", group: String(localized: "Private"), choices: tacitFromChoices),
         ]
         return VStack(alignment: .leading, spacing: 0) {
             MoveTokenGrid(places: places)
@@ -5822,7 +5929,8 @@ struct MoveSentence: View {
         guard q.isEmpty || "tac".contains(q) || "tacit".contains(q) else { return [] }
         let usd = TacitAccount.shared.tacPrice.map { tac * $0 }
         return [MoveTokenChoice(id: "tacit|TAC", symbol: "TAC", network: String(localized: "Tacit chain"), badge: "brand-tacit",
-                                sub: usd.map { Self.money($0, whole: true) } ?? "\(TacitAccountRows.amount(tac)) TAC") {
+                                sub: usd.map { Self.money($0, whole: true) } ?? "\(TacitAccountRows.amount(tac)) TAC",
+                                line: TacitAccountRows.amount(tac)) {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { open = nil; tacitOutOpen = true }
         }]
@@ -6020,15 +6128,28 @@ struct MoveSentence: View {
             let recent = q.isEmpty ? recentTo.filter { a in
                 !(above.map { WalletWatch.sameAddress($0.to, a) || $0.toName?.caseInsensitiveCompare(a) == .orderedSame } ?? false)
             } : []
-            let balanceWord = "Privacy Pools Railgun"
             let privateNet = (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name
-            let poolsHere = PrivateMove.available
-                && (q.isEmpty || balanceWord.lowercased().contains(q) || privateNet.lowercased().contains(q))
+            let picked = with?.token.symbol.uppercased()
+            let searched: (String) -> Bool = { name in q.isEmpty || name.lowercased().contains(q) }
+            // **EACH PLACE ON ITS OWN RULE (prd §1976, the Move audit of
+            // 2026-11-26):** Privacy Pools takes ETH and USDC; Aztec takes
+            // USDC, ETH and WETH from Ethereum; Railgun any other Ethereum
+            // token; Tacit takes TAC. No place hangs off another's switch.
+            let toRailgun = RailgunPocket.available && with.map { held in
+                network == Op.ethereum && RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract,
+                                                                       chainId: network.chainId)
+            } ?? false
+            let poolsHere = PrivateMove.available && !toRailgun
+                && (picked == nil || picked == "ETH" || picked == "USDC")
+                && (searched("Privacy Pools") || privateNet.lowercased().contains(q))
+            let railgunHere = RailgunPocket.available && (with == nil || toRailgun) && searched("Railgun")
             let aztecHere = (YourAccountKey.address != nil || DemoMode.isActive) && AztecProver.isAvailable
-                && (q.isEmpty || balanceWord.lowercased().contains(q) || "aztec".contains(q))
+                && (picked == nil || (network == Op.ethereum && ["ETH", "USDC", "WETH"].contains(picked ?? "")))
+                && searched("Aztec")
             // TAC on Ethereum, sent, with a co-signer to open Tacit (prd §1976).
-            let takesTacit = verb == .send && network == Op.ethereum && YourAccountFacts.coSigners.first != nil
-                && with.map { $0.token.contract?.lowercased() == TacitPocket.tacToken.lowercased() } == true
+            let takesTacit = verb == .send && TacitAccount.shared.connected
+                && (with == nil || (network == Op.ethereum && with?.token.contract?.lowercased() == TacitPocket.tacToken.lowercased()))
+                && searched("Tacit")
             // **ONE SCROLL, EVERY SECTION TITLED (prd §1916, user, 2026-11-19:
             // "don't know what 'people' means, are these 'recent'? also they
             // aren't all 'people'"), YOURS FIRST (prd §1923, user, 2026-11-20:
@@ -6052,7 +6173,7 @@ struct MoveSentence: View {
                 // A saved one is called by the name you gave it (prd §1965).
                 // Every row names its place (prd §1965a, as §1964b).
                 toRow(AddressBook.shared.name(for: q) ?? String(localized: "Their private balance"),
-                      sub: "Railgun · " + AddressTail.short(q), symbol: "eye.slash") {
+                      sub: "Railgun · " + AddressTail.short(q), image: "brand-railgun") {
                     goRailgun(.takeBack, contract: nil, recipient: q)
                 }
             }
@@ -6083,7 +6204,10 @@ struct MoveSentence: View {
             }
             // An Aztec address typed: a private send from Aztec (prd §1700f item 14).
             if AztecAddressText.isAztec(to), AztecProver.isAvailable {
-                toRow(AddressTail.short(to.trimmingCharacters(in: .whitespaces)), sub: String(localized: "Aztec · Private"), symbol: "eye.slash") {
+                // As Railgun's and Tacit's: a name or "Their Aztec account", place · tail (prd §1985).
+                let aztecTo = to.trimmingCharacters(in: .whitespaces)
+                toRow(AddressBook.shared.name(for: aztecTo) ?? String(localized: "Their Aztec account"),
+                      sub: "Aztec · " + AddressTail.short(aztecTo), image: "brand-aztec") {
                     goAztec(.send, recipient: to.trimmingCharacters(in: .whitespaces).lowercased())
                 }
             }
@@ -6094,36 +6218,30 @@ struct MoveSentence: View {
             // Aztec, in Aztec's ink with its rule under it. No protocol is
             // ever picked: on Ethereum the token decides (ETH and USDC to
             // Privacy Pools, any other token to Railgun). One tap, never typed.
-            if poolsHere || aztecHere { listHeader(String(localized: "Yours")) }
-            if poolsHere {
-                // **THE ROW NAMES WHERE THE TOKEN GOES (prd §1929, the token
-                // deciding as §1713 item 1):** ETH and USDC to Privacy Pools,
-                // any other token on Ethereum to Railgun.
-                let toRailgun = RailgunPocket.available && with.map { held in
-                    network == Op.ethereum && RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract,
-                                                                           chainId: network.chainId)
-                } ?? false
-                // **EVERY PLACE THAT TAKES IT (prd §1976):** TAC leads with
-                // Tacit, its own chain, then Railgun, which takes any token.
-                if takesTacit {
-                    toRow("Tacit", sub: String(localized: "Tacit chain"), image: "brand-tacit") {
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) { open = nil; tacitOpen = true }
-                    }
-                }
-                if toRailgun, let held = with {
-                    toRow("Railgun", sub: String(localized: "Ethereum"), symbol: "lock.fill") {
-                        goRailgun(.deposit, contract: held.token.contract)
-                    }
-                } else {
-                    toRow("Privacy Pools", sub: privateNet, symbol: "lock.fill") {
-                        goPrivate(.deposit)
-                    }
+            // Grouped as Home and Holdings group money (prd §1985).
+            if poolsHere || railgunHere || aztecHere || takesTacit { listHeader(String(localized: "Private")) }
+            // **A–Z UNDER PRIVATE (prd §1985)**, as From lists them.
+            if aztecHere {
+                // Its chain alone, as every place (prd §1985): the token
+                // picked already keeps to what it takes (`aztecHere`).
+                toRow("Aztec", sub: "Aztec", image: "brand-aztec") {
+                    goAztec(.deposit)
                 }
             }
-            if aztecHere {
-                toRow("Aztec", sub: Self.aztecInRule, image: "brand-aztec", titleInk: DS.aztecInk) {
-                    goAztec(.deposit)
+            if poolsHere {
+                toRow("Privacy Pools", sub: privateNet, image: "brand-privacy-pools") {
+                    goPrivate(.deposit)
+                }
+            }
+            if railgunHere {
+                toRow("Railgun", sub: String(localized: "Ethereum"), image: "brand-railgun") {
+                    goRailgun(.deposit, contract: with?.token.contract)
+                }
+            }
+            if takesTacit {
+                toRow("Tacit", sub: String(localized: "Tacit chain"), image: "brand-tacit") {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { open = nil; tacitOpen = true }
                 }
             }
             // **RECENT (prd §1752):** the last people Send sent to from here,
@@ -6181,7 +6299,7 @@ struct MoveSentence: View {
                 }
             }
             ForEach(Array(railgunSaved.prefix(8)), id: \.address) { e in
-                toRow(e.name, sub: "Railgun · " + AddressTail.short(e.address), symbol: "eye.slash") {
+                toRow(e.name, sub: "Railgun · " + AddressTail.short(e.address), image: "brand-railgun") {
                     goRailgun(.takeBack, contract: nil, recipient: e.address)
                 }
             }
@@ -6532,7 +6650,7 @@ struct MoveSentence: View {
             Text("Paste an address")
                 .dsText(.body17)
                 .foregroundStyle(DS.pickInk)
-                .frame(minHeight: 44, alignment: .leading)
+                .frame(minHeight: MoveDeck.rowHeight, alignment: .leading)
         }
         .buttonStyle(RowPress())
     }
@@ -6990,7 +7108,9 @@ struct MoveSentence: View {
         focus = nil
         let net = network
         let sold = Op.spoken(draft.sellUnits, decimals: draft.sell.decimals)
-        let reason = String(localized: "Swap \(sold) \(draft.sell.symbol) for \(draft.buy.symbol) when \(draft.pricedSymbol) is \(draft.priceWords)")
+        // A rate order says its rate, never a dollar trigger (prd §1988).
+        let reason = draft.rateWords.map { String(localized: "Swap \(sold) \(draft.sell.symbol) for \(draft.buy.symbol) at \($0)") }
+            ?? String(localized: "Swap \(sold) \(draft.sell.symbol) for \(draft.buy.symbol) when \(draft.pricedSymbol) is \(draft.priceWords)")
         stage = .preparing
         Task {
             do {
@@ -7044,7 +7164,8 @@ struct MoveSentence: View {
                                Line(glue: String(localized: "on"), text: net.name),
                                Line(glue: String(localized: "for"), text: p.buySymbol),
                                Line(glue: String(localized: "on"), text: net.name),
-                               Line(glue: String(localized: "when \(p.pricedSymbol) is"), text: p.priceWords + ".")],
+                               p.rateWords.map { Line(glue: String(localized: "at"), text: $0 + ".") }
+                                   ?? Line(glue: String(localized: "when \(p.pricedSymbol) is"), text: p.priceWords + ".")],
                        detail: String(localized: "Order placed · Until \(until) · CoW Swap"),
                        link: link, linkName: link == nil ? nil : linkName)
     }
@@ -9228,7 +9349,10 @@ struct MoveSentence: View {
         // only where a limit can be on: this phone set its plan.
         func signersIfLimited() async throws -> [String] { Chain.plan(net) == nil ? [] : try await Chain.knownSigners(net, account) }
         async let signers = signersIfLimited()
-        guard case .on = (try? await Chain.limitState(net, account)) ?? .off else {
+        // **A ROUND-UPS MOVE GOES WITH FACE ID (prd §1988):** the session
+        // key carries no ride, so a send whose change moves to Privacy Pools
+        // is never sent by it, and what the receipt promised is what happens.
+        guard ride.isEmpty, case .on = (try? await Chain.limitState(net, account)) ?? .off else {
             return try await Chain.transact(batch, reason: reason, roundUp: roundUp, ride: ride, stage: stage)
         }
         let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
@@ -9341,6 +9465,16 @@ struct MoveSentence: View {
         // deposit's own amount — and the line says it is on its way until the
         // fill is read.
         if swaps.count == 1, batch.count == 1, let x = swaps.first, x.crosses, let dest = x.to {
+            // **A PAYMENT THAT CROSSES IS A SEND (prd §1988):** a tag paid
+            // from another network goes to the tag's address, not back to
+            // you; the receipt said "Swapped".
+            if x.payee != nil {
+                let lines = [Line(glue: nil, text: amount(x.quote.buyAmount, x.buy)),
+                             Line(glue: String(localized: "to"), text: x.payeeName ?? AddressTail.short(x.payee ?? "")),
+                             Line(glue: String(localized: "on"), text: dest.name + ".")]
+                let waiting = [String(localized: "Moving to \(dest.name)"), YourAccountAcross.about(x.quote.across?.seconds)]
+                return made(String(localized: "Sent"), lines, waiting.compactMap { $0 })
+            }
             let lines = [Line(glue: nil, text: amount(x.amount, x.sell)), Line(glue: String(localized: "on"), text: net.name),
                          Line(glue: String(localized: "for"), text: amount(x.quote.buyAmount, x.buy)),
                          Line(glue: String(localized: "on"), text: dest.name + ".")]
@@ -10070,8 +10204,10 @@ struct MoveSentence: View {
     /// A section's title in a deck list (prd §1916): 17 semibold, white,
     /// 24 above it.
     private func listHeader(_ text: String) -> some View {
+        // One head for every Move list: the token list's (prd §1985).
         Text(verbatim: text)
             .dsText(.heading17)
+            .fontWeight(.bold)
             .foregroundStyle(DS.textPrimary)
             .padding(.top, DS.Space.s4)
             .frame(minHeight: DS.Hit.min, alignment: .bottomLeading)
@@ -10342,8 +10478,13 @@ struct MoveSentence: View {
         stage = .preparing
         delivering = false
         Task { @MainActor in
+            // What was swapped before Bitrefill was asked: a failure after it
+            // says the USDC is on Base and nothing was paid (prd §1988).
+            var swapped: String?
+            // Face ID reached for the payment: past it, "nothing was paid" is
+            // not ours to say (prd §1988).
+            let paySigned = SignedFlag()
             do {
-                var swapped: String?
                 if let topUp, let cost {
                     toppingUp = true
                     let swap = try await SpendTopUp.swap(cost: cost, held: topUp, on: net, account: account)
@@ -10363,7 +10504,13 @@ struct MoveSentence: View {
                     Tokens.remember(Op.dollar(on: Op.base), on: Op.base)
                     swapped = String(localized: "Swapped \(sold) on \(net.name) first")
                 }
-                let invoice = try await BitrefillX402.buy(product: product, value: value, account: account, reason: reason) { s in
+                // Never more than the price shown (prd §1988): a dollar price
+                // only (a euro card's price is in euros), with 1% for rounding.
+                let ceiling: String? = package.currency.uppercased() == "USD"
+                    ? Op.baseUnits(BitrefillBuy.Product.valueText((package.price * 1.01 * 100).rounded(.up) / 100), decimals: 6) : nil
+                let invoice = try await BitrefillX402.buy(product: product, value: value, account: account, reason: reason,
+                                                          expectedUnits: ceiling) { s in
+                    if s == .signing || s == .sending { await paySigned.mark() }
                     await MainActor.run { advance(to: s) }
                 }
                 stage = .landing
@@ -10373,7 +10520,8 @@ struct MoveSentence: View {
                 if let roundUp { RoundUpsPot.owed = roundUp.carry }
                 chrome.refreshRooms()
                 let standing = await BitrefillX402.awaitDelivery(invoiceID: invoice.id, account: account)
-                let landed = BitrefillX402.land(invoice: invoice, product: product, value: value, delivered: standing?.delivered == true)
+                let landed = BitrefillX402.land(invoice: invoice, product: product, value: value, delivered: standing?.delivered == true,
+                                                failed: standing?.failed == true)
                 stage = nil
                 delivering = false
                 var made = Self.buyReceipt(product: product, value: value, invoice: invoice, net: Op.base,
@@ -10403,7 +10551,15 @@ struct MoveSentence: View {
                 #if DEBUG
                 NSLog("moveBuy: failed %@", failure.message)
                 #endif
-                say(failure.message, failure: true, seconds: 6, from: failure.from)
+                if await paySigned.value {
+                    say(String(localized: "The payment may have gone. Check your Activity before buying again") + " · " + failure.message,
+                        failure: true, seconds: 8, from: failure.from)
+                } else if let swapped {
+                    say(swapped + ". " + String(localized: "Your USDC is on Base; nothing was paid") + " · " + failure.message,
+                        failure: true, seconds: 8, from: failure.from)
+                } else {
+                    say(failure.message, failure: true, seconds: 6, from: failure.from)
+                }
             } catch {
                 stage = nil
                 delivering = false
@@ -10411,7 +10567,13 @@ struct MoveSentence: View {
                 #if DEBUG
                 NSLog("moveBuy: not paid %@", String(describing: error))
                 #endif
-                say(String(localized: "Not paid"), failure: true)
+                if await paySigned.value {
+                    say(String(localized: "The payment may have gone. Check your Activity before buying again"), failure: true, seconds: 8)
+                } else if let swapped {
+                    say(swapped + ". " + String(localized: "Your USDC is on Base; nothing was paid"), failure: true, seconds: 8)
+                } else {
+                    say(String(localized: "Not paid"), failure: true)
+                }
             }
         }
     }
@@ -10438,7 +10600,7 @@ struct MoveSentence: View {
     #if DEBUG
     /// A launch hook fills the sentence, so the lists are read before it.
     static var drafting: Bool {
-        ["moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
+        ["tacitReelSample", "moveWarnProbe", "moveWhenDraft", "moveSwapDraft", "moveSendDraft", "moveReceiveFrom", "moveBuyDraft", "moveSweepDraft", "moveDepositDraft"]
             .contains { UserDefaults.standard.string(forKey: $0)?.isEmpty == false }
     }
 
@@ -10448,6 +10610,35 @@ struct MoveSentence: View {
     /// swap is Added once the pools price it, and the send fills the next sentence.
     private func draft() {
         let d = UserDefaults.standard
+        // `-tacitReelSample back|pay|to|shield|receive|earn` (prd §1983): back to public or a
+        // private send, finished, or Send's To with a saved Tacit address
+        // and Again; for recording, where no co-signer opens the account.
+        if let reel = d.string(forKey: "tacitReelSample"), !reel.isEmpty {
+            let maya = TacitOut.reelAddress
+            switch reel {
+            case "back":
+                TacitOut.shared.sample(tac: 5, payTo: nil)
+                tacitOutOpen = true
+            case "pay":
+                AddressBook.shared.remove(maya)
+                TacitOut.shared.sample(tac: 25, payTo: maya)
+                tacitPayTo = maya
+                tacitOutOpen = true
+            case "shield":
+                tacitOpen = true
+            case "receive":
+                verb = .receive
+            case "earn":
+                verb = .lend
+            default:
+                _ = AddressBook.shared.setName("Maya", for: maya, networks: ["tacit"])
+                TacitOut.sampleAgain(to: maya, tac: 25)
+                verb = .send
+                open = .to
+            }
+            NSLog("tacitReelSample: %@", reel)
+            return
+        }
         // `-moveWarnProbe first|lookalike|scam|sanctioned|newContract|fails`
         // (prd §1513): a sentence that draws that warning, off the demo's
         // table (or OFAC's first address); logs `moveWarn|` once checked.

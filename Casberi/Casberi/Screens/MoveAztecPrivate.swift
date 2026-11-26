@@ -86,6 +86,18 @@ final class AztecMove {
     /// draws its steps, and Move opened on Aztec again shows this same
     /// sentence, running or failed, never a second one beside it.
     static var kept: AztecMove?
+    /// **THE KEPT SEND IS ITS OWN RECIPIENT'S (prd §1988 item 2).** A send
+    /// kept behind its sheet, running or failed, is the sentence Move opens
+    /// on only for a recipient it pays (the line or a kept payment): one
+    /// picked for someone else came back as the old send. nil asks for none
+    /// (Send opened with no recipient, or the capsule's own door).
+    static func kept(for recipient: String?) -> AztecMove? {
+        guard let kept else { return nil }
+        guard let recipient else { return kept }
+        let wanted = recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let paid = (kept.recipient.map { [$0] } ?? []) + kept.pays.map(\.recipient)
+        return paid.contains { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == wanted } ? kept : nil
+    }
     /// Closes the sheet; nil where the sentence is a page, which stays.
     var onAway: (() -> Void)?
     /// Another send is still going behind its sheet.
@@ -301,6 +313,23 @@ final class AztecMove {
         return PrivateCost(usd: usd, parts: parts)
     }
 
+    /// What reaches the recipient of a send out through Shield, base units:
+    /// the amount less Shield's cut, rounded as the cost rounds it (prd §1988).
+    static func afterShield(_ units: String) -> String {
+        let whole = Decimal(string: units) ?? 0
+        var raw = whole * Decimal(shieldBps) / 10_000, cut = Decimal()
+        NSDecimalRound(&cut, &raw, 0, .down)
+        return NSDecimalNumber(decimal: whole - cut).stringValue
+    }
+
+    /// Out to an Ethereum address that is not your own account: Finish
+    /// withdraws it from your account, so the payout is linked to you on
+    /// Ethereum (`ShieldBridge.finish`, prd §1988 item 4).
+    var finishLinksYou: Bool {
+        guard mode == .send, toEthereum, let recipient else { return false }
+        return recipient.lowercased() != YourAccountKey.address?.lowercased()
+    }
+
     /// A send's gas on Aztec: "Private gas" when the private fee contract
     /// pays it, else the account's own Fee Juice, which names it.
     @MainActor static var gasWords: String {
@@ -311,7 +340,9 @@ final class AztecMove {
     var costTail: String {
         switch mode {
         case .deposit: String(localized: "private in 5 to 15 minutes")
-        case .send where toEthereum: String(localized: "on Ethereum in about an hour")
+        // Finish's Ethereum gas is paid later, from your account, and has no
+        // measured figure to count yet: said, never left out (prd §1988 item 4).
+        case .send where toEthereum: String(localized: "on Ethereum in about an hour, plus Ethereum gas to finish")
         case .send: String(localized: "who, what and how much stay private")
         }
     }
@@ -745,10 +776,12 @@ final class AztecMove {
                     steps.begin(.move, plan: .send(.aztec))
                     stage = .working(String(localized: "Sending…"))
                     let exit = try await ShieldBridge.exit(asset, units: units, to: recipient, usd: amountUSD)
-                    // Out to Ethereum, its row at once too (prd §1953).
+                    // Out to Ethereum, its row at once too (prd §1953), naming
+                    // what the recipient gets: the amount less Shield's 0.5%
+                    // (prd §1988 item 3), never the gross.
                     if !exit.transaction.isEmpty, let context = SharedStore.live?.mainContext {
                         PrivateActivity.landAztec(hash: exit.transaction,
-                                                  title: PrivateMoney.activityTitle(figure: PrivateMoney.figure(units, decimals: decimals, symbol: symbol),
+                                                  title: PrivateMoney.activityTitle(figure: PrivateMoney.figure(Self.afterShield(units), decimals: decimals, symbol: symbol),
                                                                                     to: AddressTail.short(recipient)),
                                                   context: context)
                     }
@@ -891,7 +924,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             // The token and its amount are the receipt's lines (prd §1931).
             MoveCostRows(cost: live && move.amountOK ? move.cost : nil, open: $costOpen, ink: DS.aztecInk, indented: false) {
                 ForEach(facts, id: \.name) { f in
-                    MoveFactRow(name: f.name, value: f.value, valueInk: f.ink, indented: false)
+                    MoveFactRow(name: f.name, value: f.value.isEmpty ? nil : f.value, valueInk: f.ink, indented: false)
                 }
             }
         }
@@ -917,13 +950,22 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                             asks == 1 ? String(localized: "Signs once") : String(localized: "Signs \(asks) times"), DS.textPrimary))
             }
         } else {
-            // It reaches Aztec, or goes out to Ethereum (prd §1924).
-            out.append((String(localized: "Reaches"), move.pays.isEmpty ? String(localized: "Aztec, or out to Ethereum") : "Aztec", DS.aztecInk))
+            // It reaches Aztec, or goes out to Ethereum (prd §1924): named by
+            // the recipient once there is one (prd §1988 item 4).
+            let reaches = move.toEthereum ? "Ethereum"
+                : (move.toAztec || !move.pays.isEmpty) ? "Aztec" : String(localized: "Aztec, or out to Ethereum")
+            out.append((String(localized: "Reaches"), reaches, DS.aztecInk))
             // Out to Ethereum: who signs in to Shield (prd §1950).
             if live, move.toEthereum {
                 out.append(move.outFitsKey
                            ? (String(localized: "Signs"), String(localized: "This iPhone"), DS.textPrimary)
                            : (String(localized: "Over $100 a day"), String(localized: "Your co-signer signs"), DS.textPrimary))
+            }
+            // **FINISH IS YOURS, IN THE OPEN (prd §1988 item 4).** The portal's
+            // withdraw is sent from your account, so a payout to someone else
+            // links your public account to it on Ethereum. Said, as a fact.
+            if live, move.finishLinksYou {
+                out.append((String(localized: "Finished from your public account, so it's linked to you"), "", DS.textPrimary))
             }
         }
         if live {
@@ -1222,7 +1264,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                     }
                     Spacer(minLength: DS.Space.s2)
                 }
-                .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+                .frame(minHeight: MoveDeck.rowHeight)  // every Move row, 40pt (prd §1984)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -1235,11 +1277,11 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             .dsText(.body17)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
-            .frame(minHeight: DSFeed.headHeight + DS.Space.s3)
+            .frame(minHeight: MoveDeck.rowHeight)
             .onSubmit { take(typed) }
         Button { take(UIPasteboard.general.string ?? "") } label: {
             Text("Paste").dsText(.body17).foregroundStyle(DS.aztecInk)
-                .frame(maxWidth: .infinity, minHeight: DSFeed.headHeight + DS.Space.s3, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: MoveDeck.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -1261,7 +1303,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         // are Ethereum addresses, so none is offered.
         guard move.pays.isEmpty else { return out }
         let mine = YourAccountKey.address
-        let yours = String(localized: "Your account")
+        let yours = String(localized: "Your public account")
         if let mine, q.isEmpty || yours.lowercased().contains(q) || mine.lowercased().hasPrefix(q) {
             out.append(Suggestion(name: yours, line: String(localized: "Ethereum · \(AddressTail.short(mine))"), address: mine))
         }

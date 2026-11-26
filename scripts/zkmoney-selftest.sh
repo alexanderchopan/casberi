@@ -743,15 +743,15 @@ grep -q 'if tag != nil, !onEthereum {' "$PM" \
 # Your Aztec account cannot pay a tag (prd §1907): with a tag in To, Send's
 # From offers no Aztec row, so nobody picks a way that leads nowhere.
 grep -q 'if sendsFromAztec, aztecCanPay {' "$SEND" \
-  && grep -q 'return !toIsTag && !RailgunSwap.isPrivateAddress(typed) && items.isEmpty' "$SEND" \
+  && grep -q 'return !toIsTag && !RailgunSwap.isPrivateAddress(typed) && !TacitOut.isTacitAddress(typed) && items.isEmpty' "$SEND" \
   && grep -q 'return paysZkMoney || ZkMoneyWire.tag(typed) != nil || ZkMoneyWire.atTag(typed) != nil' "$SEND" \
   || { echo "✗ Send offers your Aztec account to pay a zk.money tag, which it cannot (prd §1907)"; exit 1; }
 
-# Send's token list: your private account on Aztec is its own heading, in
-# Aztec's ink, and offered only where Aztec can pay the To (prd §1908).
-# Drawn through Move's one token list since prd §1910.
+# Send's token list: your private account on Aztec is its own heading,
+# under Private (prd §1985), and offered only where Aztec can pay the To
+# (prd §1908). Drawn through Move's one token list since prd §1910.
 grep -q 'let aztec = aztecCanPay ? privateRows.filter { $0.key.hasPrefix("aztec|") } : \[\]' "$SEND" \
-  && grep -q 'MoveTokenPlace(id: "aztec", title: "Aztec", ink: DS.aztecInk, rule: Self.aztecSendRule,' "$SEND" \
+  && grep -q 'MoveTokenPlace(id: "aztec", title: "Aztec", group: String(localized: "Private"),' "$SEND" \
   && grep -q 'let railgunHeld = privateRows.filter { !$0.key.hasPrefix("pools|") && !$0.key.hasPrefix("aztec|") }' "$SEND" \
   || { echo "✗ Send lists Aztec's tokens under another place, or offers them to a To Aztec cannot pay (prd §1908, §1929)"; exit 1; }
 

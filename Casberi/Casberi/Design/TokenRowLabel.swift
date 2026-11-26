@@ -53,7 +53,7 @@ struct TokenRowLabel: View {
                 Text(verbatim: figure).dsText(.price17).monospacedDigit().foregroundStyle(figureInk).lineLimit(1)
             }
         }
-        .frame(minHeight: MoveReceipt.lineHeight + MoveReceipt.gap)
+        .walletRowPitch()
         .contentShape(Rectangle())
     }
 

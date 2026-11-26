@@ -74,6 +74,10 @@ struct MoveTrayPresenter: ViewModifier {
             guard UserDefaults.standard.bool(forKey: "openMove") else { return }
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] openMove: raised")
+            // A Tacit sample opens on Send, past the phone's menu.
+            if let reel = UserDefaults.standard.string(forKey: "tacitReelSample"), !reel.isEmpty {
+                chrome.moveAsk = reel == "receive" ? "receive" : reel == "earn" ? "earn" : "send"
+            }
             chrome.moveTray = true
         }
         // `-ollaOpen lend|back` raises Earn on Olla's AZTEC, Deposit or

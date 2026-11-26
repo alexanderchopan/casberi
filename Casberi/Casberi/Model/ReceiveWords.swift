@@ -122,7 +122,12 @@ enum ReceiveWords {
     /// "From another network"'s one line, under its name on its door.
     static var elsewhereLine: String { String(localized: "USDC or its token, most EVM networks") }
 
-    static func facts(_ place: Place, networks: String, poolsNetworks: String, pools: Pools) -> [Fact] {
+    /// `tacitNetwork` is the network Tacit's deposit address belongs to
+    /// (`TacitAccount.Reading.receiveNetwork`): each network has its own, so
+    /// the line names the one this address was read on (prd §1988). Nil (a
+    /// reading kept before it was recorded) draws no On line, never a guess.
+    static func facts(_ place: Place, networks: String, poolsNetworks: String, pools: Pools,
+                      tacitNetwork: String? = nil) -> [Fact] {
         // "Takes" here is what a place accepts; Move uses the word for time (MovePrivate), so its own key.
         let takes = String(localized: "Takes (accepts)", defaultValue: "Takes"), on = String(localized: "On"), from = String(localized: "From")
         let ready = String(localized: "Ready"), earns = String(localized: "Earns")
@@ -166,7 +171,11 @@ enum ReceiveWords {
                     Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]
         // The pool's deposit address: ETH sent here goes private.
         case .tacitDeposit:
-            return [Fact(label: takes, value: "ETH"),
+            var lines = [Fact(label: takes, value: "ETH")]
+            if let tacitNetwork, !tacitNetwork.isEmpty {
+                lines.append(Fact(label: on, value: tacitNetwork))
+            }
+            return lines + [
                     Fact(label: from, value: String(localized: "Any wallet or exchange")),
                     Fact(label: ready, value: String(localized: "In a few minutes")),
                     Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]

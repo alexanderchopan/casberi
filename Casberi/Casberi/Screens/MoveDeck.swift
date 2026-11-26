@@ -41,8 +41,9 @@ enum MoveDeck {
     static var listClearance: CGFloat { footHeight + fade }
     /// The keypad's top row of sums.
     static let presetHeight: CGFloat = 44
-    /// A row of a step's list.
-    static let rowHeight: CGFloat = 48
+    /// A row of a step's list: the Wallet's 40pt pitch (§1482; user,
+    /// 2026-11-26: "the denser rows are actually more easy to scan").
+    static let rowHeight: CGFloat = DSFeed.headHeight + 2 * FeedScreen.rowAir
     /// A row's lead: a mark, a face or a glyph.
     static let lead: CGFloat = 30
     /// Between a row's lead and its words.
@@ -395,8 +396,28 @@ struct MoveKeypad: View {
     @State private var knocks = 0
 
     var body: some View {
+        // **THE KEYS FIT THE SHEET (user, 2026-11-26: "the keyboard doesn't
+        // fit. we need to fix this"):** a sheet with one more line (Privacy
+        // Pools' Network) pushed the bottom row under the foot. The keys take
+        // their height where there is room and give it up, step by step, to
+        // a finger's floor where there is not, on every sheet at once.
+        // Each size a child of its own: a `ForEach` here is ONE subview and
+        // the fit silently stops working (`lead-body-audit.py`).
+        ViewThatFits(in: .vertical) {
+            grid(keyHeight)
+            grid(Self.fit(keyHeight, 0.88))
+            grid(Self.fit(keyHeight, 0.76))
+            grid(Self.fit(keyHeight, 0.66))
+            grid(DS.Hit.min)
+        }
+    }
+
+    /// A smaller key, never under a finger's 44pt.
+    static func fit(_ h: CGFloat, _ f: CGFloat) -> CGFloat { max(DS.Hit.min, (h * f).rounded()) }
+
+    private func grid(_ keyHeight: CGFloat) -> some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 3)
-        LazyVGrid(columns: columns, spacing: 0) {
+        return LazyVGrid(columns: columns, spacing: 0) {
             ForEach(presets) { p in
                 Button {
                     p.act()
@@ -417,15 +438,15 @@ struct MoveKeypad: View {
             ForEach(0..<((3 - presets.count % 3) % 3), id: \.self) { _ in
                 Color.clear.frame(height: MoveDeck.presetHeight)
             }
-            ForEach(Self.digits, id: \.self) { key($0) }
-            key(".")
-            key("0")
-            key("\u{232B}")
+            ForEach(Self.digits, id: \.self) { key($0, height: keyHeight) }
+            key(".", height: keyHeight)
+            key("0", height: keyHeight)
+            key("\u{232B}", height: keyHeight)
         }
         .disabled(disabled)
     }
 
-    private func key(_ label: String) -> some View {
+    private func key(_ label: String, height keyHeight: CGFloat) -> some View {
         let delete = label == "\u{232B}"
         return Button {
             tap(label)
@@ -732,6 +753,9 @@ struct MoveTokenChoice: Identifiable {
     /// place ("Aave", "Olla") after the rate, and the network moves to the
     /// badge on the mark, so token, rate, place and balance fit one line.
     var place: String?
+    /// The grey line in place of the network, when a side head already
+    /// names it: the amount, as Holdings' rows (prd §1988).
+    var line: String?
     var picked = false
     var dim = false
     let act: () -> Void
@@ -743,6 +767,10 @@ struct MoveTokenPlace: Identifiable {
     let id: String
     /// Drawn only when the list holds more than one place or network.
     var title: String?
+    /// **PUBLIC OR PRIVATE (prd §1985), as Home and Holdings group money:**
+    /// the group's word stands once above its places, each place's name
+    /// under it in grey, as Holdings' Tacit or Privacy Pools.
+    var group: String?
     var ink: Color = DS.textPrimary
     /// A line the place keeps under its title, whatever else is shown
     /// ("Aztec to Aztec only", prd §1898 item 4).
@@ -774,14 +802,27 @@ struct MoveTokenGrid: View {
         })
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(shown.enumerated()), id: \.element.id) { n, place in
-                if titled, let title = place.title {
-                    // Home's side head (prd §1917): bold, a label.
-                    Text(verbatim: title)
+                let grouped = shown.contains { $0.group != nil }
+                // Home's side head (prd §1917): bold, a label; the group's
+                // word when places are grouped (prd §1985), else the place's.
+                let head: (String, Color)? = !titled ? nil
+                    : grouped ? place.group.flatMap { g in n == 0 || shown[n - 1].group != g ? (g, DS.textPrimary) : nil }
+                    : place.title.map { ($0, place.ink) }
+                if let head {
+                    Text(verbatim: head.0)
                         .dsText(.heading17)
                         .fontWeight(.bold)
-                        .foregroundStyle(place.ink)
+                        .foregroundStyle(head.1)
                         .padding(.top, n == 0 ? 0 : DS.Space.s4)
                         .frame(minHeight: DS.Hit.min, alignment: .bottomLeading)
+                        .accessibilityAddTraits(.isHeader)
+                }
+                if titled, grouped, let title = place.title {
+                    // A place under its group: Holdings' grey side head.
+                    Text(verbatim: title)
+                        .dsText(.body17)
+                        .foregroundStyle(place.ink == DS.textPrimary ? DS.textSecondary : place.ink)
+                        .padding(.top, DS.Space.s1)
                         .accessibilityAddTraits(.isHeader)
                 }
                 if let rule = place.rule {
@@ -814,8 +855,8 @@ struct MoveTokenGrid: View {
     static func row(_ c: MoveTokenChoice, flies: Bool = true) -> TokenRowLabel {
         let sub = c.sub ?? ""
         let figure = sub.first.map { $0 == "$" || $0.isNumber } ?? false
-        let line = c.place != nil ? [c.rate, c.place].compactMap { $0 }.joined(separator: " · ")
-            : [figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)", c.rate].compactMap { $0 }.joined(separator: " · ")
+        let line = c.line ?? (c.place != nil ? [c.rate, c.place].compactMap { $0 }.joined(separator: " · ")
+            : [figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)", c.rate].compactMap { $0 }.joined(separator: " · "))
         return TokenRowLabel(symbol: c.symbol, line: line,
                              lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
                              figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,

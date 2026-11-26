@@ -74,6 +74,7 @@ enum HomeComposition {
             "Annotation", "Milestone", "Silence",         // PostHog
             "Build", "Build failure", "Deploy",           // Vercel
             "Deadline", "Your turn",                      // reminders, Safe
+            "Not delivered",                              // Bitrefill (prd §1988)
             "Delivered", "Module added",                  // Safe, 7579
             "Control changed",                            // Safe (prd §1249)
             "Across",                                     // a crossing's row (prd §1555)

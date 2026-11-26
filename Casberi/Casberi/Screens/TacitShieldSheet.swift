@@ -90,7 +90,7 @@ struct TacitShieldSheet: View {
         ]
         if walletHeld > 0, accountHeld > 0 {
             out.append(MoveDeckStep(id: "from", word: String(localized: "From"), on: open == .from, answered: true,
-                                    value: from == .account ? "Casberi" : String(localized: "Co-signer")) { toggle(.from) })
+                                    value: from == .account ? String(localized: "Your public account") : String(localized: "Co-signer")) { toggle(.from) })
         }
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
                                 value: "TAC · Ethereum", mark: MoveRowMark(token: "TAC")) {})
@@ -114,7 +114,7 @@ struct TacitShieldSheet: View {
 
     /// Where the TAC leaves from: your Casberi account or your co-signer.
     @ViewBuilder private var fromChoices: some View {
-        fromRow("Casberi", detail: TacitAccountRows.amount(accountHeld) + " TAC", picked: from == .account) { pick(.account) }
+        fromRow(String(localized: "Your public account"), detail: TacitAccountRows.amount(accountHeld) + " TAC", picked: from == .account) { pick(.account) }
         fromRow(String(localized: "Co-signer"), detail: TacitAccountRows.amount(walletHeld) + " TAC", picked: from == .wallet) { pick(.wallet) }
     }
 
@@ -168,12 +168,21 @@ struct TacitShieldSheet: View {
         amount = Self.maxText(held)
     }
 
-    /// From your wallet the leader's sweep fee is paid in TAC; from your
-    /// Casberi account the send pays its own gas, as every send does.
+    /// **FEE AND YOU GET AGREE (prd §1988 item 5).** Both ways prove the same
+    /// deposit (`shieldProve`), and the chain takes its fee from its shares
+    /// either way: `arrives` is the amount less `quote.fee`. So the Fee says
+    /// that cut on both. From your wallet the leader's sweep fee is paid on
+    /// top in TAC (the permit's value is the amount plus it), so it adds in;
+    /// from your Casberi account there is no sweep, and the send pays its
+    /// own gas, as every send does.
     private var feeWords: String {
-        if from == .account { return String(localized: "Network fee, as any send") }
-        guard let q = shield.quote, let fee = TacitPermit.number(q.sweepFee) else { return "—" }
-        return Self.tacText(NSDecimalNumber(decimal: fee / pow(Decimal(10), 18)).doubleValue)
+        guard let q = shield.quote, let cut = TacitPermit.number(q.fee) else { return "—" }
+        let chain = cut / pow(Decimal(10), 8)
+        if from == .account {
+            return String(localized: "\(Self.tacText(NSDecimalNumber(decimal: chain).doubleValue)) and the network fee")
+        }
+        guard let sweep = TacitPermit.number(q.sweepFee) else { return "—" }
+        return Self.tacText(NSDecimalNumber(decimal: chain + sweep / pow(Decimal(10), 18)).doubleValue)
     }
 
     private var arrivesWords: String {

@@ -119,13 +119,15 @@ HOLD="Casberi/Casberi/Screens/FeedScreen+WalletPrivate.swift"
 use "$SENT" '}) { verbWord(title(.send)) }' "the private sentence no longer leads with Move's verb word (prd §1681)"
 # Privacy Pools (or Railgun, for a token that goes there) is a recipient at
 # the top of To, named as Home names it (prd §1923, §1929).
-use "$SENT" 'toRow("Privacy Pools", sub: privateNet, symbol: "lock.fill") {' "Privacy Pools is no longer a recipient at the top of To (prd §1923, §1929)"
-use "$SENT" 'toRow("Railgun", sub: String(localized: "Ethereum"), symbol: "lock.fill") {' "Railgun is no longer a recipient for the tokens that go there (prd §1929)"
-use "$SENT" 'toRow("Aztec", sub: Self.aztecInRule, image: "brand-aztec", titleInk: DS.aztecInk) {' "your private account on Aztec is no longer a recipient in To, in Aztec's ink with its rule (prd §1779, §1923)"
-use "$SENT" 'listRow("Aztec", sub: Self.aztecSendRule, symbol: "diamond") {' "your private account on Aztec is no longer a recipient, or lost its own noun (prd §1779)"
+# Its own mark since prd §1984, under Private since §1985.
+use "$SENT" 'toRow("Privacy Pools", sub: privateNet, image: "brand-privacy-pools") {' "Privacy Pools is no longer a recipient at the top of To (prd §1923, §1929, §1984)"
+use "$SENT" 'toRow("Railgun", sub: String(localized: "Ethereum"), image: "brand-railgun") {' "Railgun is no longer a recipient for the tokens that go there (prd §1929)"
+# Named by its chain alone, as every place, since prd §1985.
+use "$SENT" 'toRow("Aztec", sub: "Aztec", image: "brand-aztec") {' "your private account on Aztec is no longer a recipient in To (prd §1779, §1923, §1985)"
+use "$SENT" 'listRow("Aztec", sub: "Aztec", image: "brand-aztec") {' "your private account on Aztec is no longer a From, or lost its own noun (prd §1779, §1985)"
 # No Private switch in Send (prd §1700f item 11), and no private "network"
 # either (prd §1719): private money is rows in Send's token list.
-use "$SENT" 'MoveTokenPlace(id: "pools", title: "Privacy Pools", choices: privateChoices(pools, badge: badge)),' "private money is no longer tiles in Send's token list, under its network (prd §1719, §1904, §1910)"
+use "$SENT" 'MoveTokenPlace(id: "pools", title: "Privacy Pools", group: String(localized: "Private"), choices: privateChoices(pools, badge: badge)),' "private money is no longer tiles in Send's token list, under its network (prd §1719, §1904, §1910)"
 ! grep -q 'localized: "Ethereum · Private"' "$SENT" || { echo "✗ a private place is a network in Send's list again (prd §1719)"; exit 1; }
 ! grep -q 'goPrivate(.send) } }))' "$SENT" \
     || { echo "✗ a Private switch came back to Send (prd §1700f item 11)"; exit 1; }
@@ -1440,6 +1442,6 @@ wmutate "a row counts from zero" 's/step \\\(current \+ 1\) of/step \\(current) 
 wmutate "a waiting step hides what it needs" 's/let step = needs \?\? steps\[current\]/let step = steps[current]/'
 wmutate "approval waits on you" 's/steps: addressSteps, current: 3, needs: nil/steps: addressSteps, current: 3, needs: "Waiting"/'
 use "$SENT" 'LedgerRow(id: "choiceFrom", name: Self.rowName(.from, verb: verb),' "Send lost its From row (prd §1779)"
-use "$SENT" 'goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : nil)' "From's private account drops the Aztec address already typed (prd §1779)"
+use "$SENT" 'goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : resolved?.address)' "From's private account drops the address already typed (prd §1779, §1988)"
 echo "  ok   simplified: the whole menu A–Z, a sentence that takes no touch, a row for every choice, private doors in view, Aztec in its own ink, Pay the gas, Home's places, On its way step by step, the public address's networks"
 echo "  ok   81 mutations"

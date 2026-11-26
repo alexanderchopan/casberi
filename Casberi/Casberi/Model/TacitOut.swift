@@ -55,6 +55,9 @@ final class TacitOut {
     /// blocks after the first).
     private var paidAt: Date?
     private(set) var paidTAC: Double?
+    /// The payout was sent but not yet seen landed (prd §1988): nothing says
+    /// "public again" until it is.
+    private(set) var paidPending = false
 
     private init() {}
 
@@ -200,8 +203,10 @@ final class TacitOut {
         paidAt = .now
         owedWei = 0
         handed = false
+        if case .pending = sent.outcome { paidPending = true } else { paidPending = false }
         step = .done
-        if let paid = paidTAC {
+        if paidPending { watchPayout(to: to) }
+        if !paidPending, let paid = paidTAC {
             Task { await Notifications.outcome(.readyToUse, id: "tacit:out:\(Int(Date().timeIntervalSince1970))", place: TacitAccount.name,
                                                body: String(localized: "\(TacitAccountRows.amount(paid)) TAC is public again"),
                                                mark: TacitAccount.name) }
@@ -210,6 +215,28 @@ final class TacitOut {
         await TacitAccount.shared.readPublic()
         if let coSigner = YourAccountFacts.coSigners.first, let chain = await TacitPocket.chain(coSigner: coSigner) {
             TacitAccount.shared.applyChain(chain, coSigner: coSigner)
+        }
+    }
+
+    /// **A PENDING PAYOUT IS WATCHED TO ITS END (prd §1988):** Tacit's
+    /// contract owes nothing once it lands, so the sheet's "on its way" and
+    /// the "public again" notice wait for that, every 15 seconds, ten minutes.
+    private func watchPayout(to: String) {
+        let paid = paidTAC
+        Task { @MainActor [weak self] in
+            for _ in 0..<40 {
+                try? await Task.sleep(for: .seconds(15))
+                guard let self, self.paidPending else { return }
+                guard let o = try? await TacitEngine.shared.owed(to), let wei = TacitPermit.number(o.wei), wei <= 0 else { continue }
+                self.paidPending = false
+                if let paid {
+                    await Notifications.outcome(.readyToUse, id: "tacit:out:\(Int(Date().timeIntervalSince1970))", place: TacitAccount.name,
+                                                body: String(localized: "\(TacitAccountRows.amount(paid)) TAC is public again"),
+                                                mark: TacitAccount.name)
+                }
+                await TacitAccount.shared.readPublic()
+                return
+            }
         }
     }
 
@@ -257,6 +284,21 @@ final class TacitOut {
         quote = nil
         units = 0
     }
+
+    #if DEBUG
+    /// `-tacitReelSample`: a finished send drawn on a simulator, where no
+    /// co-signer can open the account. Nothing is proved, sent or kept.
+    static let reelAddress = "tc1" + "8e41c07a3bd95f2e6c1a7d04b9f3528e6d0c7a19b4e25f8d3c60a1e97b2d45f8c1e0a3b76d9f24c58e1b0a7d36c9f2e41b5"
+    func sample(tac: Double, payTo: String?) {
+        self.payTo = payTo
+        units = UInt64(tac * 1e8)
+        paidTAC = tac
+        paidPending = false
+        handed = false
+        step = .done
+    }
+    static func sampleAgain(to: String, tac: Double) { keepAgain(Again(to: to, tac: tac)) }
+    #endif
 
     enum Stop: Error {
         case refused, slow, nothingOwed, badAddress

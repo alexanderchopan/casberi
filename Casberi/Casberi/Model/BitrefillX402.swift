@@ -144,8 +144,16 @@ enum BitrefillX402 {
 
     /// Creates the invoice, pays it with the account's signed authorization,
     /// and answers the invoice. `stage` reports as a send does.
+    ///
+    /// **Face ID says what is SIGNED, not what was shown (prd §1988).** The
+    /// sentence priced the card off the catalogue; the invoice may price it
+    /// higher. `expectedUnits` is the shown price in USDC base units: an
+    /// invoice above it stops here, before anything is signed, and the
+    /// prompt is written from the requirement's own amount. `reason` is the
+    /// caller's words, used only when they already name that amount.
     @MainActor
     static func buy(product: Product, value: Double, phone: String? = nil, account: String, reason: String,
+                    expectedUnits: String? = nil,
                     stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> Invoice {
         await stage(.preparing)
         let headers = try await auth(account: account)
@@ -154,6 +162,11 @@ enum BitrefillX402 {
                                                                 headers: headers, service: service)
         guard status == 200, let invoice = Invoice.parse(created) else {
             throw Failure(message: BitrefillBuy.refusal(created, status: status) ?? String(localized: "Bitrefill would not price it"), from: "Bitrefill")
+        }
+        // Dearer than the sentence said: nothing is signed (prd §1988).
+        if let expectedUnits, !Op.atMost(invoice.priceUnits, expectedUnits) {
+            let dollars = String(format: "%.2f", (Double(invoice.priceUnits) ?? 0) / 1_000_000)
+            throw Failure(message: String(localized: "Bitrefill's price changed to $\(dollars). Nothing was paid"), from: "Bitrefill")
         }
         // What it accepts: USDC on Base, exactly the invoice.
         let payURL = "\(base)/x402/invoice/pay"
@@ -177,8 +190,12 @@ enum BitrefillX402 {
         }
         let authorization = BitrefillBuy.Authorization.make(from: EIP55.checksum(account), requirement: requirement, nonce: nonce)
         await stage(.signing)
+        // The prompt names the amount the authorization moves (prd §1988).
+        let paying = Op.spoken(requirement.amount, decimals: 6)
+        let prompt = reason.contains(paying) ? reason
+            : BitrefillBuy.faceWords(spoken: paying, value: product.money(value), product: product)
         let signature = try await YourAccountMessage.signTypedData(authorization.typedData(requirement: requirement),
-                                                                   on: network, account: account, reason: reason)
+                                                                   on: network, account: account, reason: prompt)
         guard let header = BitrefillBuy.paymentHeader(requirement: requirement, authorization: authorization, signature: signature,
                                                       challenge: challenge) else {
             throw Failure(message: "The payment could not be written")
@@ -190,11 +207,20 @@ enum BitrefillX402 {
         guard status3 == 200 else {
             throw Failure(message: BitrefillBuy.refusal(answer, status: status3) ?? String(localized: "Bitrefill did not take the payment"), from: "Bitrefill")
         }
+        // A 200 is the answer, not the settlement (prd §1988): only a pay
+        // answer that says it took the payment lets the row say "Paid";
+        // otherwise it says "Sent payment" until the card is delivered.
+        if BitrefillBuy.paymentAccepted(answer) { accepted.insert(invoice.id) }
         #if DEBUG
-        NSLog("bitrefillBuy| paid invoice %@ for %@ %@", invoice.id, Op.spoken(requirement.amount, decimals: 6), "USDC")
+        NSLog("bitrefillBuy| sent invoice %@ for %@ %@ accepted=%@", invoice.id, Op.spoken(requirement.amount, decimals: 6), "USDC",
+              accepted.contains(invoice.id) ? "yes" : "no")
         #endif
         return invoice
     }
+
+    /// Invoices whose pay answer said the payment was taken, this process
+    /// only (prd §1988): `land` reads it to choose "Paid" over "Sent payment".
+    @MainActor private static var accepted: Set<String> = []
 
     // MARK: - The payment, measured for a fifth of a cent
 
@@ -270,27 +296,46 @@ enum BitrefillX402 {
     }
 
     /// Lands the purchase as the §103 row: "Delta Air Lines · $50", the
-    /// merchant as the counterparty, the value as the price, dated now,
-    /// under `bitrefill:order:<invoice id>`. The code is NOT on it.
+    /// merchant as the counterparty, the card's face value as the price,
+    /// dated now, under `bitrefill:order:<invoice id>`. The code is NOT on it.
+    ///
+    /// **What was paid is the invoice's USDC, said as USDC (prd §1988).**
+    /// `priceUSD` falls back to 0 and read "Paid $0"; `priceUnits` is exactly
+    /// what the authorization moved. "Paid" only once Bitrefill took the
+    /// payment or delivered; "Sent payment" before. A card Bitrefill could
+    /// not deliver says so in its title and its words, and is tagged.
     @MainActor
-    static func land(invoice: Invoice, product: Product, value: Double, delivered: Bool) -> Thing? {
+    static func land(invoice: Invoice, product: Product, value: Double, delivered: Bool, failed: Bool = false) -> Thing? {
         guard let context = SharedStore.live?.mainContext else { return nil }
         let ref = BitrefillBuy.ref(invoiceID: invoice.id)
         let stored = IngestSupport.thingsByRef(context, source: "Bitrefill")
+        let name = BitrefillBuy.shortName(product.name)
+        let usdc = Op.spoken(invoice.priceUnits, decimals: 6)
+        let settled = delivered || accepted.contains(invoice.id)
+        let summary = failed
+            ? String(localized: "Not delivered · Sent \(usdc) USDC on Base from your account")
+            : settled ? String(localized: "Paid \(usdc) USDC on Base from your account")
+                      : String(localized: "Sent payment of \(usdc) USDC on Base from your account")
+        let title = failed
+            ? IngestSupport.titleLine(TitleSeam.join(name, String(localized: "Not delivered")))
+            : IngestSupport.titleLine(TitleSeam.join(name, product.money(value)))
         if let existing = stored[ref], existing.isLive {
-            if delivered, !existing.tags.contains("Delivered") { existing.tags.append("Delivered"); context.saveHonestly() }
+            if delivered, !existing.tags.contains("Delivered") { existing.tags.append("Delivered") }
+            if failed, !existing.tags.contains("Not delivered") { existing.tags.append("Not delivered") }
+            if existing.summary != summary { existing.summary = summary }
+            if existing.title != title { existing.title = title }
+            context.saveHonestly()
             return existing
         }
-        let name = BitrefillBuy.shortName(product.name)
-        let thing = Thing(kind: .link,
-                          title: IngestSupport.titleLine(TitleSeam.join(name, product.money(value))),
+        let thing = Thing(kind: .link, title: title,
                           content: "https://www.bitrefill.com/\(product.id)/",
                           source: "Bitrefill", capturedAt: .now, sourceRef: ref)
         thing.transferCounterparty = name
         thing.priceValue = value
         thing.priceCurrency = product.currency
-        thing.summary = String(localized: "Paid \(BitrefillBuy.money(invoice.priceUSD, currency: "USD")) in USDC on Base from your account")
+        thing.summary = summary
         if delivered { thing.tags = ["Delivered"] }
+        if failed { thing.tags.append("Not delivered") }
         context.insert(thing)
         context.saveHonestly()
         return thing

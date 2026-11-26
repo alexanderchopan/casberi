@@ -4062,6 +4062,19 @@ enum ProbeHooks {
         // `-tacitSample open|closed|clear` — a sample Tacit reading on the
         // account's page (`-openRoom Wallet -openSection tacit`), for a
         // simulator, where no co-signer's wallet can sign; reads nothing.
+        // `-tacitNotifySample public|sent` — after 8s, the notification a
+        // Tacit move sends when it ends (prd §1983), for recording: press
+        // Home first, since outcomes speak while you are away.
+        Hook(key: "tacitNotifySample") { raw, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(8))
+                let body = raw == "sent" ? String(localized: "\(TacitAccountRows.amount(25)) TAC sent privately")
+                    : String(localized: "\(TacitAccountRows.amount(5)) TAC is public again")
+                await Notifications.outcome(raw == "sent" ? .moveSent : .readyToUse, id: "tacit:sample:\(raw):\(Int(Date().timeIntervalSince1970))",
+                                            place: TacitAccount.name, body: body, mark: TacitAccount.name, awayOnly: false)
+                NSLog("tacitNotifySample: %@", raw)
+            }
+        },
         Hook(key: "tacitSample") { raw, _ in
             Task { @MainActor in TacitAccount.shared.sample(raw); NSLog("tacitSample: %@", raw) }
         },

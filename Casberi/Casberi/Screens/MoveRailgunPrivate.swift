@@ -109,6 +109,17 @@ final class RailgunMove {
     /// it landed, and Move opened on it again shows this same sentence.
     /// Moving in and taking back are signed by your account after, and stay.
     static var kept: RailgunMove?
+    /// **THE KEPT SEND IS ITS OWN RECIPIENT'S (prd §1988 item 2).** A send
+    /// kept behind its sheet, running or failed, is the sentence Move opens
+    /// on only for the recipient it was written to: one picked for someone
+    /// else came back as the old send, To and all. nil asks for none (the
+    /// capsule's own door passes the kept recipient).
+    static func kept(for recipient: String?) -> RailgunMove? {
+        guard let kept else { return nil }
+        guard let recipient else { return kept }
+        let wanted = recipient.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return kept.recipient?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == wanted ? kept : nil
+    }
     /// Closes the sheet; nil where the sentence is a page, which stays.
     var onAway: (() -> Void)?
     /// Another send is still proving behind its sheet: the engine proves
@@ -119,8 +130,23 @@ final class RailgunMove {
     }
     /// What the toast says when a send behind its sheet lands.
     static var landedWords: String { String(localized: "Sent privately") }
-    /// This move's: a swap lands as one (prd §1875).
-    private var landed: String { mode == .swap ? String(localized: "Swapped privately") : Self.landedWords }
+    /// This move's: a swap lands as one (prd §1875); an unshield to a public
+    /// address lands as sent to it, never "privately" (prd §1988 item 3).
+    private var landed: String {
+        if mode == .swap { return String(localized: "Swapped privately") }
+        if !toPrivate, toSomeoneElse, let recipient { return String(localized: "Sent to \(AddressTail.short(recipient))") }
+        return Self.landedWords
+    }
+
+    /// **SAID BY WHAT HAPPENED (prd §1988 item 3).** A 0zk send stays inside
+    /// Railgun: sent privately. An unshield to a public address puts the
+    /// amount and the recipient on Ethereum in the open (only the sender is
+    /// hidden): sent to its tail. To your own account: back in it.
+    var sentWords: String {
+        if toPrivate { return String(localized: "Sent privately.") }
+        if toSomeoneElse, let recipient { return String(localized: "Sent to \(AddressTail.short(recipient)).") }
+        return String(localized: "Back in your account.")
+    }
     /// The broadcaster's terms for the picked amount.
     private(set) var quote: RailgunEngineWire.Quote?
     /// A private swap's (prd §1875): what it buys, and its plan once priced.
@@ -534,6 +560,27 @@ final class RailgunMove {
     /// fresh sender. nil where a price is missing: the line then says
     /// Railgun's percentage, as before.
     var cost: PrivateCost? {
+        func gasUSD(_ gas: Int, plus extraWei: Decimal = 0) -> Double? {
+            guard let gasPriceWei, let ethUSD else { return nil }
+            let wei = Decimal(gas) * gasPriceWei + extraWei
+            return NSDecimalNumber(decimal: wei / pow(10, 18)).doubleValue * ethUSD
+        }
+        // **A 0ZK SEND UNSHIELDS NOTHING (prd §1988 item 1).** It stays
+        // inside Railgun (`transact` with no unshield), so Railgun's cut of
+        // an unshield is never taken: the cost is who carries it, alone. A
+        // fresh sender is brought `railgunSendGas` at today's price
+        // (`senderGasCost`, the most the send may use) and the relayer's fee,
+        // never the unshield's measured 520K.
+        if toPrivate {
+            guard picked != nil else { return nil }
+            if viaFresh {
+                guard let gas = gasUSD(FreshTx.railgunSendGas, plus: RailgunPocket.lastRelayerFeeWei ?? 0) else { return nil }
+                return PrivateCost(usd: gas, parts: [.init(words: String(localized: "A new address of yours sends it, its gas from your private ETH"),
+                                                           figure: String(localized: "about \(Self.usd(gas))"))])
+            }
+            guard let feeWords, let feeUSD = broadcasterFeeUSD else { return nil }
+            return PrivateCost(usd: feeUSD, parts: [.init(words: String(localized: "A Railgun broadcaster sends it"), figure: feeWords)])
+        }
         guard let picked, let h = holding, let price = h.price, let bps = feeBps,
               let units = Decimal(string: picked.units) else { return nil }
         var cutUnits = units * Decimal(bps) / 10_000, cut = Decimal()
@@ -542,11 +589,6 @@ final class RailgunMove {
         var usd = YourAccountOp.dollars(cutText, decimals: h.decimals, price: price)
         var parts = [PrivateCost.Part(words: String(localized: "Railgun"),
                                figure: RailgunHoldings.figure(cutText, decimals: h.decimals) + " " + h.symbol)]
-        func gasUSD(_ gas: Int, plus extraWei: Decimal = 0) -> Double? {
-            guard let gasPriceWei, let ethUSD else { return nil }
-            let wei = Decimal(gas) * gasPriceWei + extraWei
-            return NSDecimalNumber(decimal: wei / pow(10, 18)).doubleValue * ethUSD
-        }
         switch mode {
         case .deposit:
             guard let gas = gasUSD(RailgunPocket.shieldGas) else { return nil }
@@ -705,7 +747,7 @@ final class RailgunMove {
                                                           unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
                 try await Self.mined(hash)
                 finishSteps()
-                stage = .done(String(localized: "Sent privately."))
+                stage = .done(sentWords)
             case .takeBack where toSomeoneElse:
                 guard let q = quote else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
@@ -713,7 +755,7 @@ final class RailgunMove {
                 quote = nil
                 try await Self.mined(hash)
                 finishSteps()
-                stage = .done(String(localized: "Sent privately."))
+                stage = .done(sentWords)
             case .swap where viaFresh:
                 guard let plan = swapPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
@@ -911,6 +953,7 @@ final class RailgunMove {
         case .feeTokenPending?: String(localized: "Your ETH for fees is private in about an hour. Send then.")
         case .noPrivateGas?: String(localized: "No broadcaster can send it, and your private ETH can't pay its gas. Nothing was sent.")
         case .gasOnItsWay?: String(localized: "Its gas is on its way from your private ETH. Try again in a minute.")
+        case .ownAddress?: String(localized: "That's your own Railgun address")
         default: String(localized: "Railgun did not answer. Nothing was sent.")
         }
     }
@@ -1210,6 +1253,10 @@ struct MoveRailgunSentence<Head: View>: View {
     private func doneLine(_ words: String) -> String {
         guard let total = stepsRun?.total, move.mode != .deposit else { return words }
         if move.mode == .swap { return String(localized: "Swapped privately · \(total) s") }
+        // An unshield to a public address is sent to it, not privately (prd §1988 item 3).
+        if move.toSomeoneElse, !move.toPrivate, let to = move.recipient {
+            return String(localized: "Sent to \(AddressTail.short(to)) · \(total) s")
+        }
         return move.toSomeoneElse ? String(localized: "Sent privately · \(total) s")
             : String(localized: "Back in your account · \(total) s")
     }
@@ -1217,7 +1264,8 @@ struct MoveRailgunSentence<Head: View>: View {
     /// Where no price makes a dollar cost: Railgun's percentage and who
     /// pays the gas (§1713 item 6).
     private var readyLine: String {
-        let fee = move.feeBps.map { String(localized: "Railgun takes \(RailgunPocket.percent(bps: $0))") }
+        // A 0zk send unshields nothing, so Railgun takes no cut (prd §1988).
+        let fee = move.toPrivate ? nil : move.feeBps.map { String(localized: "Railgun takes \(RailgunPocket.percent(bps: $0))") }
         switch move.mode {
         case .deposit:
             return [fee, String(localized: "private in about an hour")].compactMap { $0 }.joined(separator: " · ")
@@ -1444,7 +1492,7 @@ struct MoveRailgunSentence<Head: View>: View {
             // The name keeps the address's tail, to check by (prd §1965a, as §1964b).
             let to = move.toPrivate ? (AddressBook.shared.name(for: move.recipient ?? "").map { "\($0) · \(AddressTail.short(move.recipient ?? ""))" }
                                         ?? YourAccount.short(move.recipient ?? ""))
-                : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your account")
+                : move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") : String(localized: "Your public account")
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: to) { leave(.pickRecipient) })
         case .swap:
             break

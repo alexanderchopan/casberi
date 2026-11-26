@@ -112,7 +112,7 @@ struct TacitOutSheet: View {
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true, value: name) { leave() })
         } else {
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), on: open == .to, answered: true,
-                                    value: toCoSigner ? String(localized: "Co-signer") : "Casberi") { toggle(.to) })
+                                    value: toCoSigner ? String(localized: "Co-signer") : String(localized: "Your public account")) { toggle(.to) })
         }
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
                                 value: payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain", mark: mark) {})
@@ -136,7 +136,8 @@ struct TacitOutSheet: View {
 
     /// Where back to public lands: your Casberi account or your co-signer.
     @ViewBuilder private var toChoices: some View {
-        toRow("Casberi", picked: !toCoSigner) { pick(false) }
+        // Named as Move names it everywhere (prd §1986 item 3).
+        toRow(String(localized: "Your public account"), picked: !toCoSigner) { pick(false) }
         if coSigner != nil {
             toRow(String(localized: "Co-signer"), picked: toCoSigner) { pick(true) }
         }
@@ -198,12 +199,12 @@ struct TacitOutSheet: View {
     // MARK: - Sending
 
     @ViewBuilder private var steps: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(verbatim: "\(TacitAccountRows.amount(Double(out.units) / 1e8)) TAC ").foregroundStyle(DS.textPrimary)
-            Text("to ").foregroundStyle(DS.textPrimary)
-            Text(verbatim: payTo.map { AddressTail.short($0) } ?? (toCoSigner ? String(localized: "Co-signer") : "Casberi")).foregroundStyle(DS.pickInk)
-        }
+        // One sentence, so a long place wraps as words do (prd §1986 item 3).
+        (Text(verbatim: "\(TacitAccountRows.amount(Double(out.units) / 1e8)) TAC ").foregroundStyle(DS.textPrimary)
+            + Text("to ").foregroundStyle(DS.textPrimary)
+            + Text(verbatim: payTo.map { AddressTail.short($0) } ?? (toCoSigner ? String(localized: "Co-signer") : String(localized: "your public account"))).foregroundStyle(DS.pickInk))
         .dsText(.heading34)
+        .frame(maxWidth: .infinity, alignment: .leading)
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 step(String(localized: "Proved"), state: state(for: 0),
@@ -239,18 +240,27 @@ struct TacitOutSheet: View {
                     .buttonStyle(RowPress())
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, DS.Space.s6)
         } else if case .done = out.step, let paid = out.paidTAC {
-            let place = toCoSigner ? String(localized: "your co-signer") : String(localized: "your Casberi account")
+            let place = toCoSigner ? String(localized: "your co-signer") : String(localized: "your public account")
             let now = toCoSigner ? account.reading?.publicTAC : account.reading?.accountTAC
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text("\(TacitAccountRows.amount(paid)) TAC is in \(place)")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                if let now {
+                // Sent, not yet seen: on its way, never "is in" (prd §1988).
+                Group {
+                    if out.paidPending {
+                        Text("\(TacitAccountRows.amount(paid)) TAC is on its way to \(place)")
+                    } else {
+                        Text("\(TacitAccountRows.amount(paid)) TAC is in \(place)")
+                    }
+                }
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                if !out.paidPending, let now {
                     Text("It holds \(TacitAccountRows.amount(now)) TAC now")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, DS.Space.s6)
         }
     }
