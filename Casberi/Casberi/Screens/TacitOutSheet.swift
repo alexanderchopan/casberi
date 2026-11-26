@@ -9,6 +9,8 @@ struct TacitOutSheet: View {
     @Bindable var out = TacitOut.shared
     @Bindable var account = TacitAccount.shared
     var leave: () -> Void
+    /// Another Tacit account (prd §1982): a private send, not back to public.
+    var payTo: String? = nil
     @State private var amount = ""
     @State private var toCoSigner = false
     @FocusState private var typing: Bool
@@ -44,6 +46,7 @@ struct TacitOutSheet: View {
             if let to { await out.readOwed(to) }
         }
         .onAppear {
+            out.payTo = payTo
             out.reset()
             if amount.isEmpty, held > 0 { amount = TacitShieldSheet.maxText(held) }
         }
@@ -62,6 +65,12 @@ struct TacitOutSheet: View {
         Text("Send").dsText(.heading34).foregroundStyle(DS.textPrimary)
         VStack(alignment: .leading, spacing: 0) {
             row("From") { Chip(text: "Tacit", glyph: "lock.fill") }
+            if let payTo {
+                row("To") {
+                    Text("Their Tacit account · \(AddressTail.short(payTo))")
+                        .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                }
+            } else {
             row("To") {
                 HStack(spacing: DS.Space.s2) {
                     Button { pick(false) } label: { Chip(text: "Casberi", selected: !toCoSigner) }
@@ -72,10 +81,11 @@ struct TacitOutSheet: View {
                     }
                 }
             }
+            }
             row("Token") {
                 HStack(spacing: DS.Space.s2) {
                     AssetMark(name: "TAC", size: 24)
-                    Text("TAC · Ethereum").dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain").dsText(.body17).foregroundStyle(DS.textPrimary)
                 }
             }
             row("Amount") {
@@ -97,7 +107,7 @@ struct TacitOutSheet: View {
                 }
             }
             row("Fee") { Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary) }
-            row("Arrives") { Text("In a few minutes").dsText(.body17).foregroundStyle(DS.textPrimary) }
+            row("Arrives") { Text(payTo == nil ? "In a few minutes" : "In about a minute").dsText(.body17).foregroundStyle(DS.textPrimary) }
         }
         .padding(.top, DS.Space.s6)
         if case .failed(let why) = out.step {
@@ -114,7 +124,8 @@ struct TacitOutSheet: View {
     private var feeWords: String {
         guard let q = out.quote, let fee = TacitEngineWire.tac(q.fee) else { return "—" }
         let text = TacitShieldSheet.tacText(NSDecimalNumber(decimal: fee).doubleValue)
-        return String(localized: "\(text) and network fee")
+        // A pay stays on the Tacit chain: no Ethereum fee.
+        return payTo == nil ? String(localized: "\(text) and network fee") : text
     }
 
     private func row<V: View>(_ name: LocalizedStringKey, @ViewBuilder _ value: () -> V) -> some View {
@@ -133,7 +144,7 @@ struct TacitOutSheet: View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(verbatim: "\(TacitAccountRows.amount(Double(out.units) / 1e8)) TAC ").foregroundStyle(DS.textPrimary)
             Text("to ").foregroundStyle(DS.textPrimary)
-            Text(verbatim: toCoSigner ? String(localized: "Co-signer") : "Casberi").foregroundStyle(DS.pickInk)
+            Text(verbatim: payTo.map { AddressTail.short($0) } ?? (toCoSigner ? String(localized: "Co-signer") : "Casberi")).foregroundStyle(DS.pickInk)
         }
         .dsText(.heading34)
         VStack(alignment: .leading, spacing: DS.Space.s4) {
@@ -142,13 +153,19 @@ struct TacitOutSheet: View {
                      figure: out.provingSince.map { "\(Int(context.date.timeIntervalSince($0))) s" })
             }
             step(String(localized: "Tacit takes it"), state: state(for: 1), figure: nil)
-            step(String(localized: "Collected"), state: state(for: 2), figure: nil)
+            if payTo == nil {
+                step(String(localized: "Collected"), state: state(for: 2), figure: nil)
+            }
         }
         .padding(.top, DS.Space.s6)
         // **SAY WHERE IT LANDED (user, 2026-11-25: "it said success but i
         // can't tell if it worked or not").** The amount paid out and the
         // place, and what that place now holds.
-        if case .done = out.step, let paid = out.paidTAC {
+        if case .done = out.step, let paid = out.paidTAC, let payTo {
+            Text("\(TacitAccountRows.amount(paid)) TAC went to \(AddressTail.short(payTo)), privately")
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .padding(.top, DS.Space.s6)
+        } else if case .done = out.step, let paid = out.paidTAC {
             let place = toCoSigner ? String(localized: "your co-signer") : String(localized: "your Casberi account")
             let now = toCoSigner ? account.reading?.publicTAC : account.reading?.accountTAC
             VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -171,7 +188,7 @@ struct TacitOutSheet: View {
         case .proving: at = 0
         case .handing, .landing: at = 1
         case .collecting: at = 2
-        case .done: at = 3
+        case .done: at = payTo == nil ? 3 : 2
         default: at = 0
         }
         return index < at ? .done : index == at ? .now : .waiting
@@ -214,7 +231,7 @@ struct TacitOutSheet: View {
             case .failed:
                 // After a withdrawal was handed, never a second one from here:
                 // Collect, which reads what is owed again.
-                if out.owedWei > 0 || out.handed {
+                if payTo == nil, out.owedWei > 0 || out.handed {
                     MoveFootWord(word: String(localized: "Collect")) { Task { await out.collectOwed() } }
                 } else {
                     MoveFootWord(word: String(localized: "Try again")) {
@@ -225,7 +242,7 @@ struct TacitOutSheet: View {
             case .proving, .handing, .landing, .collecting:
                 EmptyView()
             default:
-                if out.owedWei > 0 {
+                if payTo == nil, out.owedWei > 0 {
                     // Owed from an earlier try: collected before anything new.
                     MoveFootWord(word: String(localized: "Collect")) { Task { await out.collectOwed() } }
                 } else if !TacitEngine.shared.isOpen, !DemoMode.isActive, let coSigner {

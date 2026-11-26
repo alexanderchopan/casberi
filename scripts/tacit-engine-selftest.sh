@@ -137,7 +137,11 @@ grep -A8 "async shieldOffer" "$JS" | grep -qF ".offer({ back: p.back, meta:" || 
 grep -A10 "async outHand" "$JS" | grep -qF "client.send(p," || fail "the withdrawal hand-off is not in outHand"
 [[ "$(grep -c "prepareWithdraw(" "$JS")" == "1" ]] || fail "a withdrawal is proved from somewhere new"
 grep -A6 "async outProve" "$JS" | grep -qF "c.prepareWithdraw(String(to), BigInt(units))" || fail "the withdrawal is not proved in outProve to the address asked"
-hasnt "$JS" "preparePay(" "the engine pays to a Tacit address: not built"
+# Sending privately (prd §1982) is the third: a pay to another Tacit account,
+# proved only in `payProve` to the address asked, and handed through the same
+# one `client.send(` in `outHand`.
+[[ "$(grep -c "preparePay(" "$JS")" == "1" ]] || fail "a private pay is proved from somewhere new"
+grep -A6 "async payProve" "$JS" | grep -qF "c.preparePay(recipient, BigInt(units))" || fail "the pay is not proved in payProve to the address asked"
 for verb in ".deposit(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts" ".spend(" ".publish(" ".makeNote(" ".submit(" "sendTransaction" "eth_sendRawTransaction"; do
   hasnt "$JS" "$verb" "the engine calls $verb: it reads only"
 done

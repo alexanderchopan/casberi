@@ -16,6 +16,7 @@ enum TacitEngineWire {
         case info, open, read, chain, defi, close
         case shieldQuote, shieldProve, shieldHand, shieldOffer, shieldStatus
         case outQuote, outProve, outHand, owed
+        case payQuote, payProve, payCheck
     }
 
     typealias Failure = PrivacyEngineWire.Failure

@@ -104,6 +104,8 @@ struct MoveSentence: View {
     @State private var tacitOpen = false
     /// Private TAC back to public (prd §1977): Tacit's other Send.
     @State private var tacitOutOpen = false
+    /// A Tacit address typed in To (prd §1982): the private send's recipient.
+    @State private var tacitPayTo: String?
     @State private var railgunMove: RailgunMove
 
     /// `recipient`: out to someone else through a broadcaster (prd §1721
@@ -1518,7 +1520,8 @@ struct MoveSentence: View {
                 .transition(.opacity)
             }
             if tacitOutOpen, privateMode == nil, open != .verb {
-                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false } })
+                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil } },
+                              payTo: tacitPayTo)
                     .transition(.opacity)
             }
             if tacitOpen, privateMode == nil, open != .verb {
@@ -6061,6 +6064,16 @@ struct MoveSentence: View {
                 toRow(AddressBook.shared.name(for: q) ?? String(localized: "Their private balance"),
                       sub: "Railgun · " + AddressTail.short(q), symbol: "eye.slash") {
                     goRailgun(.takeBack, contract: nil, recipient: q)
+                }
+            }
+            // A Tacit address typed: a private send of TAC on the Tacit chain
+            // (prd §1982), while the last reading holds some.
+            if TacitOut.isTacitAddress(to), (TacitAccount.shared.reading?.privateTAC ?? 0) > 0 || DemoMode.isActive {
+                let address = to.trimmingCharacters(in: .whitespacesAndNewlines)
+                toRow(AddressBook.shared.name(for: address) ?? String(localized: "Their Tacit account"),
+                      sub: "Tacit · " + AddressTail.short(address), image: "brand-tacit") {
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { open = nil; tacitPayTo = address; tacitOutOpen = true }
                 }
             }
             // An Aztec address typed: a private send from Aztec (prd §1700f item 14).

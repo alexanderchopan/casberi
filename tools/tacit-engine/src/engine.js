@@ -26,6 +26,7 @@ import { poseidon2, poseidon3, poseidon4, poseidon5 } from '../vendor/dapp/vendo
 // signs and never sends a transaction: the permit is the wallet's, checked
 // by the app before it is asked for (`TacitShield`).
 import { makeChainClient } from '../vendor/dapp/tacit-chain-client.js';
+import { makeTacitAddress } from '../vendor/dapp/tacit-address.js';
 import { makeHalo2System } from '../vendor/dapp/btc-pool-halo2-prover.js';
 import pin from '../vendor/dapp/btc-pool/pin.json';
 
@@ -320,6 +321,34 @@ const methods = {
     });
   },
 
+  // SEND PRIVATELY (prd §1982). Private TAC on the Tacit chain to another
+  // Tacit account: its chain address (`tc1…`) or its whole Tacit address
+  // (`tacit1…`, whose chain lane names it). Proved with the Tacit key, handed
+  // to the leader like a withdrawal (`outHand`), and nothing to collect: the
+  // note is theirs once a block takes it.
+  async payQuote({ rpcUrl, blocks, leader, units }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    await c.scan();
+    const q = await c.quote('pay', BigInt(units || 0));
+    return { fee: hex(q.fee), holders: hex(q.holders ?? 0n), most: hex(q.most ?? 0n) };
+  },
+
+  async payProve({ rpcUrl, blocks, leader, to, units }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    const recipient = await payRecipient(c, String(to).trim());
+    const t = now();
+    outPending = await c.preparePay(recipient, BigInt(units));
+    return { proveMs: Math.round(now() - t) };
+  },
+
+  // Whether `to` names a Tacit account this send can reach, and its chain
+  // lane's address, without proving anything.
+  async payCheck({ rpcUrl, blocks, leader, to }) {
+    const c = await chainClient({ rpcUrl, blocks, leader });
+    await payRecipient(c, String(to).trim());
+    return {};
+  },
+
   // TAC Tacit's contract owes `address`, in wei, waiting for `withdraw`.
   async owed({ rpcUrl, blocks, leader, address }) {
     const c = await chainClient({ rpcUrl, blocks, leader });
@@ -396,3 +425,19 @@ globalThis.casberiEngine = {
   },
 };
 try { globalThis.webkit.messageHandlers.engineLog.postMessage('ready'); } catch {}
+
+// A Tacit address as the chain client's recipient: a chain address decoded
+// as it stands, a whole Tacit address through its chain lane (the key's
+// record first, then the leader's directory, as Tacit's own payer asks).
+async function payRecipient(c, to) {
+  if (/^tc1[0-9a-f]+$/i.test(to)) {
+    const w = makeChainWallet({ poseidon, prover: null, chain: '0x' + '0'.repeat(64), asset: 0n });
+    return w.decodeAddress(to.toLowerCase());
+  }
+  if (/^tacit1[02-9ac-hj-np-z]+$/i.test(to)) {
+    const d = makeTacitAddress({ secp }).decodeTacitAddress(to.toLowerCase());
+    if (!d.lanes.chain && !d.lanes.evm && !d.lanes.btc) throw Object.assign(new Error('that Tacit address has no chain lane'), { name: 'BadAddress' });
+    return await c.recipientOf(d.lanes);
+  }
+  throw Object.assign(new Error('not a Tacit address'), { name: 'BadAddress' });
+}

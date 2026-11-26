@@ -1230,6 +1230,13 @@ enum WalletIngest {
         "0x30672ebb8d3c3b62c261a23b4a225712ff2cadbc": "World ID grants",
         "0xdaa7bbad496c4d4431423be64d878a769fbdebc8": "World ID grants",
         "0x14a028cc500108307947dca4a1aa35029fb66ce0": "WLD Vault",
+        // Tacit (prd §1982): its chain's contract on Ethereum, `TacitBlocks`,
+        // which pays out every back-to-public withdrawal (`withdraw(address)`,
+        // seen paying the phone's account 5 TAC on 2026-11-25), and its
+        // confidential pool, both as Tacit's own config names them
+        // (`TacitChain.blocks`, the engine's `POOL`).
+        "0x00000000000a9147ffd8d41d152d730ca5f84e6c": "Tacit",
+        "0x000000c2a20657ce25f2ba99737933d031afbee9": "Tacit",
         // Aztec mainnet's contracts on Ethereum (prd §1277): the Rollup, GSE,
         // Governance and Fee Juice portal as Aztec's own mainnet node lists
         // them (`node_getNodeInfo`), the two earlier Rollups and the

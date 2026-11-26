@@ -1935,6 +1935,34 @@
         }
       }
     },
+    "%@ TAC went to %@, privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TAC se envió a %2$@, en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TACを%2$@へ非公開で送りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TAC가 %2$@에게 비공개로 전송되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TAC 已私密发送至 %2$@"
+          }
+        }
+      }
+    },
     "%@ Up from %@ in %@." : {
       "localizations" : {
         "en" : {
@@ -110881,6 +110909,34 @@
         }
       }
     },
+    "In about a minute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En aproximadamente un minuto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "約1分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "약 1분 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "约一分钟"
+          }
+        }
+      }
+    },
     "In about an hour" : {
       "localizations" : {
         "es" : {
@@ -200197,6 +200253,34 @@
         }
       }
     },
+    "Tacit chain · earned %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cadena de Tacit · ganado %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーン · 獲得 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인 · 수익 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 链 · 已赚 %@"
+          }
+        }
+      }
+    },
     "Tacit chain · not read" : {
       "localizations" : {
         "es" : {
@@ -209474,6 +209558,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "他们的 %@"
+          }
+        }
+      }
+    },
+    "Their Tacit account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Su cuenta de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相手のTacitアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대의 Tacit 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对方的 Tacit 账户"
+          }
+        }
+      }
+    },
+    "Their Tacit account · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Su cuenta de Tacit · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相手のTacitアカウント · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대의 Tacit 계정 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对方的 Tacit 账户 · %@"
           }
         }
       }

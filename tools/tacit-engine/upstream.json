@@ -271,6 +271,9 @@
       "from": "dapp/tac-airdrop.js",
       "sha256": "6a6bb45f51a2a7aa575f29cb661286ad7d5186f55644838c03465d55702858f3"
     },
+    "vendor/dapp/tacit-address.js": {
+      "sha256": "848d3aaa3b6f82ab4ecd2ebe656707d110b2d6d95e5cddf7e04c9620ede94c00"
+    },
     "vendor/dapp/tacit-chain-client.js": {
       "from": "dapp/tacit-chain-client.js",
       "sha256": "523a269a4b4a867e0f59ced2691b1ec0d9c5c1ad2999040d853e38ebab6f0256"

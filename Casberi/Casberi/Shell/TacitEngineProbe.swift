@@ -122,6 +122,18 @@ enum TacitEngineProbe {
                         let t2 = Date()
                         let again = try await TacitEngine.shared.chain(from: first.next, known: first.kept)
                         log("resume", ms(t), "first \(first.next) tried in \(first.ms) ms · resumed from \(first.next) to \(again.next) in \(Int(Date().timeIntervalSince(t2) * 1000)) ms · address \(again.chainAddress.prefix(10))… (\(again.chainAddress.count) chars)")
+                    case "pay":
+                        // Send privately (prd §1982), read only: this key's own
+                        // chain address decoded as a recipient, a malformed one
+                        // refused, and the quote for 1 TAC. Nothing is proved.
+                        guard key != nil else { throw TacitEngineWire.Failure(name: "NotOpen", message: "open first") }
+                        let t = Date()
+                        let mine = try await TacitEngine.shared.chain()
+                        try await TacitEngine.shared.payCheck(to: mine.chainAddress)
+                        var refused = false
+                        do { try await TacitEngine.shared.payCheck(to: "tc1" + String(repeating: "0", count: 40)) } catch { refused = true }
+                        let q = try await TacitEngine.shared.payQuote(units: 100_000_000)
+                        log("pay", ms(t), "own tc1 accepted · malformed refused \(refused) · isTacitAddress \(TacitOut.isTacitAddress(mine.chainAddress)) · fee \(q.fee) · holders \(q.holders) · most \(q.most)")
                     case "out":
                         // Back to public (prd §1977), read only: the notes
                         // scanned, the quote for 1 TAC, the most that can go,

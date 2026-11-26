@@ -298,7 +298,13 @@ extension FeedScreen {
                                 factInk: DS.attentionInk)
             }
             if let tac = reading.privateTACAll, tac > 0 {
-                walletTacitLine("TAC", held: WalletValue.held(tac), fact: String(localized: "Tacit chain"),
+                // What the chain's fees added since the first reading that knew
+                // the rate (user, 2026-11-24: "should we show rewards too a
+                // user is earning?"), on the row since its page went (§1981).
+                let earned = reading.earnedTAC.flatMap { $0 >= 0.0001 ? $0 : nil }
+                let fact = earned.map { String(localized: "Tacit chain · earned \(TacitAccountRows.amount($0))") }
+                    ?? String(localized: "Tacit chain")
+                walletTacitLine("TAC", held: WalletValue.held(tac), fact: fact,
                                 figure: tacit.privateTacUSD.map { mask ?? WalletValue.exactMoney($0) },
                                 move: tacit.privateTacUSD == nil ? nil : walletHoldingMoves[HoldingMoves.key("TAC")])
             }

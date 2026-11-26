@@ -58,6 +58,19 @@ final class TacitOut {
 
     private init() {}
 
+    /// Another Tacit account, when this is a private send rather than back
+    /// to public (prd §1982): its `tc1…` or `tacit1…` address. Nothing to
+    /// collect: the note is theirs once a block takes it.
+    var payTo: String?
+
+    /// Whether `text` reads as a Tacit address a private send can take.
+    static func isTacitAddress(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if t.hasPrefix("tc1") { return t.count > 100 && t.dropFirst(3).allSatisfy(\.isHexDigit) }
+        if t.hasPrefix("tacit1") { return t.count > 60 && t.dropFirst(6).allSatisfy { "023456789acdefghjklmnpqrstuvwxyz".contains($0) } }
+        return false
+    }
+
     /// `withdraw(address)` on `TacitChain.blocks`, read off Tacit's contract
     /// (keccak256 of the signature, checked against its source 2026-11-25).
     static let withdrawSelector = "51cff8d9"
@@ -76,7 +89,8 @@ final class TacitOut {
         units = u
         step = .quoting
         do {
-            quote = try await TacitEngine.shared.outQuote(units: u)
+            quote = payTo == nil ? try await TacitEngine.shared.outQuote(units: u)
+                : try await TacitEngine.shared.payQuote(units: u)
             if units == u { step = .ready }
         } catch {
             step = .failed(TacitAccount.words(error))
@@ -100,7 +114,11 @@ final class TacitOut {
             step = .proving
             provingSince = .now
             do {
-                _ = try await TacitEngine.shared.outProve(to: to, units: units)
+                if let payTo {
+                    _ = try await TacitEngine.shared.payProve(to: payTo, units: units)
+                } else {
+                    _ = try await TacitEngine.shared.outProve(to: to, units: units)
+                }
                 provingSince = nil
             } catch {
                 provingSince = nil
@@ -112,6 +130,16 @@ final class TacitOut {
             handed = true
             step = .landing
             try await land(ticket.id)
+            if payTo != nil {
+                // A pay has nothing to collect: theirs once the block took it.
+                paidTAC = Double(units) / 1e8
+                handed = false
+                step = .done
+                if let coSigner = YourAccountFacts.coSigners.first, let chain = await TacitPocket.chain(coSigner: coSigner) {
+                    TacitAccount.shared.applyChain(chain, coSigner: coSigner)
+                }
+                return
+            }
             await readOwed(to)
             try await collect(to: to)
         } catch is CancellationError {

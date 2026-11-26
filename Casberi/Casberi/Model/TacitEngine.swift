@@ -210,6 +210,21 @@ final class TacitEngine: NSObject {
         try await call(.outHand, Wire.Empty(), as: Wire.ShieldHanded.self)
     }
 
+    // MARK: Send privately (prd §1982)
+
+    func payQuote(units: UInt64) async throws -> Wire.OutQuote {
+        try await call(.payQuote, outAsk(to: "", units: units), as: Wire.OutQuote.self)
+    }
+
+    func payProve(to: String, units: UInt64) async throws -> Wire.OutProved {
+        try await call(.payProve, outAsk(to: to, units: units), as: Wire.OutProved.self)
+    }
+
+    /// Throws when `to` names no Tacit account the chain can pay.
+    func payCheck(to: String) async throws {
+        _ = try await call(.payCheck, outAsk(to: to, units: 0), as: Wire.Empty.self)
+    }
+
     func owed(_ address: String) async throws -> Wire.Owed {
         try await call(.owed, Wire.OwedAsk(rpcUrl: TacitNetwork.ethereum.rpcUrl, blocks: TacitChain.blocks,
                                            leader: TacitChain.leader, address: address), as: Wire.Owed.self)

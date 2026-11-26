@@ -263,7 +263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2166 of 2240 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2167 of 2241 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2426,11 +2426,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1974a — Every category in Apps is one row of one height, the Wallet's too
 - §1975 — Safe, Privacy Pools and Railgun are no apps: they are built into Your account (amended by §1976)
 - §1976 — Send's To lists every private place that takes the token, Tacit among them, and the Safes you sign for stand under th…
-- §1977 — Back to public: private TAC on the Tacit chain goes back to your Casberi account or your co-signer, from Move's From
+- §1977 — Back to public: private TAC on the Tacit chain goes back to your Casberi account or your co-signer, from Move's From (amended by §1982)
 - §1978 — A private send's To lists your public account and your addresses and takes a name; a token held in two places shows i…
 - §1979 — A private send takes any amount, in the token or in dollars, and keeps its lines while it goes (amended by §1980)
 - §1980 — Railgun's and Aztec's sends keep their lines while they go, as public Send and Privacy Pools do
 - §1981 — Tacit's page is deleted: its money stands in Holdings › Private, its verbs in Move, its addresses on Receive, and Rea…
+- §1982 — Send privately: private TAC to another Tacit account from Send's To; Tacit named in Activity; what TAC earned on Hold…
 
 ## Dead rulings → what replaced them (generated)
 
