@@ -46,6 +46,9 @@ final class TacitOut {
     private(set) var owedWei: Decimal = 0
     private(set) var owedTo: String?
     private(set) var provingSince: Date?
+    /// Set once a withdrawal is handed to the leader, until it is collected:
+    /// from then the sheet offers Collect, never a second withdrawal.
+    private(set) var handed = false
 
     private init() {}
 
@@ -89,12 +92,19 @@ final class TacitOut {
         do {
             step = .proving
             provingSince = .now
-            defer { provingSince = nil }
-            _ = try await TacitEngine.shared.outProve(to: to, units: units)
+            do {
+                _ = try await TacitEngine.shared.outProve(to: to, units: units)
+                provingSince = nil
+            } catch {
+                provingSince = nil
+                throw error
+            }
+            owedTo = to
             step = .handing
-            let handed = try await TacitEngine.shared.outHand()
+            let ticket = try await TacitEngine.shared.outHand()
+            handed = true
             step = .landing
-            try await land(handed.id)
+            try await land(ticket.id)
             await readOwed(to)
             try await collect(to: to)
         } catch is CancellationError {
@@ -108,6 +118,13 @@ final class TacitOut {
 
     /// Pays out what the contract owes `to`, from your Casberi account.
     func collect(to: String) async throws {
+        // Read again here, never trusted from before: a read that failed
+        // after the block must not leave "Try again" (a second withdrawal)
+        // where Collect belongs.
+        for attempt in 0..<3 where owedWei <= 0 {
+            if attempt > 0 { try await Task.sleep(for: .seconds(Double(2 * attempt))) }
+            await readOwed(to)
+        }
         guard owedWei > 0 else { throw Stop.nothingOwed }
         guard let data = Self.withdrawCalldata(to) else { throw Stop.badAddress }
         step = .collecting
@@ -117,6 +134,7 @@ final class TacitOut {
                                                            stage: { _ in })
         if case .dryRun = sent.outcome { throw Stop.nothingOwed }
         owedWei = 0
+        handed = false
         step = .done
         if let coSigner = YourAccountFacts.coSigners.first, let chain = await TacitPocket.chain(coSigner: coSigner) {
             TacitAccount.shared.applyChain(chain, coSigner: coSigner)
@@ -157,7 +175,7 @@ final class TacitOut {
             switch self {
             case .refused: return String(localized: "Tacit's chain didn't take it. Your TAC stays private")
             case .slow: return String(localized: "Still waiting on Tacit's chain. Collect it later from here")
-            case .nothingOwed: return String(localized: "Tacit owes nothing to collect yet")
+            case .nothingOwed: return String(localized: "Tacit owes nothing to collect yet. Collect it later from here")
             case .badAddress: return String(localized: "That isn't an Ethereum address")
             }
         }

@@ -200169,30 +200169,30 @@
         }
       }
     },
-    "Tacit owes nothing to collect yet" : {
+    "Tacit owes nothing to collect yet. Collect it later from here" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tacit aún no debe nada que recoger"
+            "value" : "Tacit aún no debe nada. Recógelo aquí más tarde"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "受け取れるものはまだありません"
+            "value" : "まだ受け取れるものはありません。後でここから受け取れます"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아직 받을 것이 없습니다"
+            "value" : "아직 받을 것이 없습니다. 나중에 여기서 받으세요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂无可领取的金额"
+            "value" : "暂无可领取的金额。稍后可在此领取"
           }
         }
       }

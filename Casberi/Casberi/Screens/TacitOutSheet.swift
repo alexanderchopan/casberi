@@ -196,7 +196,9 @@ struct TacitOutSheet: View {
             case .done:
                 MoveFootWord(word: String(localized: "Done")) { leave() }
             case .failed:
-                if out.owedWei > 0 {
+                // After a withdrawal was handed, never a second one from here:
+                // Collect, which reads what is owed again.
+                if out.owedWei > 0 || out.handed {
                     MoveFootWord(word: String(localized: "Collect")) { Task { await out.collectOwed() } }
                 } else {
                     MoveFootWord(word: String(localized: "Try again")) {
