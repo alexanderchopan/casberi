@@ -240930,6 +240930,34 @@
         }
       }
     },
+    "Your Safes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus Safes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたの Safe"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 Safe"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Safe"
+          }
+        }
+      }
+    },
     "Your Shield key could not send it. Try again: it keeps what it holds." : {
       "localizations" : {
         "es" : {
