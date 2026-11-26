@@ -26,7 +26,7 @@ import Foundation
 /// Privacy Pools' "15 minutes to a few hours" is the user's range.
 enum ReceiveWords {
     enum Place: String, Identifiable {
-        case `public`, elsewhere, pools, railgun, aztec
+        case `public`, elsewhere, pools, railgun, aztec, tacit, tacitETH, tacitDeposit
         var id: String { rawValue }
     }
 
@@ -112,6 +112,10 @@ enum ReceiveWords {
         case .pools: "Privacy Pools"
         case .railgun: "Railgun"
         case .aztec: "Aztec"
+        // Tacit's three addresses (prd §1978, from its deleted page).
+        case .tacit: "Tacit"
+        case .tacitETH: String(localized: "Tacit, private ETH")
+        case .tacitDeposit: String(localized: "Tacit, from an exchange")
         }
     }
 
@@ -147,6 +151,24 @@ enum ReceiveWords {
             return [Fact(label: takes, value: "USDC, WETH"),  // On Aztec it is WETH (prd §1943).
                     Fact(label: from, value: String(localized: "Another Aztec account only")),
                     Fact(label: ready, value: String(localized: "In about 20 seconds")),
+                    Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]
+        // Your Tacit chain address: private TAC, from another Tacit account.
+        case .tacit:
+            return [Fact(label: takes, value: "TAC"),
+                    Fact(label: on, value: String(localized: "Tacit chain")),
+                    Fact(label: from, value: String(localized: "Another Tacit account only")),
+                    Fact(label: earns, value: String(localized: "A share of the chain's fees"))]
+        // Your Tacit address: private ETH, Tacit to Tacit.
+        case .tacitETH:
+            return [Fact(label: takes, value: "ETH"),
+                    Fact(label: on, value: "Ethereum, Robinhood"),
+                    Fact(label: from, value: String(localized: "Another Tacit account only")),
+                    Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]
+        // The pool's deposit address: ETH sent here goes private.
+        case .tacitDeposit:
+            return [Fact(label: takes, value: "ETH"),
+                    Fact(label: from, value: String(localized: "Any wallet or exchange")),
+                    Fact(label: ready, value: String(localized: "In a few minutes")),
                     Fact(label: earns, value: String(localized: "Nothing"), quiet: true)]
         }
     }

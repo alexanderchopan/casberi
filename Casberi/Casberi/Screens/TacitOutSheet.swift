@@ -145,6 +145,22 @@ struct TacitOutSheet: View {
             step(String(localized: "Collected"), state: state(for: 2), figure: nil)
         }
         .padding(.top, DS.Space.s6)
+        // **SAY WHERE IT LANDED (user, 2026-11-25: "it said success but i
+        // can't tell if it worked or not").** The amount paid out and the
+        // place, and what that place now holds.
+        if case .done = out.step, let paid = out.paidTAC {
+            let place = toCoSigner ? String(localized: "your co-signer") : String(localized: "your Casberi account")
+            let now = toCoSigner ? account.reading?.publicTAC : account.reading?.accountTAC
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("\(TacitAccountRows.amount(paid)) TAC is in \(place)")
+                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                if let now {
+                    Text("It holds \(TacitAccountRows.amount(now)) TAC now")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+            }
+            .padding(.top, DS.Space.s6)
+        }
     }
 
     private enum StepState { case waiting, now, done }
@@ -194,7 +210,7 @@ struct TacitOutSheet: View {
                     Task { await out.send(to: to) }
                 }
             case .done:
-                MoveFootWord(word: String(localized: "Done")) { leave() }
+                MoveFootWord(word: String(localized: "Done")) { out.finish(); leave() }
             case .failed:
                 // After a withdrawal was handed, never a second one from here:
                 // Collect, which reads what is owed again.

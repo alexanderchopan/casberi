@@ -2587,7 +2587,9 @@ struct MoveSentence: View {
             // place it would have (user, 2026-11-21); its copy says the demo
             // acts later.
             let poolsRow = PrivateMove.freshAvailable || DemoMode.isActive
-            if poolsRow || RailgunPocket.available || aztec != nil {
+            // Tacit's addresses, from its last reading (prd §1978).
+            let tacit = TacitAccount.shared.reading
+            if poolsRow || RailgunPocket.available || aztec != nil || tacit != nil {
                 receiveGroup(String(localized: "Private"))
             }
             if poolsRow {
@@ -2621,6 +2623,20 @@ struct MoveSentence: View {
                                  DSHaptic.tap()
                                  markCopied("aztec")
                              })
+            }
+            if let tacit {
+                ForEach([(ReceiveWords.Place.tacit, tacit.chainAddress ?? ""),
+                         (.tacitETH, tacit.address), (.tacitDeposit, tacit.receive)]
+                        .filter { !$0.1.isEmpty }, id: \.0) { place, address in
+                    ReceivePlace(name: ReceiveWords.name(place), facts: receiveFacts(place),
+                                 copied: copiedPlace == place.rawValue,
+                                 copy: {
+                                     if DemoMode.isActive { say(YourAccountDemo.actsLater); return }
+                                     DSPasteboard.copy(address)
+                                     DSHaptic.tap()
+                                     markCopied(place.rawValue)
+                                 })
+                }
             }
         }
         // Privacy Pools' minimums, rates and fee for its lines, read once a

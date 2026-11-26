@@ -472,7 +472,7 @@ extension FeedScreen {
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,
-                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .roundUps, .recoveryKey, .nodes, .tacit,
+                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .roundUps, .recoveryKey, .nodes,
                      .watchlist, .watchedToken, .followedWallet:
                     walletPageSections(section, all: all, upcoming: upcoming,
                                        nextEventID: nextEventID)

@@ -1907,6 +1907,34 @@
         }
       }
     },
+    "%@ TAC is in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TAC está en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TACは%2$@にあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TAC가 %2$@에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ TAC 已在%2$@"
+          }
+        }
+      }
+    },
     "%@ Up from %@ in %@." : {
       "localizations" : {
         "en" : {
@@ -46828,6 +46856,34 @@
         }
       }
     },
+    "A share of the chain's fees" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una parte de las comisiones de la cadena"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チェーン手数料の分配"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체인 수수료의 일부"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链上手续费的分成"
+          }
+        }
+      }
+    },
     "A show" : {
       "localizations" : {
         "es" : {
@@ -56874,6 +56930,34 @@
         }
       }
     },
+    "Another Tacit account only" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo otra cuenta de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のTacitアカウントからのみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 Tacit 계정만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅限另一个 Tacit 账户"
+          }
+        }
+      }
+    },
     "Another address looks just like this one" : {
       "localizations" : {
         "es" : {
@@ -57746,6 +57830,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "任何代币,发送到 Base、Ethereum 或 Robinhood 上的任意地址,通过 Tor。由这台 iPhone 签名;开启共同签名人后,共同签名人也会签名。任何人都能看到。"
+          }
+        }
+      }
+    },
+    "Any wallet or exchange" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cualquier billetera o exchange"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意のウォレットや取引所"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 지갑 또는 거래소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意钱包或交易所"
           }
         }
       }
@@ -112931,6 +113043,34 @@
         }
       }
     },
+    "It holds %@ TAC now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora tiene %@ TAC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在 %@ TAC を保有"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 %@ TAC를 보유"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现有 %@ TAC"
+          }
+        }
+      }
+    },
     "It lands in your feed as a note — findable like everything else." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -164324,6 +164464,34 @@
         }
       }
     },
+    "Read again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再読み込み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新读取"
+          }
+        }
+      }
+    },
     "Read by Nymis %@" : {
       "localizations" : {
         "es" : {
@@ -200365,6 +200533,62 @@
         }
       }
     },
+    "Tacit, from an exchange" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit, desde un exchange"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit、取引所から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit, 거래소에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit，来自交易所"
+          }
+        }
+      }
+    },
+    "Tacit, private ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit, ETH privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit、非公開ETH"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit, 비공개 ETH"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit，私密 ETH"
+          }
+        }
+      }
+    },
     "Take back" : {
       "localizations" : {
         "es" : {
@@ -233444,6 +233668,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "与你"
+          }
+        }
+      }
+    },
+    "With your private money" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con tu dinero privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非公開の資産と一緒に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비공개 자산과 함께"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与你的私密资金一起"
           }
         }
       }
@@ -273600,6 +273852,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的 Aztec 账户"
+          }
+        }
+      }
+    },
+    "your Casberi account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tu cuenta de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberiアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Casberi 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的 Casberi 账户"
           }
         }
       }

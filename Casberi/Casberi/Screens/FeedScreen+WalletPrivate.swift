@@ -90,11 +90,11 @@ extension FeedScreen {
         }
     }
 
-    /// Where a private place's header goes: Tacit's page, or a send to
-    /// Privacy Pools or Aztec; nil for a place with no such door.
+    /// Where a private place's header goes: a send to Privacy Pools or
+    /// Aztec; nil for a place with no such door (Tacit's page is deleted,
+    /// prd §1978).
     func walletPlaceDoor(_ id: String) -> (() -> Void)? {
         switch id {
-        case Self.homeTacitPlace: { chrome.landWallet(on: .tacit) }
         case Self.homePoolsPlace where PrivateMove.available: {
             chrome.movePrivately = .deposit
             chrome.moveTray = true
@@ -290,6 +290,13 @@ extension FeedScreen {
                                 figure: tacit.usd.map { mask ?? WalletValue.exactMoney($0) },
                                 move: tacit.usd == nil ? nil : walletHoldingMoves[HoldingMoves.key("ETH")])
             }
+            // A deposit handed and not yet taken: amber, as Railgun's and
+            // Privacy Pools' waiting rows are (was on Tacit's page, §1978).
+            ForEach(TacitShield.shared.arriving) { a in
+                walletTacitLine("TAC", held: WalletValue.held(a.tac), fact: String(localized: "Arriving"),
+                                figure: tacit.tacPrice.map { mask ?? WalletValue.exactMoney(a.tac * $0) }, move: nil,
+                                factInk: DS.attentionInk)
+            }
             if let tac = reading.privateTACAll, tac > 0 {
                 walletTacitLine("TAC", held: WalletValue.held(tac), fact: String(localized: "Tacit chain"),
                                 figure: tacit.privateTacUSD.map { mask ?? WalletValue.exactMoney($0) },
@@ -298,26 +305,20 @@ extension FeedScreen {
         }
     }
 
-    private func walletTacitLine(_ symbol: String, held: String, fact: String, figure: String?, move: Double?) -> some View {
-        Button {
-            DSHaptic.selection()
-            chrome.landWallet(on: .tacit)
-        } label: {
-            HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
-                AssetMark(name: symbol, size: DS.Mark.row)
-                    .frame(width: DSRoomChassis.headGlyph)
-                    .accessibilityHidden(true)
-                walletLedgerWords(symbol, held: held, fact: fact)
-                Spacer(minLength: DS.Space.s2)
-                walletFigureOverDay(figure, move: move)
-            }
-            .walletTwoLineHead()
-            .contentShape(Rectangle())
+    /// A Tacit row states what is held; its verbs are Move's (Make private,
+    /// back to public, prd §1976, §1977), so it opens nothing (§1978).
+    private func walletTacitLine(_ symbol: String, held: String, fact: String, figure: String?, move: Double?,
+                                 factInk: Color = DS.textSecondary) -> some View {
+        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+            AssetMark(name: symbol, size: DS.Mark.row)
+                .frame(width: DSRoomChassis.headGlyph)
+                .accessibilityHidden(true)
+            walletLedgerWords(symbol, held: held, fact: fact, factInk: factInk)
+            Spacer(minLength: DS.Space.s2)
+            walletFigureOverDay(figure, move: move)
         }
-        .buttonStyle(RowPress())
-        .dsHover()
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isButton)
+        .walletTwoLineHead()
+        .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: [symbol, held, fact, figure].compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }

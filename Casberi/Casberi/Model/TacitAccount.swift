@@ -356,6 +356,16 @@ final class TacitAccount {
         r.chainRate = rate
     }
 
+    /// Your public TAC again, in your co-signer's wallet and your Casberi
+    /// account: two balance reads, no key (after back to public, §1977).
+    func readPublic() async {
+        guard !DemoMode.isActive, let me = liveReading?.coSigner else { return }
+        if let tac = await TacitPocket.publicTAC(of: me) { update(me) { $0.publicTAC = tac } }
+        if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
+            update(me) { $0.accountTAC = tac }
+        }
+    }
+
     /// Changes the kept reading in place, if it is still this co-signer's.
     private func update(_ coSigner: String, _ change: (inout Reading) -> Void) {
         guard var r = liveReading, r.coSigner == coSigner else { return }

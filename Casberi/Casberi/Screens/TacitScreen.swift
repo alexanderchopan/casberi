@@ -2,9 +2,11 @@ import SwiftUI
 
 /// TACIT IN THE CATALOGUE: ADD IT, THEN OPEN IT WITH YOUR CO-SIGNER.
 ///
-/// Adding takes one tap and pastes nothing. What it adds is a page in the
-/// Wallet (`WalletSection.tacit`, `TacitAccountRows`) that opens an account
-/// you already have on Tacit, when your co-signer's wallet signs for it.
+/// Adding takes one tap and pastes nothing. It opens an account you already
+/// have on Tacit when your co-signer's wallet signs for it; its money then
+/// stands in Holdings › Private, its verbs in Move and its addresses on
+/// Receive (prd §1978: its own Wallet page is deleted). The key is never
+/// kept, so a fresh reading is your co-signer signing again: Read again.
 struct TacitScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
@@ -29,6 +31,14 @@ struct TacitScreen: View {
         )
     }
 
+    /// Connecting, signing or reading: Read again waits.
+    private var reading: Bool {
+        switch TacitAccount.shared.phase {
+        case .connecting, .signing, .reading: true
+        default: false
+        }
+    }
+
     /// Your account's co-signer: the wallet that signs in to Tacit.
     private var coSigner: String? { YourAccountFacts.coSigners.first }
 
@@ -47,10 +57,18 @@ struct TacitScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if added {
                 DSSlabButton(tile: .open, title: String(localized: "Open Tacit"),
-                             detail: String(localized: "In your Wallet"),
+                             detail: String(localized: "With your private money"),
                              systemImage: "arrow.up.forward.app") {
                     DSHaptic.tap()
                     chrome.sourceRequest = TacitAccount.name
+                }
+                // Your co-signer signs, then every balance is read again.
+                DSSlabButton(tile: .connect, title: reading ? String(localized: "Reading…") : String(localized: "Read again"),
+                             detail: coSigner.map { AddressTail.short($0) } ?? String(localized: "Your account needs a co-signer first"),
+                             systemImage: "arrow.clockwise",
+                             enabled: !reading && coSigner != nil && !DemoMode.isActive) {
+                    DSHaptic.tap()
+                    if let coSigner { Task { await TacitAccount.shared.open(coSigner: coSigner) } }
                 }
             } else {
                 DSSlabButton(tile: .connect, title: String(localized: "Connect with your co-signer"),

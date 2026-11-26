@@ -520,8 +520,8 @@ extension FeedScreen {
         let empty = (place.usd ?? 0) < 0.01
         return Button {
             DSHaptic.selection()
-            // Tacit's money is on its own page; every other place's is in Holdings.
-            homeOpen(place.id == Self.homeTacitPlace ? .tacit : .holdings)
+            // Every place's money is in Holdings, Tacit's too (prd §1978).
+            homeOpen(.holdings)
         } label: {
             // **NO MARK (prd §1929, user: "i don't think we can show these
             // icons … b/c they are also tokens"):** Ethereum's, Railgun's and

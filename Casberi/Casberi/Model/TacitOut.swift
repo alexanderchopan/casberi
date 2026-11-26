@@ -49,6 +49,12 @@ final class TacitOut {
     /// Set once a withdrawal is handed to the leader, until it is collected:
     /// from then the sheet offers Collect, never a second withdrawal.
     private(set) var handed = false
+    /// When the last payout went out, and how much: a node a few blocks
+    /// behind still says it is owed, so for three minutes after a payout
+    /// nothing is owed here (user, 2026-11-25: a second payout of 0 TAC two
+    /// blocks after the first).
+    private var paidAt: Date?
+    private(set) var paidTAC: Double?
 
     private init() {}
 
@@ -80,6 +86,7 @@ final class TacitOut {
     /// What the contract owes `address` now; Collect stands while it is more
     /// than nothing.
     func readOwed(_ address: String) async {
+        if let paidAt, Date().timeIntervalSince(paidAt) < 180 { owedWei = 0; return }
         guard TacitEngine.shared.isOpen, let o = try? await TacitEngine.shared.owed(address),
               let wei = TacitPermit.number(o.wei) else { return }
         owedWei = wei
@@ -121,6 +128,8 @@ final class TacitOut {
         // Read again here, never trusted from before: a read that failed
         // after the block must not leave "Try again" (a second withdrawal)
         // where Collect belongs.
+        // Always a fresh read, never a figure from earlier (which paid out 0).
+        owedWei = 0
         for attempt in 0..<3 where owedWei <= 0 {
             if attempt > 0 { try await Task.sleep(for: .seconds(Double(2 * attempt))) }
             await readOwed(to)
@@ -133,9 +142,13 @@ final class TacitOut {
                                                            reason: String(localized: "Back to public"),
                                                            stage: { _ in })
         if case .dryRun = sent.outcome { throw Stop.nothingOwed }
+        paidTAC = NSDecimalNumber(decimal: owedWei / pow(Decimal(10), 18)).doubleValue
+        paidAt = .now
         owedWei = 0
         handed = false
         step = .done
+        // Your public TAC at once, then the chain's notes.
+        await TacitAccount.shared.readPublic()
         if let coSigner = YourAccountFacts.coSigners.first, let chain = await TacitPocket.chain(coSigner: coSigner) {
             TacitAccount.shared.applyChain(chain, coSigner: coSigner)
         }
@@ -161,8 +174,18 @@ final class TacitOut {
         throw Stop.slow
     }
 
+    /// Done read and closed: the next open starts fresh.
+    func finish() {
+        step = .idle
+        quote = nil
+        units = 0
+    }
+
     func reset() {
-        if case .collecting = step { return }
+        switch step {
+        case .collecting, .done: return
+        default: break
+        }
         step = .idle
         quote = nil
         units = 0

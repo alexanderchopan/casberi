@@ -318,15 +318,6 @@ extension FeedScreen {
             if let seat = selectedSeat, seat.name == pick, openNotesFolderName == nil {
                 name = seat.name
                 seatSource = seat.source ?? seat.name
-            } else if source == CategoryFold.walletRoom, chrome.walletSection == .tacit,
-                      pick == TacitAccount.name,
-                      bridges.bridges.contains(where: { $0.id == TacitAccount.seatID }) {
-                // Tacit's page is a Wallet page, not a pick in the menu, so
-                // no seat is selected on it: its name still carries its
-                // settings, where Disconnect is (user, 2026-11-24: "isn't
-                // that gear supposed to be by the name?").
-                name = TacitAccount.name
-                seatSource = TacitAccount.seatID
             } else {
                 return nil
             }
