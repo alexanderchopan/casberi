@@ -82072,6 +82072,34 @@
         }
       }
     },
+    "Couldn't read Tacit's inbox. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo leer la bandeja de Tacit. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitの受信箱を読み込めませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit의 받은함을 읽지 못했습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取 Tacit 的收件地址。请重试"
+          }
+        }
+      }
+    },
     "Couldn't read Threads — if it asked you to confirm a sign-in, open Instagram and confirm, then try again." : {
       "localizations" : {
         "es" : {
@@ -82492,6 +82520,34 @@
         }
       }
     },
+    "Couldn't read the TAC contract. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo leer el contrato de TAC. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TACのコントラクトを読み込めませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TAC 컨트랙트를 읽지 못했습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取 TAC 合约。请重试"
+          }
+        }
+      }
+    },
     "Couldn't read this conversation from your Observer." : {
       "localizations" : {
         "es" : {
@@ -82656,6 +82712,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取付款方。"
+          }
+        }
+      }
+    },
+    "Couldn't read your TAC. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo leer tu TAC. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TACの残高を読み込めませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TAC를 읽지 못했습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取你的 TAC。请重试"
           }
         }
       }
@@ -199829,6 +199913,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取 Tacit"
+          }
+        }
+      }
+    },
+    "Tacit couldn't make the proof. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit no pudo generar la prueba. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitは証明を作成できませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit이 증명을 만들지 못했습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 无法生成证明。请重试"
+          }
+        }
+      }
+    },
+    "Tacit didn't take the deposit. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit no aceptó el depósito. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitは入金を受け付けませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit이 입금을 받지 않았습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 未接受这笔存入。请重试"
           }
         }
       }

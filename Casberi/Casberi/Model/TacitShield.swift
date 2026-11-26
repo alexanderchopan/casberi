@@ -104,14 +104,12 @@ final class TacitShield {
             let proved = try await prove()
             proveMs = proved.proveMs
             // 2. Checked against the chain itself, before the wallet is asked.
-            guard let inboxData = TacitPermit.inboxCall(proved.deposit, back: proved.back),
-                  let inboxWord = await Self.ethCall(to: TacitChain.blocks, data: inboxData),
-                  let chainInbox = TacitPermit.address(fromWord: inboxWord),
-                  let nonceData = TacitPermit.noncesCall(coSigner),
+            let chainInbox = try await Self.inbox(proved)
+            guard let nonceData = TacitPermit.noncesCall(coSigner),
                   let nonceWord = await Self.ethCall(to: TacitPermit.token, data: nonceData),
-                  let nonce = TacitPermit.number(nonceWord),
-                  let balance = await TacitPocket.publicTAC(of: coSigner).map({ Decimal($0) * pow(Decimal(10), 18) })
-            else { throw Stop.unreadable }
+                  let nonce = TacitPermit.number(nonceWord)
+            else { throw Stop.notRead(.contract) }
+            let balance = try await Self.balance(of: coSigner)
             if let problem = TacitPermit.check(proved: proved, quote: quote, coSigner: coSigner, owner: coSigner,
                                                units: units, chainInbox: chainInbox, balance: balance, now: .now) {
                 throw Stop.refused(problem)
@@ -143,10 +141,10 @@ final class TacitShield {
             guard signature.count == 65 else { throw Stop.unreadable }
             // 5. Handed to the leader.
             step = .handing
-            let handed = try await TacitEngine.shared.shieldHand(.init(
+            let handed = try await Self.handed { try await TacitEngine.shared.shieldHand(.init(
                 owner: coSigner, v: Int(signature[64]),
                 r: "0x" + Keccak256.hexString(Array(signature[0..<32])),
-                s: "0x" + Keccak256.hexString(Array(signature[32..<64]))))
+                s: "0x" + Keccak256.hexString(Array(signature[32..<64])))) }
             TacitShieldKept.save(handed.kept, id: handed.id)
             arriving.append(Arriving(id: handed.id, tac: tac, at: .now))
             keepArriving()
@@ -172,11 +170,8 @@ final class TacitShield {
             step = .proving
             let proved = try await prove()
             proveMs = proved.proveMs
-            guard let inboxData = TacitPermit.inboxCall(proved.deposit, back: proved.back),
-                  let inboxWord = await Self.ethCall(to: TacitChain.blocks, data: inboxData),
-                  let chainInbox = TacitPermit.address(fromWord: inboxWord),
-                  let balance = await TacitPocket.publicTAC(of: account).map({ Decimal($0) * pow(Decimal(10), 18) })
-            else { throw Stop.unreadable }
+            let chainInbox = try await Self.inbox(proved)
+            let balance = try await Self.balance(of: account)
             if let problem = TacitPermit.checkTransfer(proved: proved, quote: quote, units: units,
                                                        chainInbox: chainInbox, balance: balance) {
                 throw Stop.refused(problem)
@@ -190,7 +185,7 @@ final class TacitShield {
                 UserDefaults.standard.set(true, forKey: Self.alikeKey(coSigner))
             }
             step = .handing
-            let handed = try await TacitEngine.shared.shieldOffer()
+            let handed = try await Self.handed { try await TacitEngine.shared.shieldOffer() }
             TacitShieldKept.save(handed.kept, id: handed.id)
             // Your account's own send: TAC, exactly the amount, to the inbox
             // the chain's contract named.
@@ -236,8 +231,10 @@ final class TacitShield {
                 do {
                     let p = try await TacitEngine.shared.shieldProve(units: units)
                     if once.take() { cont.resume(returning: p) }
+                } catch is CancellationError {
+                    if once.take() { cont.resume(throwing: CancellationError()) }
                 } catch {
-                    if once.take() { cont.resume(throwing: error) }
+                    if once.take() { cont.resume(throwing: Stop.proofFailed) }
                 }
             }
             Task { @MainActor in
@@ -294,6 +291,10 @@ final class TacitShield {
 
     enum Stop: Error {
         case unreadable
+        /// A chain read after the proof that did not answer, three tries.
+        case notRead(Read)
+        case proofFailed
+        case notTaken
         case refused(TacitPermit.Problem)
         case signsDifferently
         case tooLong
@@ -302,6 +303,11 @@ final class TacitShield {
             switch self {
             case .tooLong: return String(localized: "Tacit took too long. Try again")
             case .unreadable: return String(localized: "Tacit could not be read")
+            case .notRead(.inbox): return String(localized: "Couldn't read Tacit's inbox. Try again")
+            case .notRead(.contract): return String(localized: "Couldn't read the TAC contract. Try again")
+            case .notRead(.balance): return String(localized: "Couldn't read your TAC. Try again")
+            case .proofFailed: return String(localized: "Tacit couldn't make the proof. Try again")
+            case .notTaken: return String(localized: "Tacit didn't take the deposit. Try again")
             case .signsDifferently: return String(localized: "Your co-signer signs differently each time, so it can't hold a Tacit key")
             case .refused(let p):
                 switch p {
@@ -315,7 +321,44 @@ final class TacitShield {
     }
 
     /// One `eth_call` at the Ethereum node the engine reads, through its funnel.
+    enum Read: Sendable { case inbox, contract, balance }
+
+    /// The inbox the chain's own contract names for this proof.
+    private static func inbox(_ proved: TacitEngineWire.ShieldProved) async throws -> String {
+        guard let data = TacitPermit.inboxCall(proved.deposit, back: proved.back),
+              let word = await ethCall(to: TacitChain.blocks, data: data),
+              let inbox = TacitPermit.address(fromWord: word) else { throw Stop.notRead(.inbox) }
+        return inbox
+    }
+
+    /// The TAC an address holds, in wei, asked up to three times.
+    private static func balance(of address: String) async throws -> Decimal {
+        for attempt in 0..<3 {
+            if attempt > 0 { try await Task.sleep(for: .seconds(Double(attempt))) }
+            if let tac = await TacitPocket.publicTAC(of: address) { return Decimal(tac) * pow(Decimal(10), 18) }
+        }
+        throw Stop.notRead(.balance)
+    }
+
+    /// The leader's answer; any refusal of its own is "didn't take it".
+    private static func handed<T>(_ hand: () async throws -> T) async throws -> T {
+        do { return try await hand() }
+        catch is CancellationError { throw CancellationError() }
+        catch { throw Stop.notTaken }
+    }
+
+    /// One `eth_call`, asked up to three times: a public node that refuses
+    /// once (it is shared, and the engine has just read it hard) is not an
+    /// answer.
     static func ethCall(to: String, data: String) async -> String? {
+        for attempt in 0..<3 {
+            if attempt > 0 { try? await Task.sleep(for: .seconds(Double(attempt))) }
+            if let word = await ethCallOnce(to: to, data: data) { return word }
+        }
+        return nil
+    }
+
+    private static func ethCallOnce(to: String, data: String) async -> String? {
         guard let url = URL(string: TacitNetwork.ethereum.rpcUrl) else { return nil }
         let body: [String: Any] = ["jsonrpc": "2.0", "id": 1, "method": "eth_call", "params": [["to": to, "data": data], "latest"]]
         var request = URLRequest(url: url)

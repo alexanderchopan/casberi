@@ -96,7 +96,7 @@ struct TacitShieldSheet: View {
                     Text("TAC").dsText(.body17).foregroundStyle(DS.textSecondary)
                     Button {
                         DSHaptic.selection()
-                        amount = TacitAccountRows.amount(held)
+                        amount = Self.maxText(held)
                     } label: {
                         Text("Max").dsText(.body17).foregroundStyle(DS.pickInk)
                     }
@@ -117,7 +117,7 @@ struct TacitShieldSheet: View {
     private func pick(_ s: TacitShield.Source) {
         DSHaptic.selection()
         source = s
-        amount = TacitAccountRows.amount(held)
+        amount = Self.maxText(held)
     }
 
     /// From your wallet the leader's sweep fee is paid in TAC; from your
@@ -131,6 +131,14 @@ struct TacitShieldSheet: View {
     private var arrivesWords: String {
         guard let q = shield.quote, let arrives = TacitEngineWire.tac(q.arrives) else { return "—" }
         return Self.tacText(NSDecimalNumber(decimal: arrives).doubleValue)
+    }
+
+    /// All of it, never a hair more: rounded DOWN to the chain's eight
+    /// places, no grouping, so the field parses back to at most what is held
+    /// (Max wrote 4 significant digits rounded to nearest, and 1.7899 became
+    /// 1.79: "More than it holds").
+    static func maxText(_ held: Double) -> String {
+        held.formatted(.number.grouping(.never).precision(.fractionLength(0...8)).rounded(rule: .down))
     }
 
     static func tacText(_ v: Double) -> String {
