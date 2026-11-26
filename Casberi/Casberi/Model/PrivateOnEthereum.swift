@@ -170,7 +170,8 @@ enum PrivateOnEthereum {
     /// other flow can open another account between the proof and the relay.
     static func send(token: String, amount: String, to: String, balanceToBalance: Bool = false,
                      reason: String = String(localized: "Send from Privacy Pools"),
-                     announce: Bool = false) async throws -> String {
+                     announce: Bool = false,
+                     step: (@Sendable (SendStep) async -> Void)? = nil) async throws -> String {
         guard network.yieldPool(for: token) != nil, PrivateMoney.isAddress(to), let hex = PrivateMoney.hex(amount) else { throw Failure.noPool }
         guard let account = PrivateRootKey.currentID else { throw Failure.noRoot }
         // Told when you are away from Casberi (prd §1881): the relayer took
@@ -181,11 +182,11 @@ enum PrivateOnEthereum {
         let started = Int(Date().timeIntervalSince1970)
         guard announce else {
             return try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                         balanceToBalance: balanceToBalance, reason: reason, amount: amount)
+                                         balanceToBalance: balanceToBalance, reason: reason, amount: amount, step: step)
         }
         do {
             let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount)
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, step: step)
             Task { await Notifications.outcome(.moveSent, id: "pools:" + tx, place: "Privacy Pools",
                                                body: String(localized: "Sent on Ethereum"), mark: "Privacy Pools") }
             return tx
@@ -196,10 +197,18 @@ enum PrivateOnEthereum {
         }
     }
 
+    /// Where a send stands, so the foot says it (2026-11-26, user: "nothing
+    /// happens" — it said Confirm with Face ID through the read, the proof
+    /// and the relay).
+    enum SendStep: Sendable { case opening, preparing, proving, sending }
+
     private static func relayedSend(account: String, token: String, hex: String, to: String,
-                                    balanceToBalance: Bool, reason: String, amount: String) async throws -> String {
+                                    balanceToBalance: Bool, reason: String, amount: String,
+                                    step: (@Sendable (SendStep) async -> Void)?) async throws -> String {
         try await PrivacyEngine.exclusive {
+            await step?(.opening)
             try await open(account, reason: reason)
+            await step?(.preparing)
             let engine = PrivacyEngine.shared
             PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)
             // The relayer's fee holds a short while, and proving on the phone
@@ -209,9 +218,11 @@ enum PrivateOnEthereum {
             var tries = 0
             while true {
                 tries += 1
+                await step?(.proving)
                 let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)
                     : try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to)
                 do {
+                    await step?(.sending)
                     relayed = try await engine.relay(handle: spend.handle)
                     break
                 } catch let f as PrivacyEngineWire.Failure where f.name == "FeeCommitmentExpired" && tries < 2 {

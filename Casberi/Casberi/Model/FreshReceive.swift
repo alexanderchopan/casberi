@@ -538,7 +538,7 @@ final class FreshReceive {
     /// which step stopped: the private ETH paying the gas, or the deposit.
     static func words(_ error: Error, step: FreshAddress.SentStep?, network: PrivacyNetwork) -> String {
         let said = PrivateMove.words(error, network: network)
-        guard let step, error is PrivacyEngineWire.Failure, said == PrivateMove.engineFallback else { return said }
+        guard let step, error is PrivacyEngineWire.Failure, said.hasPrefix(PrivateMove.engineFallback) else { return said }
         return step == .gas ? String(localized: "Your private ETH could not pay its gas")
             : String(localized: "The move in could not be prepared")
     }

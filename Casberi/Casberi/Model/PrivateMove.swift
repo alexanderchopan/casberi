@@ -599,10 +599,20 @@ final class PrivateMove {
                     stage = .done(hash)
                     return
                 }
-                stage = .opening
+                // Waiting on the engine (a background read may hold it) says so.
+                stage = .preparing
                 let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
                                                             balanceToBalance: tag == nil && balanceToBalance == true,
-                                                            announce: true)
+                                                            announce: true, step: { [weak self] s in
+                    await MainActor.run {
+                        switch s {
+                        case .opening: self?.stage = .opening
+                        case .preparing: self?.stage = .preparing
+                        case .proving: self?.stage = .proving
+                        case .sending: self?.stage = .sending
+                        }
+                    }
+                })
                 stage = .done(hash)
             } else {
                 stage = .preparing
@@ -816,8 +826,11 @@ final class PrivateMove {
         }
         if let failure = error as? PrivacyEngineWire.Failure {
             NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)
+            // The engine's own name rides the words (2026-11-26: a send
+            // failed on the phone as "could not be opened", and no log
+            // reaches here): what to report is on the screen.
             if failure.name.hasPrefix("Relayer") {
-                return String(localized: "0xBow's relayer did not answer")
+                return String(localized: "0xBow's relayer did not answer") + " (\(failure.name))"
             }
             if failure.name.localizedCaseInsensitiveContains("BelowMinimum") {
                 return String(localized: "Below the pool's smallest deposit")
@@ -826,7 +839,7 @@ final class PrivateMove {
                 || failure.message.localizedCaseInsensitiveContains("insufficient") {
                 return String(localized: "Your approved private balance does not cover it")
             }
-            return engineFallback
+            return engineFallback + " (\(failure.name))"
         }
         #if DEBUG
         if let failure = error as? PrivacyTestnetSender.Failure {
