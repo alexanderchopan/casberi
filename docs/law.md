@@ -263,7 +263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2163 of 2237 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2164 of 2238 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2372,7 +2372,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1924 — "Aztec to Aztec only" is the address's rule, not the account's (amended by §1952)
 - §1925 — The Aztec move-in types on Move's own keypad, and its steps name who signs (amended by §1926)
 - §1926 — Railgun's sentence types on Move's keypad too, and the typed row rises above the keys
-- §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931)
+- §1927 — The three private sentences stand on Move's deck (amended by §1929, §1931, §1979)
 - §1928 — Every Receive screen says who can pay it, and the facts stand in the sentence (amended by §1929, §1945, §1963)
 - §1929 — Move on par with Home: the plate never repeats the sentence, every receipt leads with its token, Home's money by plac… (amended by §1930, §1931, §1945, §1946, §1973, §1976)
 - §1930 — Home's head reads as two sections, Public is its networks' sum with no "Other", and the deck stands higher (amended by §1936)
@@ -2428,6 +2428,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1976 — Send's To lists every private place that takes the token, Tacit among them, and the Safes you sign for stand under th…
 - §1977 — Back to public: private TAC on the Tacit chain goes back to your Casberi account or your co-signer, from Move's From
 - §1978 — A private send's To lists your public account and your addresses and takes a name; a token held in two places shows i…
+- §1979 — A private send takes any amount, in the token or in dollars, and keeps its lines while it goes
 
 ## Dead rulings → what replaced them (generated)
 

@@ -213,6 +213,40 @@ final class PrivateMove {
         }
     }
 
+    /// **ANY AMOUNT, NOT ONLY THE STEPS (2026-11-25, user: "this private
+    /// send doesn't let me choose custom amount or in usd. we can't have
+    /// that!").** The most this token can move, base units: sending, the
+    /// approved balance less the relayer's fee; moving in, what the account
+    /// holds less the gas kept. Nil until read.
+    var most: String? {
+        let units: Decimal?
+        switch mode {
+        case .send:
+            let held = Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: symbol)) ?? 0
+            guard let fee = fee.flatMap({ Decimal(string: $0) }) else { return nil }
+            units = held - fee
+        case .deposit:
+            if symbol == "USDC" { units = usdcBalance.flatMap { Decimal(string: $0) } }
+            else { units = balance.flatMap { b in reserve.map { (Decimal(string: b) ?? 0) - (Decimal(string: $0) ?? 0) } } }
+        }
+        guard let units, units > 0 else { return units == nil ? nil : "0" }
+        return PrivateMoney.plain(units)
+    }
+
+    /// The least this token may move: the pool's smallest deposit moving
+    /// in, else anything over nothing. Base units.
+    var least: String {
+        guard mode == .deposit, onEthereum else { return "1" }
+        return (symbol == "USDC" ? usdcMinimum : minimum) ?? "1"
+    }
+
+    /// A typed amount the move can take.
+    var amountFits: Bool {
+        guard let units = PrivateMoney.baseUnits(amount, decimals: decimals).flatMap({ Decimal(string: $0) }), units > 0,
+              let top = most.flatMap({ Decimal(string: $0) }) else { return false }
+        return units <= top && units >= (Decimal(string: least) ?? 1)
+    }
+
     /// Picks `step` of `token` (the glass box's row).
     func pick(_ step: String, of token: String) {
         symbol = token

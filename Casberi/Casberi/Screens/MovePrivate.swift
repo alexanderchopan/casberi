@@ -45,6 +45,10 @@ struct MovePrivateSentence<Head: View>: View {
     @State private var open: Blank?
     @State private var copied = false
     @State private var typed = ""
+    /// The amount typed in dollars (prd §1979): the figure on the keys, the
+    /// token's amount worked out from today's price.
+    @State private var inDollars = false
+    @State private var dollars = ""
     /// How hidden a send from this money is; nil where nothing was read.
     @State private var hidden: HiddenWords?
     #if DEBUG
@@ -54,7 +58,7 @@ struct MovePrivateSentence<Head: View>: View {
     @Environment(\.modelContext) private var context
     @Environment(ShellChrome.self) private var chrome
 
-    enum Blank { case amount, recipient, network }
+    enum Blank { case amount, recipient, network, token }
 
     private var store: PrivateMoneyStore { .shared }
 
@@ -152,7 +156,7 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// Ready to act: an amount, and switch on, an address.
     private var ready: Bool {
-        move.stage == .ready && (move.mode == .deposit || move.recipient.map(PrivateMoney.isAddress) == true || move.tag != nil)
+        move.stage == .ready && move.amountFits && (move.mode == .deposit || move.recipient.map(PrivateMoney.isAddress) == true || move.tag != nil)
     }
 
     // MARK: - The sentence
@@ -423,8 +427,8 @@ struct MovePrivateSentence<Head: View>: View {
             out.append(MoveDeckStep(id: "to", word: String(localized: "To"), answered: true,
                                     value: "Privacy Pools", glyph: "lock.fill") { leave(.pickRecipient) })
         }
-        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
-                                value: "\(move.symbol) · \(move.network.name)", mark: token) {})
+        out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), on: open == .token, answered: true,
+                                value: "\(move.symbol) · \(move.network.name)", mark: token) { toggle(.token) })
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
                                 answered: !move.amount.isEmpty, value: move.amount.isEmpty ? nil : figure) { toggle(.amount) })
         return out
@@ -471,9 +475,10 @@ struct MovePrivateSentence<Head: View>: View {
     @ViewBuilder private func choices(_ blank: Blank) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             switch blank {
-            case .amount: amounts
+            case .amount: amountKeys
             case .recipient: recipients
             case .network: networks
+            case .token: tokenChoices
             }
         }
         .padding(.vertical, DS.Space.s2)
@@ -534,6 +539,127 @@ struct MovePrivateSentence<Head: View>: View {
         if let short = move.usdcShort {
             usdcShortLine(short).padding(.top, DS.Space.s2)
         }
+    }
+
+    /// The tokens the money holds, each once (prd §1979): a pick keeps the
+    /// typed amount when it fits the new token, else its first step.
+    @ViewBuilder private var tokenChoices: some View {
+        let symbols = move.options.map(\.symbol).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        ForEach(symbols, id: \.self) { token in
+            Button {
+                withAnimation(DS.Motion.standard) {
+                    if let first = move.options.first(where: { $0.symbol == token }) { move.pick(first.amount, of: token) }
+                    inDollars = false
+                    open = nil
+                }
+                DSHaptic.selection()
+            } label: {
+                listRow("\(token) · \(move.network.name)", picked: token == move.symbol) {
+                    AssetMark(name: token, size: MoveSentence.listMark)
+                }
+            }
+            .buttonStyle(RowPress())
+        }
+        if let short = move.usdcShort {
+            usdcShortLine(short).padding(.top, DS.Space.s2)
+        }
+    }
+
+    /// The steps the money covers, three at most, then Max (prd §1979).
+    private var quickKeys: [MoveQuickKeys.Key] {
+        let steps = move.options.filter { $0.symbol == move.symbol }.prefix(3)
+        var keys = steps.map { o in
+            MoveQuickKeys.Key(id: o.amount, word: PrivateMoney.number(PrivateMoney.baseUnits(o.amount, decimals: move.decimals) ?? "0",
+                                                  decimals: move.decimals) ?? o.amount,
+                          on: !inDollars && move.amount == o.amount) { inDollars = false; move.amount = o.amount }
+        }
+        if let top = move.most, top != "0", let maxShown = plainAmount(top) {
+            keys.append(MoveQuickKeys.Key(id: "max", word: String(localized: "Max"),
+                                  on: !inDollars && move.amount == maxShown) { inDollars = false; move.amount = maxShown })
+        }
+        return Array(keys)
+    }
+
+    /// Base units as a plain typed figure ("1234.56", never "1,234.56"),
+    /// rounded down to the keys' places, so it is never more than there is.
+    private func plainAmount(_ units: String) -> String? {
+        guard var whole = Decimal(string: units) else { return nil }
+        for _ in 0..<move.decimals { whole /= 10 }
+        var r = Decimal()
+        NSDecimalRound(&r, &whole, tokenPlaces, .down)
+        return NSDecimalNumber(decimal: r).stringValue
+    }
+
+    /// Today's dollar price of the token, when read (USDC is a dollar).
+    private var price: Double? {
+        move.symbol == "USDC" ? 1 : store.shownPrices[move.symbol.lowercased()]
+    }
+
+    /// The token's places on the keys: six for ETH, two for a dollar.
+    private var tokenPlaces: Int { move.symbol == "USDC" ? 2 : 6 }
+
+    /// **ANY AMOUNT, IN THE TOKEN OR IN DOLLARS (prd §1979).** The steps are
+    /// the keys' top row with Max; the keys type the figure; the flip types
+    /// dollars and works out the token. Under them, the most it can move.
+    @ViewBuilder private var amountKeys: some View {
+        VStack(spacing: MoveReceipt.gap) {
+            let keys = quickKeys
+            if !keys.isEmpty { MoveQuickKeys(keys: keys) }
+            HStack {
+                Text(verbatim: amountLine.words).dsText(.body17).foregroundStyle(amountLine.ink)
+                    .monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: DS.Space.s2)
+                if price != nil, move.symbol != "USDC" {
+                    Button {
+                        withAnimation(DS.Motion.standard) {
+                            inDollars.toggle()
+                            if inDollars, let price, let units = Decimal(string: move.amount) {
+                                var d = units * Decimal(price), r = Decimal()
+                                NSDecimalRound(&r, &d, 2, .plain)
+                                dollars = NSDecimalNumber(decimal: r).stringValue
+                            }
+                        }
+                    } label: {
+                        Text(verbatim: inDollars ? move.symbol : "$").dsText(.heading17).foregroundStyle(DS.pickInk)
+                            .frame(minWidth: DS.Hit.min, minHeight: DS.Hit.min)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text(inDollars ? "Type in \(move.symbol)" : "Type in dollars"))
+                }
+            }
+            MoveKeypad(text: inDollars ? Binding(get: { dollars }, set: { new in
+                dollars = new
+                guard let price, price > 0, let usd = Decimal(string: new) else { move.amount = ""; return }
+                var units = usd / Decimal(price), r = Decimal()
+                NSDecimalRound(&r, &units, tokenPlaces, .down)
+                move.amount = NSDecimalNumber(decimal: r).stringValue
+            }) : Binding(get: { move.amount }, set: { move.amount = $0 }), places: inDollars ? 2 : tokenPlaces,
+                       keyHeight: MoveSentence.bigKeyHeight, big: true)
+        }
+    }
+
+    /// The line over the keys: the other unit's figure and the most it can
+    /// move, or what is wrong with the figure, in amber.
+    private var amountLine: (words: String, ink: Color) {
+        let typedFigure = inDollars ? "$\(dollars.isEmpty ? "0" : dollars)" : "\(move.amount.isEmpty ? "0" : move.amount) \(move.symbol)"
+        let other: String? = {
+            guard let price, move.symbol != "USDC", let units = Decimal(string: move.amount) else { return nil }
+            if inDollars { return "\(move.amount) \(move.symbol)" }
+            return "$" + (units * Decimal(price)).formatted(.number.precision(.fractionLength(2)))
+        }()
+        let top = move.most.flatMap { PrivateMoney.number($0, decimals: move.decimals, places: tokenPlaces) }
+        if let units = PrivateMoney.baseUnits(move.amount, decimals: move.decimals).flatMap({ Decimal(string: $0) }), units > 0 {
+            if let most = move.most.flatMap({ Decimal(string: $0) }), units > most {
+                return (String(localized: "More than you can send · up to \(top ?? "0") \(move.symbol)"), DS.attentionInk)
+            }
+            if units < (Decimal(string: move.least) ?? 1) {
+                let least = PrivateMoney.number(move.least, decimals: move.decimals, places: tokenPlaces) ?? move.least
+                return (String(localized: "At least \(least) \(move.symbol)"), DS.attentionInk)
+            }
+        }
+        let parts = [inDollars ? other : (other.map { "≈ \($0)" }), top.map { String(localized: "up to \($0) \(move.symbol)") }].compactMap { $0 }
+        return (parts.isEmpty ? typedFigure : parts.joined(separator: " · "), DS.textSecondary)
     }
 
     /// Switch on: an address, typed or pasted, and nothing else (a book
@@ -649,16 +775,21 @@ struct MovePrivateSentence<Head: View>: View {
                 open = nil; back?()
             }
         }, lines: {
-            if !isDone, move.stage == .ready || failed { MoveReceiptSteps(steps: steps, disabled: !live) }
+            // **THE LINES STAND WHILE IT GOES, AS PUBLIC SEND'S (2026-11-25,
+            // user: "is this the same design we have on public send? … we
+            // need to be consistent").** Confirming and sending keep To ·
+            // From · Token · Amount on screen, untouchable; no sentence.
+            if !isDone, move.stage == .ready || failed || move.acting { MoveReceiptSteps(steps: steps, disabled: !live) }
         }, content: {
                 Group {
                     if let open, live {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
                                 switch open {
-                                case .amount: amounts
+                                case .amount: amountKeys
                                 case .recipient: recipients
                                 case .network: networks
+                                case .token: tokenChoices
                                 }
                             }
                             .padding(.vertical, DS.Space.s2)
@@ -676,11 +807,13 @@ struct MovePrivateSentence<Head: View>: View {
                         // where it stands, and the line under it the rest.
                         ScrollView {
                             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                MoveFlow { sentence }
-                                    .moveHoldFill()
-                                    .allowsHitTesting(false)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if !move.acting {
+                                    MoveFlow { sentence }
+                                        .moveHoldFill()
+                                        .allowsHitTesting(false)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 #if DEBUG
                                 if hiddenPreview, let hidden { hiddenLine(hidden) }
                                 #endif
