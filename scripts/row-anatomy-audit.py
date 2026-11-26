@@ -47,7 +47,6 @@ GOOD_HEADS = {"44", "DSFeed.headHeight", "DS.Hit.min", "Self.rowPitch",
 
 # file stem → why its title-over-line stack is not a list row
 ALLOWED = {
-    "SourcesLibrary.swift:folder": "a folder's caption under its tile, as an app's name under its icon",
     "DSSlab.swift": "a slab is a control, not a row (§746)",
     "GenRenderer.swift": "generated UI draws the agent's own layout",
     "CasberiIntents.swift": "a Siri snippet, drawn by the system's rules",
@@ -57,8 +56,6 @@ ALLOWED = {
 def allowed(rel: str, lines: list, i: int) -> bool:
     name = Path(rel).name
     if name in ALLOWED:
-        return True
-    if name == "SourcesLibrary.swift" and "SourcesFolderWords" in "\n".join(lines[max(0, i - 10):i]):
         return True
     # A tray's own body (a sentence, its example, then the tray's control) is
     # a paragraph inside the tray, not a list row: the stack opens directly

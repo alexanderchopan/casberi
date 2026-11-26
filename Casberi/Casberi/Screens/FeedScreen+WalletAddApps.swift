@@ -28,7 +28,7 @@ extension FeedScreen {
                 // Every icon lit: the row's words already say none is yours.
                 SourcesCategoryRow(folder: .init(category: CategoryFold.walletCategory, apps: apps, have: 0),
                                    has: { _ in true }, needs: { _ in false },
-                                   title: String(localized: "Add to Wallet"), nameColumn: 116) {
+                                   title: String(localized: "Add to Wallet")) {
                     route.openCategory = CategoryFold.walletRoom
                     route.present(.apps)
                 }

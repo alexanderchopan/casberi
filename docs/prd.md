@@ -75402,3 +75402,11 @@ Not built here: a place's own page (the canvas's rule 12); a token's page alread
 4. **Testnets and Logos are retired** ("we aren't doing anything else with it anymore"): the category, its room, the Logos seat, its probes, its self-tests, its hosts in `NetworkReach`, its website tile; stored rows and `logos.` defaults go through `SourceRename.sweepRetiredSeats`.
 
 **Mac half (§1402).** Apps on the Mac draws the same three blocks in its pane. Holdings' foot is the phone's alone: the Mac carries no wallet (§1893).
+
+## §1974a — Every category in Apps is one row of one height, the Wallet's too (amends §1974 item 1 and item 3's drawing) (user of build 1084, 2026-11-25: "there is noway that can work you can't even tap the rows of apps", "its like one giant square", "even the numbers are truncated on some rows", "the list has to look different", "more spacing between them"; of the canvas "Apps list, take two": "i think the wallet one seems weird too they should all be the same size", "even if wallet is separated", then "A, rows with icons") — BUILT
+
+1. **A category is a row as Settings draws one**: its name, three of its apps at 28pt at the right (yours first, the rest stepped back), its count ("3 of 22") in one column down the page or the amber word, then a chevron. The whole row is one door, to its folder (§1316); an app is opened in the folder, never from the row. No line of touching icons, no "+N".
+2. **The Wallet is the same row** under its own section word, "Wallet", above "Feed"; the section is the only thing that sets it apart.
+3. **Holdings' "Add to Wallet"** is that row with its words in the name's place and no count.
+
+**Mac half (§1402).** The Mac's Apps pane draws the same rows.
