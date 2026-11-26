@@ -123,27 +123,13 @@ enum BridgeCatalog {
         Offer(name: "Wallet",      tagline: "",          group: "Wallet",    connectable: true,
               alsoReads: ["Aave", "Morpho", "Uniswap", "Hyperliquid", "Aerodrome", "Spark"],
               needsSetup: true),
-        // Wallet group by ruling (user, 2026-07-21, prd §162). Privacy Pools
-        // rides the watched wallets the Peer way: no account exists to
-        // connect — deposits come from the person's own wallet, so the seat
-        // is a switch over the watched list.
-        Offer(name: "Privacy Pools", tagline: "Know when your deposit clears",       group: "Wallet",    connectable: true,
-              needsSetup: true, added: day(2026, 7, 21)),
-        // Wallet group, beside Privacy Pools — the same category for the same
-        // reason (prd §268): Railgun trades nothing, it's your own funds
-        // wearing a privacy status, and it rides the watched wallets with no
-        // account and no key.
-        //
-        // The summary names all three ceilings plainly, because the obvious
-        // expectation of a privacy-tool feed is that it shows your private
-        // balance, and this one can't and shouldn't: nothing inside the pool
-        // is read; an unshield can never name its sender; and native ETH
-        // shields route through a wrapper that leaves the wallet in no log.
-        // The middle one is the interesting half, not an apology — it's the
-        // only shape in this app where someone can pay you privately and the
-        // money still shows up.
-        Offer(name: "Railgun", tagline: "See what you shield, and what comes back", group: "Wallet", connectable: true,
-              needsSetup: true, added: day(2026, 8, 1)),
+        // (Privacy Pools and Railgun were offers here, the Wallet group's,
+        // from 2026-07-21 and 2026-08-01 until prd §1975. They are places in
+        // your own account, not apps: Holdings › Private shows them, Move
+        // sends to and from them, and a tile that looks like something you
+        // connect said otherwise. Their rows keep their sources and stand in
+        // the Wallet (`accountSources` below); their reads run with the
+        // Wallet's.)
         // Wallet group, and the only seat here that reads no money at all (prd §419):
         // every other one reads what your funds did, this reads what the SOFTWARE
         // holding them does. Walletbeat is an independent, MIT-licensed registry.
@@ -304,22 +290,10 @@ enum BridgeCatalog {
         // argument too — it no longer distinguishes the two groups.)
         Offer(name: "Peer",        tagline: "Fiat to crypto trades, as they settle",      group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 17)),
-        // Wallet group, beside Peer/Privacy Pools (2026-07-30): a
-        // Safe multisig is your own account too, and the seat rides the
-        // watched wallets the same way — no account, no key, watching is
-        // consent (§207). Split from a generic Wallet feature into its own
-        // tile once it grew a second detection path (a watched EOA that's a
-        // SIGNER on a Safe, not just a directly-watched Safe address) and its
-        // own alert class (owner/threshold/module changes) — too much to
-        // fold into one bullet under Wallet's summary honestly.
-        // The summary said "signing always happens in your own Safe app" until
-        // 2026-08-21, and prd §425 made that false — the §303 tripwire class,
-        // caught by reading rather than by any check, because the setup-copy
-        // audit governs the SCREEN's intro and this is the product page.
-        // Whatever this offer claims about signing has to move in the same
-        // commit as the code that signs.
-        Offer(name: "Safe",        tagline: "The signature queue, and this phone as a signer", group: "Wallet",    connectable: true,
-              needsSetup: true, added: day(2026, 7, 30)),
+        // (Safe was an offer here from 2026-07-30 until prd §1975: Safe is
+        // your account itself, Your Safes and Without a signature on its
+        // page, and its tile read as an app to connect. Signing for another
+        // Safe stays on `SafeScreen`, reached by a pairing link.)
         // THE FIVE THAT ARE NOT SEATS (prd §515, 2026-08-29) — Aave, Morpho,
         // Uniswap, Hyperliquid and Aerodrome had offers here from 2026-07-30
         // until this date, and the reason they are gone is the one test that
@@ -861,8 +835,20 @@ enum BridgeCatalog {
     static func category(forSource source: String) -> String? {
         // A merged room no seat names is its category.
         if let offer = offer(forSource: source) { return category(of: offer) }
+        if accountSources.contains(source) { return walletCategory }
         return RoomAccounts.room(ofCategory: source)
     }
+
+    /// The sources of what is built into Your account, not an app (prd
+    /// §1975): Privacy Pools and Railgun, the private places, and Safe, the
+    /// account itself. No offer names them, so their rows, which keep their
+    /// sources, stand in the Wallet by this list; the rows still ride the
+    /// Wallet room through `RoomAccounts`' seats of the same names.
+    static let accountSources: Set<String> = ["Privacy Pools", "Railgun", "Safe"]
+
+    /// The category the Wallet group files under, by the table.
+    private static let walletCategory: String? =
+        categories.first { $0.groups.contains("Wallet") }?.name
 
     /// The catalog offer a landed SOURCE belongs to — the join itself, factored
     /// out of `category(forSource:)` because grouping was never the only thing
@@ -1057,7 +1043,7 @@ enum BridgeSetupMode {
     /// Reads the wallets already watched — no connection of its own (§515):
     /// `WalletSeatStanding.seats`, by offer name (that table is by seat id and
     /// is not compiled by the harnesses that compile this file).
-    static let walletRidingSeats: Set<String> = ["Peer", "Privacy Pools", "Railgun", "Safe",
+    static let walletRidingSeats: Set<String> = ["Peer",
         // MetaMask Card belongs here because it rides the watched wallets, and
         // leaving it out is not cosmetic (prd §857): `Offer.mode` falls
         // through to `.pasteKey`, so the catalogue row offered **Add key** for

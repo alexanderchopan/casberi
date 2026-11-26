@@ -263,7 +263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2159 of 2233 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2160 of 2234 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2178,7 +2178,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1735 — The tab bar folds into Move, Move wears ink, and no row wears a dot: read down, the places draw into Move's circle at… (amended by §1739)
 - §1736 — Every Move opens on the verbs: the list of what Move does stands under Swap's sentence each time, not once (amended by §1779)
 - §1737 — Five things said one way: a Wallet door's count is white, a Library folder wears its category's glyph and weight, a v…
-- §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle… (amended by §1738a)
+- §1738 — The Wallet is the private room: Safe, Privacy Pools and Railgun are no pick, their Library tiles land where the Walle… (amended by §1738a, §1975)
 - §1738a — The three retired picks' model is deleted: the Railgun and Privacy Pools heads, the Safe card, their probes and the p…
 - §1739 — Move's circle is glass with a pink glyph; your face stays on Library
 - §1740 — Money is centred, reading is left: the Feed's sheets lead from the rows' edge, the tiles stand under the head on ever…
@@ -2424,6 +2424,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1973 — How money is listed: one row is one token in one place, Holdings is Home's cut with the tokens under it (Public by ne…
 - §1974 — Apps is Recent, the Wallet, then the Feed A–Z; Holdings ends in Add to Wallet; Testnets and Logos are retired (supers… (amended by §1974a)
 - §1974a — Every category in Apps is one row of one height, the Wallet's too
+- §1975 — Safe, Privacy Pools and Railgun are no apps: they are built into Your account
 
 ## Dead rulings → what replaced them (generated)
 

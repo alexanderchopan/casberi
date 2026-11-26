@@ -41,7 +41,8 @@ time and the watchlist grows a duplicate nobody can explain.
 
 Nine checks, all static — no build, no simulator, no network.
 
-  A. Every VALUE in `Corpus.renamedSources` is a real `Offer(name:)`.
+  A. Every VALUE in `Corpus.renamedSources` is a real `Offer(name:)`, or a
+     source built into Your account (`BridgeCatalog.accountSources`, §1975).
   B. No KEY is a live offer name (an alias may never shadow a seat).
   C. No KEY is in `Corpus.retiredSources` (a source cannot be both renamed
      onto a live seat and declared to have left the catalog).
@@ -235,9 +236,12 @@ def audit(thing_src, catalog_src, rootshell_src, resolver_srcs,
         return ["A: no `Offer(name:)` literals found in BridgeCatalog.swift"]
 
     retired = set(unescape(s) for s in (swift_set(strip_comments(thing_src), "retiredSources") or []))
+    # What is built into Your account (prd §1975) has no offer and still
+    # resolves: `BridgeCatalog.category(forSource:)` files it in the Wallet.
+    account = set(swift_set(strip_comments(catalog_src), "accountSources") or [])
 
     for old, current, ref_old, ref_current in aliases:
-        if current not in offers:
+        if current not in offers and current not in account:
             fails.append(f"A: alias {old!r} → {current!r} names no catalog offer")
         if old in offers:
             fails.append(f"B: alias key {old!r} is a live offer name — it would shadow that seat")

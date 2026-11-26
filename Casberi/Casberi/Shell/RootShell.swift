@@ -3023,8 +3023,9 @@ struct RootShell: View {
         case "pair":
             guard let uri = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                     .queryItems?.first(where: { $0.name == "uri" })?.value else { return }
-            sceneState.route.present(.apps)
-            sceneState.route.openSetup(forOffer: "Safe")
+            // Safe is no app since prd §1975, so no catalogue door: the
+            // link pushes the Safe page itself, as `-openSafe` does.
+            sceneState.route.pushBridge(.safe)
             Task { @MainActor in
                 if case .failure(let error) = await SafePeer.pair(uri: uri, context: { modelContext }) {
                     chrome.flash(SafeScreen.pairSentence(error), tone: .failure)

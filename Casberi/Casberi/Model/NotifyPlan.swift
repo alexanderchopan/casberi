@@ -985,7 +985,8 @@ enum NotifyDigest {
         "Gmail", "iCloud Mail", "Calendar", "Reminders",
         "ChatGPT", "Claude", "Gemini", "Grok",
         "Coinbase", "Kraken", "Binance", "Gemini Exchange",
-        "Apple Wallet", "Safe", "ether.fi",
+        // Safe left with its seat (prd §1975): Casberi is your Safe now.
+        "Apple Wallet", "ether.fi",
         "GitHub", "GitLab", "Linear", "Notion", "Slack", "Trello", "Jira",
         "Sentry", "Vercel", "PagerDuty", "Cloudflare", "App Store Connect", "Stripe",
         "YouTube", "Spotify", "Strava", "Garmin",

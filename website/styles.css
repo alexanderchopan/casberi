@@ -86,9 +86,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-metamaskcard { background: #fff; }   /* the fox on white — the mark bundled in the app */
 .ai-plasmaone  { background: #162f29; }   /* the mark's own green (icon-sampled), so the disc reads full-bleed */
 .ai-applewallet { background: #1d1d1f; } /* Apple Card graphite */
-.ai-privacypools { background: #fff; }
-.ai-railgun   { background: #000; }      /* their black — the mark's own field */
-.ai-safe      { background: #12ff80; }   /* Safe{Wallet}'s green (icon-sampled) */
 /* The five DeFi protocols seated 2026-07-30 — each icon-sampled from the same
    mark bundled in the app, so tile and hue can't drift between the two. */
 .ai-aave        { background: #9391f7; }   /* the ghost's lavender */

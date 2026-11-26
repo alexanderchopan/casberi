@@ -303,25 +303,13 @@ grep -q 'needingASpareOwner' Casberi/Casberi/Screens/SafeScreen.swift \
 grep -q 'report.reachable' Casberi/Casberi/Screens/SafeScreen.swift \
   || { echo "✗ the N-of-N warning no longer gates on the read having answered — silence would read as an all-clear"; exit 1; }
 
-# THE CATALOG COPY, which is where this feature's promise is READ (§303's
-# tripwire, and it had already gone stale once). The Safe offer's summary said
-# "signing always happens in your own Safe app" for the whole first day this
-# feature existed — the setup-copy audit never saw it, because that audit
-# governs a connect screen's intro and this is the product page. So: the offer
-# may not claim signing happens elsewhere, and must say that it happens here.
+# THE CATALOG COPY was where this feature's promise was read (§303's
+# tripwire: the Safe offer once said "signing always happens in your own Safe
+# app"). Since prd §1975 Safe is no offer at all: it is Your account, and a
+# tile would sell it as an app to connect. So the check is that it stays out.
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
-SAFE_OFFER=$(python3 - "$CATALOG" <<'OFFER'
-import re, sys
-src = open(sys.argv[1]).read()
-i = src.index('Offer(name: "Safe",')
-j = src.index('needsSetup:', i)
-print(re.sub(r"^\s*//.*$", "", src[i:j], flags=re.M))
-OFFER
-)
-printf '%s' "$SAFE_OFFER" | grep -qi 'signing always happens in your own Safe app' \
-  && { echo "✗ the Safe offer still says signing happens elsewhere — prd §425 made that false"; exit 1; }
-printf '%s' "$SAFE_OFFER" | grep -qi 'sign' \
-  || { echo "✗ the Safe offer never mentions signing — the co-signer is unfindable for anyone without a Safe yet"; exit 1; }
+grep -qE '^[[:space:]]*Offer\(name: "Safe",' "$CATALOG" \
+  && { echo "✗ Safe is a catalog offer again — prd §1975 made it Your account, not an app"; exit 1; }
 # …and the two honest limits that make the claim safe to print at all.
 #
 # READ OFF THE SCREEN, NOT THE OFFER (prd §641b). Until §641 these lived in the

@@ -24,7 +24,9 @@ struct PeerScreen: View {
     @Environment(HomeRoute.self) private var route
     @State private var syncing = false
     @State private var lastResult: BridgeProof?
-    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen`.
+    /// Whether `lastResult` is a failure. Hardcoding `false` at the call site
+    /// painted "Couldn't reach the chain" in confirm green with the count-up
+    /// animation — the fake-status class §83 bans (audit, 2026-07-31).
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     private var walletCount: Int { WalletStore.shared.addresses.count }

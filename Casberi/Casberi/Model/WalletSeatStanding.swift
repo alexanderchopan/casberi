@@ -3,8 +3,9 @@ import Foundation
 /// What a WALLET-RIDING seat's product page says before it lights up
 /// (prd §515, 2026-08-29).
 ///
-/// These seats have no connection of their own: Peer, Privacy Pools,
-/// Railgun, Safe, MetaMask Card, Plasma One and ether.fi. Watching an address is the
+/// These seats have no connection of their own: Peer, MetaMask Card,
+/// Plasma One and ether.fi (Privacy Pools, Railgun and Safe are Your
+/// account's since prd §1975, no seats). Watching an address is the
 /// whole consent (§207), every one of their sweeps runs unconditionally inside
 /// `WalletIngest.refresh`, and the seat is pure display gated on evidence
 /// (§403) — so there is nothing to connect, and a Connect button was a control
@@ -43,13 +44,10 @@ enum WalletSeatStanding {
         let thing: String
     }
 
-    /// The seven, by catalog seat id. Anything not here is an ordinary bridge
+    /// The four, by catalog seat id. Anything not here is an ordinary bridge
     /// with a connection of its own, and keeps its Connect.
     static let seats: [Seat] = [
         Seat(id: "peer",         thing: "Peer trade"),
-        Seat(id: "privacypools", thing: "Privacy Pools deposit"),
-        Seat(id: "railgun",      thing: "Railgun shield"),
-        Seat(id: "safe",         thing: "Safe"),
         // The noun is the CARD, not the spend, and the difference matters here
         // more than for its siblings: the sweep looks for a purchase, but what
         // the person has or hasn't got is a card, and "No MetaMask Card spend

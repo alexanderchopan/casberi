@@ -108,9 +108,11 @@ enum WalletUnwatch {
     @discardableResult
     static func dropRiders(of address: String, context: ModelContext, bridges: BridgeStore) -> [String] {
         SafeBridge.forgetUnfollowed(context: context)
-        let hadSafe = bridges.bridges.contains { $0.id == "safe" }
+        // Safe is no seat since prd §1975 (it is Your account), so what can
+        // leave here is an app riding the follows: Peer, a card, ether.fi.
+        let before = Set(bridges.bridges.map(\.name))
         bridges.reconcileWalletSeats()
-        return hadSafe && !bridges.bridges.contains(where: { $0.id == "safe" }) ? ["Safe"] : []
+        return before.subtracting(bridges.bridges.map(\.name)).sorted()
     }
 
     /// Puts the watch back, and goes and gets what it pruned.

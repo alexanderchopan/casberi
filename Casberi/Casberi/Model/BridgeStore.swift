@@ -227,7 +227,7 @@ final class BridgeStore {
         /// never the network — `reconcileWalletSeats` runs on every
         /// foreground and inside several screens' `onAppear`.
         let count: (Set<String>) -> Int
-        /// What that number IS, singular ("wallet", "card", "Safe") — pluralised
+        /// What that number IS, singular ("wallet", "card") — pluralised
         /// below. Naming the object beats "wallets" wherever the protocol has
         /// one: "Watching 2 locks" says more than "Watching 1 wallet".
         let noun: String
@@ -236,7 +236,7 @@ final class BridgeStore {
 
     /// Every wallet-riding seat, and the evidence that lights it.
     ///
-    /// These nine have no connect switch: watching a wallet is the whole
+    /// These have no connect switch: watching a wallet is the whole
     /// consent, and each sweep runs unconditionally inside
     /// `WalletIngest.refresh`. **A seat here gates no requests at all** — it
     /// is pure display, and has been since §207 took the switches away. So
@@ -258,15 +258,6 @@ final class BridgeStore {
                    count: { PeerBridge.evidence.count(in: $0) }, noun: "wallet",
                    can: ["Reads Peer fills for the accounts you follow, from the public chain.",
                          "Read-only — never starts, signs, or settles a trade."]),
-        WalletSeat(id: "privacypools", name: "Privacy Pools",
-                   count: { PrivacyPoolsBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads Privacy Pools deposits and their screening status for the accounts you follow, from public sources.",
-                         "Read-only — never deposits, withdraws, or moves funds."]),
-        WalletSeat(id: "railgun", name: "Railgun",
-                   count: { RailgunBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads what you shield into Railgun and what comes back out, for the accounts you follow, from the public chain.",
-                         "Never sees inside the pool — an unshield never names its sender, and relayer sends leave no public trace.",
-                         "Read-only — never shields, unshields, or moves funds."]),
         // Counted in CARDS, not wallets: one watched wallet is
         // one card here, because the allowance that makes a card is granted by
         // the wallet itself. The second line is not boilerplate — the merchant
@@ -285,11 +276,6 @@ final class BridgeStore {
                    can: ["Reads what your Plasma One card settles on Plasma, for the accounts you follow — follow your Plasma One account.",
                          "One total a day: the card settles daily, so purchases and merchants never reach the chain.",
                          "Read-only — never spends, tops up, or changes a limit."]),
-        WalletSeat(id: "safe", name: "Safe",
-                   count: { _ in SafeBridge.detectedCount() }, noun: "Safe",
-                   can: ["Reads the pending signature queue for any Safe you follow, or that follows you as a signer.",
-                         "Alerts on a change to a Safe's owners, threshold, or modules.",
-                         "Read-only — signing always happens in your own Safe app."]),
         // ONE ether.fi seat, not two (user ruling 2026-07-31). The unstake
         // queue and Cash were seated separately because they're separate
         // products on separate chains — but to a person they are one company
@@ -390,7 +376,6 @@ final class BridgeStore {
             // person reads change.
             case "wallet": String(localized: "Following \(n) address")
             case "card":   String(localized: "Following \(n) card")
-            case "Safe":   String(localized: "Following \(n) Safe")
             default:       String(localized: "Following \(n) \(seat.noun)")
             }
             registerConnected(id: seat.id, name: seat.name,
@@ -526,8 +511,13 @@ final class BridgeStore {
     /// every foreground, `remove` is a no-op for an id that is not there, and
     /// a seat can arrive later from another device through CloudKit — a
     /// one-shot migration would let that one through.
+    ///
+    /// Privacy Pools, Railgun and Safe joined them in prd §1975: built into
+    /// Your account, not apps, so no seat stands for them in Library. Their
+    /// sweeps and evidence marks stay; only the seats go.
     private static let retiredWalletSeats = ["aave", "morpho", "uniswap",
-                                             "hyperliquid", "aerodrome"]
+                                             "hyperliquid", "aerodrome",
+                                             "privacypools", "railgun", "safe"]
 
     /// How many watched addresses a wallet-riding seat has really been SEEN at
     /// — the same number `reconcileWalletSeats` gates on, for a screen that

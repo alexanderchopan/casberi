@@ -488,8 +488,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Radicle"),
                  purpose: "Reads the patches and issues of the repos you follow, from the seed node you name. Carries only the repo ids you asked for; there is no account and no key, so nothing identifies you — but the seed you pick does see which repos you ask about.",
                  hosts: ["rosa.radicle.network", "iris.radicle.network", "the seed you name"]),
+        // Reach WALLET since prd §1975: Privacy Pools is no app but a place in
+        // Your account, read with the Wallet's own reads.
         Endpoint(service: "Privacy Pools",
-                 reach: .whenConnected(bridge: "Privacy Pools"),
+                 reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your Privacy Pools deposits, v1 and v2, from the public chain and their review status from 0xBow's public APIs, for the accounts you follow.",
                  hosts: ["api.0xbow.io", "api-v2.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"],
                  throughTor: true,
@@ -500,7 +502,7 @@ enum NetworkReach {
         // `PrivacyEngine`, which sends it only to a host listed HERE
         // (`PrivacyEngineWire.allows`), through the funnel.
         Endpoint(service: "Privacy Pools engine",
-                 reach: .whenConnected(bridge: "Privacy Pools"),
+                 reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads Privacy Pools v2 on Ethereum for your private balance: the pool's notes and keystore, and Aave's rate on what is private, from MEV Blocker's public node; which deposits 0xBow has approved, from its review service; and its relayer's fees, which it then hands a private send to post. Then checks what it read against Ethereum itself, through the Ethereum Foundation's Kohaku provider: Colibri's prover proves the pool knows the trees your balance was rebuilt from, and two checkpoint services give the chain's starting point; the questions name only those trees, never a note. In a test build, the same on the Sepolia testnet (old logs from Tenderly's node, the one that keeps them all). Carries your account's address and your notes' public commitments, never a key or a note's secret.",
                  hosts: ["rpc.mevblocker.io", "api-v2.0xbow.io",
                          "relayer-v2-prod-149184580131.us-east1.run.app",
@@ -522,7 +524,7 @@ enum NetworkReach {
         // IPFS CID and refused unless it hashes to its pin
         // (`PrivacyArtifacts`). Public files; the request names no one.
         Endpoint(service: "Privacy Pools circuits",
-                 reach: .whenConnected(bridge: "Privacy Pools"),
+                 reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Downloads, once, the public circuit files Privacy Pools proofs are made with (3 to 66 MB each), from public IPFS gateways, and checks each against the fingerprint the app carries before using it.",
                  hosts: ["gateway.pinata.cloud", "ipfs.io"],
                  credentialed: false),
@@ -540,11 +542,8 @@ enum NetworkReach {
                          "sync-mainnet.beaconcha.in", "mainnet.checkpoint.sigp.io"],
                  credentialed: false,
                  throughTor: true),
-        // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
-        // appears only once a shield has been seen, but the read that
-        // discovers one runs for every watched wallet, so declaring it under
-        // its own seat would say this host is reached only after connecting,
-        // which is false.
+        // Reach is WALLET: Railgun is no app (prd §1975), and the read runs
+        // for every watched wallet.
         Endpoint(service: "Railgun",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads what you shield into Railgun and what comes back out, off Ethereum's public chain, for the accounts you follow — the two public doors, never anything inside the pool.",

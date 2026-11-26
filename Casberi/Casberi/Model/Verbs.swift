@@ -631,6 +631,9 @@ enum VerbDerivation {
         if thing.mark == .todo || thing.mark == .doing,
            thing.source != "Reminders", !ownApps.contains(thing.source),
            BridgeCatalog.offer(forSource: thing.source) == nil,
+           // Your account's own rows (a Safe's ask) are no app's since prd
+           // §1975, and still not yours to tick.
+           !BridgeCatalog.accountSources.contains(thing.source),
            !out.contains(where: { $0.label == "Mark done" }) {
             out.append(Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone))
         }

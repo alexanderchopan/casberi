@@ -5395,8 +5395,8 @@ enum DemoSeedAll {
     /// returns before that reconcile while `DemoMode.isActive` — which is the
     /// only reason the demo's Peer, Privacy Pools, Railgun, card and
     /// ether.fi seats survived at all. They did not survive a visit to their
-    /// own setup screens: `PeerScreen`, `PrivacyPoolsScreen`, `RailgunScreen`,
-    /// `SafeScreen` and the wallet picker each call `reconcileWalletSeats()`
+    /// own setup screens: `PeerScreen`, the Privacy Pools and Railgun screens
+    /// (deleted, prd §1975), `SafeScreen` and the wallet picker each call `reconcileWalletSeats()`
     /// on appear, so opening any one of them mid-demo silently stripped those
     /// seats out of the catalog. Marking the evidence makes the reconcile
     /// AGREE with the seat table instead of fighting it, everywhere it runs.
@@ -5496,7 +5496,8 @@ enum DemoSeedAll {
         // demo that claims a seat the catalog does not offer is the fake
         // status check D exists to catch.
         ("Peer", "Rides your accounts", "Lands settled fills, never trades."),
-        ("Privacy Pools", "Rides your accounts", "Reads your deposits' review status."),
+        // Privacy Pools, Railgun and Safe were seats here until prd §1975:
+        // built into Your account, no offers.
         ("MetaMask Card", "Rides your accounts", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your accounts", "Reads what the card settled onchain."),
         ("Plasma One", "Rides your accounts", "Reads what the card settled each day."),
@@ -5569,8 +5570,6 @@ enum DemoSeedAll {
         ("NEAR AI", "Key on this phone", "Answers with your things, on your key."),
         ("Muse", "Key on this phone", "Answers with your things, on your key."),
         ("Your own model", "On your network", "Answers with your things, on your own server."),
-        ("Railgun", "Synced 45m ago", "Reads your accounts' shielded moves."),
-        ("Safe", "Synced 15m ago", "Reads your Safe's pending signatures."),
         ("Linear", "Synced 15m ago", "Reads the work assigned to you."),
         ("Notion", "Synced 25m ago", "Reads your pages."),
         ("Slack", "3 channels", "Reads the channels you name."),

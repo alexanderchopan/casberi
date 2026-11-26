@@ -368,6 +368,12 @@ def catalog_proper_nouns() -> set[str]:
     words: set[str] = set()
     for m in re.finditer(r'name: "([^"]+)"', text):
         words.update(WORD.findall(m.group(1)))
+    # What is built into Your account is named the same way, with no offer
+    # since prd §1975: Privacy Pools, Railgun, Safe (`accountSources`).
+    m = re.search(r'static let accountSources: Set<String> = \[(.*?)\]', text, re.S)
+    if m:
+        for name in re.findall(r'"([^"]+)"', m.group(1)):
+            words.update(WORD.findall(name))
     return words
 
 

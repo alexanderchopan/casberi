@@ -23,7 +23,7 @@ struct SafeScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @State private var syncing = false
     @State private var lastResult: BridgeProof?
-    /// Whether `lastResult` is a failure — see `PrivacyPoolsScreen` (audit,
+    /// Whether `lastResult` is a failure — see `PeerScreen` (audit,
     /// 2026-07-31): hardcoding `false` painted "Couldn't reach Safe" in
     /// confirm green with the count-up animation.
     /// Redrawn on create/delete — `SignerKey.address()` reads UserDefaults,

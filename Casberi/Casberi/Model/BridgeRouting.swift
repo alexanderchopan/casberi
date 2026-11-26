@@ -15,12 +15,10 @@ enum BridgeRouter {
     enum Destination: Identifiable, Hashable {
         case wallet
         case peer
-        case privacyPools
-        case railgun
-        /// The Safe multisig signature queue (2026-07-30) — same shape as
-        /// `.peer`/`.privacyPools`: no account of its own, "connecting" IS
-        /// watching a wallet (§207), and Connect for the "Safe" offer routes
-        /// straight to the wallet manager (see `destination(forOffer:)`).
+        /// Signing for a Safe: this phone as a co-signer, a paired Safe app,
+        /// an Enclave owner (prd §425, §913). No offer since prd §1975 (Safe
+        /// is Your account, not an app), so no seat opens it: a pairing link
+        /// (`casberi://pair`) pushes it.
         case safe
         case exchange(ExchangeBridge.Venue)
         case ethValidators
@@ -296,8 +294,6 @@ enum BridgeRouter {
             switch self {
             case .wallet:         "wallet"
             case .peer:           "peer"
-            case .privacyPools:   "privacypools"
-            case .railgun:        "railgun"
             case .safe:           "safe"
             // The venue's own raw value IS the seat id ("kraken", "coinbase"),
             // so the Row above and this can't drift apart.
@@ -390,9 +386,8 @@ enum BridgeRouter {
     private static let rows: [Row] = [
         Row(offer: "Wallet",    id: "wallet", destination: .wallet),
         Row(offer: "Peer",      id: "peer",   destination: .peer),
-        Row(offer: "Privacy Pools", id: "privacypools", destination: .privacyPools),
-        Row(offer: "Railgun", id: "railgun", destination: .railgun),
-        Row(offer: "Safe", id: "safe", destination: .safe),
+        // (Privacy Pools, Railgun and Safe had rows here until prd §1975:
+        // built into Your account, no offers, no seats.)
         // MetaMask Card has no screen of its own (2026-09-20, the shape Gnosis
         // Pay set in prd §222 until §1318 removed it). CONNECT routes to the
         // wallet manager, because watching the wallet is the only real action
@@ -498,16 +493,15 @@ enum BridgeRouter {
     /// `nil` = the offer has no dedicated screen — its Connect runs
     /// `BridgeConnect` instead of pushing.
     static func destination(forOffer name: String) -> Destination? {
-        // Peer & Privacy Pools have no setup of their own — "connecting"
-        // them IS watching a wallet (prd §207/§209). So the CONNECT flow (every
+        // Peer has no setup of its own — "connecting"
+        // it IS watching a wallet (prd §207/§209). So the CONNECT flow (every
         // caller of `forOffer`) routes straight to the Wallet manager instead
         // of a pass-through setup screen that only re-doored there — one fewer
         // screen between the catalog and the one real action. Their own screen
         // (recent fills) is unaffected: it's the OPEN/manage path, which resolves
-        // through `destination(forID:)` below, and still returns `.peer`/
-        // `.privacyPools` once a wallet is watched and the seat reads connected.
-        if name == "Peer" || name == "Privacy Pools" || name == "Safe"
-            || name == "Railgun" { return .wallet }
+        // through `destination(forID:)` below, and still returns `.peer`
+        // once a wallet is watched and the seat reads connected.
+        if name == "Peer" { return .wallet }
         return rows.first { $0.offer == name }?.destination
     }
 
@@ -607,8 +601,6 @@ struct BridgeDestinationView: View {
         switch destination {
         case .wallet:         WalletScreen()
         case .peer:           PeerScreen()
-        case .privacyPools:   PrivacyPoolsScreen()
-        case .railgun:        RailgunScreen()
         case .safe:           SafeScreen()
         case .ethValidators:  EthValidatorScreen()
         case .ens:            ENSScreen()
