@@ -283,8 +283,9 @@ done
 # The seats themselves must still say where their door lands, or the deletion
 # above orphans three Library tiles.
 ACCOUNTS="Casberi/Casberi/Model/RoomAccounts.swift"
-[[ $(grep -c 'landing: .privateHoldings' "$ACCOUNTS") -eq 2 ]] \
-  || { echo "✗ Privacy Pools and Railgun no longer both land on Holdings › Private (§1738)"; exit 1; }
+# Tacit joined them when its page was deleted (prd §1981).
+[[ $(grep -c 'landing: .privateHoldings' "$ACCOUNTS") -eq 3 ]] \
+  || { echo "✗ Privacy Pools, Railgun and Tacit no longer all land on Holdings › Private (§1738, §1981)"; exit 1; }
 grep -q 'landing: .yourAccount' "$ACCOUNTS" \
   || { echo "✗ Safe no longer lands on Your account (§1738)"; exit 1; }
 
