@@ -84,6 +84,9 @@ final class TacitAccount {
         /// TAC the Tacit chain's fees have added to your shares since
         /// `earnedSince`, the first reading that knew a rate.
         var earnedTAC: Double? = nil
+        /// How many notes the Tacit chain holds at the last reading: the
+        /// crowd a send from it hides in (How hidden, prd §1983).
+        var chainNotes: Int? = nil
         var earnedSince: Date? = nil
 
         /// Private TAC in both places; nil when neither was read.
@@ -127,7 +130,7 @@ final class TacitAccount {
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
         asOf: .now, publicTAC: 240, privateTAC: 310, accountTAC: 55, defiTAC: 0,
         chainAddress: "tc1" + String(repeating: "3f", count: 40) + "c91d",
-        earnedTAC: 2.1, earnedSince: Date.now.addingTimeInterval(-21 * 86_400))
+        earnedTAC: 2.1, chainNotes: 12_135, earnedSince: Date.now.addingTimeInterval(-21 * 86_400))
     static let demoPrice = 3_850.0
     static let demoTacPrice = 0.78
 
@@ -300,7 +303,8 @@ final class TacitAccount {
                               held: held, asOf: .now, publicTAC: reading.publicTAC, privateTAC: reading.privateTAC,
                               privateElsewhere: reading.privateElsewhere, defiTAC: reading.defiTAC,
                               chainAddress: reading.chainAddress, chainShares: reading.chainShares,
-                              chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, earnedSince: reading.earnedSince)
+                              chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, chainNotes: reading.chainNotes,
+                              earnedSince: reading.earnedSince)
             keep(reading)
             if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
             if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
@@ -344,6 +348,7 @@ final class TacitAccount {
         r.privateTAC = tac(chain.worth)
         r.privateElsewhere = chain.elsewhere
         r.chainAddress = chain.chainAddress
+        if chain.leaves > 0 { r.chainNotes = chain.leaves }
         guard let shares = tac(chain.shares), let pool = tac(chain.pool), let all = tac(chain.allShares) else { return }
         // Tacit's own rate: a share is the pool over the shares, each with
         // the contract's virtual 1 TAC (`VIRTUAL`, 1e8 units).

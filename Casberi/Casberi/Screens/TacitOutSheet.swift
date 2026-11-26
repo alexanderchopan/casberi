@@ -167,6 +167,14 @@ struct TacitOutSheet: View {
             MoveReceiptLine(label: String(localized: "Arrives")) {
                 Text(payTo == nil ? "In a few minutes" : "In about a minute").dsText(.body17).foregroundStyle(DS.textPrimary)
             }
+            // **HOW HIDDEN, WHERE YOU SEND (prd §1983, as Privacy Pools'
+            // §1738):** the notes on the Tacit chain at the last reading, the
+            // crowd this send's note is one of. It advises, never blocks.
+            if let notes = account.reading?.chainNotes {
+                Text("Hidden among \(notes.formatted()) notes on the Tacit chain")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if case .failed(let why) = out.step {
                 Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)

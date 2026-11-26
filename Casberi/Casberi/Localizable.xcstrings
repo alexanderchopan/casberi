@@ -108217,6 +108217,34 @@
         }
       }
     },
+    "Hidden among %@ notes on the Tacit chain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oculto entre %@ notas en la cadena de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitチェーン上の%@件のノートに紛れています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 체인의 노트 %@개 사이에 숨겨짐"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏于 Tacit 链上的 %@ 个票据之中"
+          }
+        }
+      }
+    },
     "Hidden apps" : {
       "localizations" : {
         "es" : {
