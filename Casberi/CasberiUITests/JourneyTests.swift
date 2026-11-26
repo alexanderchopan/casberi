@@ -311,8 +311,10 @@ final class JourneyTests: XCTestCase {
         let w = Walk("stoptracking", launch: Walk.demo + ["-subscriptionTrack", "Hulu:15.99"], test: self)
         // The Wallet's Spending lists Subscriptions (prd §1469, §1480);
         // Library's count is deleted (§1612).
-        w.tap(w.el(.button, "label == %@", "Wallet"), "band Wallet")
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Spending"), "Spending tile")
+        // Spending is a row in Home's Wallet section (prd §1870); the bar is
+        // Move alone (§1809), so there is no Wallet tab to take first.
+        w.scrollUntil(w.el(.button, "label BEGINSWITH %@", "Spending"), "Spending row on Home")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Spending"), "Spending row")
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Subscriptions"), "Subscriptions row")
         // The row under the box is one element named for the plan (prd §1317).
         w.hold(w.visible(.any, "label == %@", "Hulu"), "hold Hulu")
