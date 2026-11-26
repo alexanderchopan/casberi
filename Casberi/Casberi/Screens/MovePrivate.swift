@@ -672,7 +672,7 @@ struct MovePrivateSentence<Head: View>: View {
         ForEach(recipientChoices, id: \.address) { choice in
             Button { take(choice.address) } label: {
                 listRow(choice.title, picked: move.recipient?.lowercased() == choice.address.lowercased()) {
-                    WalletFace(address: choice.address, size: MoveSentence.listMark, circular: true)
+                    WalletFace(address: choice.address, size: DS.Face.list, circular: true)
                 }
             }
             .buttonStyle(RowPress())
