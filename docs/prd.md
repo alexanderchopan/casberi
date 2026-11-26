@@ -75453,3 +75453,7 @@ Not built here: a place's own page (the canvas's rule 12); a token's page alread
 1. **Amount is the keys** (`MovePrivate.amountKeys`): the steps the money covers (three at most) and Max are the top row; the keypad types the figure; a flip beside the line types dollars and works out the token at today's price, rounded down. The line over the keys says the other unit and "up to N ETH", or in amber "More than you can send · up to N" or "At least N" (`PrivateMove.most`, `least`, `amountFits`). Hold to send waits for a figure that fits.
 2. **Token is its own line** (`tokenChoices`): ETH or USDC, each once; picking one takes its first step.
 3. **The lines stand while it goes**, as public Send's do: confirming and sending keep To · From · Token · Amount on screen, untouchable, with the step line under them; no sentence replaces them. Railgun's and Aztec's sends still draw their sentence while they go.
+
+## §1980 — Railgun's and Aztec's sends keep their lines while they go, as public Send and Privacy Pools do (amends §1979 item 3's exception) (user, 2026-11-25, asked whether Railgun and Aztec should match: "yes") — BUILT
+
+Confirming, proving and sending keep the receipt's lines (From · To · Token · Amount, or Swap's) on screen, untouchable, with the steps under them; the sentence is drawn only while reading or blocked, never while a move goes (`MoveRailgunPrivate`, `MoveAztecPrivate`).

@@ -1363,7 +1363,8 @@ struct MoveRailgunSentence<Head: View>: View {
                 if costOpen { costOpen = false } else { open = nil; back?() }
             }
         }, lines: {
-            if picking, !isDone {
+            // **THE LINES STAND WHILE IT GOES, AS PUBLIC SEND'S (prd §1980).**
+            if (picking || move.acting), !isDone {
                 MoveReceiptSteps(steps: steps, disabled: !picking)
             }
         }, content: {
@@ -1401,11 +1402,14 @@ struct MoveRailgunSentence<Head: View>: View {
                         // stands, the steps and the line the rest.
                         listBody {
                             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                MoveFlow { sentence }
-                                    .moveHoldFill()
-                                    .allowsHitTesting(false)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                // While it goes the lines say it, as public Send's (prd §1980).
+                                if !move.acting {
+                                    MoveFlow { sentence }
+                                        .moveHoldFill()
+                                        .allowsHitTesting(false)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 if let run = stepsRun {
                                     PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
                                         .transition(.opacity)

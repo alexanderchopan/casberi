@@ -1320,7 +1320,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 if costOpen { costOpen = false } else { open = nil; back?() }
             }
         }, lead: move.canAddAnother ? AnyView(addAnotherWord) : nil, lines: {
-            if live {
+            // **THE LINES STAND WHILE IT GOES, AS PUBLIC SEND'S (prd §1980).**
+            if live || move.acting {
                 MoveReceiptSteps(steps: steps, disabled: move.acting)
             }
         }, content: {
@@ -1364,11 +1365,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                         // where it stands; the steps and the facts the rest.
                         ScrollView {
                             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                MoveFlow { sentence }
-                                    .moveHoldFill()
-                                    .allowsHitTesting(false)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                // While it goes the lines say it, as public Send's (prd §1980).
+                                if !move.acting {
+                                    MoveFlow { sentence }
+                                        .moveHoldFill()
+                                        .allowsHitTesting(false)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 if let run = stepsRun {
                                     // Face ID came before a send's clock; a move-in signs inside it.
                                     PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
