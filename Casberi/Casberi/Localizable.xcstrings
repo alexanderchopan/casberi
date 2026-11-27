@@ -365,6 +365,40 @@
         }
       }
     },
+    " · %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : " · %1$lld of %2$lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %1$lld de %2$lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %2$lld件中%1$lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · %2$lld개 중 %1$lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 第 %1$lld 个，共 %2$lld 个"
+          }
+        }
+      }
+    },
     " · %lld older not imported" : {
       "localizations" : {
         "es" : {
@@ -473,6 +507,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : " · %lld 项无法读取"
+          }
+        }
+      }
+    },
+    " · fees %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · comisiones %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 手数料 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 수수료 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : " · 手续费 %@"
           }
         }
       }
@@ -2043,6 +2105,68 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已私密发送 %@ TAC"
+          }
+        }
+      }
+    },
+    "%@ TAC to %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ TAC to %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ TAC a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ TACを%2$@へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@(으)로 %1$@ TAC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ TAC 到 %2$@"
+          }
+        }
+      }
+    },
+    "%@ TAC to Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TAC a Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TACをTacitへ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit으로 %@ TAC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TAC 到 Tacit"
           }
         }
       }
@@ -29178,6 +29302,40 @@
         }
       }
     },
+    "%lld of %lld sends went. The rest stays private: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld sends went. The rest stays private: %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se enviaron %1$lld de %2$lld envíos. El resto sigue siendo privado: %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld件中%1$lld件を送信しました。残りは非公開のままです：%3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld건 중 %1$lld건을 보냈습니다. 나머지는 비공개로 남아 있습니다: %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld 笔中已发送 %1$lld 笔。其余仍为私密：%3$@"
+          }
+        }
+      }
+    },
     "%lld of %lld shown" : {
       "localizations" : {
         "en" : {
@@ -37523,6 +37681,34 @@
         }
       }
     },
+    "0xBow's relayer is busy. Nothing was sent: try again in a minute." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El relayer de 0xBow está ocupado. No se envió nada: inténtalo de nuevo en un minuto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBowのリレイヤーが混み合っています。何も送信されていません。1分後にもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow 릴레이어가 바쁩니다. 아무것도 보내지 않았습니다. 1분 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0xBow 的中继器正忙。未发送任何内容：请一分钟后重试。"
+          }
+        }
+      }
+    },
     "0xBow's relayer refused it" : {
       "localizations" : {
         "es" : {
@@ -43185,6 +43371,34 @@
         }
       }
     },
+    "30 AZTEC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC"
+          }
+        }
+      }
+    },
     "30 AZTEC from your account pays for it, about $0.45." : {
       "localizations" : {
         "es" : {
@@ -43237,6 +43451,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "30 AZTEC，约 $0.45"
+          }
+        }
+      }
+    },
+    "30 AZTEC, about %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC, unos %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC（約%@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC, 약 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "30 AZTEC，约 %@"
           }
         }
       }
@@ -50970,6 +51212,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "请先添加共同签名人"
+          }
+        }
+      }
+    },
+    "Add a co-signer first: over the limit, a send waits on it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Primero añade un cofirmante: por encima del límite, un envío lo espera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に共同署名者を追加してください：上限を超えると、送金はその署名を待ちます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 공동 서명자를 추가하세요: 한도를 넘으면 송금이 그 서명을 기다립니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先添加联合签名者：超出限额时，发送需等待其签名"
           }
         }
       }
@@ -75580,6 +75850,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你持有的收藏品"
+          }
+        }
+      }
+    },
+    "Collecting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recogiendo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "领取中"
+          }
+        }
+      }
+    },
+    "Collecting…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recogiendo…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取り中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "领取中…"
           }
         }
       }
@@ -106216,6 +106542,34 @@
         }
       }
     },
+    "Gas rose while it was proving, past 0xBow's quote. Nothing was sent: try again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El gas subió mientras se generaba la prueba, por encima de la cotización de 0xBow. No se envió nada: inténtalo de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明中にガス代が0xBowの見積もりを超えて上昇しました。何も送信されていません。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명하는 동안 가스비가 0xBow의 견적보다 올랐습니다. 아무것도 보내지 않았습니다. 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "证明期间 Gas 上涨，超过了 0xBow 的报价。未发送任何内容：请重试。"
+          }
+        }
+      }
+    },
     "Gas, from your Fee Juice" : {
       "localizations" : {
         "es" : {
@@ -108712,6 +109066,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "存放于"
+          }
+        }
+      }
+    },
+    "Held in %lld parts, and the relayer sends one at a time%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Held in %1$lld parts, and the relayer sends one at a time%2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Guardado en %1$lld partes, y el relayer envía una a la vez%2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld個に分かれて保管されており、リレイヤーは1つずつ送信します%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld개로 나뉘어 보관되어 있으며, 릴레이어가 하나씩 보냅니다%2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分为 %1$lld 部分持有，中继器每次发送一部分%2$@"
           }
         }
       }
@@ -122731,6 +123119,40 @@
         }
       }
     },
+    "Max %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Max %1$@ %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Máx. %1$@ %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最大 %1$@ %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최대 %1$@ %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最大 %1$@ %2$@"
+          }
+        }
+      }
+    },
     "May" : {
       "localizations" : {
         "es" : {
@@ -126540,6 +126962,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已转移 %1$@、%2$@"
+          }
+        }
+      }
+    },
+    "Moved into Aztec" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Movido a Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecに移動しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec으로 옮겼습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已转入 Aztec"
           }
         }
       }
@@ -142195,6 +142645,34 @@
         }
       }
     },
+    "Nothing on Ethereum to move in yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no hay nada en Ethereum para mover."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereumにはまだ移せるものがありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum에 아직 옮길 것이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum 上还没有可转入的资产。"
+          }
+        }
+      }
+    },
     "Nothing on the calendar this week." : {
       "localizations" : {
         "es" : {
@@ -148346,6 +148824,40 @@
         }
       }
     },
+    "One send moves up to %@ %@. Choose Max to move it all." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "One send moves up to %1$@ %2$@. Choose Max to move it all."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un envío mueve hasta %1$@ %2$@. Elige Máx. para moverlo todo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1回の送信で最大%1$@ %2$@まで移せます。すべて移すには「最大」を選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한 번에 최대 %1$@ %2$@까지 보낼 수 있습니다. 전부 보내려면 최대를 선택하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "单次最多发送 %1$@ %2$@。选择“最大”可全部转出。"
+          }
+        }
+      }
+    },
     "One spend made %@ of these, %@ in all" : {
       "localizations" : {
         "en" : {
@@ -154293,6 +154805,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "超过你的限额：你的签名者也要签名"
+          }
+        }
+      }
+    },
+    "Over your limit: your co-signer signs too" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima de tu límite: tu cofirmante también firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上限を超えています：共同署名者も署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한도를 넘었습니다: 공동 서명자도 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超出你的限额：联合签名者也需签名"
           }
         }
       }
@@ -161431,6 +161971,34 @@
         }
       }
     },
+    "Prepared" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preparado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "準備完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已准备"
+          }
+        }
+      }
+    },
     "Preparing" : {
       "localizations" : {
         "es" : {
@@ -161455,6 +162023,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "准备中"
+          }
+        }
+      }
+    },
+    "Preparing your private send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preparando tu envío privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開送金を準備中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 송금 준비 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在准备你的私密发送"
           }
         }
       }
@@ -163879,6 +164475,40 @@
         }
       }
     },
+    "Proving %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Proving %1$lld of %2$lld…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Generando prueba %1$lld de %2$lld…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明中 %2$lld件中%1$lld件…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명 중 %2$lld개 중 %1$lld개…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在证明第 %1$lld 个，共 %2$lld 个…"
+          }
+        }
+      }
+    },
     "Proving not reported" : {
       "localizations" : {
         "es" : {
@@ -165128,6 +165758,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Railgun 收取 %@"
+          }
+        }
+      }
+    },
+    "Railgun takes %@ or more. Your %@ is %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Railgun takes %1$@ or more. Your %2$@ is %3$@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun acepta %1$@ o más. Tu %2$@ vale %3$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgunは%1$@以上から受け付けます。あなたの%2$@は%3$@です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun은 %1$@ 이상부터 받습니다. 내 %2$@은(는) %3$@입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Railgun 接受 %1$@ 或以上。你的 %2$@ 价值 %3$@。"
           }
         }
       }
@@ -185171,6 +185835,40 @@
         }
       }
     },
+    "Sending %lld of %lld…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sending %1$lld of %2$lld…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando %1$lld de %2$lld…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送信中 %2$lld件中%1$lld件…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내는 중 %2$lld개 중 %1$lld개…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在发送第 %1$lld 个，共 %2$lld 个…"
+          }
+        }
+      }
+    },
     "Sending from Privacy Pools…" : {
       "localizations" : {
         "es" : {
@@ -186025,6 +186723,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发送自"
+          }
+        }
+      }
+    },
+    "Sent from Privacy Pools" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviado desde Privacy Pools"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Poolsから送信しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools에서 보냈습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已从 Privacy Pools 发送"
           }
         }
       }
@@ -202121,6 +202847,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tacit 接收"
+          }
+        }
+      }
+    },
+    "Tacit took it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit lo recibió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitが受け取りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit이 받았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 已接收"
           }
         }
       }
@@ -245078,6 +245832,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的共同签名人正在登录 Shield…"
+          }
+        }
+      }
+    },
+    "Your co-signer signs this too" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cofirmante también firma esto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者もこれに署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자도 여기에 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "联合签名者也会签署此项"
           }
         }
       }

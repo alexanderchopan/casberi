@@ -277,10 +277,17 @@ def main():
     face = os.path.join(HERE, '..', '..', 'Casberi', 'Casberi', 'Assets.xcassets', 'casberi-app-icon.imageset')
     os.makedirs(face, exist_ok=True)
     Image.open(dark).convert("RGB").resize((256, 256), Image.LANCZOS).save(os.path.join(face, "icon.png"))
+    # The same 256px file is what a wallet draws over a WalletConnect request
+    # (`WalletConnectBridge`'s metadata names this URL). It sat on the arm
+    # §1708 retired until 2026-11-27; `app-icon-audit.py` rule 7 holds the two
+    # to one file.
+    site = os.path.join(HERE, '..', '..', 'website', 'icons', 'casberi-app-icon.png')
+    with open(os.path.join(face, "icon.png"), "rb") as src, open(site, "wb") as dst:
+        dst.write(src.read())
     with open(os.path.join(face, "Contents.json"), "w") as f:
         f.write('{\n  "images" : [\n    {\n      "filename" : "icon.png",\n      "idiom" : "universal"\n    }\n  ],\n'
                 '  "info" : {\n    "author" : "xcode",\n    "version" : 1\n  }\n}\n')
-    print("wrote the three SVGs, the three icons and the in-app icon")
+    print("wrote the three SVGs, the three icons, the in-app icon and the website copy")
 
 
 if __name__ == "__main__":

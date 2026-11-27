@@ -162,8 +162,11 @@ enum WalletConnectBridge {
             description: "Follow your accounts. A send is asked only to move your own money into Casberi.",
             url: "https://casberi.app",
             // The wallet fetches this, never the app (user, 2026-11-03: Rainbow
-            // drew a bare "c" over an empty list). The app icon, 256px.
-            icons: ["https://casberi.app/icons/casberi-app-icon.png"],
+            // drew a bare "c" over an empty list). The app icon, 256px, written
+            // by `tentacle.py` and held to the app's by `app-icon-audit.py`
+            // rule 7. `?v=` busts a wallet's cached copy: bump it whenever
+            // the icon is redrawn (v2, 2026-11-27: the cursive C, §1708).
+            icons: ["https://casberi.app/icons/casberi-app-icon.png?v=2"],
             redirect: redirect
         )
 

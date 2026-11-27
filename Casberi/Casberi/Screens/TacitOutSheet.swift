@@ -56,8 +56,17 @@ struct TacitOutSheet: View {
                     }
                 } else if open == .to, !sending {
                     deckList { toChoices }
+                } else if sending {
+                    // **THE SHARED STEPS (2026-11-27, the Move review: Tacit
+                    // drew its own rows):** the sentence and `PrivateStepRows`,
+                    // as Railgun's and Aztec's sends draw theirs; the finish
+                    // under them.
+                    MoveDeckStatus(linesStand: false, sentence: { MovePhrase(sentenceWords) }) {
+                        if let run = stepsRun { PrivateStepRows(run: run).transition(.opacity) }
+                        finish
+                    }
                 } else {
-                    deckList { if sending { steps } else { receipt } }
+                    deckList { receipt }
                 }
             }
         }, word: { foot })
@@ -83,11 +92,14 @@ struct TacitOutSheet: View {
         .task(id: to) {
             if let to { await out.readOwed(to) }
         }
+        // The shared steps follow the send's own (2026-11-27).
+        .onChange(of: out.step) { _, now in follow(now) }
         .onAppear {
             out.payTo = payTo
             out.reset()
+            // Again fills its amount; otherwise it opens empty, as every Move
+            // page does: Max is a key (2026-11-27).
             if amount.isEmpty, let startAmount { amount = startAmount }
-            if amount.isEmpty, held > 0 { amount = TacitShieldSheet.maxText(held) }
         }
     }
 
@@ -114,7 +126,7 @@ struct TacitOutSheet: View {
                                     value: toCoSigner ? String(localized: "Co-signer") : String(localized: "Your public account")) { toggle(.to) })
         }
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
-                                value: payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain", mark: mark) {})
+                                value: payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain", mark: mark, fixed: true) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
                                 value: amount.isEmpty ? (open == .amount ? "0 TAC" : nil) : "\(amount) TAC",
                                 fieldNote: MoveFieldNote.against(typed: amount, have: TacitShieldSheet.maxText(most), symbol: "TAC")) { toggle(.amount) })
@@ -157,15 +169,15 @@ struct TacitOutSheet: View {
         .accessibilityAddTraits(picked ? [.isSelected] : [])
     }
 
-    /// The receipt under the lines: Tacit's fee and when it lands.
+    /// The receipt under the lines: Tacit's fee and when it lands, as every
+    /// private send's facts (`MoveDeckFacts`).
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-            MoveReceiptLine(label: String(localized: "Fee")) {
-                Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
-            }
-            MoveReceiptLine(label: String(localized: "Arrives")) {
-                Text(payTo == nil ? "In a few minutes" : "In about a minute").dsText(.body17).foregroundStyle(DS.textPrimary)
-            }
+            MoveDeckFacts(facts: [
+                .init(name: String(localized: "Fee"), value: feeWords),
+                .init(name: String(localized: "Arrives"),
+                      value: payTo == nil ? String(localized: "In a few minutes") : String(localized: "In about a minute")),
+            ])
             // **HOW HIDDEN, WHERE YOU SEND (prd §1983, as Privacy Pools'
             // §1738):** the notes on the Tacit chain at the last reading, the
             // crowd this send's note is one of. It advises, never blocks.
@@ -175,7 +187,8 @@ struct TacitOutSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             if case .failed(let why) = out.step {
-                Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
+                // A failure in the attention ink, as every private send's.
+                Text(verbatim: why).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -190,29 +203,54 @@ struct TacitOutSheet: View {
         guard let q = out.quote, let fee = TacitEngineWire.tac(q.fee) else { return "—" }
         let text = TacitShieldSheet.tacText(NSDecimalNumber(decimal: fee).doubleValue)
         // A pay stays on the Tacit chain: no Ethereum fee.
-        return payTo == nil ? String(localized: "\(text) and network fee") : text
+        return payTo == nil ? String(localized: "\(text) and the network fee") : text
     }
 
     // MARK: - Sending
 
-    @ViewBuilder private var steps: some View {
-        // One sentence, so a long place wraps as words do (prd §1986 item 3).
-        (Text(verbatim: "\(TacitAccountRows.amount(Double(out.units) / 1e8)) TAC ").foregroundStyle(DS.textPrimary)
-            + Text("to ").foregroundStyle(DS.textPrimary)
-            + Text(verbatim: payTo.map { AddressTail.short($0) } ?? (toCoSigner ? String(localized: "Co-signer") : String(localized: "your public account"))).foregroundStyle(DS.pickInk))
-        .dsText(.heading34)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                step(String(localized: "Proved"), state: state(for: 0),
-                     figure: out.provingSince.map { "\(Int(context.date.timeIntervalSince($0))) s" })
-            }
-            step(String(localized: "Tacit takes it"), state: state(for: 1), figure: nil)
-            if payTo == nil {
-                step(String(localized: "Collected"), state: state(for: 2), figure: nil)
-            }
+    /// "1.5 TAC to your public account", the sentence over the steps.
+    private var sentenceWords: String {
+        let place = payTo.map { AddressTail.short($0) } ?? (toCoSigner ? String(localized: "Co-signer") : String(localized: "your public account"))
+        return String(localized: "\(TacitAccountRows.amount(Double(out.units) / 1e8)) TAC to \(place)")
+    }
+
+    /// Proved on this phone, Tacit takes it, then (back to public) your
+    /// account collects it. Quiet: the send says its own ending.
+    @MainActor static func plan(collects: Bool) -> PrivateSendSteps.Plan {
+        var steps: [PrivateSendSteps.Step] = [
+            .proving,
+            PrivateSendSteps.Step(key: .sent, running: String(localized: "Tacit is taking it"), done: String(localized: "Tacit took it")),
+        ]
+        if collects {
+            steps.append(PrivateSendSteps.Step(key: .signing, running: String(localized: "Collecting"), done: String(localized: "Collected")))
         }
-        .padding(.top, DS.Space.s6)
+        return PrivateSendSteps.Plan(steps: steps)
+    }
+
+    /// The run the steps draw, while this send goes.
+    private var stepsRun: PrivateSendSteps.Run? {
+        guard let run = PrivateSendSteps.shared.run, run.kind == .move, run.plan == Self.plan(collects: payTo == nil) else { return nil }
+        return run
+    }
+
+    /// The send's step, told to the shared run.
+    private func follow(_ step: TacitOut.Step) {
+        let steps = PrivateSendSteps.shared
+        switch step {
+        case .proving:
+            if stepsRun?.isRunning != true {
+                steps.forget(.move)
+                steps.begin(.move, plan: Self.plan(collects: payTo == nil), quiet: true)
+            }
+        case .handing, .landing: steps.mark(.sent)
+        case .collecting: steps.mark(.signing)
+        case .done: steps.finish()
+        case .failed(let why): steps.fail(why)
+        default: break
+        }
+    }
+
+    @ViewBuilder private var finish: some View {
         // **SAY WHERE IT LANDED (user, 2026-11-25: "it said success but i
         // can't tell if it worked or not").** The amount paid out and the
         // place, and what that place now holds.
@@ -254,38 +292,6 @@ struct TacitOutSheet: View {
         }
     }
 
-    private enum StepState { case waiting, now, done }
-
-    private func state(for index: Int) -> StepState {
-        let at: Int
-        switch out.step {
-        case .proving: at = 0
-        case .handing, .landing: at = 1
-        case .collecting: at = 2
-        case .done: at = payTo == nil ? 3 : 2
-        default: at = 0
-        }
-        return index < at ? .done : index == at ? .now : .waiting
-    }
-
-    private func step(_ words: String, state: StepState, figure: String?) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            Group {
-                switch state {
-                case .done: Image(systemName: "checkmark").dsGlyph(.body, weight: .bold).foregroundStyle(DS.confirmInk)
-                case .now: DSSpinner()
-                case .waiting: Image(systemName: "circle").dsGlyph(.body, weight: .regular).foregroundStyle(DS.textTertiary)
-                }
-            }
-            .frame(width: DSRoomChassis.headGlyph)
-            Text(verbatim: words).dsText(.body17)
-                .foregroundStyle(state == .waiting ? DS.textTertiary : DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            if let figure { Text(verbatim: figure).dsText(.body17).monospacedDigit().foregroundStyle(DS.textSecondary) }
-        }
-        .frame(minHeight: WalletCardStyle.ledgerHead)
-    }
-
     // MARK: - The foot
 
     @ViewBuilder private var foot: some View {
@@ -310,8 +316,12 @@ struct TacitOutSheet: View {
                         if let tac { Task { await out.quote(tac: tac) } }
                     }
                 }
-            case .proving, .handing, .landing, .collecting:
-                EmptyView()
+            case .proving:
+                MoveFootWord(word: String(localized: "Proving…"), ink: DS.textSecondary)
+            case .handing, .landing:
+                MoveFootWord(word: String(localized: "Sending…"), ink: DS.textSecondary)
+            case .collecting:
+                MoveFootWord(word: String(localized: "Collecting…"), ink: DS.textSecondary)
             default:
                 if payTo == nil, out.owedWei > 0 {
                     // Owed from an earlier try: collected before anything new.

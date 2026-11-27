@@ -128,6 +128,9 @@ KNOWN_ACRONYMS: set[str] = {
     # Tacit's token, spelled as its contract's symbol, the unit beside an
     # amount on Make private (prd §1971). "Tac" is no one's spelling.
     "TAC",
+    # Aztec's token, spelled as its contract's symbol: the gas a first send
+    # buys, "30 AZTEC" (prd §1700aa). "Aztec" is the network, not the unit.
+    "AZTEC",
     # Graphics Interchange Format — the word X and Instagram both use for an
     # animated picture, and what a live DM transcript names one (prd §1244).
     "GIF",
