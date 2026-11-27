@@ -229,7 +229,9 @@ async function prepareYieldWithdraw({ tokenId, amount, recipient, upTo = false }
   // fee re-quoted now (gas moved) put the release a few wei over the notes.
   // `upTo`: the release shrinks by exactly what it is over, quoted again.
   if (upTo) {
-    const have = activeNotes(pool.share).reduce((t, n) => t + BigInt(n.value), 0n);
+    // One note per send: the relayer prices a withdrawal at one input's gas
+    // and refuses two (2026-11-27), so Max is the largest note's.
+    const have = activeNotes(pool.share).reduce((t, n) => (BigInt(n.value) > t ? BigInt(n.value) : t), 0n);
     for (let i = 0; i < 3 && BigInt(quote.amountSent) > have; i++) {
       shares -= BigInt(quote.amountSent) - have;
       if (shares <= 0n) break;

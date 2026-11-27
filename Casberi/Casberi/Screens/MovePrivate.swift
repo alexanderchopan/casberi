@@ -714,6 +714,11 @@ struct MovePrivateSentence<Head: View>: View {
         let top = move.most.flatMap { PrivateMoney.number($0, decimals: move.decimals, places: tokenPlaces) }
         if let units = PrivateMoney.baseUnits(move.amount, decimals: move.decimals).flatMap({ Decimal(string: $0) }), units > 0 {
             if let most = move.most.flatMap({ Decimal(string: $0) }), units > most {
+                // Held in more than one note, a send moves one (`largestNote`):
+                // the rest is another send, never "more than you have".
+                if move.mode == .send, PrivateMoneyStore.shared.noteCount(chainId: move.network.chainId, symbol: move.symbol) > 1 {
+                    return (String(localized: "Up to \(top ?? "0") \(move.symbol) in one send · send the rest after"), DS.attentionInk)
+                }
                 return (String(localized: "More than you can send · up to \(top ?? "0") \(move.symbol)"), DS.attentionInk)
             }
             if units < (Decimal(string: move.least) ?? 1) {

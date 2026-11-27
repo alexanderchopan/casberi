@@ -311,13 +311,31 @@ final class PrivateMoneyStore {
             .compactMap { Decimal(string: $0.amount) }.max().map(PrivateMoney.plain) ?? "0"
     }
 
+    /// **ONE NOTE PER RELAYED SEND (2026-11-27, user: "0xBow's relayer
+    /// refused it … no longer covers the transaction cost").** 0xBow's relayer
+    /// prices every withdrawal at one input note's gas (1.1M for the yield
+    /// router, `relay_gas_budget.ts`), and each further note adds ~200k, so a
+    /// send spending two notes is refused however fresh the quote. The most
+    /// one send moves is the largest approved note, in the token.
+    func largestNote(chainId: Int, symbol: String) -> String {
+        notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol }
+            .compactMap { Decimal(string: PrivateMoney.worth($0, rates: rates).amount) }.max().map(PrivateMoney.plain) ?? "0"
+    }
+
+    /// How many approved notes the token is held in.
+    func noteCount(chainId: Int, symbol: String) -> Int {
+        notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol }.count
+    }
+
     /// The account a send of `value` (base units) and its relayer's fee
     /// spends from: the current root's when it covers it, else any other
     /// that does (`PrivateRoot.legacy` for the device-only one).
     func account(toSpend value: String, fee: String, chainId: Int, symbol: String = "ETH") -> String? {
         guard let need = Decimal(string: value).map({ $0 + (Decimal(string: fee) ?? 0) }) else { return nil }
-        let held = PrivateMoney.spendableByAccount(notes, chainId: chainId, symbol: symbol, rates: rates)
-            .filter { (Decimal(string: $0.amount) ?? 0) >= need }.map(\.root)
+        // One note covers it (`largestNote`): the relayer refuses a send of two.
+        let held = notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol
+                && (Decimal(string: PrivateMoney.worth($0, rates: rates).amount) ?? 0) >= need }
+            .map(\.root).reduce(into: [String?]()) { if !$0.contains($1) { $0.append($1) } }
         let current = PrivateRootKey.currentID
         if let current, held.contains(current) { return current }
         return held.first.map { $0 ?? PrivateRoot.legacy }

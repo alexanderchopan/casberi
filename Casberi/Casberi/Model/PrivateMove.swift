@@ -145,7 +145,7 @@ final class PrivateMove {
             return PrivateMoney.choices(balance: usdcBalance, reserve: "0", decimals: 6, ladder: usdcLadder, minimum: usdcMinimum)
         case .send:
             guard let usdcFee else { return [] }
-            return PrivateMoney.choices(balance: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC"),
+            return PrivateMoney.choices(balance: PrivateMoneyStore.shared.largestNote(chainId: network.chainId, symbol: "USDC"),
                                         reserve: usdcFee, decimals: 6, ladder: PrivateMoney.usdcLadder)
         }
     }
@@ -222,7 +222,8 @@ final class PrivateMove {
         let units: Decimal?
         switch mode {
         case .send:
-            let held = Decimal(string: PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: symbol)) ?? 0
+            // One note per send: the relayer refuses two (`largestNote`).
+            let held = Decimal(string: PrivateMoneyStore.shared.largestNote(chainId: network.chainId, symbol: symbol)) ?? 0
             guard let fee = fee.flatMap({ Decimal(string: $0) }) else { return nil }
             units = held - fee
         case .deposit:
@@ -345,9 +346,10 @@ final class PrivateMove {
             }
             return PrivateMoney.choices(balance: balance, reserve: reserve)
         case .send:
-            // The approved private balance, less the relayer's fee on all of
-            // it (the fee is paid from the notes, beside the amount).
-            let held = PrivateMoneyStore.shared.spendable(chainId: network.chainId)
+            // The largest approved note, less the relayer's fee on all of it
+            // (the fee is paid from the note, beside the amount): one note per
+            // send, as the relayer prices it (`largestNote`).
+            let held = PrivateMoneyStore.shared.largestNote(chainId: network.chainId, symbol: "ETH")
             if onEthereum {
                 guard let quotedFee else { return [] }
                 return PrivateMoney.choices(balance: held, reserve: quotedFee, ladder: PrivateMoney.mainnetLadder)

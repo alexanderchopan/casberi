@@ -154,7 +154,7 @@ use "$MPRIV" 'MoveWord(YourAccount.short(address), ink: DS.textPrimary)' "the ad
 use "$MPRIV" 'MoveWord(YourAccount.short(to), ink: MoveSentence.settledInk)' "the recipient is no longer drawn by its tail"
 ! grep -qE 'prefix\([0-9]+\)' "$MPRIV" || { echo "✗ the sentence draws an address's head"; exit 1; }
 use "Casberi/Casberi/Model/PrivateMove.swift" 'let relayed = try await engine.relay(handle: spend.handle)' "a private send no longer goes through the relayer"
-use "Casberi/Casberi/Model/PrivateMove.swift" 'let held = PrivateMoneyStore.shared.spendable(chainId: network.chainId)' "a private send's amounts are not the approved private balance"
+use "Casberi/Casberi/Model/PrivateMove.swift" 'let held = PrivateMoneyStore.shared.largestNote(chainId: network.chainId, symbol: "ETH")' "a private send's amounts are not one approved note (the relayer refuses two)"
 use "tools/privacy-pools-engine/src/engine.js" 'const r = await s.relayWithdraw(option);' "the engine no longer relays a withdrawal"
 use "Casberi/Casberi/Resources/privacy-engine.js" 'relayWithdraw' "the shipped bundle cannot relay — rebuild with tools/privacy-pools-engine/build.mjs"
 use "Casberi/Casberi/Design/BridgeIcon.swift" 'if PrivateMoney.isActivity(thing.sourceRef) { return "eye.slash" }' "a private move's Activity row lost its eye"
