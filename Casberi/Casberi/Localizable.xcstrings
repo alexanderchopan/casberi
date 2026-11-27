@@ -146575,6 +146575,34 @@
         }
       }
     },
+    "On Ethereum, paid in TAC until %@. You join on Tacit's site." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En Ethereum, se paga en TAC hasta el %@. Te unes en el sitio de Tacit."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ethereum上、%@までTACで支払われます。参加はTacitのサイトで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ethereum에서 %@까지 TAC로 지급됩니다. 참여는 Tacit 사이트에서 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Ethereum 上，以 TAC 支付至 %@。在 Tacit 网站上加入。"
+          }
+        }
+      }
+    },
     "On Ethereum. Move funds in from your public account. Send and receive at fresh addresses, and your balance stays hidden." : {
       "localizations" : {
         "es" : {
@@ -177453,6 +177481,34 @@
         }
       }
     },
+    "Rewards ended %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las recompensas terminaron el %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "報酬は%@に終了しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보상은 %@에 종료되었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "奖励已于 %@ 结束。"
+          }
+        }
+      }
+    },
     "Rewards waiting" : {
       "localizations" : {
         "es" : {
@@ -201841,6 +201897,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tacit 未接受这笔存入。请重试"
+          }
+        }
+      }
+    },
+    "Tacit farm" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granja de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitファーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 팜"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 农场"
+          }
+        }
+      }
+    },
+    "Tacit farm · earned %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granja de Tacit · ganó %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitファーム · 獲得 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 팜 · %@ 획득"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 农场 · 已赚 %@"
+          }
+        }
+      }
+    },
+    "Tacit farms" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granjas de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitファーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 팜"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 农场"
           }
         }
       }

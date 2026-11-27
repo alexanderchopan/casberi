@@ -73,9 +73,28 @@ struct AssetMark: View {
         return TokenIconBook.url(for: name)
     }
 
+    /// **A PAIR IS ITS TWO MARKS (prd §1992):** "TAC/cETH", a liquidity
+    /// pool, draws TAC's mark and ETH's, overlapping; Tacit's private "c"
+    /// tokens take their underlying's mark (cETH is ETH, cBTC is BTC).
+    static func pairSides(_ name: String) -> (String, String)? {
+        let sides = name.split(separator: "/").map(String.init)
+        guard sides.count == 2, sides.allSatisfy({ !$0.isEmpty }) else { return nil }
+        let plain: (String) -> String = { s in
+            s.count > 1 && s.first == "c" && s.dropFirst().allSatisfy(\.isUppercase) ? String(s.dropFirst()) : s
+        }
+        return (plain(sides[0]), plain(sides[1]))
+    }
+
     var body: some View {
         Group {
-            if let ui = BrandMark.image(for: name) {
+            if let (a, b) = Self.pairSides(name) {
+                ZStack(alignment: .topLeading) {
+                    AssetMark(name: a, size: size * 0.66, tint: tint)
+                    AssetMark(name: b, size: size * 0.66, tint: tint)
+                        .offset(x: size * 0.34, y: size * 0.34)
+                }
+                .frame(width: size, height: size, alignment: .topLeading)
+            } else if let ui = BrandMark.image(for: name) {
                 Image(uiImage: ui)
                     .resizable()
                     .scaledToFill()

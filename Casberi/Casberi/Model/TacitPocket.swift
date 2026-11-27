@@ -98,6 +98,31 @@ enum TacitPocket {
         }
     }
 
+    /// Tacit's farms, priced from their own pools (prd §1993); nil when the
+    /// farm program did not answer.
+    static func farms() async -> TacitFarms.Reading? {
+        do {
+            let read = try await TacitEngine.shared.farms()
+            NSLog("tacitEngine| farms | %d pools, %d ms", read.pools.count, read.ms)
+            return TacitFarms.reading(read, at: .now)
+        } catch {
+            NSLog("tacitEngine| farms | FAILED %@", describe(error))
+            return nil
+        }
+    }
+
+    /// The open account's farm positions; nil when they could not be read.
+    static func farmed() async -> [TacitFarms.Position]? {
+        do {
+            let read = try await TacitEngine.shared.farmed()
+            NSLog("tacitEngine| farmed | %d positions, %d ms", read.positions.count, read.ms)
+            return read.positions.compactMap(TacitFarms.position)
+        } catch {
+            NSLog("tacitEngine| farmed | FAILED %@", describe(error))
+            return nil
+        }
+    }
+
     private static func describe(_ error: Error) -> String {
         (error as? TacitEngineWire.Failure).map { "\($0.name): \($0.message)" } ?? "\(error)"
     }

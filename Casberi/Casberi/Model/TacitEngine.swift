@@ -167,6 +167,16 @@ final class TacitEngine: NSObject {
         try await call(.defi, Wire.Empty(), as: Wire.DefiReading.self)
     }
 
+    /// Tacit's farms: rates' inputs, read for anyone, no key (prd §1993).
+    func farms() async throws -> Wire.Farms {
+        try await call(.farms, Wire.Empty(), as: Wire.Farms.self)
+    }
+
+    /// The open account's farm positions, found with its key.
+    func farmed() async throws -> Wire.Farmed {
+        try await call(.farmed, Wire.Empty(), as: Wire.Farmed.self)
+    }
+
     // MARK: - Making TAC private
 
     private func shieldAsk(_ units: UInt64) -> Wire.ShieldAsk {

@@ -2718,6 +2718,7 @@ harness "Spend top-up" "spend top-up" "scripts/spend-topup-selftest.sh" "the spe
 harness "Savings goal" "savings goal" "scripts/savings-goal-selftest.sh" "the savings goal self-test failed — run scripts/savings-goal-selftest.sh"
 harness "Tacit engine" "tacit engine" "scripts/tacit-engine-selftest.sh" "the Tacit engine self-test failed — run scripts/tacit-engine-selftest.sh"
 harness "Tacit permit" "tacit permit" "scripts/tacit-permit-selftest.sh" "the Tacit permit self-test failed — run scripts/tacit-permit-selftest.sh"
+harness "Tacit farms" "tacit farms" "scripts/tacit-farms-selftest.sh" "the Tacit farms self-test failed — run scripts/tacit-farms-selftest.sh"
 # Lend (prd §1674): the Aave calls byte for byte as simulated, nothing signed
 # that goes anywhere but the market's asset or Pool, the rate read and compounded.
 harness "Aave lend" "aave lend" "scripts/aave-lend-selftest.sh" "the Aave lend self-test failed — run scripts/aave-lend-selftest.sh"

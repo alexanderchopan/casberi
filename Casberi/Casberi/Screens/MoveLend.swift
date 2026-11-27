@@ -24,6 +24,8 @@ struct MoveLendSentence<Head: View>: View {
     @ViewBuilder let head: () -> Head
 
     @State private var open: Blank?
+    /// Tacit's farm page, raised from a farm row (prd §1993).
+    @State private var farmPage = false
     /// The cost's list stands in the rows' place (prd §1876).
     @Environment(\.openURL) private var openURL
     @Environment(ShellChrome.self) private var chrome
@@ -55,6 +57,9 @@ struct MoveLendSentence<Head: View>: View {
         }
         .onChange(of: doneHash) { _, hash in
             if hash != nil { DSHaptic.success() }
+        }
+        .sheet(isPresented: $farmPage) {
+            DSWebSheet(url: TacitFarms.page) { farmPage = false }
         }
     }
 
@@ -431,7 +436,35 @@ struct MoveLendSentence<Head: View>: View {
         }
         var all = choices
         all.insert(contentsOf: tacitChoice, at: min(tacitAt, all.count))
-        return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: all)])
+        return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: all)] + farmPlace)
+    }
+
+    /// **TACIT'S FARMS (prd §1993; user, 2026-11-26: "Farms in Earn").**
+    /// Each pool Tacit pays TAC to, at the rate its own pools price, highest
+    /// first; Withdraw lists the ones you are in. A farm is entered and left
+    /// on Tacit's own page, so a row opens it: Casberi reads, Tacit moves.
+    /// Shown while a Tacit account is connected, as Tacit's own row (§1986).
+    private var farmPlace: [MoveTokenPlace] {
+        let tacit = TacitAccount.shared
+        guard self.tacit != nil, tacit.connected, let farms = tacit.farms else { return [] }
+        let mine = tacit.reading?.farmed ?? []
+        let pools = farms.pools
+            .filter { p in move.mode == .lend || mine.contains { $0.lpAsset == p.lpAsset } }
+            .sorted { (TacitFarms.rate($0, in: farms) ?? 0) > (TacitFarms.rate($1, in: farms) ?? 0) }
+        let choices = pools.map { p in
+            let held = mine.first { $0.lpAsset == p.lpAsset }
+            return MoveTokenChoice(id: "farm|\(p.lpAsset)", symbol: TacitFarms.name(p.pair), network: String(localized: "Ethereum"),
+                                   // The pair's two marks fill the face: no network badge.
+                                   sub: held.flatMap { tacit.farmUSD($0) }.map { MoveSentence.money($0, whole: true) },
+                                   rate: TacitFarms.rateWords(TacitFarms.rate(p, in: farms)), place: "Tacit") {
+                farmPage = true
+            }
+        }
+        let day = farms.endsAt.formatted(.dateTime.month(.abbreviated).day())
+        let rule = farms.active && farms.endsAt > .now
+            ? String(localized: "On Ethereum, paid in TAC until \(day). You join on Tacit's site.")
+            : String(localized: "Rewards ended \(day).")
+        return [MoveTokenPlace(id: "tacit-farms", title: String(localized: "Tacit farms"), rule: rule, choices: choices)]
     }
 
     /// What Tacit's row is worth, to stand it among the rest.

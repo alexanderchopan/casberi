@@ -321,6 +321,17 @@ extension FeedScreen {
                                 figure: tacit.privateTacUSD.map { mask ?? WalletValue.exactMoney($0) },
                                 move: tacit.privateTacUSD == nil ? nil : walletHoldingMoves[HoldingMoves.key("TAC")])
             }
+            // **YOUR FARMS (prd §1993):** each position its pair, with the TAC
+            // it has earned and not claimed; its worth counts in Private.
+            // Entered and left on Tacit's page, from Earn, so the row opens
+            // nothing, as Tacit's other rows (§1981).
+            ForEach(reading.farmed ?? []) { position in
+                let earned = position.pendingTAC >= 0.0001
+                    ? String(localized: "Tacit farm · earned \(TacitAccountRows.amount(position.pendingTAC))")
+                    : String(localized: "Tacit farm")
+                walletTacitLine(TacitFarms.name(position.pair), held: nil, fact: earned,
+                                figure: tacit.farmUSD(position).map { mask ?? WalletValue.exactMoney($0) }, move: nil)
+            }
         }
     }
 
@@ -352,7 +363,7 @@ extension FeedScreen {
 
     /// A Tacit row states what is held; its verbs are Move's (Make private,
     /// back to public, prd §1976, §1977), so it opens nothing (§1981).
-    private func walletTacitLine(_ symbol: String, held: String, fact: String, figure: String?, move: Double?,
+    private func walletTacitLine(_ symbol: String, held: String?, fact: String, figure: String?, move: Double?,
                                  factInk: Color = DS.textSecondary) -> some View {
         HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             AssetMark(name: symbol, size: DS.Mark.row)

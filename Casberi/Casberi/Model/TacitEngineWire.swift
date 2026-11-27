@@ -14,6 +14,7 @@ enum TacitEngineWire {
 
     enum Method: String, CaseIterable {
         case info, open, read, chain, defi, close
+        case farms, farmed
         case shieldQuote, shieldProve, shieldHand, shieldOffer, shieldStatus
         case outQuote, outProve, outHand, owed
         case payQuote, payProve, payCheck
@@ -240,6 +241,53 @@ enum TacitEngineWire {
         let errors: [String]
         let passes: Int
         let ms: Int
+    }
+
+    /// Tacit's farms as its farm program reads them (prd §1993). Every
+    /// figure is 0x-hex: TAC per year and reserves in value units (8
+    /// decimals), shares as the pool counts them.
+    struct Farms: Decodable, Equatable {
+        struct Pool: Decodable, Equatable {
+            let pair: String
+            let lpAsset: String
+            let perYear: String
+            let staked: String
+            let shares: String
+            /// The pool's two assets by ticker; empty when Tacit names none.
+            let a: String
+            let b: String
+            let reserveA: String
+            let reserveB: String
+        }
+        let active: Bool
+        /// Seconds until this round of rewards ends.
+        let remaining: Int
+        let pools: [Pool]
+        let ms: Int
+    }
+
+    /// Your farm positions: LP shares bonded, and TAC earned, unclaimed.
+    struct Farmed: Decodable, Equatable {
+        struct Position: Decodable, Equatable {
+            let pair: String
+            let lpAsset: String
+            let shares: String
+            /// 0x-hex value units (8 decimals) of TAC.
+            let pending: String
+        }
+        let positions: [Position]
+        let ms: Int
+    }
+
+    /// A 0x-hex whole number as a Double; nil for anything else.
+    static func number(_ hex: String) -> Double? {
+        guard hex.hasPrefix("0x"), hex.count > 2, hex.count <= 66 else { return nil }
+        var n = 0.0
+        for character in hex.dropFirst(2) {
+            guard let digit = character.hexDigitValue else { return nil }
+            n = n * 16 + Double(digit)
+        }
+        return n
     }
 
     /// 0x-hex chain units (8 decimals) as TAC; nil for anything else.

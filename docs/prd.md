@@ -75595,4 +75595,18 @@ They drifted because each page drew its own body. Privacy Pools, Railgun and Azt
 
 **Not covered:** failed and going states (no hook reaches them on the demo) and Tacit's two sheets (no launch hook); the audit covers their code. Public Send keeps its own page; the deck's bodies are cut from its rules, not the other way round.
 
+## §1993 — Tacit's farms in Earn, and your farm positions in Holdings (amends §1986's places, §1982 item 5's "the DeFi pool in and out ... not looked at yet") (2026-11-26)
+
+**User, asked what more Tacit could do, "anything re earn is great too": "Farms in Earn".**
+
+1. **Tacit's farms are a place in Earn.** Under Aave, Olla and Tacit's TAC row, "Tacit farms" lists every pool Tacit pays TAC to (TAC/ETH, ETH/cUSD, ETH/BTC, SPX/TAC, SPX/ETH), highest rate first, each with its rate and "Tacit"; Withdraw lists only the ones you are in. Its one line says what the rows cannot: "On Ethereum, paid in TAC until <day>. You join on Tacit's site.", or "Rewards ended <day>." Shown while a Tacit account is connected, as §1986's row.
+2. **A rate is priced from Tacit's own pools, never a price from elsewhere** (`TacitFarms.rate`): the TAC a pool streams in a year (Tacit's farm program, `aprInputs`) over what its bonded shares are worth, the pool worth twice the side that is TAC, or cETH named in TAC by the TAC/cETH pool. Read keylessly, about 0.8 s and 7 calls (measured 2026-11-26: 833%, 430%, 416%, 202%, 146%, this round ending in 22 days). Kept between launches (`tacit.farms.v1`), read again when the account opens.
+3. **A farm row opens Tacit's farm page** (`https://tacit.finance/farm/`) in the app's own sheet. Entering a farm (add liquidity and bond, two proofs) and leaving it are not built here: Casberi reads, Tacit moves, until a bond is measured on a phone.
+4. **Your farm positions stand in Holdings › Private under Tacit**, one row a pool: its name, "Tacit farm · earned N" (TAC earned, unclaimed), and its worth at today's pool plus that TAC, which counts in Private (`TacitAccount.farmUSD`). Found with your key after the DeFi read (`farmed`, Tacit's own `farmPositions`), whose logs it reuses. A standalone farm (SPX's) keeps no shares on chain; Tacit's library finds its position from the transaction that bonded it, read only.
+5. **Pools are named as Tacit's page names them:** "TAC/ETH", never "TAC/cETH"; a pair wears its two marks, overlapping (`AssetMark.pairSides`), cETH as ETH's and cBTC as BTC's.
+
+**Not built:** Claim, joining and leaving a farm inside Casberi, the pools' swap fees in the rate.
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Earn's From list with the five farms, the farm page opening in the sheet, Holdings' TAC/ETH row at $159. **Not seen:** a real account's positions (no position exists to test with); `tacit-farms-selftest.sh` holds the rates on the measured figures.
+
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).

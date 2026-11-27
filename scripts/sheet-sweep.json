@@ -1766,6 +1766,12 @@
     "Screens/AccountsGuideTray.swift:passport"
    ],
    "why": "Human Passport's page from How your accounts work's Aztec plate (prd §1962): the same `AztecBrowserView` over `HumanPassport.site` that Screens/MoveAztecPrivate.swift:passport raises; it landed with §1962 without a sweep row, and whether the sweep's demo launch can reach the guide's door is not measured"
+  },
+  {
+   "covers": [
+    "Screens/MoveLend.swift:farmPage"
+   ],
+   "why": "NOT WALKED YET: Tacit's farm page (prd §1993), a remote site in Safari's own sheet, raised from a farm row in Earn's From list; opened by hand on the demo 2026-11-26, the journey to Earn's list is not written"
   }
  ]
 }

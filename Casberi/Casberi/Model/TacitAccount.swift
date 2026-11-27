@@ -92,6 +92,8 @@ final class TacitAccount {
         /// deposit address, and Receive says which one it shows (prd §1988).
         /// Nil on a reading kept before it was recorded.
         var receiveNetwork: String? = nil
+        /// Your farm positions (prd §1993); nil when they were not read.
+        var farmed: [TacitFarms.Position]? = nil
 
         /// Private TAC in both places; nil when neither was read.
         var privateTACAll: Double? {
@@ -135,7 +137,7 @@ final class TacitAccount {
         asOf: .now, publicTAC: 240, privateTAC: 310, accountTAC: 55, defiTAC: 0,
         chainAddress: "tc1" + String(repeating: "3f", count: 40) + "c91d",
         earnedTAC: 2.1, chainNotes: 12_135, earnedSince: Date.now.addingTimeInterval(-21 * 86_400),
-        receiveNetwork: "Ethereum")
+        receiveNetwork: "Ethereum", farmed: TacitFarms.demoPositions)
     static let demoPrice = 3_850.0
     static let demoTacPrice = 0.78
 
@@ -150,6 +152,26 @@ final class TacitAccount {
     private static let readingKey = "tacit.reading.v1"
     private static let priceKey = "tacit.ethPrice.v1"
     private static let tacPriceKey = "tacit.tacPrice.v1"
+    private static let farmsKey = "tacit.farms.v1"
+    private var liveFarms: TacitFarms.Reading?
+
+    /// Tacit's farms as last read (prd §1993): public facts, kept between
+    /// launches, read again each time the account opens.
+    var farms: TacitFarms.Reading? { DemoMode.isActive ? TacitFarms.demo : liveFarms }
+
+    /// Your farm positions in dollars: their shares at today's pool and the
+    /// TAC they earned, unclaimed; nil when none was read or TAC has no price.
+    var farmUSD: Double? {
+        guard let positions = reading?.farmed, !positions.isEmpty, let farms, let tacPrice else { return nil }
+        let tac = positions.reduce(0.0) { $0 + (TacitFarms.worthTAC($1, in: farms) ?? 0) + $1.pendingTAC }
+        return tac * tacPrice
+    }
+
+    /// One position in dollars, shares and earned TAC together.
+    func farmUSD(_ position: TacitFarms.Position) -> Double? {
+        guard let farms, let tacPrice, let worth = TacitFarms.worthTAC(position, in: farms) else { return nil }
+        return (worth + position.pendingTAC) * tacPrice
+    }
 
     /// Dollars per TAC, as DeFiLlama last priced the token; nil until it has.
     var tacPrice: Double? { DemoMode.isActive ? Self.demoTacPrice : liveTacPrice }
@@ -185,6 +207,10 @@ final class TacitAccount {
         if price > 0 { livePrice = price }
         let tac = UserDefaults.standard.double(forKey: Self.tacPriceKey)
         if tac > 0 { liveTacPrice = tac }
+        if let data = UserDefaults.standard.data(forKey: Self.farmsKey),
+           let kept = try? JSONDecoder().decode(TacitFarms.Reading.self, from: data) {
+            liveFarms = kept
+        }
     }
 
     var isOpen: Bool { phase == .open || phase == .reading }
@@ -222,8 +248,8 @@ final class TacitAccount {
     /// total counts: private ETH and private TAC. Public TAC is left out: it
     /// is in your co-signer's own wallet. nil when nothing held has a price.
     var privateUSD: Double? {
-        guard reading != nil, usd != nil || privateTacUSD != nil else { return nil }
-        return (usd ?? 0) + (privateTacUSD ?? 0)
+        guard reading != nil, usd != nil || privateTacUSD != nil || farmUSD != nil else { return nil }
+        return (usd ?? 0) + (privateTacUSD ?? 0) + (farmUSD ?? 0)
     }
 
     /// The account's private ETH in dollars at the last reading; nil with no
@@ -314,7 +340,8 @@ final class TacitAccount {
                               chainAddress: reading.chainAddress, chainShares: reading.chainShares,
                               chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, chainNotes: reading.chainNotes,
                               earnedSince: reading.earnedSince,
-                              receiveNetwork: paidAt.map { $0.network.name } ?? reading.receiveNetwork)
+                              receiveNetwork: paidAt.map { $0.network.name } ?? reading.receiveNetwork,
+                              farmed: reading.farmed)
             keep(reading)
             if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
             if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
@@ -331,13 +358,24 @@ final class TacitAccount {
                 group.addTask { @MainActor in
                     guard let defi = await TacitPocket.defi() else { return }
                     self.update(me) { $0.defiTAC = TacitEngineWire.tac(defi.worth).map { NSDecimalNumber(decimal: $0).doubleValue } }
+                    // Your farm positions after the DeFi read: the pool's
+                    // logs it read are kept, so this pass reads only the farm's.
+                    if let farmed = await TacitPocket.farmed() { self.update(me) { $0.farmed = farmed } }
                 }
+                group.addTask { @MainActor in await self.readFarms() }
             }
             livePhase = .open
         } catch {
             TacitEngine.shared.stop()
             livePhase = .failed(Self.words(error))
         }
+    }
+
+    /// Tacit's farms, read for anyone; kept as they answer (prd §1993).
+    func readFarms() async {
+        guard !DemoMode.isActive, let farms = await TacitPocket.farms() else { return }
+        liveFarms = farms
+        if let data = try? JSONEncoder().encode(farms) { DefaultsWrite.set(data, forKey: Self.farmsKey) }
     }
 
     /// Whether `key` is the key the open account was made from.

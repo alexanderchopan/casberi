@@ -222,6 +222,42 @@ const methods = {
   },
 
 
+  // Tacit's farms (prd §1993): each LP pool's TAC emission over a year, the
+  // shares staked in it, and the pool's own reserves, as Tacit's farm
+  // program reads them for anyone. No key: the account need not be open.
+  // Value units are 8 decimals, every asset the farms pair alike.
+  async farms() {
+    const t = now();
+    const ux = poolUx();
+    const a = await ux.farmProgram().aprInputs();
+    return {
+      active: !!a.epochActive, remaining: Number(a.remainingSeconds || 0),
+      pools: a.pools.filter((p) => p.amm).map((p) => ({
+        pair: String(p.pair || ''), lpAsset: String(p.lpAsset).toLowerCase(),
+        perYear: hex(p.tacPerYearUnits), staked: hex(p.stakedShares), shares: hex(p.amm.totalShares),
+        a: String(ux.tickerOf(p.amm.assetA) || ''), b: String(ux.tickerOf(p.amm.assetB) || ''),
+        reserveA: hex(p.amm.reserveA), reserveB: hex(p.amm.reserveB),
+      })),
+      ms: Math.round(now() - t),
+    };
+  },
+
+  // Your farm positions (prd §1993): the LP shares you have bonded into a
+  // farm and the TAC each has earned and not yet claimed, found with your
+  // key as Tacit's own Earn tab finds them. Read only: nothing is claimed.
+  async farmed() {
+    if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+    const t = now();
+    const key = Uint8Array.from(identity);
+    try {
+      const list = await poolUx().farmPositions({ walletPriv: key });
+      return {
+        positions: list.map((p) => ({ pair: String(p.pair || ''), lpAsset: String(p.lpAsset).toLowerCase(), shares: hex(p.shares), pending: hex(p.pendingUnits) })),
+        ms: Math.round(now() - t),
+      };
+    } finally { key.fill(0); }
+  },
+
   // What a deposit of `units` (TAC, 8 decimals) costs and lands as now.
   async shieldQuote({ rpcUrl, blocks, leader, units }) {
     const c = await chainClient({ rpcUrl, blocks, leader });
