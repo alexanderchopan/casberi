@@ -740,6 +740,7 @@ final class PrivateMove {
                         case .proving: self?.stage = .proving
                         case .sending: self?.stage = .sending
                         case .part(let k, let n): self?.part = (k, n)
+                        case .relayed(let tx): self?.stage = .done(tx)
                         }
                     }
                 })

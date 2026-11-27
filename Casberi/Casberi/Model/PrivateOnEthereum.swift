@@ -232,6 +232,8 @@ enum PrivateOnEthereum {
         case opening, preparing, proving, sending
         /// Max's send `k` of `n`, one note each.
         case part(Int, Int)
+        /// The relayer took it: its transaction.
+        case relayed(String)
     }
 
     private static func relayedSend(account: String, token: String, hex: String, to: String,
@@ -295,6 +297,9 @@ enum PrivateOnEthereum {
             }
             guard let relayed else { throw Failure.noPool }
             NSLog("privateEthereum| relayed | %@ | %@ | %@ to %@", balanceToBalance ? "balance to balance" : "paid out", relayed.tx, amount, YourAccount.short(to))
+            // Sent is said when the relayer took it (2026-11-27: the toast
+            // said "Sending" through the minute this read takes).
+            await step?(.relayed(relayed.tx))
             if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after, root: account, network: network) }
             return relayed.tx
         }
