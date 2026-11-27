@@ -37523,6 +37523,62 @@
         }
       }
     },
+    "0xBow's relayer refused it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El relayer de 0xBow lo rechazó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0xBowのリレイヤーが拒否しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0xBow 릴레이어가 거부했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0xBow 的中继拒绝了它"
+          }
+        }
+      }
+    },
+    "0xBow's relayer refused it: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El relayer de 0xBow lo rechazó: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0xBowのリレイヤーが拒否しました: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0xBow 릴레이어가 거부했습니다: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "0xBow 的中继拒绝了它：%@"
+          }
+        }
+      }
+    },
     "0xBow's relayer refused to quote" : {
       "localizations" : {
         "es" : {
