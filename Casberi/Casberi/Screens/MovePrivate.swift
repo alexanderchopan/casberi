@@ -505,7 +505,7 @@ struct MovePrivateSentence<Head: View>: View {
                                     // "0." and "0.000" drew "0" and the keys looked dead.
                                     : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil)
                                         : typing ? "\(MoveSentence.grouped(move.amount)) \(move.symbol)" : figure),
-                                note: typing ? nil : (depositNote ?? maxWhy),
+                                note: typing ? nil : ((move.symbol == "USDC" ? move.usdcShort : nil) ?? depositNote ?? maxWhy),
                                 accessory: flips ? AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { setDollars($0) }) : nil,
                                 fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { if !fixed { toggle(.amount) } })
         return out
@@ -621,22 +621,24 @@ struct MovePrivateSentence<Head: View>: View {
     /// The tokens the money holds, each once (prd §1979): a pick keeps the
     /// typed amount when it fits the new token, else its first step.
     @ViewBuilder private var tokenChoices: some View {
-        let symbols = move.options.map(\.symbol).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        // USDC under the pool's minimum is listed too, and picked says why
+        // (2026-11-27, user: "they should be able to pick the token from the
+        // list and then get an error").
+        let symbols = (move.options.map(\.symbol) + (move.usdcShort != nil ? ["USDC"] : []))
+            .reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
         // Move's one token list (prd §1910, `move-token-grid-audit.py`), as
         // every other place's tokens are drawn.
         MoveTokenGrid(places: [MoveTokenPlace(id: "private", choices: symbols.map { token in
             MoveTokenChoice(id: token, symbol: token, network: move.network.name, picked: token == move.symbol) {
                 withAnimation(DS.Motion.standard) {
                     if let first = move.options.first(where: { $0.symbol == token }) { move.pick(first.amount, of: token) }
+                    else { move.pick("", of: token) }
                     inDollars = false
                     open = nil
                 }
                 DSHaptic.selection()
             }
         })])
-        if let short = move.usdcShort {
-            usdcShortLine(short).padding(.top, DS.Space.s2)
-        }
     }
 
     /// The steps the money covers, three at most, then Max (prd §1979).
@@ -744,6 +746,7 @@ struct MovePrivateSentence<Head: View>: View {
     }
 
     private var amountLine: (words: String, ink: Color) {
+        if move.symbol == "USDC", let short = move.usdcShort { return (short, DS.attentionInk) }
         let typedFigure = inDollars ? "$\(dollars.isEmpty ? "0" : dollars)" : "\(move.amount.isEmpty ? "0" : move.amount) \(move.symbol)"
         let other: String? = {
             guard let price, move.symbol != "USDC", let units = Decimal(string: move.amount) else { return nil }

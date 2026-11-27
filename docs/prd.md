@@ -75624,3 +75624,14 @@ User, 2026-11-26: "when i press the tac token in my private tac balance in holdi
 **Seen** on an iPhone 17 Pro simulator over the demo: the TAC row's page and Send TAC landing on Tacit's Send with 25% · 50% · Max; every private Move opening (Privacy Pools in and send, Railgun in, back, send, swap and private, Aztec in and send, Earn in and out). The demo stops each at "Not in the demo", so no proof or send ran.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1995 — You pick the private place for ETH and USDC, and a token under a place's minimum is listed and says why (amends §1721's "routing is by token, and the person never picks", §1938's line under the tokens) (2026-11-27)
+
+User, 2026-11-27, testing on the phone: "when i try to put into railgun it only shows me tac", then "we should change the rule b/c now that we added privacy providers user should be able to have the choice"; "if a user doesn't have a minimum they should be told. like they should be able to pick the token from the list and then get an error", "we will need this to apply to privacy pools and aztec and railgun and tacit".
+
+1. **Railgun takes every Ethereum token, ETH and USDC included** (`RailgunRouting.goesToRailgun`). ETH goes in through Railgun's relay adapter, which wraps it to WETH: no approval, the transaction's value exactly the amount, the adapter the one the engine opened with, and gas for the shield kept back. Privacy Pools still takes ETH and USDC, so Send offers both places for them and you pick.
+2. **A token under a place's minimum is listed, last, and picked it says why, in amber, under Amount; it does not send.** Railgun: "Railgun takes $10 or more. Your DAI is $1.00." Privacy Pools: USDC under ppUSDC's minimum is a choice again, saying "Privacy Pools takes 10 USDC or more. You have …"; the line under the token grid is gone. Aztec and Tacit list everything held already (neither has a floor; Aztec's cap is Shield's).
+
+**Seen** on the user's iPhone (debug build): Railgun's in listed TAC only before. **Not seen:** ETH or USDC shielded into Railgun on mainnet, or a token under a floor picked.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
