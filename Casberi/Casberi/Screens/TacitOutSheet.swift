@@ -47,15 +47,13 @@ struct TacitOutSheet: View {
         }, content: {
             Group {
                 if open == .amount, !sending {
-                    VStack(spacing: MoveReceipt.gap) {
-                        Spacer(minLength: 0)
+                    MoveDeckKeys {
                         MoveQuickKeys(keys: [MoveQuickKeys.Key(id: "max", word: String(localized: "Max"),
                                                                on: amount == TacitShieldSheet.maxText(most)) {
                             amount = TacitShieldSheet.maxText(most)
                         }])
                         MoveKeypad(text: $amount, places: 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
                     }
-                    .transition(.opacity)
                 } else if open == .to, !sending {
                     deckList { toChoices }
                 } else {
@@ -129,10 +127,8 @@ struct TacitOutSheet: View {
     }
 
     private func deckList<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        ScrollView { content().padding(.vertical, DS.Space.s2) }
-            .scrollIndicators(.hidden)
-            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-            .transition(.opacity)
+        let body = content()
+        return MoveDeckScroll { body }
     }
 
     /// Where back to public lands: your Casberi account or your co-signer.

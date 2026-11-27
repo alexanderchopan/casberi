@@ -75578,3 +75578,21 @@ The four private sends finished four ways: Privacy Pools on "View on Etherscan" 
 **Seen** on an iPhone 17 Pro simulator over the demo: Blue Bottle's sheet at "−$6.50". **Not seen:** a deposit's sheet and Home's private receive row, which the demo does not carry; `wallet-row-words-selftest.sh` holds the row's words.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1992 — Every Move page is one deck, its bodies the template's (2026-11-26)
+
+**User, of a failed Privacy Pools send: "is that send sentence the same style our other sends are? i don't want them handrolled … its too close to the selection rows"; then: "how do we make sure ALL of our move confirmations, receipts, etc follow same template. it seems like they drift"; then: "please do step 1 and 2 and 3".**
+
+They drifted because each page drew its own body. Privacy Pools, Railgun and Aztec each drew their own scroll, their own sentence under the lines and their own fact rows, so one fix (the facts at the page's edge, the gap under the lines, no sentence under a failure) was made three times, and Earn had copied the whole deck by hand for its Deposit · Withdraw title.
+
+1. **The bodies are the template's** (`Screens/MoveDeck.swift`): `MoveDeckKeys` (the quick row and keypad at the foot), `MoveDeckScroll` (a list or the receipt: one scroll, the same gap from the lines, the same fade over the foot), `MoveDeckStatus` (where the move stands) and `MoveDeckFacts` (the receipt's facts at the page's edge).
+2. **The sentence is never drawn under the lines.** `MoveDeckStatus` alone decides: with the lines standing (going, or failed), the lines say it and a failure is one amber line under them, as public Send's. Aztec now keeps its lines, still, on a failure, as the others do.
+3. **Earn is a `MoveReceiptDeck`.** The deck takes a `header` in its title's place, Earn's Deposit · Withdraw.
+4. **`move-deck-audit.py`** (in `verify.sh`): a file with Move's keypad must compose `MoveReceiptDeck`; a deck page may draw no `ScrollView`, `MoveFlow {`, `MoveFactRow(` or hand fade; `MoveDeckFoot(` stands only in the template. Public Send (`MoveSentence.swift`), the deck's origin, is allowed by name.
+5. **`move-deck-sweep.sh`**: every deck opened over the demo by its launch hook, shot at its first screen, and laid on one sheet (`sheet.png`), report-only in the nightly. `-openMove YES -moveSendDraft …` now opens public Send past the menu, so Send stands on the sheet beside the private decks.
+
+**What the first sheet showed, not yet fixed:** a line's note is drawn three ways (Aztec's amber note and Earn's "You have…" indented in the answers' column, Privacy Pools' and Railgun's at the page's edge), and Earn's amount is a field where the others are a chip.
+
+**Not covered:** failed and going states (no hook reaches them on the demo) and Tacit's two sheets (no launch hook); the audit covers their code. Public Send keeps its own page; the deck's bodies are cut from its rules, not the other way round.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

@@ -103,6 +103,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Card-spend audit (scripts/card-spend-audit.py) — the three onchain-card seats, and four failures that compile and look right** → docs/verify.md · prd §857
 - **The demo's mark: on the phone "Exit demo" ends the title row (`demoTagOnTitle()`), none on a pushed page; iPad/Mac keep the top pill** → prd §919 · §1389
 - **The demo is one person's life (prd §1026): a topic (`ocrTopics`) in at most two rooms, no room leading three topic rows with one word, and the person's app is Quillmark, never Casberi (`CasberiTests/DemoSpreadTests`); pictures are drawn by `scripts/demo-art/render.py`, one generator per imageset** → prd §1026 · §890
+- **Move-deck audit (scripts/move-deck-audit.py) — every Move page is a `MoveReceiptDeck`, its keys, scroll, status and facts `MoveDeck.swift`'s; the sentence never under the lines; `move-deck-sweep.sh` lays every deck on one sheet nightly** → prd §1992
 - **Dead-closure audit (scripts/dead-closure-audit.py) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
 - **Way-back audit (scripts/way-back-audit.py) — every screen has a way back: a full-screen cover shows a close control on every branch, no sheet switches its swipe off unlisted, a hidden back button keeps `DSSwipeBack()`** → docs/verify.md
 - **Defaults-lock audit (scripts/defaults-lock-audit.py) — a lock held across a `UserDefaults` write deadlocks with every view body (build 570)** → docs/verify.md · prd §721

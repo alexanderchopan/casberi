@@ -312,6 +312,16 @@ else
   print -r -- "app pages: no report — read /tmp/nightly-app-pages.log"
 fi
 
+# THE MOVE-DECK SWEEP (prd §1992): every Move deck shot over the demo and laid
+# on one sheet, for the eye. Report-only: nothing files from it.
+"$ROOT/scripts/move-deck-sweep.sh" > /tmp/nightly-move-decks.log 2>&1
+MOVE_DECKS_DIR=$(print -l -- "$ROOT"/scripts/output/move-decks-*(/om[1]N) 2>/dev/null)
+if [[ -n "$MOVE_DECKS_DIR" && -f "$MOVE_DECKS_DIR/report.txt" ]]; then
+  print -r -- "move decks:" && sed 's/^/  /' "$MOVE_DECKS_DIR/report.txt"
+else
+  print -r -- "move decks: no report — read /tmp/nightly-move-decks.log"
+fi
+
 # Prune: keep the most recent $KEEP mac-* dirs, drop the rest. Journeys keep
 # as many nights: each holds a screenshot per step.
 print -l -- "$ROOT"/scripts/output/mac-*(/om) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do

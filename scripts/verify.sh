@@ -882,6 +882,15 @@ step "Address-tail audit"
 "$ROOT/scripts/address-tail-audit.py" || fail "an address is shortened somewhere other than AddressTail, or at both ends — see the output above"
 print -P "%F{green}✓ address-tail audit%f"
 
+# Every Move page is one deck, its bodies the template's (prd §1992): a
+# scroll, a sentence or a fact row drawn by hand on one page drifts from the
+# rest, and a fix made to one never reaches the others.
+step "Move-deck audit"
+"$ROOT/scripts/move-deck-audit.py" --self-test >/dev/null \
+  || fail "the move-deck audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/move-deck-audit.py" || fail "a Move page draws its own body or foot instead of MoveDeck.swift's — see the output above"
+print -P "%F{green}✓ move-deck audit%f"
+
 # Every token list in Move is `MoveTokenGrid` (prd §1910): a token and its
 # network are one pick, drawn one way. A token tile or row drawn by hand on
 # one verb renders fine and looks different from every other, so only a

@@ -279,7 +279,7 @@ struct MovePrivateSentence<Head: View>: View {
                 // " · " parts at the page's edge was the one block on Move
                 // that read as a sentence of small print.
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value, indented: false) }
+                    MoveDeckFacts(facts: sendFacts.map { .init(name: $0.name, value: $0.value) })
                 }
             } else if let held = move.held {
                 if move.onEthereum {
@@ -508,7 +508,7 @@ struct MovePrivateSentence<Head: View>: View {
             // **NOTHING THE SENTENCE SAYS (prd §1929):** from, to and the
             // network are its words; the receipt holds the rest.
             if move.mode == .send {
-                ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value, indented: false) }
+                MoveDeckFacts(facts: sendFacts.map { .init(name: $0.name, value: $0.value) })
                 if let hidden { hiddenLine(hidden) }
             } else {
                 line
@@ -837,53 +837,31 @@ struct MovePrivateSentence<Head: View>: View {
             // From · Token · Amount on screen, untouchable; no sentence.
             if !isDone, move.stage == .ready || failed || move.acting { MoveReceiptSteps(steps: steps, disabled: !live) }
         }, content: {
+                // The deck's bodies (prd §1992): keys, a list, the receipt or
+                // where it stands, each the template's.
                 Group {
-                    if let open, live {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 0) {
-                                switch open {
-                                case .amount: amountKeys
-                                case .recipient: recipients
-                                case .network: networks
-                                case .token: tokenChoices
-                                }
+                    if open == .amount, live {
+                        MoveDeckKeys { amountKeys }
+                    } else if let open, live {
+                        MoveDeckScroll {
+                            switch open {
+                            case .amount: EmptyView()
+                            case .recipient: recipients
+                            case .network: networks
+                            case .token: tokenChoices
                             }
-                            .padding(.vertical, DS.Space.s2)
                         }
-                        .scrollIndicators(.hidden)
-                        .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                        .transition(.opacity)
                     } else if move.stage == .ready {
-                        ScrollView { receipt.padding(.vertical, DS.Space.s2) }
-                            .scrollIndicators(.hidden)
-                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                            .transition(.opacity)
+                        MoveDeckScroll { receipt }
                     } else {
-                        // Reading, funding, working, done: the sentence says
-                        // where it stands, and the line under it the rest.
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                // **NO SENTENCE UNDER THE LINES (2026-11-26,
-                                // user: "is that send sentence the same style
-                                // our other sends are? … too close to the
-                                // selection rows"):** while the lines stand, a
-                                // failure is public Send's one amber line.
-                                if !move.acting, !failed {
-                                    MoveFlow { sentence }
-                                        .moveHoldFill()
-                                        .allowsHitTesting(false)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                #if DEBUG
-                                if hiddenPreview, let hidden { hiddenLine(hidden) }
-                                #endif
-                                line
-                            }
-                            .padding(.vertical, DS.Space.s2)
+                        // Reading, funding, working, done: with no lines over
+                        // it, the sentence says where it stands.
+                        MoveDeckStatus(linesStand: move.acting || failed, sentence: { sentence }) {
+                            #if DEBUG
+                            if hiddenPreview, let hidden { hiddenLine(hidden) }
+                            #endif
+                            line
                         }
-                        .scrollIndicators(.hidden)
-                        .transition(.opacity)
                     }
                 }
         }, word: { footWord })

@@ -237,84 +237,53 @@ struct MoveLendSentence<Head: View>: View {
     /// **EARN'S DECK (prd §1901 items 1–3, §1911):** Earn · Take back as
     /// chips over From · Amount on Home's panel, the foot's word held to act.
     private var deck: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if kindsShown, doneHash == nil {
-                // The title is the Type (prd §1934): Deposit · Withdraw.
-                MoveKindTitle(kinds: [
-                    MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: move.mode == .lend) { flip(.lend) },
-                    MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: move.mode == .takeBack) { flip(.takeBack) },
-                ], disabled: move.acting)
-            } else {
-                Text(verbatim: title)
-                    .dsText(.heading34)
-                    .foregroundStyle(DS.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        // **THE RECEIPT'S PAGE, EVERY VERB'S (prd §1992):** Earn drew its own
+        // copy of `MoveReceiptDeck` for its title; the title is now the
+        // deck's `header`.
+        MoveReceiptDeck(title: title, inTray: inTray, backDisabled: move.acting, back: {
+            withAnimation(DS.Motion.standard) {
+                // Back is the menu, never the step before (prd §1911).
+                open = nil; back?()
             }
+        }, header: kindsShown && doneHash == nil ? AnyView(
+            // The title is the Type (prd §1934): Deposit · Withdraw.
+            MoveKindTitle(kinds: [
+                MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: move.mode == .lend) { flip(.lend) },
+                MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: move.mode == .takeBack) { flip(.takeBack) },
+            ], disabled: move.acting)
+        ) : nil, lines: {
             if move.stage == .reading {
                 MoveReceiptLine(label: "") {
                     Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                .padding(.top, MoveReceipt.gap)
             } else {
                 receiptLines
-                    .padding(.top, MoveReceipt.gap)
             }
-            // The body runs under the foot and fades there (prd §1904 item 9).
-            ZStack(alignment: .bottom) {
-                Group {
-                    if open == .amount {
-                        // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931).**
-                        VStack(spacing: MoveReceipt.gap) {
-                            Spacer(minLength: 0)
-                            // The quick shares are the keys' top row (prd §1932).
-                            if canUseAll {
-                                MoveQuickKeys(keys: [25, 50, 100].map { p in
-                                    MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%",
-                                                      on: p == 100 && move.all) { pickShare(p) }
-                                }, disabled: !live)
-                            }
-                            MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live,
-                                       keyHeight: MoveSentence.bigKeyHeight, big: true)
+        }, content: {
+            Group {
+                if open == .amount {
+                    // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931).**
+                    MoveDeckKeys {
+                        // The quick shares are the keys' top row (prd §1932).
+                        if canUseAll {
+                            MoveQuickKeys(keys: [25, 50, 100].map { p in
+                                MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%",
+                                                  on: p == 100 && move.all) { pickShare(p) }
+                            }, disabled: !live)
                         }
-                        .transition(.opacity)
-                    } else if open == .network {
-                        ScrollView { fromRows.padding(.vertical, DS.Space.s2) }
-                            .scrollIndicators(.hidden)
-                            // The last row clears the foot and its fade.
-                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                            .transition(.opacity)
-                    } else {
-                        // **THE RECEIPT IS THE DECK'S (prd §1927, §1929):** the
-                        // facts under the steps, never between the sentence
-                        // and the plate.
-                        ScrollView { receipt.padding(.vertical, DS.Space.s2) }
-                            .scrollIndicators(.hidden)
-                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                            .transition(.opacity)
+                        MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live,
+                                   keyHeight: MoveSentence.bigKeyHeight, big: true)
                     }
+                } else if open == .network {
+                    MoveDeckScroll { fromRows }
+                } else {
+                    // **THE RECEIPT IS THE DECK'S (prd §1927, §1929):** the
+                    // facts under the steps, never between the sentence
+                    // and the plate.
+                    MoveDeckScroll { receipt }
                 }
-                .safeAreaPadding(.bottom, MoveDeck.footHeight)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(.top, MoveReceipt.gap)
-                .deckUnderFoot()
-                MoveDeckFoot(backDisabled: move.acting, back: {
-                    withAnimation(DS.Motion.standard) {
-                        // Back is the menu, never the step before (prd §1911).
-                        open = nil; back?()
-                    }
-                }) { footWord }
             }
-            .frame(maxHeight: .infinity)
-        }
-        .padding(.horizontal, MoveSentence.sideInset(inTray))
-        .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
-        .modifier(MoveFootClearance(inTray: inTray, intoBody: true))
-        .background(alignment: .top) {
-            Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
-                .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
-                .ignoresSafeArea(edges: .bottom)
-        }
+        }, word: { footWord })
         .animation(DS.Motion.standard, value: open)
     }
 

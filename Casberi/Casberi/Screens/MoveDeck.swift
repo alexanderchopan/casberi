@@ -149,19 +149,26 @@ struct MoveReceiptDeck<Lines: View, Content: View, Word: View>: View {
     let back: () -> Void
     /// A second word beside back: Add another (prd §1952, as Send's §1931).
     var lead: AnyView? = nil
+    /// A title that is a choice, Earn's Deposit · Withdraw (prd §1934), in
+    /// the title's place; Earn drew the whole deck by hand for it (§1992).
+    var header: AnyView? = nil
     @ViewBuilder let lines: () -> Lines
     @ViewBuilder let content: () -> Content
     @ViewBuilder let word: () -> Word
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: title)
-                .dsText(.heading34)
-                .foregroundStyle(titleInk)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .accessibilityAddTraits(.isHeader)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let header {
+                header
+            } else {
+                Text(verbatim: title)
+                    .dsText(.heading34)
+                    .foregroundStyle(titleInk)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityAddTraits(.isHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             lines()
                 .padding(.top, MoveReceipt.gap)
             ZStack(alignment: .bottom) {
@@ -182,6 +189,86 @@ struct MoveReceiptDeck<Lines: View, Content: View, Word: View>: View {
             Group { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
                 .padding(.horizontal, inTray ? -DS.Space.s4 : 0)
                 .ignoresSafeArea(edges: .bottom)
+        }
+    }
+}
+
+// MARK: - The deck's bodies, one set for every move (prd §1992)
+
+/// **ONE BODY PER KIND, NEVER DRAWN BY HAND (prd §1992, user, 2026-11-26:
+/// "how do we make sure ALL of our move confirmations, receipts, etc follow
+/// same template. it seems like they drift").** What stands under a deck's
+/// lines is keys, a scroll (a list or the receipt) or where the move stands,
+/// each drawn here; `move-deck-audit.py` fails a deck page that draws its
+/// own scroll, sentence or fact row.
+struct MoveDeckKeys<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(spacing: MoveReceipt.gap) {
+            Spacer(minLength: 0)
+            content()
+        }
+        .transition(.opacity)
+    }
+}
+
+/// A list or the receipt: one scroll, the same gap from the lines and the
+/// same fade over the foot on every page.
+struct MoveDeckScroll<Content: View>: View {
+    var spacing: CGFloat = 0
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: spacing) { content() }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, DS.Space.s2)
+        }
+        .scrollIndicators(.hidden)
+        .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
+        .transition(.opacity)
+    }
+}
+
+/// **WHERE THE MOVE STANDS.** The sentence is drawn only when no lines
+/// stand over it: with them, the lines say it, and a failure is one amber
+/// line under them, as public Send's (2026-11-26, user: "is that send
+/// sentence the same style our other sends are? … too close to the
+/// selection rows").
+struct MoveDeckStatus<Sentence: View, Content: View>: View {
+    let linesStand: Bool
+    @ViewBuilder let sentence: () -> Sentence
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        MoveDeckScroll(spacing: DS.Space.s3) {
+            if !linesStand {
+                MoveFlow { sentence() }
+                    .moveHoldFill()
+                    .allowsHitTesting(false)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            content()
+        }
+    }
+}
+
+/// The receipt's facts, at the page's edge (prd §1897 item 1).
+struct MoveDeckFacts: View {
+    struct Fact {
+        let name: String
+        var value: String?
+        var ink: Color = DS.textPrimary
+    }
+    let facts: [Fact]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(facts.indices, id: \.self) { i in
+                MoveFactRow(name: facts[i].name, value: facts[i].value, valueInk: facts[i].ink, indented: false)
+            }
         }
     }
 }

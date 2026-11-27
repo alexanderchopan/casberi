@@ -78,6 +78,8 @@ struct MoveTrayPresenter: ViewModifier {
             if let reel = UserDefaults.standard.string(forKey: "tacitReelSample"), !reel.isEmpty {
                 chrome.moveAsk = reel == "receive" ? "receive" : reel == "earn" ? "earn" : "send"
             }
+            // A drafted send opens on Send too (`move-deck-sweep.sh`, prd §1992).
+            if UserDefaults.standard.string(forKey: "moveSendDraft")?.isEmpty == false { chrome.moveAsk = "send" }
             chrome.moveTray = true
         }
         // `-ollaOpen lend|back` raises Earn on Olla's AZTEC, Deposit or

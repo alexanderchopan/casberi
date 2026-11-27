@@ -1336,7 +1336,7 @@ struct MoveRailgunSentence<Head: View>: View {
             // The token and its amount are the receipt's lines (prd §1931).
             if lineInDeck { line }
             MoveCostRows(cost: costRow, open: $costOpen, indented: false) {
-                ForEach(facts, id: \.name) { f in MoveFactRow(name: f.name, value: f.value, indented: false) }
+                MoveDeckFacts(facts: facts.map { .init(name: $0.name, value: $0.value) })
             }
             if !costOpen, costRow == nil, move.stage == .ready, move.amountOK {
                 Text(verbatim: readyLine).dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1431,8 +1431,7 @@ struct MoveRailgunSentence<Head: View>: View {
         }, content: {
                 Group {
                     if open == .amount, picking {
-                        VStack(spacing: MoveReceipt.gap) {
-                            Spacer(minLength: 0)
+                        MoveDeckKeys {
                             // The quick amounts are the keys' top row (prd §1932).
                             let quick = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
@@ -1443,7 +1442,6 @@ struct MoveRailgunSentence<Head: View>: View {
                             MoveKeypad(text: $move.amount, places: min(move.holding?.decimals ?? 6, 6),
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
-                        .transition(.opacity)
                     } else if open == .token, picking {
                         listBody { tokens }
                     } else if open == .buy, picking {
@@ -1459,25 +1457,14 @@ struct MoveRailgunSentence<Head: View>: View {
                             }
                         }
                     } else {
-                        // Reading, working, done: the sentence says where it
-                        // stands, the steps and the line the rest.
-                        listBody {
-                            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                // While it goes the lines say it, as public Send's (prd §1980);
-                                // a failure under them is one amber line, no sentence.
-                                if !move.acting, !picking {
-                                    MoveFlow { sentence }
-                                        .moveHoldFill()
-                                        .allowsHitTesting(false)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                if let run = stepsRun {
-                                    PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
-                                        .transition(.opacity)
-                                }
-                                if !lineInDeck { line }
+                        // Reading, working, done: with no lines over it,
+                        // the sentence says where it stands (prd §1992).
+                        MoveDeckStatus(linesStand: move.acting, sentence: { sentence }) {
+                            if let run = stepsRun {
+                                PrivateStepRows(run: run, confirmed: move.unlockedFirst ? String(localized: "Confirmed with Face ID") : nil)
+                                    .transition(.opacity)
                             }
+                            if !lineInDeck { line }
                         }
                     }
                 }
@@ -1486,10 +1473,8 @@ struct MoveRailgunSentence<Head: View>: View {
     }
 
     private func listBody<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        ScrollView { content().padding(.vertical, DS.Space.s2) }
-            .scrollIndicators(.hidden)
-            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-            .transition(.opacity)
+        let body = content()
+        return MoveDeckScroll { body }
     }
 
     /// Where it goes (back to Send's recipients), the token, what a swap

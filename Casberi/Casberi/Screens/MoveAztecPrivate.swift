@@ -908,6 +908,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
     }
 
     private var live: Bool { move.stage == .ready }
+    private var failed: Bool { if case .failed = move.stage { true } else { false } }
 
     /// The Aztec accounts this send paid that the book has no name for (prd §1964).
     private var unsavedAztec: [String] {
@@ -923,9 +924,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // The token and its amount are the receipt's lines (prd §1931).
             MoveCostRows(cost: live && move.amountOK ? move.cost : nil, open: $costOpen, ink: DS.aztecInk, indented: false) {
-                ForEach(facts, id: \.name) { f in
-                    MoveFactRow(name: f.name, value: f.value.isEmpty ? nil : f.value, valueInk: f.ink, indented: false)
-                }
+                MoveDeckFacts(facts: facts.map { .init(name: $0.name, value: $0.value.isEmpty ? nil : $0.value, ink: $0.ink) })
             }
         }
     }
@@ -1383,16 +1382,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
         }, lead: move.canAddAnother ? AnyView(addAnotherWord) : nil, lines: {
             // **THE LINES STAND WHILE IT GOES, AS PUBLIC SEND'S (prd §1980).**
-            if live || move.acting {
-                MoveReceiptSteps(steps: steps, disabled: move.acting)
+            // A failure keeps them, still, as every deck's (prd §1992).
+            if live || move.acting || failed {
+                MoveReceiptSteps(steps: steps, disabled: move.acting || failed)
             }
         }, content: {
                 Group {
                     if open == .amount, live {
                         // **BIG KEYS, AT THE SAME HEIGHT AS SEND'S (prd §1931)**,
                         // Half and All their top row (prd §1932).
-                        VStack(spacing: MoveReceipt.gap) {
-                            Spacer(minLength: 0)
+                        MoveDeckKeys {
                             let quick = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
@@ -1404,50 +1403,28 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                                        places: min(move.decimals, 6),
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
-                        .transition(.opacity)
                     } else if open == .token, live {
-                        ScrollView { tokens.padding(.vertical, DS.Space.s2) }
-                            .scrollIndicators(.hidden)
-                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                            .transition(.opacity)
+                        MoveDeckScroll { tokens }
                     } else if open == .recipient, live {
-                        ScrollView { VStack(alignment: .leading, spacing: 0) { recipients }.padding(.vertical, DS.Space.s2) }
-                            .scrollIndicators(.hidden)
-                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                            .transition(.opacity)
+                        MoveDeckScroll { recipients }
                     } else if live {
                         // **THE RECEIPT IS THE DECK'S (prd §1927):** nothing
                         // open, what it is and costs, as Send's Ready.
-                        ScrollView { receipt.padding(.vertical, DS.Space.s2) }
-                            .scrollIndicators(.hidden)
-                            .contentMargins(.bottom, MoveDeck.fade, for: .scrollContent)
-                            .transition(.opacity)
+                        MoveDeckScroll { receipt }
                     } else {
-                        // Reading, blocked, working, done: the sentence says
-                        // where it stands; the steps and the facts the rest.
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                // While it goes the lines say it, as public Send's (prd §1980).
-                                if !move.acting {
-                                    MoveFlow { sentence }
-                                        .moveHoldFill()
-                                        .allowsHitTesting(false)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                if let run = stepsRun {
-                                    // Face ID came before a send's clock; a move-in signs inside it.
-                                    PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
-                                        .transition(.opacity)
-                                } else if move.stage == .reading, move.mode == .send, let since = move.readingSince {
-                                    PrivateWarmingRow(since: since).transition(.opacity)
-                                }
-                                if stepsRun == nil, !facts.isEmpty { receipt }
-                                line
+                        // Reading, blocked, working, done: with no lines
+                        // over it, the sentence says where it stands (prd §1992).
+                        MoveDeckStatus(linesStand: move.acting || failed, sentence: { sentence }) {
+                            if let run = stepsRun {
+                                // Face ID came before a send's clock; a move-in signs inside it.
+                                PrivateStepRows(run: run, confirmed: move.mode == .send ? String(localized: "Confirmed with Face ID") : nil)
+                                    .transition(.opacity)
+                            } else if move.stage == .reading, move.mode == .send, let since = move.readingSince {
+                                PrivateWarmingRow(since: since).transition(.opacity)
                             }
+                            if stepsRun == nil, !facts.isEmpty { receipt }
+                            line
                         }
-                        .scrollIndicators(.hidden)
-                        .transition(.opacity)
                     }
                 }
         }, word: { footWord })
