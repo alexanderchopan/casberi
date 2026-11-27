@@ -736,7 +736,12 @@ final class RailgunMove {
     /// Ethereum. Taking back is proved, then signed by your account. The
     /// engine says when a proof starts and a send leaves (`step` lines);
     /// your account's stages say the signing.
-    static let takeBackPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, .signing, .sent(.ethereum)])
+    static let takeBackPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, signingAway, .sent(.ethereum)])
+    /// Its signing, said as what you do: behind the sheet, the capsule asks
+    /// for Face ID in these words (2026-11-27, user: "the toast could say
+    /// opening faceid or whatever").
+    static let signingAway = PrivateSendSteps.Step(key: .signing, running: String(localized: "Confirm with Face ID"),
+                                                   done: String(localized: "Signed"))
     /// A swap's (prd §1875): said as swapped, never as sent.
     static let swapStepsPlan = PrivateSendSteps.Plan(steps: [.checking, .proving, swapped])
     static let swapped = PrivateSendSteps.Step(key: .sent, running: String(localized: "Swapping on Ethereum"),
@@ -819,10 +824,14 @@ final class RailgunMove {
                 guard let account = YourAccountKey.address else { stage = .failed(String(localized: "No account on this iPhone")); return }
                 stage = .working(String(localized: "Confirm with Face ID"))
                 _ = try await RailgunPocket.send(token: picked.contract, amount: picked.units, to: account,
-                                                 unlocked: { [weak self] in self?.started(Self.takeBackPlan) }) { [weak self] s in
+                                                 // **BEHIND THE SHEET TOO (2026-11-27, user: "can't we
+                                                 // still fix it so the sheet doesn't have to be open?",
+                                                 // amends §1806 item 3):** your account signs with
+                                                 // Face ID, which iOS draws over anything; no co-signer.
+                                                 unlocked: { [weak self] in self?.started(Self.takeBackPlan, away: true) }) { [weak self] s in
                     await self?.say(s)
                 }
-                steps.finish()
+                if Self.kept === self, steps.away != nil { steps.finishAway() } else { steps.finish() }
                 stage = .done(String(localized: "Back in your account."))
             }
             if Self.kept === self { Self.kept = nil }
@@ -937,16 +946,18 @@ final class RailgunMove {
     /// step, its sending the Sent one.
     private func say(_ s: YourAccountChain.Stage) {
         let steps = PrivateSendSteps.shared
+        // Behind its sheet, the marks go to the capsule's run.
+        let away: PrivateSendSteps.Source? = Self.kept === self ? .railgun : nil
         switch s {
         case .preparing: break
         case .signing:
-            steps.mark(.signing)
+            steps.mark(.signing, from: away)
             stage = .working(String(localized: "Confirm with Face ID"))
         case .cosigning:
-            steps.mark(.signing)
+            steps.mark(.signing, from: away)
             stage = .working(String(localized: "Waiting for your co-signer"))
         case .sending, .landing:
-            steps.mark(.sent)
+            steps.mark(.sent, from: away)
             stage = .working(String(localized: "Sending…"))
             // **MOVING IN GOES BEHIND ITS SHEET TOO (2026-11-27, user: "we
             // want the toast banners here too", amends §1806 item 3):** Face

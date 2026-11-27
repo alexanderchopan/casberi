@@ -243,6 +243,9 @@ extension FeedScreen {
     /// newest thing, on one line; the name stood over it and repeated down
     /// any list of one app's things. A thing with no words keeps the name,
     /// and VoiceOver still says it.
+    /// The sources whose rows are your own money moving (prd §1987).
+    static let actsInRoom: Set<String> = ["Wallet", RailgunBridge.sourceName, PrivacyPoolsBridge.sourceName]
+
     func activityAppRow(_ thing: Thing, from section: String, fades: Bool = true,
                         opens: (() -> Void)? = nil) -> some View {
         let seen = fades && ActivitySeen.shared.has(thing.id)
@@ -252,7 +255,10 @@ extension FeedScreen {
         // "Received 5.214713 USDC privately o…" under the old wallet mark:
         // "it should have new glyph and no verb right?"):** the act's glyph
         // leads, where or who is the name, the amount stands on the right.
-        let acted = thing.source == "Wallet" ? WalletRowWords.read(words).flatMap { $0.act == nil ? nil : $0 } : nil
+        // Railgun's and Privacy Pools' own rows too (2026-11-27, user: "for
+        // receive usdc from railgun it shows me the railgun icon ... it also
+        // has a verb which we got rid of"): the glyph, the place, the amount.
+        let acted = Self.actsInRoom.contains(thing.source) ? WalletRowWords.read(words).flatMap { $0.act == nil ? nil : $0 } : nil
         return DSPushRow(title: Text(verbatim: acted?.name ?? (words.isEmpty ? app : words)),
                          fact: acted?.figure.map { Text(verbatim: $0) },
                          factTone: seen ? DS.textSecondary : DS.textPrimary,

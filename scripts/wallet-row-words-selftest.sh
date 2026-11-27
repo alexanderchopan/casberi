@@ -73,6 +73,17 @@ check(WalletRowWords.read("Received 5.214713 USDC privately on Aztec")
       == W(name: "Aztec", figure: "+5.214713 USDC", clause: "Privately",
            spoken: "Received 5.214713 USDC privately on Aztec", act: .received, received: true),
       "a private receive names where it landed, privately on the line, the amount in")
+// Railgun's and Privacy Pools' own rows (2026-11-27): the place is the name.
+check(WalletRowWords.read("Received 8 USDC from Railgun")?.name == "Railgun"
+      && WalletRowWords.read("Received 8 USDC from Railgun")?.act == .received,
+      "Railgun's unshield row: the received glyph, Railgun, the amount")
+check(WalletRowWords.read("Shielded 10 USDC into Railgun")?.act == .deposited
+      && WalletRowWords.read("Shielded 10 USDC into Railgun")?.name == "Railgun",
+      "Railgun's shield row: the deposit glyph, Railgun")
+check(WalletRowWords.read("Put 0.01 ETH into Privacy Pools")?.name == "Privacy Pools",
+      "Privacy Pools' deposit row names the pool")
+check(WalletRowWords.read("Reclaimed 0.01 ETH from Privacy Pools")?.act == .withdrew,
+      "Privacy Pools' reclaim row: the withdraw glyph")
 check(WalletRowWords.read("Received 0.4 ETH from vitalik.eth")
       == W(name: "vitalik.eth", figure: "+0.4 ETH", spoken: "Received 0.4 ETH from vitalik.eth",
            act: .received, received: true),
