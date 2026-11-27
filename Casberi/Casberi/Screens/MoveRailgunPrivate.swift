@@ -529,9 +529,9 @@ final class RailgunMove {
     }
 
     /// A token amount in base units, written whole and exact ("7.525").
-    static func plain(_ units: Decimal, decimals: Int) -> String {
+    static func plain(_ units: Decimal, decimals: Int, places: Int? = nil) -> String {
         var whole = units / pow(10, decimals), cut = Decimal()
-        NSDecimalRound(&cut, &whole, decimals, .down)
+        NSDecimalRound(&cut, &whole, places ?? decimals, .down)
         return NSDecimalNumber(decimal: cut).stringValue
     }
 
@@ -563,7 +563,7 @@ final class RailgunMove {
 
     /// The amounts a chip types: $10 worth (moving in only, where the token
     /// has a price), half, all. Exact, in the token's own places.
-    enum Pick: CaseIterable { case floor, half, all }
+    enum Pick: CaseIterable { case floor, quarter, half, all }
 
     func amount(for pick: Pick) -> String? {
         guard let h = holding, let held = Decimal(string: h.units), held > 0 else { return nil }
@@ -575,6 +575,11 @@ final class RailgunMove {
             NSDecimalRound(&up, &tokens, min(h.decimals, 6), .up)
             guard up * pow(10, h.decimals) <= held else { return nil }
             return NSDecimalNumber(decimal: up).stringValue
+        case .quarter:
+            var part = held / 4, down = Decimal()
+            NSDecimalRound(&down, &part, 0, .down)
+            guard down > 0 else { return nil }
+            return Self.plain(down, decimals: h.decimals, places: min(h.decimals, 6))
         case .half:
             var half = held / 2, down = Decimal()
             NSDecimalRound(&down, &half, 0, .down)
@@ -582,9 +587,11 @@ final class RailgunMove {
             // Half under the floor is no choice moving in (§83).
             if mode == .deposit, !RailgunRouting.meetsFloor(units: NSDecimalNumber(decimal: down).stringValue,
                                                             decimals: h.decimals, price: h.price, floorUSD: Self.floorUSD) { return nil }
-            return Self.plain(down, decimals: h.decimals)
+            return Self.plain(down, decimals: h.decimals, places: min(h.decimals, 6))
         case .all:
-            return Self.plain(held, decimals: h.decimals)
+            // At the keys' places, rounded down: a Max the keypad cannot
+            // hold read as more than you have (the review of 2026-11-27).
+            return Self.plain(held, decimals: h.decimals, places: min(h.decimals, 6))
         }
     }
 
@@ -1425,6 +1432,7 @@ struct MoveRailgunSentence<Head: View>: View {
     private func chipWord(_ pick: RailgunMove.Pick) -> String {
         switch pick {
         case .floor: RailgunMove.floorText
+        case .quarter: "25%"
         case .half: "50%"
         case .all: String(localized: "Max")
         }
@@ -1480,7 +1488,7 @@ struct MoveRailgunSentence<Head: View>: View {
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
                                     p == .floor ? MoveQuickKeys.Key(id: value, word: chipWord(p), on: move.amount == value) { move.amount = value }
-                                        : MoveQuickKeys.Key.share(p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
+                                        : MoveQuickKeys.Key.share(p == .quarter ? 25 : p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
                                 })
                             }
                             MoveKeypad(text: $move.amount, places: min(move.holding?.decimals ?? 6, 6),

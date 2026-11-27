@@ -528,7 +528,7 @@ struct MoveSentence: View {
     }
 
     /// Over the limit with no co-signer (`spend`): said with a door to it.
-    static let needsCoSigner = String(localized: "Add a signer first: over the limit, a send waits on it")
+    static let needsCoSigner = String(localized: "Add a co-signer first: over the limit, a send waits on it")
 
     /// Bumped to shake the To word once: an address that imitates a book entry.
     @State private var shake = 0
@@ -5073,7 +5073,7 @@ struct MoveSentence: View {
                             shareBinding(with).wrappedValue = 100
                             DSHaptic.snap()
                         } label: {
-                            Text("Use all \(Op.spoken(left(with), decimals: with.token.decimals)) \(with.token.symbol)")
+                            Text("Max \(Op.spoken(left(with), decimals: with.token.decimals)) \(with.token.symbol)")
                                 .dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
                         }
                         .buttonStyle(RowPress())
@@ -7574,7 +7574,7 @@ struct MoveSentence: View {
         VStack(spacing: MoveReceipt.gap) {
             Spacer(minLength: 0)
             MoveQuickKeys(keys: whenQuickKeys, disabled: stage != nil)
-            MoveKeypad(text: priceDigits, presets: [],
+            MoveKeypad(text: priceDigits,
                        places: priceInPercent ? 2 : ((nowPrice ?? 1) < 1 ? 6 : 2),
                        disabled: stage != nil,
                        keyHeight: Self.bigKeyHeight, big: true)
@@ -7870,7 +7870,7 @@ struct MoveSentence: View {
                 Spacer(minLength: 0)
                 let quick = quickKeys
                 if !quick.isEmpty { MoveQuickKeys(keys: quick, disabled: stage != nil) }
-                MoveKeypad(text: $amount, presets: [],
+                MoveKeypad(text: $amount,
                            places: amountInDollars ? 2 : min(with?.token.decimals ?? 18, 18),
                            disabled: stage != nil,
                            keyHeight: Self.bigKeyHeight, big: true)
@@ -8173,93 +8173,6 @@ struct MoveSentence: View {
         .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
     }
 
-    /// The keypad's top row (prd §1898 item 6): $20 · Half · All for a token
-    /// with a price, Half · All without one; Buy's round sums. A sum you
-    /// cannot cover is dimmed.
-    private var keypadPresets: [MoveKeypadPreset] {
-        func done(_ act: @escaping () -> Void) -> () -> Void {
-            {
-                withAnimation(DS.Motion.standard) { act() }
-                focus = nil
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(280))
-                    advance()
-                }
-            }
-        }
-        // **NO SUMS OVER SEND'S AND SWAP'S KEYS (prd §1916, user, 2026-11-19:
-        // "the 20 half all on swap looks weird"):** "Use all" stands on the
-        // line that says what you have (`unitLine`), and the keys take the room.
-        if verb == .deposit {
-            return Self.amountSteps.map { step in
-                MoveKeypadPreset(id: "\(step)", title: Self.money(Double(step)).replacingOccurrences(of: ".00", with: ""),
-                                 picked: amount == "\(step)", act: done { amount = "\(step)" })
-            }
-        }
-        return []
-    }
-
-    /// **THE UNIT FLIPS FROM THE FACTS (prd §1898, the user: "Keep a flip on
-    /// the keypad").** What you have, and the other unit as a word to tap.
-    @ViewBuilder private var unitLine: some View {
-        if focus == .amount, let with, verb == .send || verb == .swap {
-            // **TWO LINES, EACH WITH ITS ONE ACT (prd §1916):** the figure in
-            // the other unit and the flip of units; what you have and Use all.
-            let other = units != nil ? otherUnit(with) : nil
-            let have = with.usd.map { Self.money($0) } ?? Op.spoken(left(with), decimals: with.token.decimals) + " " + with.token.symbol
-            VStack(spacing: 0) {
-                // **THE FIGURE IS THE HERO (prd §1917):** what you type, at
-                // Home's balance size, centred over its keys, the caret after
-                // it; the sentence says it again in its place.
-                HStack(alignment: .center, spacing: DS.Space.s1) {
-                    Text(verbatim: heroFigure(with))
-                        .dsText(.price52)
-                        .monospacedDigit()
-                        .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textPrimary)
-                        .contentTransition(.numericText())
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        // Never squeezed by the deck's height: only a figure
-                        // too wide for the line shrinks.
-                        .fixedSize(horizontal: false, vertical: true)
-                    MoveCaret()
-                }
-                .frame(maxWidth: .infinity)
-                .layoutPriority(1)
-                .animation(DS.Motion.standard, value: amount)
-                // The other unit under it, the flip beside it.
-                HStack(alignment: .center, spacing: DS.Space.s1) {
-                    Text(verbatim: other ?? " ").dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    if flips {
-                        Button { setDollars(!inDollars, with) } label: {
-                            Image(systemName: "arrow.up.arrow.down")
-                                .dsGlyph(.body, weight: .bold)
-                                .foregroundStyle(DS.pickInk)
-                                .frame(width: DS.Hit.min, height: DS.Hit.min)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PressSpring())
-                        .disabled(stage != nil)
-                        .accessibilityLabel(inDollars ? Text("Type in \(with.token.symbol)") : Text("Type in dollars"))
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: DS.Hit.min)
-                // **WHAT YOU HAVE IS HOME'S ROW (prd §1917):** the token, where
-                // it is, what you hold of it, and Use all under the figure. The
-                // figure turns amber when the amount is more (§83).
-                Button { useAll(with) } label: {
-                    TokenRowLabel(symbol: with.token.symbol, line: network.name,
-                                  figure: have, figureInk: over ? DS.attentionInk : DS.textPrimary,
-                                  under: String(localized: "Use all"), underInk: DS.pickInk)
-                }
-                .buttonStyle(RowPress())
-                .disabled(stage != nil)
-                .accessibilityLabel(Text("Use all, \(have) of \(with.token.symbol)"))
-            }
-        }
-    }
-
     /// The hero's figure: what is typed, in the unit it is typed in; "$0"
     /// before a digit, grey.
     private func heroFigure(_ with: Tokens.Held) -> String {
@@ -8410,7 +8323,7 @@ struct MoveSentence: View {
             // A limit order's Through is a fact of its receipt (`limitLedger`):
             // in this indented column its word wrapped, "Throu / gh".
             if shownPreview?.signerSigns == true {
-                MoveFactRow(name: String(localized: "Your Signer signs this too"), indented: false)
+                MoveFactRow(name: String(localized: "Your co-signer signs this too"), indented: false)
             }
         }
         // An order still waiting can be withdrawn here (prd §1673 item 7).
@@ -8749,7 +8662,7 @@ struct MoveSentence: View {
             // signer signs this too"): the limit's route missed an account
             // that already needs both keys on this network.
             if shownPreview?.signerSigns == true, receipt == nil, !nothingToMove {
-                Text("Your Signer signs this too")
+                Text("Your co-signer signs this too")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .frame(maxWidth: .infinity)
@@ -8853,7 +8766,7 @@ struct MoveSentence: View {
         case .preparing: return String(localized: "Preparing…")
         // Passed at the tap (prd §1687), Face ID is not asked for again.
         case .signing: return faceIDPassed ? String(localized: "Preparing…") : String(localized: "Confirm with Face ID")
-        case .cosigning: return String(localized: "Waiting for your Signer…")
+        case .cosigning: return String(localized: "Waiting for your co-signer…")
         case .sending: return String(localized: "Sending…")
         case .landing:
             if delivering { return String(localized: "Waiting for Bitrefill…") }
@@ -9376,7 +9289,7 @@ struct MoveSentence: View {
                 #if DEBUG
                 NSLog("moveSpend: over the limit, both keys: %@", failure.message)
                 #endif
-                await said(String(localized: "Over your limit: your Signer signs too"))
+                await said(String(localized: "Over your limit: your co-signer signs too"))
             }
         }
         guard let signer = try await signers.first else {

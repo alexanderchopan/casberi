@@ -397,7 +397,12 @@ struct MoveLendSentence<Head: View>: View {
     private var typed: Binding<String> {
         Binding(get: {
             guard move.all, let m = move.market, let units = move.units, let u = Decimal(string: units) else { return move.amount ?? "" }
-            return NSDecimalNumber(decimal: u / pow(10, m.decimals)).stringValue
+            // At the keys' places, rounded down; `all` still moves every unit
+            // (the review of 2026-11-27: Max drawn longer than the keys read
+            // as more than you have).
+            var whole = u / pow(10, m.decimals), cut = Decimal()
+            NSDecimalRound(&cut, &whole, min(m.decimals, 6), .down)
+            return NSDecimalNumber(decimal: cut).stringValue
         }, set: { text in
             move.pick(text.isEmpty ? nil : text, all: false)
         })
@@ -548,7 +553,7 @@ struct MoveLendSentence<Head: View>: View {
         switch move.stage {
         // The rows say each step; the act waits, as Aztec's and Railgun's do.
         case .working(.signing): String(localized: "Confirm with Face ID")
-        case .working(.cosigning): String(localized: "Waiting for your Signer…")
+        case .working(.cosigning): String(localized: "Waiting for your co-signer…")
         case .working: String(localized: "Sending…")
         default: move.claims ? String(localized: "Claim") : move.mode == .lend ? String(localized: "Deposit") : String(localized: "Withdraw")
         }

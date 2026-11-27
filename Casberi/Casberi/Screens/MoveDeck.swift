@@ -81,6 +81,9 @@ struct MoveDeckStep: Identifiable {
     var accessory: AnyView? = nil
     /// The line under the open amount: what the figure means (prd §1989).
     var fieldNote: (text: String, ink: Color)? = nil
+    /// Its answer is fixed (Tacit's one token): drawn as a chip that does
+    /// not press, never one whose tap does nothing (prd §83).
+    var fixed = false
     let act: () -> Void
 }
 
@@ -98,7 +101,7 @@ struct MoveReceiptSteps: View {
                         let typing = s.on && s.id == "amount"
                         MoveChip(text: s.value ?? (typing ? "0" : String(localized: "Choose")), mark: s.mark,
                                  tone: tone(s), caret: typing, glyph: s.glyph,
-                                 disabled: disabled, placeholder: typing && !s.answered,
+                                 disabled: disabled || s.fixed, placeholder: typing && !s.answered,
                                  accessory: typing ? s.accessory : nil, action: s.act)
                         if let remove = s.remove {
                             Spacer(minLength: 0)
@@ -448,23 +451,12 @@ struct MoveDeckRowLabel<Lead: View>: View {
     }
 }
 
-/// A sum on the keypad's top row.
-struct MoveKeypadPreset: Identifiable {
-    let id: String
-    let title: String
-    /// It can be covered: a sum over what you have is dimmed (prd §1898 item 6).
-    var enabled = true
-    var picked = false
-    let act: () -> Void
-}
-
 /// **MOVE'S OWN KEYPAD (prd §1897 item 4).** Digits, the point and delete in
 /// three centred columns, the sums as the first row; the figure is typed into
 /// the sentence. Every key goes through one grammar, so a figure that cannot
 /// be expressed is refused and the previous one stands.
 struct MoveKeypad: View {
     @Binding var text: String
-    var presets: [MoveKeypadPreset] = []
     /// The most places after the point: a dollar's two, a token's decimals.
     var places: Int = 2
     var disabled = false
@@ -503,26 +495,6 @@ struct MoveKeypad: View {
     private func grid(_ keyHeight: CGFloat) -> some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 3)
         return LazyVGrid(columns: columns, spacing: 0) {
-            ForEach(presets) { p in
-                Button {
-                    p.act()
-                    DSHaptic.selection()
-                } label: {
-                    Text(verbatim: p.title)
-                        .dsText(.heading17)
-                        .foregroundStyle(p.picked ? DS.pickInk : DS.textSecondary)
-                        .frame(maxWidth: .infinity, minHeight: MoveDeck.presetHeight)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressSpring())
-                .disabled(!p.enabled || disabled)
-                .opacity(p.enabled ? 1 : 0.4)
-            }
-            // The top row keeps the keys' three columns: two sums leave the
-            // third place empty, never a digit in it.
-            ForEach(0..<((3 - presets.count % 3) % 3), id: \.self) { _ in
-                Color.clear.frame(height: MoveDeck.presetHeight)
-            }
             ForEach(Self.digits, id: \.self) { key($0, height: keyHeight) }
             key(".", height: keyHeight)
             key("0", height: keyHeight)

@@ -53,8 +53,15 @@ struct TacitShieldSheet: View {
                     }
                 } else if open == .from, !sending {
                     deckList { fromChoices }
+                } else if sending {
+                    // **THE SHARED STEPS (2026-11-27, the Move review: Tacit
+                    // drew its own rows):** the sentence and `PrivateStepRows`,
+                    // as Railgun's and Aztec's sends draw theirs.
+                    MoveDeckStatus(linesStand: false, sentence: { MovePhrase(sentenceWords) }) {
+                        if let run = stepsRun { PrivateStepRows(run: run).transition(.opacity) }
+                    }
                 } else {
-                    deckList { if sending { steps } else { receipt } }
+                    deckList { receipt }
                 }
             }
         }, word: { foot })
@@ -65,10 +72,10 @@ struct TacitShieldSheet: View {
             guard !sending, let tac, tac > 0, tac <= held else { return }
             await shield.quote(tac: tac)
         }
-        .onAppear {
-            shield.reset()
-            if amount.isEmpty, held > 0 { amount = Self.maxText(held) }
-        }
+        // The shared steps follow the shield's own (2026-11-27).
+        .onChange(of: shield.step) { _, now in follow(now) }
+        // Opens empty, as every Move page does: Max is a key (2026-11-27).
+        .onAppear { shield.reset() }
     }
 
     private var busy: Bool {
@@ -91,7 +98,7 @@ struct TacitShieldSheet: View {
                                     value: from == .account ? String(localized: "Your public account") : String(localized: "Co-signer")) { toggle(.from) })
         }
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
-                                value: "TAC · Ethereum", mark: MoveRowMark(token: "TAC")) {})
+                                value: "TAC · Ethereum", mark: MoveRowMark(token: "TAC"), fixed: true) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
                                 value: amount.isEmpty ? (open == .amount ? "0 TAC" : nil) : "\(amount) TAC",
                                 fieldNote: MoveFieldNote.against(typed: amount, have: Self.maxText(held), symbol: "TAC")) { toggle(.amount) })
@@ -132,20 +139,18 @@ struct TacitShieldSheet: View {
         .accessibilityAddTraits(picked ? [.isSelected] : [])
     }
 
-    /// The receipt under the lines: the fee, what lands and when.
+    /// The receipt under the lines: the fee, what lands and when, as every
+    /// private send's facts (`MoveDeckFacts`).
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-            MoveReceiptLine(label: String(localized: "Fee")) {
-                Text(verbatim: feeWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
-            }
-            MoveReceiptLine(label: String(localized: "You get")) {
-                Text(verbatim: arrivesWords).dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
-            }
-            MoveReceiptLine(label: String(localized: "Arrives")) {
-                Text("In a minute").dsText(.body17).foregroundStyle(DS.textPrimary)
-            }
+            MoveDeckFacts(facts: [
+                .init(name: String(localized: "Fee"), value: feeWords),
+                .init(name: String(localized: "You get"), value: arrivesWords),
+                .init(name: String(localized: "Arrives"), value: String(localized: "In a minute")),
+            ])
             if case .failed(let why) = shield.step {
-                Text(verbatim: why).dsText(.body17).foregroundStyle(DS.destructiveInk)
+                // A failure in the attention ink, as every private send's.
+                Text(verbatim: why).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -190,8 +195,13 @@ struct TacitShieldSheet: View {
     /// places, no grouping, so the field parses back to at most what is held
     /// (Max wrote 4 significant digits rounded to nearest, and 1.7899 became
     /// 1.79: "More than it holds").
+    /// Plain digits with a "." whatever the phone's locale (2026-11-27: a
+    /// comma locale wrote "1,5", which the keys refuse to extend).
     static func maxText(_ held: Double) -> String {
-        held.formatted(.number.grouping(.never).precision(.fractionLength(0...8)).rounded(rule: .down))
+        guard held > 0, var exact = Decimal(string: "\(held)") else { return "0" }
+        var down = Decimal()
+        NSDecimalRound(&down, &exact, 8, .down)
+        return NSDecimalNumber(decimal: down).stringValue
     }
 
     static func tacText(_ v: Double) -> String {
@@ -200,74 +210,42 @@ struct TacitShieldSheet: View {
 
     // MARK: - Sending
 
-    @ViewBuilder private var steps: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(verbatim: "\(TacitAccountRows.amount(Double(shield.units) / 1e8)) TAC ").foregroundStyle(DS.textPrimary)
-            Text("to ").foregroundStyle(DS.textPrimary)
-            Text(verbatim: "Tacit").foregroundStyle(DS.pickInk)
-        }
-        .dsText(.heading34)
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            // While it proves, the seconds count, so a slow read is seen
-            // moving, never a spinner alone.
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                step(String(localized: "Proved"), state: provedState, figure: provedFigure(at: context.date))
+    /// "1.5 TAC to Tacit", the sentence over the steps.
+    private var sentenceWords: String {
+        String(localized: "\(TacitAccountRows.amount(Double(shield.units) / 1e8)) TAC to Tacit")
+    }
+
+    /// Proved on this phone, the co-signer signs, Tacit takes it. Quiet: the
+    /// shield says its own ending, never as Railgun's.
+    @MainActor static var plan: PrivateSendSteps.Plan {
+        PrivateSendSteps.Plan(steps: [
+            .proving,
+            .signing(onThisPhone: false),
+            PrivateSendSteps.Step(key: .sent, running: String(localized: "Tacit is taking it"), done: String(localized: "Tacit took it")),
+        ])
+    }
+
+    /// The run the steps draw, while this send goes.
+    private var stepsRun: PrivateSendSteps.Run? {
+        guard let run = PrivateSendSteps.shared.run, run.kind == .move, run.plan == Self.plan else { return nil }
+        return run
+    }
+
+    /// The shield's step, told to the shared run.
+    private func follow(_ step: TacitShield.Step) {
+        let steps = PrivateSendSteps.shared
+        switch step {
+        case .proving:
+            if stepsRun?.isRunning != true {
+                steps.forget(.move)
+                steps.begin(.move, plan: Self.plan, quiet: true)
             }
-            step(String(localized: "Co-signer signs"), state: signState, figure: signFigure)
-            step(String(localized: "Tacit takes it"), state: takeState, figure: nil)
+        case .signing: steps.mark(.signing)
+        case .handing: steps.mark(.sent)
+        case .arriving, .landed: steps.finish()
+        case .failed(let why): steps.fail(why)
+        default: break
         }
-        .padding(.top, DS.Space.s6)
-    }
-
-    private enum StepState { case waiting, now, done }
-
-    private func provedFigure(at now: Date) -> String? {
-        if let since = shield.provingSince { return "\(Int(now.timeIntervalSince(since))) s" }
-        return shield.proveMs.map { "\(Int((Double($0) / 1000).rounded())) s" }
-    }
-
-    private var provedState: StepState {
-        if case .proving = shield.step { return .now }
-        return .done
-    }
-
-    private var signState: StepState {
-        switch shield.step {
-        case .proving: return .waiting
-        case .signing: return .now
-        default: return .done
-        }
-    }
-
-    private var takeState: StepState {
-        switch shield.step {
-        case .handing, .arriving: return .now
-        case .landed: return .done
-        default: return .waiting
-        }
-    }
-
-    private var signFigure: String? {
-        if case .signing(let done, let of) = shield.step, of > 1 { return String(localized: "\(done + 1) of \(of)") }
-        return nil
-    }
-
-    private func step(_ words: String, state: StepState, figure: String?) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            Group {
-                switch state {
-                case .done: Image(systemName: "checkmark").dsGlyph(.body, weight: .bold).foregroundStyle(DS.confirmInk)
-                case .now: DSSpinner()
-                case .waiting: Image(systemName: "circle").dsGlyph(.body, weight: .regular).foregroundStyle(DS.textTertiary)
-                }
-            }
-            .frame(width: DSRoomChassis.headGlyph)
-            Text(verbatim: words).dsText(.body17)
-                .foregroundStyle(state == .waiting ? DS.textTertiary : DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            if let figure { Text(verbatim: figure).dsText(.body17).monospacedDigit().foregroundStyle(DS.textSecondary) }
-        }
-        .frame(minHeight: WalletCardStyle.ledgerHead)
     }
 
     // MARK: - The foot
@@ -288,9 +266,12 @@ struct TacitShieldSheet: View {
                     shield.reset()
                     if let tac { Task { await shield.quote(tac: tac) } }
                 }
-            case .proving, .signing, .handing:
-                // The steps above say where it is; the foot stays quiet.
-                EmptyView()
+            case .proving:
+                MoveFootWord(word: String(localized: "Proving…"), ink: DS.textSecondary)
+            case .signing:
+                MoveFootWord(word: String(localized: "Waiting for your co-signer"), ink: DS.textSecondary)
+            case .handing:
+                MoveFootWord(word: String(localized: "Sending…"), ink: DS.textSecondary)
             default:
                 if !TacitEngine.shared.isOpen, !DemoMode.isActive, let coSigner, (tac ?? 0) > 0, (tac ?? 0) <= held {
                     // Closed, the account is opened here, then quoted: never a

@@ -76,8 +76,9 @@ struct PrivateStepRows: View {
                 .dsText(.heading17)
                 .foregroundStyle(phase == .now ? DS.textPrimary : phase == .done ? DS.textSecondary
                                  : phase == .failed ? DS.attentionInk : DS.textTertiary)
-                .lineLimit(phase == .failed ? 3 : 1)
-                .fixedSize(horizontal: false, vertical: phase == .failed)
+                // Wraps, never "…" (the review of 2026-11-27).
+                .lineLimit(phase == .failed ? 3 : 2)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: DS.Space.s2)
             if let time {
                 Text(verbatim: time).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
@@ -145,7 +146,7 @@ struct StepCapsuleLabel: View {
         let step = run.plan.steps[run.currentIndex]
         HStack(spacing: DS.Space.s2) {
             if failed {
-                Image(systemName: "exclamationmark.circle.fill").dsGlyph(.body).foregroundStyle(DS.destructive)
+                Image(systemName: "exclamationmark.circle.fill").dsGlyph(.body).foregroundStyle(DS.attention)
             } else if run.ended != nil {
                 Image(systemName: "checkmark.circle.fill").dsGlyph(.body).foregroundStyle(DS.confirm)
             } else {
@@ -156,7 +157,9 @@ struct StepCapsuleLabel: View {
             // Max's sends count, "2 of 3" (2026-11-27).
             let count = run.part.flatMap { k in run.parts.map { String(localized: " · \(k) of \($0)") } } ?? ""
             Text(verbatim: failed ? (run.swap ? String(localized: "Not swapped") : String(localized: "Not sent")) : (run.ended == nil ? step.running : step.done) + count)
-                .dsText(.body17).foregroundStyle(failed || !run.plan.isAztec ? DS.textPrimary : DS.aztecInk).lineLimit(1)
+                .dsText(.body17).foregroundStyle(failed || !run.plan.isAztec ? DS.textPrimary : DS.aztecInk)
+                // Never cut off with "…": smaller first (the review of 2026-11-27).
+                .lineLimit(1).minimumScaleFactor(0.75)
             if !failed {
                 Text(verbatim: "· " + PrivateStepRows.seconds(run.started, run.ended ?? now))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
@@ -227,6 +230,14 @@ struct MoveStepCapsule: View {
                     chrome.moveRailgun = .init(contract: kept.wanted, takeBack: kept.mode != .swap, recipient: kept.recipient,
                                                swap: kept.mode == .swap)
                     chrome.moveTray = true
+                } else if steps.awayFrom == .privacyPools {
+                    // Privacy Pools keeps no sentence: its Send again, the
+                    // reason said once more (the review of 2026-11-27).
+                    let why = run.reason
+                    withAnimation(DS.Motion.standard) { steps.clearAway() }
+                    chrome.movePrivately = .send
+                    chrome.moveTray = true
+                    if let why { chrome.flash(why, tone: .failure, seconds: 6) }
                 } else {
                     withAnimation(DS.Motion.standard) { steps.clearAway() }
                 }

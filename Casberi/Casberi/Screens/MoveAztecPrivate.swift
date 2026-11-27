@@ -237,12 +237,17 @@ final class AztecMove {
 
     /// Half · All (prd §1700y, Railgun's §1728 item 1 without its floor):
     /// each types its amount, exact; one Shield would refuse is not drawn.
-    enum Pick: CaseIterable { case half, all }
+    /// 25% · 50% · Max, as every amount's (`MoveQuickKeys.shares`).
+    enum Pick: CaseIterable { case quarter, half, all }
 
     func amount(for pick: Pick) -> String? {
         guard let available, let held = Decimal(string: available), held > 0 else { return nil }
         var value: Decimal
         switch pick {
+        case .quarter:
+            var part = held / 4, down = Decimal()
+            NSDecimalRound(&down, &part, 0, .down)
+            value = down
         case .half:
             var half = held / 2, down = Decimal()
             NSDecimalRound(&down, &half, 0, .down)
@@ -255,8 +260,10 @@ final class AztecMove {
         }
         guard value > 0 else { return nil }
         if mode == .deposit, symbol == "USDC", let maxUSD, value > Decimal(maxUSD) * 1_000_000 { return nil }
+        // At the keys' places, rounded down: a Max the keypad cannot hold
+        // read as more than you have (the review of 2026-11-27).
         var whole = value / pow(10, decimals), cut = Decimal()
-        NSDecimalRound(&cut, &whole, decimals, .down)
+        NSDecimalRound(&cut, &whole, min(decimals, 6), .down)
         return NSDecimalNumber(decimal: cut).stringValue
     }
 
@@ -1142,10 +1149,14 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 AztecWayInRows(coSigner: move.coSigner, score: score, threshold: threshold, maxUSD: move.maxUSD)
             }
         case .needsGas:
-            VStack(alignment: .leading, spacing: 0) {
-                fact(String(localized: "Gas"), String(localized: "Needed first"), ink: DS.attentionInk)
-                fact(String(localized: "Costs"), String(localized: "30 AZTEC, about $0.45"), ink: DS.textSecondary)
-            }
+            // The deck's facts, and the cost priced now, never a figure
+            // written in (prd §83; the review of 2026-11-27).
+            MoveDeckFacts(facts: [
+                .init(name: String(localized: "Gas"), value: String(localized: "Needed first"), ink: DS.attentionInk),
+                .init(name: String(localized: "Costs"), value: move.prices["AZTEC"].map {
+                    String(localized: "30 AZTEC, about \((30 * $0).formatted(.currency(code: "USD").precision(.fractionLength(2))))")
+                } ?? String(localized: "30 AZTEC"), ink: DS.textSecondary),
+            ])
         case .failed(let words):
             // A failure the rows carry is said once, on its step.
             VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -1408,7 +1419,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                             let quick = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
-                                    MoveQuickKeys.Key.share(p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
+                                    MoveQuickKeys.Key.share(p == .quarter ? 25 : p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
                                 }, onInk: DS.aztecInk)
                             }
                             MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
@@ -1548,15 +1559,6 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 Task { await move.run() }
             }
         }
-    }
-
-    private func fact(_ name: String, _ value: String, ink: Color) -> some View {
-        HStack(spacing: DS.Space.s2) {
-            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textSecondary)
-            Spacer(minLength: DS.Space.s2)
-            Text(verbatim: value).dsText(.body17).foregroundStyle(ink).lineLimit(1).minimumScaleFactor(0.8)
-        }
-        .frame(minHeight: 30)
     }
 
     private var checkAgain: some View {
