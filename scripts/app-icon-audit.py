@@ -34,6 +34,11 @@ The rules, from design/app-icon/README.md:
   6. All three carry the SAME coverage mask. The suckers are knocked OUT of
      the mark, so they are the ground; a variant redrawn by hand loses that.
      design/app-icon/tentacle.py writes all three from one mask.
+  7. The website's `icons/casberi-app-icon.png` is the in-app icon, byte for
+     byte. It is the picture a wallet draws over every WalletConnect request
+     (`WalletConnectBridge`'s metadata), and it sat on the arm §1708 retired
+     for three weeks because no check compared it with the app (user,
+     2026-11-27: "why does our wallet connect stuff show our old logo").
 
 Usage:  scripts/app-icon-audit.py [--self-test]
 Exit 0 = clean.
@@ -49,6 +54,8 @@ import itertools
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ICONSET = ROOT / "Casberi/Casberi/Assets.xcassets/AppIcon.appiconset"
+FACE = ROOT / "Casberi/Casberi/Assets.xcassets/casberi-app-icon.imageset/icon.png"
+SITE = ROOT / "website/icons/casberi-app-icon.png"
 
 SIDE = 1024
 # A pixel counts as mark rather than ground once it is this far (sum of the
@@ -214,6 +221,18 @@ def audit(iconset, side=SIDE):
     return findings
 
 
+def published(face, site):
+    """7. The website's copy is the in-app icon (the WalletConnect picture)."""
+    for path in (face, site):
+        if not path.exists():
+            return [f"{path.name}: missing ({path})"]
+    if face.read_bytes() != site.read_bytes():
+        return [f"{site.relative_to(site.parents[2]) if len(site.parents) > 2 else site} is not the "
+                f"in-app icon ({face.name}) — wallets draw it over every WalletConnect "
+                f"request, so they show an icon the app no longer wears"]
+    return []
+
+
 def self_test():
     """Build synthetic iconsets and prove each check catches its own defect."""
     # Deliberately NOT 1024: the checks are side-agnostic and the shipped size
@@ -300,6 +319,24 @@ def self_test():
                   lambda t: build(t, {**good, "tinted": bytes(nudged)})))
 
     ok = True
+    # 7. the website copy
+    with tempfile.TemporaryDirectory() as tmp:
+        d = pathlib.Path(tmp) / "website" / "icons"; d.mkdir(parents=True)
+        face, site = pathlib.Path(tmp) / "icon.png", d / "casberi-app-icon.png"
+        write(face, good["dark"])
+        for why, should_flag, bytes_ in (
+                ("passes a website copy equal to the in-app icon", False, face.read_bytes()),
+                ("flags  a website copy left on an older drawing", True, b"\x89PNG old arm")):
+            site.write_bytes(bytes_)
+            flagged = bool(published(face, site))
+            ok &= flagged == should_flag
+            print(f"  {'ok  ' if flagged == should_flag else 'FAIL'} "
+                  f"{'flags ' if should_flag else 'passes'} {why.split(maxsplit=1)[1]}")
+        site.unlink()
+        flagged = bool(published(face, site))
+        ok &= flagged
+        print(f"  {'ok  ' if flagged else 'FAIL'} flags  a missing website copy")
+
     for why, should_flag, make in cases:
         with tempfile.TemporaryDirectory() as tmp:
             flagged = bool(audit(make(pathlib.Path(tmp) / "AppIcon.appiconset"), side=TINY))
@@ -314,7 +351,7 @@ if "--self-test" in sys.argv:
     print("app-icon self-test")
     sys.exit(0 if self_test() else 1)
 
-problems = audit(ICONSET)
+problems = audit(ICONSET) + published(FACE, SITE)
 if problems:
     print("✗ app icon findings:")
     for p in problems:
@@ -323,4 +360,5 @@ if problems:
           "python3 design/app-icon/tentacle.py")
     sys.exit(1)
 print("✓ app icon: light is the dark art, every ground is black, "
-      "tinted is greyscale, one coverage mask across all three")
+      "tinted is greyscale, one coverage mask across all three, the website "
+      "copy is the in-app icon")
