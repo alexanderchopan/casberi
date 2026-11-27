@@ -316,8 +316,13 @@ struct MoveLendSentence<Head: View>: View {
                 }
             }
             MoveReceiptLine(label: String(localized: "Amount")) {
-                MoveChip(text: move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
-                         caret: open == .amount, disabled: !live, placeholder: move.units == nil) { toggle(.amount) }
+                // While typing, the field shows what was typed (2026-11-27):
+                // `figure` rounds, so "0." and "0.000" drew "0".
+                let typedShown = open == .amount && !move.all && !move.claims
+                    ? move.amount.flatMap { $0.isEmpty ? nil : "\(MoveSentence.grouped($0)) \(move.market?.symbol ?? move.symbol)" }
+                    : nil
+                MoveChip(text: typedShown ?? move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
+                         caret: open == .amount, disabled: !live, placeholder: typedShown == nil && move.units == nil) { toggle(.amount) }
             }
             // What the figure means, under the field (prd §1989).
             if open == .amount, let m = market,

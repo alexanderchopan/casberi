@@ -247,8 +247,12 @@ enum PrivateOnEthereum {
                     await step?(.sending)
                     relayed = try await engine.relay(handle: spend.handle)
                     break
-                } catch let f as PrivacyEngineWire.Failure where f.name == "FeeCommitmentExpired" && tries < 2 {
-                    NSLog("privateEthereum| fee quote expired before the relay | proving again")
+                } catch let f as PrivacyEngineWire.Failure where PrivateMove.staleFee(f) && tries < 3 {
+                    // Gas rose past the quote while it proved (2026-11-27, on
+                    // the phone: "the quoted relay fee no longer covers the
+                    // transaction cost"): nothing went out, so quote and
+                    // prove again at today's gas.
+                    NSLog("privateEthereum| fee quote stale before the relay (%@) | proving again", f.name)
                 }
             }
             NSLog("privateEthereum| relayed | %@ | %@ | %@ to %@", balanceToBalance ? "balance to balance" : "paid out", relayed.tx, amount, YourAccount.short(to))

@@ -889,10 +889,24 @@ final class PrivateMove {
     /// for. A fresh address's move names its step instead (prd §1823).
     /// The reason in a relayer's refusal ("HTTP 400: Bad Request: {…}"):
     /// the body's `message`, `error` or `reason`, or nil.
+    /// The relayer's quote no longer stands: it expired, or gas rose past it
+    /// while the phone proved. Nothing went out; a fresh quote and proof fix it.
+    static func staleFee(_ f: PrivacyEngineWire.Failure) -> Bool {
+        f.name == "FeeCommitmentExpired"
+            || (f.name == "RelayerRejected" && (f.message.localizedCaseInsensitiveContains("no longer covers")
+                || f.message.localizedCaseInsensitiveContains("FeeCommitmentExpired")))
+    }
+
     static func relayerReason(_ message: String) -> String? {
         guard let brace = message.firstIndex(of: "{"),
               let data = String(message[brace...]).data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            // A body cut short is no JSON (2026-11-27: the reason drew as
+            // raw braces): its message, as far as it goes.
+            guard let r = message.range(of: #""message"\s*:\s*"([^"]+)"#, options: .regularExpression) else { return nil }
+            let m = message[r].split(separator: "\"", maxSplits: 3, omittingEmptySubsequences: false)
+            return m.count > 3 ? String(m[3].prefix(160)) : nil
+        }
         func text(_ v: Any?) -> String? {
             if let s = v as? String, !s.isEmpty { return s }
             if let d = v as? [String: Any] { return text(d["message"]) ?? text(d["reason"]) }
@@ -926,6 +940,9 @@ final class PrivateMove {
             // reaches here): what to report is on the screen.
             // Refused is not silent (2026-11-26, user: "one time i get
             // rejected"): the relayer's own reason, as it gave it.
+            if staleFee(failure) {
+                return String(localized: "Gas rose while it was proving, past 0xBow's quote. Nothing was sent: try again.")
+            }
             if failure.name == "RelayerRejected" {
                 let why = relayerReason(failure.message)
                 return why.map { String(localized: "0xBow's relayer refused it: \($0)") }

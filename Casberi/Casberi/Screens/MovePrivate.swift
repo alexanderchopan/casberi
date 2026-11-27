@@ -483,7 +483,11 @@ struct MovePrivateSentence<Head: View>: View {
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: typing,
                                 answered: typingDollars ? !dollars.isEmpty : !move.amount.isEmpty,
                                 value: typingDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
-                                    : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil) : figure),
+                                    // **THE FIELD SHOWS WHAT WAS TYPED (2026-11-27, user: "i am
+                                    // unable to enter a decimal point"):** `figure` rounds, so
+                                    // "0." and "0.000" drew "0" and the keys looked dead.
+                                    : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil)
+                                        : typing ? "\(MoveSentence.grouped(move.amount)) \(move.symbol)" : figure),
                                 note: typing ? nil : depositNote,
                                 accessory: flips ? AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { setDollars($0) }) : nil,
                                 fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { if !fixed { toggle(.amount) } })
