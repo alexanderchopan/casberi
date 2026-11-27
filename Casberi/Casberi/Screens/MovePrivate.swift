@@ -723,7 +723,7 @@ struct MovePrivateSentence<Head: View>: View {
             return "$" + (d * Decimal(price)).formatted(.number.precision(.fractionLength(2)))
         }()
         let fee = fees.map { String(localized: " · fees \($0)") } ?? ""
-        return String(localized: "Held in \(n) parts, and 0xBow's relayer moves one per send: \(n) sends\(fee)")
+        return String(localized: "Held in \(n) parts, and the relayer sends one at a time\(fee)")
     }
 
     private var amountLine: (words: String, ink: Color) {
@@ -741,9 +741,9 @@ struct MovePrivateSentence<Head: View>: View {
             // Over one note and short of Max: the relayer takes one note a
             // send, so it is one note's worth, or Max for every note.
             if move.mode == .send, move.onEthereum, let one = move.oneSend, units > one,
-               let most = move.most.flatMap({ Decimal(string: $0) }), units < most {
+               !move.isMax(PrivateMoney.plain(units)) {
                 let oneShown = PrivateMoney.number(PrivateMoney.plain(one), decimals: move.decimals, places: tokenPlaces) ?? "0"
-                return (String(localized: "One send moves up to \(oneShown) \(move.symbol) · Max sends it all"), DS.attentionInk)
+                return (String(localized: "One send moves up to \(oneShown) \(move.symbol). Choose Max to move it all."), DS.attentionInk)
             }
             if let why = maxWhy { return (why, DS.textSecondary) }
             if units < (Decimal(string: move.least) ?? 1) {

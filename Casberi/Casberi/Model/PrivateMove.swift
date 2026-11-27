@@ -331,7 +331,7 @@ final class PrivateMove {
         guard let units = PrivateMoney.baseUnits(amount, decimals: decimals).flatMap({ Decimal(string: $0) }), units > 0,
               let top = most.flatMap({ Decimal(string: $0) }) else { return false }
         // Over one note, only Max: it alone sends a note per send.
-        if mode == .send, onEthereum, let one = oneSend, units > one, units < top { return false }
+        if mode == .send, onEthereum, let one = oneSend, units > one, !isMax(PrivateMoney.plain(units)) { return false }
         return units <= top && units >= (Decimal(string: least) ?? 1)
     }
 

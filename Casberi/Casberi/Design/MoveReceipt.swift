@@ -413,8 +413,10 @@ struct MoveFieldNote: View {
             .dsText(.fact15)
             .foregroundStyle(ink)
             .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
+            // Wraps rather than cut off (2026-11-27, user: "don't have the
+            // ellipsis"): a note truncated reads as more to read.
+            .lineLimit(1...3)
+            .fixedSize(horizontal: false, vertical: true)
             .contentTransition(.numericText())
             .padding(.leading, MoveReceipt.labelWidth + 16)
             .frame(maxWidth: .infinity, minHeight: MoveReceipt.lineHeight / 2, alignment: .leading)
