@@ -194,7 +194,11 @@ final class RailgunMove {
     var note = ""
     private(set) var transferPlan: RailgunPocket.TransferPlan?
 
-    static var floorUSD: Double { RailgunRouting.floorUSD }
+    /// **NO FLOOR MOVING IN (2026-11-27, user: "we should remove the
+    /// railgun minimum"):** the $10 was Privacy Pools' minimum copied over
+    /// (§1713); Railgun has none of its own. Kept as a figure, zero, so the
+    /// checks that read it stand.
+    static var floorUSD: Double { 0 }
 
     var holding: Holding? { holdings.first { $0.contract.lowercased() == token?.lowercased() } }
 
@@ -552,7 +556,7 @@ final class RailgunMove {
             ?? String(localized: "you have \(RailgunHoldings.figure(h.units, decimals: h.decimals) + " " + h.symbol)")
         var parts: [String] = []
         if let amountUSD { parts.append(Self.usd(amountUSD)) }
-        if mode == .deposit { parts.append(String(localized: "\(Self.floorText) or more")) }
+        if mode == .deposit, Self.floorUSD > 0 { parts.append(String(localized: "\(Self.floorText) or more")) }
         parts.append(have)
         return parts.joined(separator: " · ")
     }
@@ -565,7 +569,7 @@ final class RailgunMove {
         guard let h = holding, let held = Decimal(string: h.units), held > 0 else { return nil }
         switch pick {
         case .floor:
-            guard mode == .deposit, let price = h.price, price > 0 else { return nil }
+            guard mode == .deposit, Self.floorUSD > 0, let price = h.price, price > 0 else { return nil }
             // $10 worth, rounded UP at six places so it never falls short.
             var tokens = Decimal(Self.floorUSD) / Decimal(price), up = Decimal()
             NSDecimalRound(&up, &tokens, min(h.decimals, 6), .up)
@@ -686,7 +690,7 @@ final class RailgunMove {
             guard let price = prices["eth"] ?? prices["ETH"], price > 0 else {
                 stage = .failed(String(localized: "Couldn't price ETH. Nothing was sent.")); return
             }
-            var wei = Decimal(RailgunRouting.nice(Self.floorUSD / price)) * pow(10, 18), whole = Decimal()
+            var wei = Decimal(RailgunRouting.nice(RailgunRouting.floorUSD / price)) * pow(10, 18), whole = Decimal()
             NSDecimalRound(&whole, &wei, 0, .up)
             // A shield like any move-in: its rows are signed (§1728 item 5).
             PrivateSendSteps.shared.forget(.move)
@@ -1102,7 +1106,7 @@ struct MoveRailgunSentence<Head: View>: View {
                 MovePhrase(String(localized: "Your \(short.symbol) is \(RailgunMove.usd(short.usd))."), ink: DS.textSecondary)
             } else {
                 MovePhrase(move.mode == .deposit
-                           ? String(localized: "Moving to Railgun takes $10 or more.")
+                           ? String(localized: "Nothing on Ethereum to move in yet.")
                            : move.mode == .swap ? String(localized: "Nothing private to swap yet.")
                            : String(localized: "Nothing private to take back yet."), ink: DS.textSecondary)
             }
@@ -1543,7 +1547,7 @@ struct MoveRailgunSentence<Head: View>: View {
                                     : "\(move.amount) \(move.holding?.symbol ?? "")",
                                 // The floor is a rule no menu shows: under Amount (prd §1992).
                                 note: move.mode == .deposit && open != .amount
-                                    ? (underWords ?? String(localized: "\(RailgunMove.floorText) or more")) : nil,
+                                    ? (underWords ?? (RailgunMove.floorUSD > 0 ? String(localized: "\(RailgunMove.floorText) or more") : nil)) : nil,
                                 fieldNote: underWords.map { (text: $0, ink: DS.attentionInk) } ?? move.holding.flatMap { h in
                                     MoveFieldNote.against(typed: move.amount, have: MoveFieldNote.plain(units: h.units, decimals: h.decimals),
                                                           symbol: h.symbol)

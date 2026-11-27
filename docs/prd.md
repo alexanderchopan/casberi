@@ -75635,3 +75635,13 @@ User, 2026-11-27, testing on the phone: "when i try to put into railgun it only 
 **Seen** on the user's iPhone (debug build): Railgun's in listed TAC only before. **Not seen:** ETH or USDC shielded into Railgun on mainnet, or a token under a floor picked.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1996 — Railgun has no minimum moving in (amends §1713 item 2's and §1727's $10 floor, §1995 item 2's Railgun line) (2026-11-27)
+
+User, 2026-11-27: "we set railgun minimum to 10 b/c privacy pools has one. we should remove the railgun minimum and as long as we have helper text for privacy pools minimum be fine."
+
+Railgun's own contracts take any amount; the $10 was Privacy Pools' minimum copied over. Moving in now takes any amount over nothing (`RailgunMove.floorUSD` is zero); the "$10" chip, the "$10 or more" line under Amount and the under-the-floor words are not drawn. Privacy Pools keeps its minimum and says it (§1995). The fresh-address top-up's $10 (`RailgunRouting.floorUSD`) is not this rule and stands.
+
+**Seen** on the user's iPhone: 10.002 USDC moved into Railgun (`0xd3ca94f0…`), before the floor came off. **Not seen:** a move under $10.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
