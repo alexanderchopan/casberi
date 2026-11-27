@@ -73,7 +73,18 @@ struct MovePrivateSentence<Head: View>: View {
             }
         }
         // Send opens whole: its rows and sentence clip in the short sheet.
-        .onAppear { chrome.moveTall = true }
+        .onAppear {
+            chrome.moveTall = true
+            move.watcher = nil
+        }
+        // Closed on a send still going: the toast says each step and the
+        // row lands without the sheet (2026-11-27).
+        .onDisappear {
+            guard move.busy, move.mode == .send else { return }
+            let chrome = chrome, context = context
+            move.watcher = { m in MovePrivateToast.say(m, chrome: chrome, context: context) }
+            MovePrivateToast.say(move, chrome: chrome, context: context)
+        }
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         .onChange(of: chrome.moveTall) { _, tall in
@@ -1009,14 +1020,7 @@ struct MovePrivateSentence<Head: View>: View {
     /// One Activity row for the move, by its transaction: the eye-slash
     /// lead, the words with no verb, Etherscan its door.
     private func land(_ hash: String) {
-        // **NO TRANSACTION, NO ROW (prd §1988):** a deposit Ethereum named
-        // no hash for wrote an empty row keyed on "", which every later one
-        // was deduped against. Holdings shows its note by its commitment.
-        guard !hash.isEmpty else { return }
-        let title = PrivateMoney.activityTitle(figure: figure,
-                                               to: move.mode == .send ? (move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short)) : nil)
-        PrivateActivity.land(hash: hash, title: title, chainId: move.network.chainId, context: context)
-        chrome.refreshRooms()
+        MovePrivateToast.land(hash, move: move, chrome: chrome, context: context)
     }
 
     private func copy(_ address: String) {
@@ -1051,5 +1055,45 @@ struct MovePrivateSwitch: View {
         }
         .frame(minHeight: DSFeed.headHeight)
         .animation(DS.Motion.standard, value: isOn)
+    }
+}
+
+/// **A SEND THE SHEET LET GO OF (2026-11-27, user: "even if it was like a
+/// toast that said each step").** The glass toast above the bar says where
+/// it stands, step by step; done, the Activity row lands as the sheet's
+/// would and the toast says it went; failed, its words, in amber.
+@MainActor
+enum MovePrivateToast {
+    static func say(_ m: PrivateMove, chrome: ShellChrome, context: ModelContext) {
+        let n = m.part.map { " \($0.0) of \($0.1)" } ?? ""
+        switch m.stage {
+        case .opening: chrome.flash(String(localized: "Private send · Confirm with Face ID"), mark: "Privacy Pools", seconds: 600)
+        case .preparing: chrome.flash(String(localized: "Private send · Preparing…"), mark: "Privacy Pools", seconds: 600)
+        case .proving: chrome.flash(String(localized: "Private send · Proving\(n)…"), mark: "Privacy Pools", seconds: 600)
+        case .sending: chrome.flash(String(localized: "Private send · Sending\(n)…"), mark: "Privacy Pools", seconds: 600)
+        case .done(let hash):
+            m.watcher = nil
+            land(hash, move: m, chrome: chrome, context: context)
+            chrome.flash(String(localized: "Sent from Privacy Pools"), tone: .success, mark: "Privacy Pools", seconds: 3)
+        case .failed(let words):
+            m.watcher = nil
+            chrome.flash(words, tone: .failure, mark: "Privacy Pools", seconds: 8)
+        default: break
+        }
+    }
+
+    /// One Activity row for the move, by its transaction: the eye-slash
+    /// lead, the words with no verb, Etherscan its door.
+    static func land(_ hash: String, move: PrivateMove, chrome: ShellChrome, context: ModelContext) {
+        // **NO TRANSACTION, NO ROW (prd §1988):** a deposit Ethereum named
+        // no hash for wrote an empty row keyed on "", which every later one
+        // was deduped against. Holdings shows its note by its commitment.
+        guard !hash.isEmpty else { return }
+        let figure = PrivateMoney.figure(PrivateMoney.baseUnits(move.amount, decimals: move.decimals) ?? "0",
+                                         decimals: move.decimals, symbol: move.symbol)
+        let title = PrivateMoney.activityTitle(figure: figure,
+                                               to: move.mode == .send ? (move.tag.map(ZkMoneyWire.display) ?? move.recipient.map(YourAccount.short)) : nil)
+        PrivateActivity.land(hash: hash, title: title, chainId: move.network.chainId, context: context)
+        chrome.refreshRooms()
     }
 }

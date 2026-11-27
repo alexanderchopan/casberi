@@ -43,7 +43,12 @@ final class PrivateMove {
     }
 
     var mode: Mode
-    var stage: Stage = .reading
+    var stage: Stage = .reading { didSet { if stage != oldValue { watcher?(self) } } }
+    /// **THE SHEET MAY CLOSE (2026-11-27, user: "a banner or something
+    /// would be nicer than having to stare at a sheet").** Set when the sheet
+    /// closes on a send still going: told each step, so the toast says it and
+    /// the Activity row lands without the sheet.
+    @ObservationIgnored var watcher: (@MainActor (PrivateMove) -> Void)?
     /// Switch on: who it goes to, an address.
     var recipient: String?
     /// **A ZK.MONEY TAG, PAID FROM YOUR PRIVATE BALANCE (prd §1874).** The
@@ -257,7 +262,7 @@ final class PrivateMove {
     }
 
     /// Which send of how many is going, while Max sends its notes.
-    private(set) var part: (Int, Int)?
+    private(set) var part: (Int, Int)? { didSet { watcher?(self) } }
 
     /// The least this token may move: the pool's smallest deposit moving
     /// in, else anything over nothing. Base units.
@@ -726,6 +731,7 @@ final class PrivateMove {
                                                             // Max sends what the notes hold, fee quoted now (2026-11-26).
                                                             upTo: maxing,
                                                             parts: parts,
+                                                            recount: { [weak self] in self?.maxParts.count ?? 1 },
                                                             step: { [weak self] s in
                     await MainActor.run {
                         switch s {

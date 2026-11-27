@@ -420,8 +420,12 @@ final class PrivateMoneyStore {
             if case .sent(_, let tx, .deposit, _, _) = e.state { return tx.lowercased() }
             return nil
         })
+        // A note the pool says is spent is gone, however new (2026-11-27:
+        // Max counted "1 of 3" over two notes it had just sent).
+        let gone = Set(found.notes.filter { ["SPENT", "EXITED"].contains($0.status.uppercased()) }.map { $0.commitment.lowercased() })
         next += mine.filter { old in
-            (old.at > recent || out.contains(old.commitment.lowercased()) || outTx.contains(old.tx.lowercased()))
+            !gone.contains(old.commitment.lowercased())
+            && (old.at > recent || out.contains(old.commitment.lowercased()) || outTx.contains(old.tx.lowercased()))
                 && !next.contains { $0.commitment.lowercased() == old.commitment.lowercased() }
         }
         notes = notes.filter { !($0.root == root && $0.chainId == network.chainId) } + next

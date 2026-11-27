@@ -177,6 +177,7 @@ enum PrivateOnEthereum {
                      announce: Bool = false,
                      upTo: Bool = false,
                      parts: Int = 1,
+                     recount: (@MainActor () -> Int)? = nil,
                      step: (@Sendable (SendStep) async -> Void)? = nil) async throws -> String {
         guard network.yieldPool(for: token) != nil, PrivateMoney.isAddress(to), let hex = PrivateMoney.hex(amount) else { throw Failure.noPool }
         guard let account = PrivateRootKey.currentID else { throw Failure.noRoot }
@@ -188,13 +189,13 @@ enum PrivateOnEthereum {
         let started = Int(Date().timeIntervalSince1970)
         guard announce else {
             let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, parts: parts, step: step)
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, parts: parts, recount: recount, step: step)
             settle(account: account, to: to)
             return tx
         }
         do {
             let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, parts: parts, step: step)
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, parts: parts, recount: recount, step: step)
             settle(account: account, to: to)
             Task { await Notifications.outcome(.moveSent, id: "pools:" + tx, place: "Privacy Pools",
                                                body: String(localized: "Sent on Ethereum"), mark: "Privacy Pools") }
@@ -234,7 +235,7 @@ enum PrivateOnEthereum {
     }
 
     private static func relayedSend(account: String, token: String, hex: String, to: String,
-                                    balanceToBalance: Bool, reason: String, amount: String, upTo: Bool, parts: Int = 1,
+                                    balanceToBalance: Bool, reason: String, amount: String, upTo: Bool, parts: Int = 1, recount: (@MainActor () -> Int)? = nil,
                                     step: (@Sendable (SendStep) async -> Void)?) async throws -> String {
         try await PrivacyEngine.exclusive {
             await step?(.opening)
@@ -242,6 +243,9 @@ enum PrivateOnEthereum {
             await step?(.preparing)
             let engine = PrivacyEngine.shared
             PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)
+            // Max's sends counted again from what the pool holds now.
+            var parts = parts
+            if parts > 1, let recount { parts = max(await recount(), 1) }
             // The relayer's fee holds a short while, and proving on the phone
             // can outlast it (measured 2026-11-18: "FeeCommitmentExpired", 11 s
             // late): prove and quote once more, then relay; nothing went out.
