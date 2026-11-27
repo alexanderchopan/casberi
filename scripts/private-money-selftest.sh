@@ -1311,14 +1311,19 @@ use "$TMP/blank" 'MoveSentenceBlanksKey.self' "a word of the sentence no longer 
 use "$SENT" '.onPreferenceChange(MoveSentenceBlanksKey.self) { sentenceBlanks = $0 }' "the rows no longer read the sentence on screen (prd §1781)"
 use "$SENT" 'for b in sentenceBlanks {' "the rows are listed by hand again: a sentence can hold a choice with no row (prd §1781)"
 # Earn draws no sentence since §1931: its receipt lines are the page.
-for f in MoveSentence MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
-    use "Casberi/Casberi/Screens/$f.swift" '.allowsHitTesting(false)' "$f's sentence takes a touch again (prd §1781)"
+# The private decks draw their sentence through `MoveDeckStatus` (prd §1992),
+# which holds the rule once.
+use "Casberi/Casberi/Screens/MoveSentence.swift" '.allowsHitTesting(false)' "MoveSentence's sentence takes a touch again (prd §1781)"
+awk '/^struct MoveDeckStatus/,/^}$/' Casberi/Casberi/Screens/MoveDeck.swift > "$TMP/deckstatus"
+use "$TMP/deckstatus" '.allowsHitTesting(false)' "the decks' sentence takes a touch again (MoveDeckStatus, prd §1781)"
+for f in MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
+    use "Casberi/Casberi/Screens/$f.swift" 'MoveDeckStatus(' "$f draws its sentence by hand again (prd §1781, §1992)"
 done
 # Earn and the three private sentences stand on the Deck (prd §1901, §1927):
 # the foot's chevron is the way back, closing an open step first, then the
 # environment's back to the menu.
 # §1931: the private pages' foot comes with the receipt deck.
-use "Casberi/Casberi/Screens/MoveLend.swift" 'MoveDeckFoot(' "MoveLend has no way back to Move's menu (prd §1781, §1901)"
+use "Casberi/Casberi/Screens/MoveLend.swift" 'MoveReceiptDeck(' "MoveLend has no way back to Move's menu: the deck's foot is it (prd §1781, §1901, §1992)"
 use "Casberi/Casberi/Screens/MoveDeck.swift" 'MoveDeckFoot(' "the receipt deck has no foot (prd §1931)"
 for f in MoveLend MovePrivate MoveAztecPrivate MoveRailgunPrivate; do
     [[ $f == MoveLend ]] || use "Casberi/Casberi/Screens/$f.swift" 'MoveReceiptDeck(' "$f has no way back to Move's menu (prd §1781, §1931)"
