@@ -216,6 +216,9 @@ enum BrandMark {
         // Hyperliquid's own logo, and the composition strip names the venue
         // "ether.fi Cash" where the roster names it "ether.fi".
         "hype": "hyperliquid", "aave-token": "aave", "tac": "tacit",
+        // Tacit's farms are Tacit's (user, 2026-11-27: "for tacit farms use
+        // tacit icon"): Earn's row wears its mark, never a monogram.
+        "tacit-farms": "tacit",
         "etherfi-cash": "etherfi", "etherfi-liquid": "etherfi",
         // A network named whole wears its own mark: Ethereum's is ETH's, and
         // Robinhood's is the one the Wallet's network rows already draw

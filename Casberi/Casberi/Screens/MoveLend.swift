@@ -709,6 +709,7 @@ struct MoveLendSentence<Head: View>: View {
             let rows = earningRows
             let total = rows.compactMap(\.usd).reduce(0, +)
             let year = rows.compactMap(\.year).reduce(0, +)
+            let earned = rows.compactMap(\.earned).reduce(0, +)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(verbatim: MoveSentence.money(total, whole: true))
                     .dsText(.price52).monospacedDigit().foregroundStyle(DS.textPrimary)
@@ -718,6 +719,11 @@ struct MoveLendSentence<Head: View>: View {
                      : year > 0 ? String(localized: "Earning about \(LendMove.usd(year)) a year at today's rates")
                      : String(localized: "Earning at today's rates"))
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
+                // What it earned, said once under the head: on each row it
+                // pushed the line past the row (user, 2026-11-27: "clipping").
+                if earned >= 0.005 {
+                    Text("Earned \(LendMove.usd(earned)) so far").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
             }
         }
     }
@@ -726,6 +732,8 @@ struct MoveLendSentence<Head: View>: View {
         let choice: MoveTokenChoice
         let usd: Double?
         let year: Double?
+        /// Dollars earned above what went in (prd §2000).
+        let earned: Double?
     }
 
     /// Each position earning: Aave's and Olla's markets with something lent,
@@ -737,25 +745,25 @@ struct MoveLendSentence<Head: View>: View {
             let key = LendMove.key(m)
             guard let units = move.lent[key], (Decimal(string: units) ?? 0) > 0 else { continue }
             let net = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? m.network
-            let earned = move.earned(m).flatMap { move.dollars($0.units, in: m) }.flatMap { $0 >= 0.005 ? String(localized: "earned \(LendMove.usd($0))") : nil }
+            let earned = move.earned(m).flatMap { move.dollars($0.units, in: m) }
             let usd = move.dollars(units, in: m)
-            let line = [m.placeName, net, AaveLend.rateOnly(move.rates[key]), earned].compactMap { $0 }.joined(separator: " · ")
+            let line = [m.placeName, net, AaveLend.rateOnly(move.rates[key])].compactMap { $0 }.joined(separator: " · ")
             out.append(Earning(choice: MoveTokenChoice(id: "earning|\(key)", symbol: m.symbol, network: net,
                                                        sub: usd.map { MoveSentence.money($0, whole: true) }
                                                            ?? PrivateMoney.figure(units, decimals: m.decimals, symbol: ""),
                                                        line: line) { withdraw(m) },
-                               usd: usd, year: move.yearly(units, in: m)))
+                               usd: usd, year: move.yearly(units, in: m), earned: earned))
         }
         if let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading, let held = r.privateTAC, held > 0 {
             let price = TacitAccount.shared.tacPrice
             let apy = r.chainAPY()?.apy
-            let earned = r.earnedTAC.flatMap { e in price.map { e * $0 } }.flatMap { $0 >= 0.005 ? String(localized: "earned \(LendMove.usd($0))") : nil }
+            let earned = r.earnedTAC.flatMap { e in price.map { e * $0 } }
             let usd = price.map { held * $0 }
-            let line = ["Tacit", String(localized: "Private"), AaveLend.rateOnly(apy), earned].compactMap { $0 }.joined(separator: " · ")
+            let line = ["Tacit", String(localized: "Private"), AaveLend.rateOnly(apy)].compactMap { $0 }.joined(separator: " · ")
             out.append(Earning(choice: MoveTokenChoice(id: "earning|tacit", symbol: "TAC", network: String(localized: "Tacit chain"),
                                                        sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
                                                        line: line) { tacit(.takeBack) },
-                               usd: usd, year: usd.flatMap { u in apy.map { u * $0 } }))
+                               usd: usd, year: usd.flatMap { u in apy.map { u * $0 } }, earned: earned))
         }
         return out.sorted { ($0.usd ?? 0) > ($1.usd ?? 0) }
     }
@@ -768,10 +776,9 @@ struct MoveLendSentence<Head: View>: View {
             let rates = farms.pools.compactMap { TacitFarms.rate($0, in: farms) }
             let day = farms.endsAt.formatted(.dateTime.month(.abbreviated).day())
             let live = farms.active && farms.endsAt > .now
-            let line = [String(localized: "\(farms.pools.count) pools"),
-                        live ? Self.farmSpan(rates) : nil,
-                        live ? String(localized: "until \(day)") : String(localized: "ended \(day)")]
-                .compactMap { $0 }.joined(separator: " · ")
+            // One line, no more (user, 2026-11-27: "clipping"): the rates;
+            // the day stands in To's head for the farms.
+            let line = live ? (Self.farmSpan(rates) ?? "") : String(localized: "ended \(day)")
             rows.append(MoveTokenChoice(id: "farms", symbol: String(localized: "Tacit farms"), network: String(localized: "Ethereum"),
                                         line: line) {
                 withAnimation(DS.Motion.standard) {
