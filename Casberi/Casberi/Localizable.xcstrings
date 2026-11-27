@@ -8006,6 +8006,40 @@
         }
       }
     },
+    "%@ is in %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is in %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ está en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@は%2$@にあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@이(가) %2$@에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@已在%2$@"
+          }
+        }
+      }
+    },
     "%@ is in ALARM" : {
       "localizations" : {
         "es" : {
@@ -8102,6 +8136,34 @@
         }
       }
     },
+    "%@ is in your public account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ está en tu cuenta pública"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@は公開アカウントにあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@이(가) 공개 계정에 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已在你的公开账户"
+          }
+        }
+      }
+    },
     "%@ is live again after %lld days" : {
       "localizations" : {
         "en" : {
@@ -8160,6 +8222,68 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 不在 Uniswap 的列表中，卖出它会运行它自己的合约"
+          }
+        }
+      }
+    },
+    "%@ is on its way to %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ is on its way to %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ va de camino a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@を%2$@へ送っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@이(가) %2$@(으)로 가는 중입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@正在发往%2$@"
+          }
+        }
+      }
+    },
+    "%@ is on its way to your public account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ va de camino a tu cuenta pública"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@を公開アカウントへ送っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@이(가) 공개 계정으로 가는 중입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@正在发往你的公开账户"
           }
         }
       }
@@ -14130,6 +14254,34 @@
         }
       }
     },
+    "%@ swapped privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ intercambiado en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@を非公開でスワップしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@을(를) 비공개로 스왑했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@已私密兑换"
+          }
+        }
+      }
+    },
     "%@ test ETH" : {
       "localizations" : {
         "es" : {
@@ -15794,6 +15946,74 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ wei"
+          }
+        }
+      }
+    },
+    "%@ went to %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ went to %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ fue a %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@を%2$@へ送りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@을(를) %2$@에게 보냈습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@已发给%2$@"
+          }
+        }
+      }
+    },
+    "%@ went to %@, privately" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ went to %2$@, privately"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ fue a %2$@, en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@を%2$@へ非公開で送りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@을(를) %2$@에게 비공개로 보냈습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@已私密发给%2$@"
           }
         }
       }
@@ -62667,6 +62887,34 @@
         }
       }
     },
+    "Aztec carries it in minutes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aztec lo lleva en minutos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aztecが数分で届けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aztec이 몇 분 안에 옮깁니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aztec 几分钟内送达。"
+          }
+        }
+      }
+    },
     "Aztec did not take this move" : {
       "localizations" : {
         "es" : {
@@ -89496,6 +89744,34 @@
         }
       }
     },
+    "ETH for fees is on its way to Railgun" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El ETH para comisiones va de camino a Railgun"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手数料用のETHをRailgunへ送っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수수료용 ETH가 Railgun으로 가는 중입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于手续费的 ETH 正在发往 Railgun"
+          }
+        }
+      }
+    },
     "ETH from an exchange · %@" : {
       "localizations" : {
         "es" : {
@@ -115162,6 +115438,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Gas 费需要少量私密 ETH"
+          }
+        }
+      }
+    },
+    "Its gas was paid by your account, in the open." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Su gas lo pagó tu cuenta, a la vista."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ガス代はあなたのアカウントが公開で支払いました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가스비는 내 계정이 공개적으로 냈습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其 Gas 由你的账户公开支付。"
           }
         }
       }
@@ -154532,6 +154836,34 @@
         }
       }
     },
+    "Paid %lld Aztec accounts, privately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagaste a %lld cuentas de Aztec, en privado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld件のAztecアカウントに非公開で支払いました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aztec 계정 %lld개에 비공개로 지불했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已私密支付给 %lld 个 Aztec 账户"
+          }
+        }
+      }
+    },
     "Paid by" : {
       "localizations" : {
         "es" : {
@@ -162389,6 +162721,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "大约一小时后变为私密"
+          }
+        }
+      }
+    },
+    "Private in about an hour." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privado en una hora aproximadamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "約1時間で非公開になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "약 1시간 후 비공개가 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大约一小时后转为私密。"
+          }
+        }
+      }
+    },
+    "Private in about an hour. Then send again." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privado en una hora aproximadamente. Después, envía de nuevo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "約1時間で非公開になります。その後、もう一度送ってください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "약 1시간 후 비공개가 됩니다. 그다음 다시 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大约一小时后转为私密。然后再发送一次。"
           }
         }
       }
@@ -217636,6 +218024,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用时 %@"
+          }
+        }
+      }
+    },
+    "Took %lld s" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tardó %lld s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld秒かかりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld초 걸렸습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用时 %lld 秒"
           }
         }
       }

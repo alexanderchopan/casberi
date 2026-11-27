@@ -1146,8 +1146,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             }
         case .done:
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(verbatim: doneLine).dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                PrivateFinishLines(headline: finishHeadline, note: finishNote)
+                    .onAppear { chrome.rain(sources: ["Wallet"]) }
                 // **SAVE WHO YOU PAID (prd §1964):** each Aztec account sent
                 // to that has no name yet, one row each.
                 ForEach(unsavedAztec, id: \.self) { address in
@@ -1212,13 +1212,33 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         return run.total
     }
 
-    private var doneLine: String {
+    /// The finish's first line (prd §1990): what went and where it is.
+    private var finishHeadline: String {
+        let what = [move.amount, move.symbol].filter { !$0.isEmpty }.joined(separator: " ")
         switch move.mode {
-        case .deposit: String(localized: "On its way: Aztec carries it in minutes, then it is yours.")
+        case .deposit: return PrivateFinish.headline(what, to: .yours("Aztec"), onItsWay: true)
+        case .send:
+            // Pay many (prd §1952): each its own amount, so the count.
+            if !move.pays.isEmpty {
+                let count = move.pays.count + (move.recipient == nil ? 0 : 1)
+                return String(localized: "Paid \(count) Aztec accounts, privately")
+            }
+            guard let to = move.recipient else { return String(localized: "Sent privately") }
+            if move.toEthereum {
+                return PrivateFinish.headline(what, to: PrivateMove.isYours(to) ? .yourPublic : .theirPublic(PrivateFinish.who(to)), onItsWay: true)
+            }
+            return PrivateFinish.headline(what, to: .theirPrivate(PrivateFinish.who(to)))
+        }
+    }
+
+    /// Under it, grey: what is left, what was paid in the open, or how long it took.
+    private var finishNote: String? {
+        switch move.mode {
+        case .deposit: String(localized: "Aztec carries it in minutes.")
         case .send:
             move.toEthereum ? String(localized: "Proved. In about an hour Needs you offers Finish on Ethereum.")
-                : move.paidInTheOpen ? String(localized: "Sent privately. Its gas was paid by your account, in the open.")
-                : sentTotal.map { String(localized: "Sent privately · \($0) s") } ?? String(localized: "Sent privately.")
+                : move.paidInTheOpen ? String(localized: "Its gas was paid by your account, in the open.")
+                : PrivateFinish.took(sentTotal)
         }
     }
 

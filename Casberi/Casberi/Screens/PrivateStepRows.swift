@@ -198,6 +198,8 @@ struct MoveStepCapsule: View {
             let words = steps.awayLanded ?? run.plan.steps[run.currentIndex].done
             steps.clearAway()
             chrome.flash(words)
+            // A finish rains, behind its sheet too (prd §1990).
+            chrome.rain(sources: ["Wallet"])
             NSLog("moveStepCapsule| landed | %@", words)
         }
         // The first Railgun sync on this phone finished (prd §1885): said

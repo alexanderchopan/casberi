@@ -31,6 +31,7 @@ struct TacitOutSheet: View {
     private var tac: Double? { Double(amount.replacingOccurrences(of: ",", with: ".")) }
 
     @Environment(\.moveBack) private var moveBack
+    @Environment(ShellChrome.self) private var chrome
     /// The step whose list or keys stand in the deck (prd §1931).
     @State private var open: Open? = .amount
     private enum Open { case amount, to }
@@ -221,8 +222,10 @@ struct TacitOutSheet: View {
         // place, and what that place now holds.
         if case .done = out.step, let paid = out.paidTAC, let payTo {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text("\(TacitAccountRows.amount(paid)) TAC went to \(AddressBook.shared.name(for: payTo) ?? AddressTail.short(payTo)), privately")
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
+                // One finish for every private move (prd §1990).
+                PrivateFinishLines(headline: PrivateFinish.headline("\(TacitAccountRows.amount(paid)) TAC",
+                                                                    to: .theirPrivate(PrivateFinish.who(payTo))))
+                    .onAppear { chrome.rain(sources: ["Wallet"]) }
                 // **SAVE WHO YOU PAID (prd §1983, as Railgun's §1965):** one
                 // field, the address under it; the book files it as Tacit's.
                 if AddressBook.shared.name(for: payTo) == nil {
@@ -245,22 +248,12 @@ struct TacitOutSheet: View {
         } else if case .done = out.step, let paid = out.paidTAC {
             let place = toCoSigner ? String(localized: "your co-signer") : String(localized: "your public account")
             let now = toCoSigner ? account.reading?.publicTAC : account.reading?.accountTAC
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // Sent, not yet seen: on its way, never "is in" (prd §1988).
-                Group {
-                    if out.paidPending {
-                        Text("\(TacitAccountRows.amount(paid)) TAC is on its way to \(place)")
-                    } else {
-                        Text("\(TacitAccountRows.amount(paid)) TAC is in \(place)")
-                    }
-                }
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                if !out.paidPending, let now {
-                    Text("It holds \(TacitAccountRows.amount(now)) TAC now")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // Sent, not yet seen: on its way, never "is in" (prd §1988).
+            PrivateFinishLines(headline: PrivateFinish.headline("\(TacitAccountRows.amount(paid)) TAC",
+                                                                to: toCoSigner ? .yours(place) : .yourPublic,
+                                                                onItsWay: out.paidPending),
+                               note: out.paidPending ? nil : now.map { String(localized: "It holds \(TacitAccountRows.amount($0)) TAC now") })
+                .onAppear { chrome.rain(sources: ["Wallet"]) }
             .padding(.top, DS.Space.s6)
         }
     }

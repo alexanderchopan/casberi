@@ -75544,3 +75544,19 @@ Measured live is still owed (a small amount each): Privacy Pools' Max against it
 **Seen** on an iPhone 17 Pro simulator over the demo: Swap's amount empty and typed in dollars, When with +10%, −10% (amber), and in dollars; Send over its balance. **Not seen:** Earn, Privacy Pools, Railgun, Aztec and Tacit fields (built through the same chip), Dynamic Type, iPad.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1990 — One finish for every private move (2026-11-26)
+
+**User, of the Move polish canvas's "One receipt for every verb": "Yes, then ship"; and "do we do any rain tile when a move action is complete. should we?"**
+
+The four private sends finished four ways: Privacy Pools on "View on Etherscan" alone, Railgun and Aztec on a grey "Sent privately · 12 s", Tacit on a white line naming the amount and the place (§1983). The public verbs already share one receipt (§1914).
+
+1. **Every private finish says it Tacit's way** (`Screens/PrivateFinish.swift`, `PrivateFinishLines`): what went and where it is, in the text's ink ("25 USDC went to Mira, privately", "0.1 ETH is on its way to Railgun", "5 TAC is in your public account", "25 USDC went to …41b5" for an unshield in the open, §1988 item 3); under it, grey, what is left or how long it took ("Took 12 s"). Save and the explorer follow as before.
+2. **A deposit's note drops its "On its way:"**, now the headline's: Railgun's "Private in about an hour.", Aztec's "Aztec carries it in minutes." Railgun's fee top-up says "ETH for fees is on its way to Railgun", never the send it was for.
+3. **A finish rains** (§655): each private finish deals the Wallet's tiles as a public move's does, and so does a send landing behind its sheet, beside its toast.
+
+**Not done from the canvas:** "Say where it lands" (a public send's sentence names who and where), "Amount knows its limit" (the amount's rows and "More than you have" already say it) and "Empty places with Make private" (§1781 retired Make private).
+
+**Seen** on an iPhone 17 Pro simulator: Tacit's finished send (`-tacitReelSample pay`). **Not seen:** Privacy Pools', Railgun's and Aztec's finishes, which need a real send.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

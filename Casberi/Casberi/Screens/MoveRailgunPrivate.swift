@@ -188,6 +188,8 @@ final class RailgunMove {
     /// To someone's private balance on Railgun (prd §1877): the send stays
     /// inside Railgun, a broadcaster (or a fresh sender) carrying it.
     var toPrivate: Bool { mode == .takeBack && recipient.map(RailgunSwap.isPrivateAddress) == true }
+    /// The finish was ETH for fees moving in, not this send (prd §1990).
+    private(set) var feesAdded = false
     /// A note only the receiver can read (prd §1877).
     var note = ""
     private(set) var transferPlan: RailgunPocket.TransferPlan?
@@ -649,6 +651,7 @@ final class RailgunMove {
 
     /// About $10 of ETH, as WETH, for broadcasters' fees.
     func addFees() async {
+        feesAdded = false
         guard !DemoMode.isActive else { return }
         do {
             let prices = await MainnetPrices.prices(for: ["eth"])
@@ -666,7 +669,8 @@ final class RailgunMove {
                 await self?.say(s)
             }
             PrivateSendSteps.shared.finish()
-            stage = .done(String(localized: "On its way: private in about an hour. Then send again."))
+            feesAdded = true
+            stage = .done(String(localized: "Private in about an hour. Then send again."))
             RailgunHoldings.shared.afterMove()
         } catch {
             PrivateSendSteps.shared.fail(Self.words(error))
@@ -710,6 +714,7 @@ final class RailgunMove {
 
     /// Moves it: in through your account's shield, or back to your account.
     func run() async {
+        feesAdded = false
         guard let picked, amountOK, !DemoMode.isActive else { return }
         guard mode == .deposit || !anotherIsGoing else { stage = .failed(String(localized: "A send is still on its way")); return }
         let steps = PrivateSendSteps.shared
@@ -725,7 +730,7 @@ final class RailgunMove {
                     await self?.say(s)
                 }
                 steps.finish()
-                stage = .done(String(localized: "On its way: private in about an hour."))
+                stage = .done(String(localized: "Private in about an hour."))
             case .takeBack where toPrivate && viaFresh:
                 guard let plan = transferPlan else { return }
                 stage = .working(String(localized: "Confirm with Face ID"))
@@ -851,7 +856,7 @@ final class RailgunMove {
             await step(.sent, after: 3)
             try? await Task.sleep(for: .seconds(6))
             steps.finish()
-            stage = .done(String(localized: "On its way: private in about an hour."))
+            stage = .done(String(localized: "Private in about an hour."))
             return
         }
         // As a real send to someone: behind its sheet from here (prd §1806).
@@ -1169,8 +1174,8 @@ struct MoveRailgunSentence<Head: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
         case .done(let words):
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text(verbatim: doneLine(words)).dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                PrivateFinishLines(headline: finishHeadline, note: finishNote(words))
+                    .onAppear { chrome.rain(sources: ["Wallet"]) }
                 // The Railgun address this send paid, if it has no name yet.
                 if let address = unsavedRecipient {
                     Button {
@@ -1249,16 +1254,24 @@ struct MoveRailgunSentence<Head: View>: View {
         }
     }
 
-    /// The line under a finished send: how long it took, tap to block.
-    private func doneLine(_ words: String) -> String {
-        guard let total = stepsRun?.total, move.mode != .deposit else { return words }
-        if move.mode == .swap { return String(localized: "Swapped privately · \(total) s") }
-        // An unshield to a public address is sent to it, not privately (prd §1988 item 3).
-        if move.toSomeoneElse, !move.toPrivate, let to = move.recipient {
-            return String(localized: "Sent to \(AddressTail.short(to)) · \(total) s")
+    /// The finish's first line (prd §1990): what went and where it is. An
+    /// unshield to a public address went to it, never "privately" (prd §1988
+    /// item 3).
+    private var finishHeadline: String {
+        let what = [move.amount, move.holding?.symbol ?? ""].filter { !$0.isEmpty }.joined(separator: " ")
+        if move.feesAdded { return String(localized: "ETH for fees is on its way to Railgun") }
+        switch move.mode {
+        case .deposit: return PrivateFinish.headline(what, to: .yours("Railgun"), onItsWay: true)
+        case .swap: return String(localized: "\(what) swapped privately")
+        case .takeBack:
+            guard let to = move.recipient, move.toSomeoneElse else { return PrivateFinish.headline(what, to: .yourPublic) }
+            return PrivateFinish.headline(what, to: move.toPrivate ? .theirPrivate(PrivateFinish.who(to)) : .theirPublic(PrivateFinish.who(to)))
         }
-        return move.toSomeoneElse ? String(localized: "Sent privately · \(total) s")
-            : String(localized: "Back in your account · \(total) s")
+    }
+
+    /// Under it, grey: what is left (a deposit's hour), else how long it took.
+    private func finishNote(_ words: String) -> String? {
+        move.mode == .deposit || move.feesAdded ? words : PrivateFinish.took(stepsRun?.total)
     }
 
     /// Where no price makes a dollar cost: Railgun's percentage and who

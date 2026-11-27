@@ -324,6 +324,9 @@ struct MovePrivateSentence<Head: View>: View {
                 .fixedSize(horizontal: false, vertical: true)
         case .done(let hash):
             VStack(alignment: .leading, spacing: DS.Space.s2) {
+                // What went and where it is (prd §1990).
+                PrivateFinishLines(headline: finishHeadline)
+                    .onAppear { chrome.rain(sources: ["Wallet"]) }
                 if move.mode == .deposit {
                     Text(verbatim: approval)
                         .dsText(.body17)
@@ -341,6 +344,23 @@ struct MovePrivateSentence<Head: View>: View {
         default:
             EmptyView()
         }
+    }
+
+    /// The finish's first line (prd §1990): into Privacy Pools, to someone's
+    /// private balance, back to your public account, or to their address.
+    private var finishHeadline: String {
+        if move.mode == .deposit {
+            return PrivateFinish.headline(figure, to: .yours("Privacy Pools"), onItsWay: true)
+        }
+        if let tag = move.tag {
+            return PrivateFinish.headline(figure, to: .theirPrivate(ZkMoneyWire.display(tag)))
+        }
+        guard let to = move.recipient else { return String(localized: "Sent privately") }
+        if move.balanceToBalance == true, !move.away {
+            return PrivateFinish.headline(figure, to: .theirPrivate(PrivateFinish.who(to)))
+        }
+        if PrivateMove.isYours(to) { return PrivateFinish.headline(figure, to: .yourPublic, onItsWay: move.away) }
+        return PrivateFinish.headline(figure, to: .theirPublic(PrivateFinish.who(to)), onItsWay: move.away)
     }
 
     /// Why USDC is not offered (prd §1938), in amber: under the list's
