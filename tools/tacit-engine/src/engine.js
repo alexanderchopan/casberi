@@ -59,6 +59,8 @@ let backIndex = null;
 // the second never ended (user, 2026-11-25: "just stays on this screen
 // forever spinning").
 let defiRead = null;
+// A spend's proof in flight: the farm read waits for it.
+let proving = null;
 let outPending = null;
 // The pool's PUBLIC logs, kept by the app between launches (the page keeps
 // nothing: its store is non-persistent), so a read fetches only the blocks
@@ -80,6 +82,27 @@ function forget() { identity?.fill(0); identity = null; client = null; pending =
 function poolUx() {
   setActiveNetwork('mainnet');
   return (pool ||= makeConfidentialPoolUx({ secp, keccak256: keccak_256, sha256, network: 'mainnet', logStore }));
+}
+
+// A line in the app's log (`tacitEngine| page |`), never a key or a note.
+function say(line) { try { globalThis.webkit.messageHandlers.engineLog.postMessage(String(line)); } catch {} }
+
+// A spend's stages with their times, so a phone's slow prove says where it
+// stands: the note tree read from the leader, the prover loaded, the proof.
+function stages(kind, t) {
+  say(`spend ${kind} begins: notes and tree`);
+  return (stage) => say(`spend ${kind} ${stage} at ${Math.round(now() - t)} ms`);
+}
+
+// A spend proves on the page's one thread, so it waits for the DeFi read in
+// flight (the reads that held Make private, prd §1973 item 23) rather than
+// share the thread with it.
+async function settle(kind) {
+  if (!defiRead) return;
+  const t = now();
+  say(`spend ${kind} waits for the DeFi read`);
+  await defiRead.catch(() => {});
+  say(`spend ${kind} waited ${Math.round(now() - t)} ms`);
 }
 
 function nextBackIndex() {
@@ -249,6 +272,10 @@ const methods = {
     if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
     const t = now();
     const key = Uint8Array.from(identity);
+    // After the DeFi read, as the return path's slot (it reads the same
+    // pool logs), and never beside a spend's proof on the page's one thread.
+    if (defiRead) await defiRead.catch(() => {});
+    if (proving) await proving.catch(() => {});
     try {
       const list = await poolUx().farmPositions({ walletPriv: key });
       return {
@@ -338,8 +365,12 @@ const methods = {
   // Proves the withdrawal of `units` to `to`; nothing leaves the phone.
   async outProve({ rpcUrl, blocks, leader, to, units }) {
     const c = await chainClient({ rpcUrl, blocks, leader });
+    await settle('withdraw');
     const t = now();
-    outPending = await c.prepareWithdraw(String(to), BigInt(units));
+    const made = c.prepareWithdraw(String(to), BigInt(units), { onProgress: stages('withdraw', t) });
+    proving = made;
+    try { outPending = await made; } finally { if (proving === made) proving = null; }
+    say(`spend withdraw proved in ${Math.round(now() - t)} ms`);
     return { proveMs: Math.round(now() - t) };
   },
 
@@ -372,8 +403,12 @@ const methods = {
   async payProve({ rpcUrl, blocks, leader, to, units }) {
     const c = await chainClient({ rpcUrl, blocks, leader });
     const recipient = await payRecipient(c, String(to).trim());
+    await settle('pay');
     const t = now();
-    outPending = await c.preparePay(recipient, BigInt(units));
+    const made = c.preparePay(recipient, BigInt(units), { onProgress: stages('pay', t) });
+    proving = made;
+    try { outPending = await made; } finally { if (proving === made) proving = null; }
+    say(`spend pay proved in ${Math.round(now() - t)} ms`);
     return { proveMs: Math.round(now() - t) };
   },
 

@@ -472,7 +472,22 @@ struct MoveQuickKeys: View {
         let word: String
         var on = false
         let act: () -> Void
+
+        /// **ONE MAX (user, 2026-11-26: "the 'max' button is different on
+        /// different screens. please make sure it is the same").** Every
+        /// amount's whole is this key, worded "Max" on every page.
+        static func max(on: Bool, _ act: @escaping () -> Void) -> Key {
+            Key(id: "max", word: String(localized: "Max"), on: on, act: act)
+        }
+
+        /// A share of what there is, "25%" or "50%"; 100 is `max`.
+        static func share(_ percent: Int, on: Bool, _ act: @escaping () -> Void) -> Key {
+            percent >= 100 ? max(on: on, act) : Key(id: "\(percent)", word: "\(percent)%", on: on, act: act)
+        }
     }
+
+    /// The shares every amount offers: 25%, 50%, Max.
+    static let shares = [25, 50, 100]
     let keys: [Key]
     var disabled = false
     /// The lit key's ink: the pick's, or Aztec's own (prd §1779).

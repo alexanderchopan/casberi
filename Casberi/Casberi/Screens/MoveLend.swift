@@ -271,9 +271,8 @@ struct MoveLendSentence<Head: View>: View {
                     MoveDeckKeys {
                         // The quick shares are the keys' top row (prd §1932).
                         if canUseAll {
-                            MoveQuickKeys(keys: [25, 50, 100].map { p in
-                                MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%",
-                                                  on: p == 100 && move.all) { pickShare(p) }
+                            MoveQuickKeys(keys: MoveQuickKeys.shares.map { p in
+                                MoveQuickKeys.Key.share(p, on: p == 100 && move.all) { pickShare(p) }
                             }, disabled: !live)
                         }
                         MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live,

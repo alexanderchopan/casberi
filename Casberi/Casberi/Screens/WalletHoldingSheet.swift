@@ -36,6 +36,7 @@ struct WalletHolding: Identifiable, Equatable {
         case railgunSend(contract: String?)
         case railgunSwap(contract: String?)
         case aztecSend
+        case tacitSend
 
         var id: Self { self }
 
@@ -43,7 +44,7 @@ struct WalletHolding: Identifiable, Equatable {
             switch self {
             case .lendWithdraw: String(localized: "Withdraw \(symbol)")
             case .lendDeposit: String(localized: "Deposit \(symbol)")
-            case .privateSend, .railgunSend, .aztecSend: String(localized: "Send \(symbol)")
+            case .privateSend, .railgunSend, .aztecSend, .tacitSend: String(localized: "Send \(symbol)")
             case .railgunSwap: String(localized: "Swap \(symbol)")
             }
         }
@@ -53,7 +54,7 @@ struct WalletHolding: Identifiable, Equatable {
             switch self {
             case .lendWithdraw: "arrow.down"
             case .lendDeposit: "plus"
-            case .privateSend, .railgunSend, .aztecSend: "arrow.up.right"
+            case .privateSend, .railgunSend, .aztecSend, .tacitSend: "arrow.up.right"
             case .railgunSwap: "arrow.left.arrow.right"
             }
         }
@@ -138,6 +139,10 @@ extension FeedScreen {
         case .aztecSend:
             DSHaptic.selection()
             chrome.moveAztec = .send
+            chrome.moveTray = true
+        case .tacitSend:
+            DSHaptic.selection()
+            chrome.moveTacitOut = true
             chrome.moveTray = true
         }
     }

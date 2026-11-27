@@ -38,7 +38,8 @@ struct MoveSentence: View {
 
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
          privately: PrivateMove.Mode? = nil, lending: LendMove.Mode? = nil,
-         aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil) {
+         aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil,
+         tacitOut: Bool = false) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
@@ -49,8 +50,11 @@ struct MoveSentence: View {
         // A Railgun row in Holdings opens Send onto taking it back (prd §1721).
         let railgun = RailgunPocket.available && mode == nil && aztec == nil ? railgunPrivately : nil
         let lends = AaveLend.on && lending != nil && mode == nil && aztec == nil && railgun == nil
-        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil ? .send : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        let opensTacit = tacitOut && mode == nil && aztec == nil && railgun == nil && !lends
+        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil || opensTacit ? .send : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
         _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
+        // A private TAC row's Send opens Tacit's own Send in Move.
+        _tacitOutOpen = State(initialValue: opensTacit)
         _fresh = State(initialValue: arrival != nil)
         _privateMode = State(initialValue: mode)
         _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
@@ -76,7 +80,7 @@ struct MoveSentence: View {
         }
         _railgunMove = State(initialValue: railgunMove)
         _railgunOpen = State(initialValue: railgun != nil)
-        picksUpDraft = mode == nil && aztec == nil && railgun == nil && opening == nil && arrival == nil && !lends
+        picksUpDraft = mode == nil && aztec == nil && railgun == nil && opening == nil && arrival == nil && !lends && !opensTacit
     }
 
     /// **LEND (prd §1674): a verb.** Picked, `MoveLendSentence` draws under
@@ -3659,10 +3663,10 @@ struct MoveSentence: View {
                         }
                     }
                 }
-                amountChip(String(localized: "Half"), on: share.wrappedValue == 50) { share.wrappedValue = 50 }
+                amountChip("50%", on: share.wrappedValue == 50) { share.wrappedValue = 50 }
                 // In the token's units: dollars round, and could land a cent
                 // over what is there (prd §1586).
-                amountChip(String(localized: "All"), on: share.wrappedValue == 100) {
+                amountChip(String(localized: "Max"), on: share.wrappedValue == 100) {
                     inDollars = false
                     share.wrappedValue = 100
                 }
@@ -7672,9 +7676,9 @@ struct MoveSentence: View {
         }
         guard let with, verb == .send || verb == .swap else { return [] }
         let share = shareBinding(with)
-        return [25, 50, 100].map { p in
-            // Over what there is, no share is the pick (it only reads as All).
-            MoveQuickKeys.Key(id: "\(p)", word: p == 100 ? String(localized: "All") : "\(p)%", on: share.wrappedValue == p && !over) {
+        return MoveQuickKeys.shares.map { p in
+            // Over what there is, no share is the pick (it only reads as Max).
+            MoveQuickKeys.Key.share(p, on: share.wrappedValue == p && !over) {
                 if p == 100 {
                     useAll(with)
                 } else {

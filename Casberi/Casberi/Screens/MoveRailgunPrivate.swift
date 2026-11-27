@@ -1385,8 +1385,8 @@ struct MoveRailgunSentence<Head: View>: View {
     private func chipWord(_ pick: RailgunMove.Pick) -> String {
         switch pick {
         case .floor: RailgunMove.floorText
-        case .half: String(localized: "Half")
-        case .all: String(localized: "All")
+        case .half: "50%"
+        case .all: String(localized: "Max")
         }
     }
 
@@ -1433,7 +1433,8 @@ struct MoveRailgunSentence<Head: View>: View {
                             let quick = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
-                                    MoveQuickKeys.Key(id: value, word: chipWord(p), on: move.amount == value) { move.amount = value }
+                                    p == .floor ? MoveQuickKeys.Key(id: value, word: chipWord(p), on: move.amount == value) { move.amount = value }
+                                        : MoveQuickKeys.Key.share(p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
                                 })
                             }
                             MoveKeypad(text: $move.amount, places: min(move.holding?.decimals ?? 6, 6),

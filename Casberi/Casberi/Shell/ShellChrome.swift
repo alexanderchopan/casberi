@@ -265,6 +265,9 @@ final class ShellChrome {
     /// Move raised onto a Railgun token (prd §1721): a Holdings row takes it
     /// back to your account. Cleared when the tray leaves.
     var moveRailgun: RailgunMove.Opening?
+    /// Move raised onto Tacit's Send: Holdings' private TAC row's page
+    /// (back to public, or to another Tacit account). Cleared when the tray leaves.
+    var moveTacitOut = false
     /// Move opens on Lend (prd §1674): a lent row in Holdings takes it back.
     /// Cleared when the tray closes.
     var moveLend: LendMove.Mode?

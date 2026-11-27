@@ -45,10 +45,10 @@ struct TacitShieldSheet: View {
             Group {
                 if open == .amount, !sending {
                     MoveDeckKeys {
-                        MoveQuickKeys(keys: [MoveQuickKeys.Key(id: "max", word: String(localized: "Max"),
-                                                               on: amount == Self.maxText(held)) {
-                            amount = Self.maxText(held)
-                        }])
+                        MoveQuickKeys(keys: MoveQuickKeys.shares.map { p in
+                            let text = Self.maxText(held * Double(p) / 100)
+                            return .share(p, on: amount == text) { amount = text }
+                        })
                         MoveKeypad(text: $amount, places: 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
                     }
                 } else if open == .from, !sending {

@@ -630,8 +630,7 @@ struct MovePrivateSentence<Head: View>: View {
                           on: !inDollars && move.amount == o.amount) { inDollars = false; move.amount = o.amount }
         }
         if let top = move.most, top != "0", let maxShown = plainAmount(top) {
-            keys.append(MoveQuickKeys.Key(id: "max", word: String(localized: "Max"),
-                                  on: !inDollars && move.amount == maxShown) { inDollars = false; move.amount = maxShown })
+            keys.append(.max(on: !inDollars && move.amount == maxShown) { inDollars = false; move.amount = maxShown })
         }
         return Array(keys)
     }

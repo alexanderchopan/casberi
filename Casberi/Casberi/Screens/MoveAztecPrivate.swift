@@ -1395,8 +1395,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                             let quick = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
-                                    MoveQuickKeys.Key(id: value, word: p == .half ? String(localized: "Half") : String(localized: "All"),
-                                                      on: move.amount == value) { move.amount = value }
+                                    MoveQuickKeys.Key.share(p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
                                 }, onInk: DS.aztecInk)
                             }
                             MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),

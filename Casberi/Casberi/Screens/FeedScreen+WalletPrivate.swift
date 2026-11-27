@@ -317,9 +317,16 @@ extension FeedScreen {
                 let earned = reading.earnedTAC.flatMap { $0 >= 0.0001 ? $0 : nil }
                 let fact = earned.map { String(localized: "Tacit chain · earned \(TacitAccountRows.amount($0))") }
                     ?? String(localized: "Tacit chain")
-                walletTacitLine("TAC", held: WalletValue.held(tac), fact: fact,
-                                figure: tacit.privateTacUSD.map { mask ?? WalletValue.exactMoney($0) },
-                                move: tacit.privateTacUSD == nil ? nil : walletHoldingMoves[HoldingMoves.key("TAC")])
+                // **ITS PAGE, AS RAILGUN'S (user, 2026-11-26: "when i press the
+                // tac token in my private tac balance in holdings nothing
+                // happens").** Send on it opens Tacit's Send in Move: back to
+                // public, or to another Tacit account.
+                let figure = tacit.privateTacUSD.map { mask ?? WalletValue.exactMoney($0) }
+                walletTacitLine("TAC", held: WalletValue.held(tac), fact: fact, figure: figure,
+                                move: tacit.privateTacUSD == nil ? nil : walletHoldingMoves[HoldingMoves.key("TAC")],
+                                holding: WalletHolding(id: "tacit:TAC", symbol: "TAC", figure: figure ?? "\(TacitAccountRows.amount(tac)) TAC",
+                                                       usd: mask == nil ? tacit.privateTacUSD : nil,
+                                                       line: String(localized: "Tacit chain · Tacit"), verbs: [.tacitSend]))
             }
             // **YOUR FARMS (prd §1993):** each position its pair, with the TAC
             // it has earned and not claimed; its worth counts in Private.
@@ -363,9 +370,12 @@ extension FeedScreen {
 
     /// A Tacit row states what is held; its verbs are Move's (Make private,
     /// back to public, prd §1976, §1977), so it opens nothing (§1981).
+    /// A row with a `holding` opens its page; the rest state what is held.
+    @ViewBuilder
     private func walletTacitLine(_ symbol: String, held: String?, fact: String, figure: String?, move: Double?,
-                                 factInk: Color = DS.textSecondary) -> some View {
-        HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
+                                 factInk: Color = DS.textSecondary, holding: WalletHolding? = nil) -> some View {
+        let label = Text(verbatim: [symbol, held, fact, figure].compactMap { $0 }.joined(separator: ". "))
+        let line = HStack(alignment: .center, spacing: DSRoomChassis.headGap) {
             AssetMark(name: symbol, size: DS.Mark.row)
                 .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
@@ -374,9 +384,21 @@ extension FeedScreen {
             walletFigureOverDay(figure, move: move)
         }
         .walletTwoLineHead()
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: [symbol, held, fact, figure].compactMap { $0 }.joined(separator: ". ")))
-        .walletListRow()
+        if let holding {
+            Button { walletOpenHolding(holding) } label: { line.contentShape(Rectangle()) }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .contextMenu { walletHoldingMenu(holding) }
+                .accessibilityElement(children: .ignore)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(label)
+                .walletListRow()
+        } else {
+            line
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(label)
+                .walletListRow()
+        }
     }
 
     private func walletRailgunRow(_ h: RailgunHoldings.Held, units: String, line: String, pending: Bool, mask: String?) -> some View {

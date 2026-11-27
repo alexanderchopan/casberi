@@ -59,7 +59,7 @@ struct MoveTrayPresenter: ViewModifier {
                               YourAccountFirstOpen.walked(yours)
                               chrome.walkClosed += 1
                           }
-                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false; chrome.moveAsk = nil }) {
+                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveTacitOut = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false; chrome.moveAsk = nil }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -251,7 +251,7 @@ struct MoveScreen: View {
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
                              privately: chrome.movePrivately,
                              lending: chrome.moveLend, aztecPrivately: chrome.moveAztec,
-                             railgunPrivately: chrome.moveRailgun)
+                             railgunPrivately: chrome.moveRailgun, tacitOut: chrome.moveTacitOut)
                     .transition(.opacity)
             } else if let mode = chrome.movePrivately, PrivateMove.available {
                 // No account yet, so no other verb can be tapped: Send's

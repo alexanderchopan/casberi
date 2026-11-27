@@ -131,11 +131,7 @@ final class TacitOut {
             step = .proving
             provingSince = .now
             do {
-                if let payTo {
-                    _ = try await TacitEngine.shared.payProve(to: payTo, units: units)
-                } else {
-                    _ = try await TacitEngine.shared.outProve(to: to, units: units)
-                }
+                try await proveBounded(to: to)
                 provingSince = nil
             } catch {
                 provingSince = nil
@@ -172,6 +168,35 @@ final class TacitOut {
             step = .failed(TacitAccount.words(error))
             notifyFailed(TacitAccount.words(error))
         }
+    }
+
+    /// **A PROOF HAS AN END (as Make private's, prd §1973 item 23):** the
+    /// user's phone sat on Proved past two minutes. Past `TacitShield.proveLimit`
+    /// the sheet says so and offers Try again; nothing was handed, so nothing
+    /// moved. The engine's stages are in the log (`tacitEngine| page | spend`).
+    private func proveBounded(to: String) async throws {
+        let payTo = self.payTo, units = self.units
+        let once = Once()
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            Task { @MainActor in
+                do {
+                    if let payTo { _ = try await TacitEngine.shared.payProve(to: payTo, units: units) }
+                    else { _ = try await TacitEngine.shared.outProve(to: to, units: units) }
+                    if once.take() { cont.resume() }
+                } catch {
+                    if once.take() { cont.resume(throwing: error) }
+                }
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(TacitShield.proveLimit))
+                if once.take() { cont.resume(throwing: Stop.tooLong) }
+            }
+        }
+    }
+
+    @MainActor private final class Once {
+        private var taken = false
+        func take() -> Bool { if taken { return false }; taken = true; return true }
     }
 
     /// A move of yours that stopped, said while you are away (prd §1881).
@@ -301,7 +326,7 @@ final class TacitOut {
     #endif
 
     enum Stop: Error {
-        case refused, slow, nothingOwed, badAddress
+        case refused, slow, nothingOwed, badAddress, tooLong
 
         var words: String {
             switch self {
@@ -309,6 +334,7 @@ final class TacitOut {
             case .slow: return String(localized: "Still waiting on Tacit's chain. Collect it later from here")
             case .nothingOwed: return String(localized: "Tacit owes nothing to collect yet. Collect it later from here")
             case .badAddress: return String(localized: "That isn't an Ethereum address")
+            case .tooLong: return String(localized: "Tacit took too long. Your TAC stays private. Try again")
             }
         }
     }

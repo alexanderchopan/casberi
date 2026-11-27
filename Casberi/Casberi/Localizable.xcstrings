@@ -202097,6 +202097,34 @@
         }
       }
     },
+    "Tacit took too long. Your TAC stays private. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit tardó demasiado. Tu TAC sigue privado. Inténtalo de nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacitの処理に時間がかかりすぎました。TACは非公開のままです。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit이 너무 오래 걸렸습니다. TAC는 비공개로 유지됩니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tacit 用时过长。你的 TAC 仍是私密的。请重试"
+          }
+        }
+      }
+    },
     "Tacit · On its way" : {
       "localizations" : {
         "es" : {
