@@ -462,7 +462,12 @@ extension FeedScreen {
     /// Privacy Pools, Railgun and Aztec, each where it exists for you, with
     /// everything private there; an empty one stays, at $0 (user: "ya 0 for
     /// none").
-    var homePrivatePlaces: [HomePlace] {
+    var homePrivatePlaces: [HomePlace] { Self.privatePlaces }
+
+    /// Home's private places and their sums: one reading, which Send's From
+    /// list reads too (2026-11-27, user: "it shows your accounts but not
+    /// what's in them"). Singletons only, so any screen may ask.
+    @MainActor static var privatePlaces: [HomePlace] {
         // Holdings' sums (`walletPrivateUSD`), place by place.
         let pools = PrivateMoneyStore.shared
         let held = pools.rows.filter { $0.kind == .held }

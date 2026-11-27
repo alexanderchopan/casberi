@@ -4375,7 +4375,16 @@ struct MoveSentence: View {
     /// names it. Picking a private one opens its own sentence, which is
     /// where its rules are said; an Aztec address already typed goes along.
     private var fromList: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // **WHAT EACH PLACE HOLDS (prd §1898 item 5; user, 2026-11-27: "it
+        // shows your accounts but not what's in them").** Public is what
+        // Send can move, the tokens it read (their priced worth, once every
+        // network answered); each private place is Home's own sum
+        // (`FeedScreen.privatePlaces`). None while unknown; `money` masks it
+        // under Hide balances.
+        let places = Dictionary(uniqueKeysWithValues: FeedScreen.privatePlaces.map { ($0.id, $0.usd) })
+        let figure: (Double??) -> String? = { usd in (usd ?? nil).map { Self.money($0, whole: true) } }
+        let publicUSD: Double? = readWhole ? heldBy.values.joined().reduce(0) { $0 + ($1.usd ?? 0) } : nil
+        return VStack(alignment: .leading, spacing: 0) {
             // **PUBLIC, THEN PRIVATE (prd §1985), as Home, Holdings and
             // Receive group money;** each place under its group, A–Z, its
             // network beside it.
@@ -4383,7 +4392,7 @@ struct MoveSentence: View {
             // Every network it is on, as Receive names them (user, 2026-11-26:
             // "why does this say Base, when it is Base Ethereum and Robinhood").
             listRow(String(localized: "Your public account"), sub: Op.networks.map(\.name).joined(separator: ", "),
-                    symbol: "wallet.bifold", picked: true) {
+                    trailing: publicUSD.map { Self.money($0, whole: true) }, symbol: "wallet.bifold", picked: true) {
                 withAnimation(DS.Motion.standard) { open = nil }
                 DSHaptic.selection()
             }
@@ -4395,7 +4404,7 @@ struct MoveSentence: View {
             // Aztec account cannot pay zk.money: a tag takes a deposit on
             // Ethereum, or 0xDAI from a zk.money account.
             if sendsFromAztec, aztecCanPay {
-                listRow("Aztec", sub: "Aztec", image: "brand-aztec") {
+                listRow("Aztec", sub: "Aztec", trailing: figure(places[FeedScreen.homeAztecPlace]), image: "brand-aztec") {
                     let typed = to.trimmingCharacters(in: .whitespaces)
                     // An Ethereum address read goes along too (prd §1988), so a
                     // kept send to someone else never opens in its place.
@@ -4404,19 +4413,19 @@ struct MoveSentence: View {
             }
             if sendsPrivately {
                 listRow("Privacy Pools", sub: (PrivacyNetwork.current(debugAsks: PrivateMove.debugNetwork) ?? .ethereum).name,
-                        image: "brand-privacy-pools") {
+                        trailing: figure(places[FeedScreen.homePoolsPlace]), image: "brand-privacy-pools") {
                     goPrivate(.send)
                 }
             }
             // **ONE RULE FOR ALL FOUR (prd §1984):** a place you have shows,
             // empty or not.
             if sendsFromRailgun {
-                listRow("Railgun", sub: Op.ethereum.name, image: "brand-railgun") {
+                listRow("Railgun", sub: Op.ethereum.name, trailing: figure(places[FeedScreen.homeRailgunPlace]), image: "brand-railgun") {
                     goRailgun(.takeBack, contract: nil, recipient: railgunPayee)
                 }
             }
             if sendsFromTacit {
-                listRow("Tacit", sub: String(localized: "Tacit chain"), image: "brand-tacit") {
+                listRow("Tacit", sub: String(localized: "Tacit chain"), trailing: figure(places[FeedScreen.homeTacitPlace]), image: "brand-tacit") {
                     DSHaptic.selection()
                     let typed = to.trimmingCharacters(in: .whitespacesAndNewlines)
                     withAnimation(DS.Motion.standard) {
