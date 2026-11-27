@@ -251,6 +251,9 @@ enum PrivateOnEthereum {
             var relayed: PrivacyEngineWire.Relayed? = nil
             for k in 1...max(parts, 1) {
             if parts > 1 { await step?(.part(k, parts)) }
+            // Max's sends a breath apart: the relayer limits how fast one
+            // asker may come back (it throttled the third of three).
+            if k > 1 { try await Task.sleep(for: .seconds(10)) }
             var tries = 0
             do {
             while true {
@@ -268,6 +271,12 @@ enum PrivateOnEthereum {
                     // transaction cost"): nothing went out, so quote and
                     // prove again at today's gas.
                     NSLog("privateEthereum| fee quote stale before the relay (%@) | proving again", f.name)
+                } catch let f as PrivacyEngineWire.Failure where PrivateMove.throttled(f) && tries < 4 {
+                    // **TOO MANY REQUESTS IS "WAIT" (2026-11-27, on the phone:
+                    // Max's third send, 36 s after its second, "ThrottlerException:
+                    // Too Many Requests").** Nothing went: wait, then again.
+                    NSLog("privateEthereum| relayer throttled | waiting %d s", 15 * tries)
+                    try await Task.sleep(for: .seconds(15 * tries))
                 }
             }
             } catch let f as PrivacyEngineWire.Failure where f.name == "NoteTooSmall" && relayed != nil {

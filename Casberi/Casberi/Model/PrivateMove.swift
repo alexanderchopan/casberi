@@ -942,6 +942,11 @@ final class PrivateMove {
                 || f.message.localizedCaseInsensitiveContains("FeeCommitmentExpired")))
     }
 
+    /// The relayer asked us to slow down (HTTP 429): nothing went.
+    static func throttled(_ f: PrivacyEngineWire.Failure) -> Bool {
+        f.name.hasPrefix("Relayer") && (f.message.contains("HTTP 429") || f.message.localizedCaseInsensitiveContains("Too Many Requests"))
+    }
+
     static func relayerReason(_ message: String) -> String? {
         guard let brace = message.firstIndex(of: "{"),
               let data = String(message[brace...]).data(using: .utf8),
@@ -988,6 +993,9 @@ final class PrivateMove {
             // reaches here): what to report is on the screen.
             // Refused is not silent (2026-11-26, user: "one time i get
             // rejected"): the relayer's own reason, as it gave it.
+            if throttled(failure) {
+                return String(localized: "0xBow's relayer is busy. Nothing was sent: try again in a minute.")
+            }
             if staleFee(failure) {
                 return String(localized: "Gas rose while it was proving, past 0xBow's quote. Nothing was sent: try again.")
             }
