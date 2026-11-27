@@ -208,7 +208,7 @@ function inputsFor(tokenId, amount) {
 // the payout, and the proof binds the router as the processor, so the router
 // unwraps the shares and pays the recipient the token (native ETH for
 // ppETH). The relayer posts it and pays the gas; `relay` hands it over.
-async function prepareYieldWithdraw({ tokenId, amount, recipient }) {
+async function prepareYieldWithdraw({ tokenId, amount, recipient, upTo = false }) {
   proofs = [];
   const t = now();
   const pool = yieldPool(tokenId);
@@ -217,11 +217,25 @@ async function prepareYieldWithdraw({ tokenId, amount, recipient }) {
   if (!y) throw Object.assign(new Error(`the session has no yield pool for ${pool.share}`), { name: 'NoYieldPool' });
   // previewDeposit rounds down: one share more, so the recipient's ETH is
   // never a wei short of what the sentence said.
-  const shares = (await y.deposit.sharesForUnderlying(BigInt(amount))) + 1n;
+  let shares = (await y.deposit.sharesForUnderlying(BigInt(amount))) + 1n;
   const relayer = relayerInfo('withdraw');
-  const quote = await account.relayer.getWithdrawalQuote(relayer, {
-    asset: pool.share, commit: true, recipient: getAddress(recipient.toLowerCase()), extraGas: false, amount: hex(shares),
+  const ask = (s) => account.relayer.getWithdrawalQuote(relayer, {
+    asset: pool.share, commit: true, recipient: getAddress(recipient.toLowerCase()), extraGas: false, amount: hex(s),
   });
+  let quote = await ask(shares);
+  // **MAX IS WHAT THE NOTES HOLD (2026-11-26, user: "i tried to send my max
+  // amount … it says your approved private balance does not cover it").** The
+  // app's Max is the balance less the fee it read; the share rounded up and a
+  // fee re-quoted now (gas moved) put the release a few wei over the notes.
+  // `upTo`: the release shrinks by exactly what it is over, quoted again.
+  if (upTo) {
+    const have = activeNotes(pool.share).reduce((t, n) => t + BigInt(n.value), 0n);
+    for (let i = 0; i < 3 && BigInt(quote.amountSent) > have; i++) {
+      shares -= BigInt(quote.amountSent) - have;
+      if (shares <= 0n) break;
+      quote = await ask(shares);
+    }
+  }
   const amountSent = BigInt(quote.amountSent);
   const r = await y.withdraw.prepareYieldWithdrawRelay({
     inputCommitments: inputsFor(pool.share, amountSent),
@@ -441,8 +455,8 @@ const methods = {
     return { handle: keep({ kind: 'transfer', result: r }), fee: option ? JSON.parse(JSON.stringify(option.selectedQuote.quote, (_, v) => (typeof v === 'bigint' ? hex(v) : v))) : null, ms: Math.round(now() - t), proofs };
   },
 
-  async prepareWithdraw({ tokenId, amount, recipient }) {
-    if (yieldPool(tokenId)) return prepareYieldWithdraw({ tokenId, amount, recipient });
+  async prepareWithdraw({ tokenId, amount, recipient, upTo = false }) {
+    if (yieldPool(tokenId)) return prepareYieldWithdraw({ tokenId, amount, recipient, upTo });
     proofs = [];
     const t = now();
     const s = await session('withdraw');

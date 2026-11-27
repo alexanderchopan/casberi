@@ -108,7 +108,9 @@ enum PrivacyEngineProbe {
             }
         case "spend":
             try await ensureOpen(owner)
-            for (name, act) in [("transfer", engine.prepareTransfer), ("withdraw", engine.prepareWithdraw)] {
+            for (name, act) in [("transfer", { try await engine.prepareTransfer(tokenId: $0, amount: $1, to: $2) }),
+                                   ("withdraw", { try await engine.prepareWithdraw(tokenId: $0, amount: $1, to: $2) })]
+                                   as [(String, @MainActor (String, String, String) async throws -> PrivacyEngine.Wire.PreparedSpend)] {
                 let t = Date()
                 do {
                     let spend = try await act(eth, "0x1c6bf52634000", owner) // 0.0005 ETH

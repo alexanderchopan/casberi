@@ -171,6 +171,7 @@ enum PrivateOnEthereum {
     static func send(token: String, amount: String, to: String, balanceToBalance: Bool = false,
                      reason: String = String(localized: "Send from Privacy Pools"),
                      announce: Bool = false,
+                     upTo: Bool = false,
                      step: (@Sendable (SendStep) async -> Void)? = nil) async throws -> String {
         guard network.yieldPool(for: token) != nil, PrivateMoney.isAddress(to), let hex = PrivateMoney.hex(amount) else { throw Failure.noPool }
         guard let account = PrivateRootKey.currentID else { throw Failure.noRoot }
@@ -181,12 +182,15 @@ enum PrivateOnEthereum {
         // part, never news of its own.
         let started = Int(Date().timeIntervalSince1970)
         guard announce else {
-            return try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                         balanceToBalance: balanceToBalance, reason: reason, amount: amount, step: step)
+            let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, step: step)
+            settle(account: account, to: to)
+            return tx
         }
         do {
             let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, step: step)
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, step: step)
+            settle(account: account, to: to)
             Task { await Notifications.outcome(.moveSent, id: "pools:" + tx, place: "Privacy Pools",
                                                body: String(localized: "Sent on Ethereum"), mark: "Privacy Pools") }
             return tx
@@ -197,13 +201,31 @@ enum PrivateOnEthereum {
         }
     }
 
+    /// **READ AGAIN ONCE IT LANDED (2026-11-26, user: "there is not a
+    /// deduction in my balance or increase in public").** The relayer answers
+    /// with a hash before Ethereum has the transaction, so the read right
+    /// after it still finds the spent notes unspent, and the public account's
+    /// holdings stand on their window. Twice, at a block or so and at three:
+    /// your notes as the pool holds them (no prompt: nothing spends), and the
+    /// recipient's holdings dropped.
+    private static func settle(account: String, to: String) {
+        Task { @MainActor in
+            for wait in [30, 150] {
+                try? await Task.sleep(for: .seconds(wait))
+                await PrivateWatch.findNotes(of: account, on: network)
+                await WalletIngest.invalidateHoldings(addresses: [to])
+                NSLog("privateEthereum| settle | read again after %d s", wait)
+            }
+        }
+    }
+
     /// Where a send stands, so the foot says it (2026-11-26, user: "nothing
     /// happens" — it said Confirm with Face ID through the read, the proof
     /// and the relay).
     enum SendStep: Sendable { case opening, preparing, proving, sending }
 
     private static func relayedSend(account: String, token: String, hex: String, to: String,
-                                    balanceToBalance: Bool, reason: String, amount: String,
+                                    balanceToBalance: Bool, reason: String, amount: String, upTo: Bool,
                                     step: (@Sendable (SendStep) async -> Void)?) async throws -> String {
         try await PrivacyEngine.exclusive {
             await step?(.opening)
@@ -220,7 +242,7 @@ enum PrivateOnEthereum {
                 tries += 1
                 await step?(.proving)
                 let spend = balanceToBalance ? try await engine.prepareTransfer(tokenId: token, amount: hex, to: to)
-                    : try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to)
+                    : try await engine.prepareWithdraw(tokenId: token, amount: hex, to: to, upTo: upTo)
                 do {
                     await step?(.sending)
                     relayed = try await engine.relay(handle: spend.handle)

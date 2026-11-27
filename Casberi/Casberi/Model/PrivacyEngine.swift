@@ -220,8 +220,8 @@ final class PrivacyEngine: NSObject {
     }
 
     /// A withdrawal to any address through the relayer, proof included.
-    func prepareWithdraw(tokenId: String, amount: String, to recipient: String) async throws -> Wire.PreparedSpend {
-        try await call(.prepareWithdraw, Wire.Spend(tokenId: tokenId, amount: amount, recipient: recipient),
+    func prepareWithdraw(tokenId: String, amount: String, to recipient: String, upTo: Bool = false) async throws -> Wire.PreparedSpend {
+        try await call(.prepareWithdraw, Wire.Spend(tokenId: tokenId, amount: amount, recipient: recipient, upTo: upTo ? true : nil),
                        as: Wire.PreparedSpend.self)
     }
 

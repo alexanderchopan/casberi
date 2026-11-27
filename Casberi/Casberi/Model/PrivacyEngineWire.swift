@@ -93,6 +93,9 @@ enum PrivacyEngineWire {
         let tokenId: String
         let amount: String
         let recipient: String
+        /// Max: the engine sends up to `amount`, as much as the notes hold
+        /// once the fee is quoted (2026-11-26). Nil is left out of the JSON.
+        var upTo: Bool? = nil
     }
 
     /// Into a yield pool (prd §1563): the most of the token the deposit may

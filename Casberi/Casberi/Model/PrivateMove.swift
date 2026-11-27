@@ -286,6 +286,13 @@ final class PrivateMove {
         (Decimal(string: figure) ?? 0) > 0
     }
 
+    /// Whether `units` (base units) is the most this token can move: Max, or
+    /// within a hair of it.
+    private func isMax(_ units: String) -> Bool {
+        guard let top = most.flatMap({ Decimal(string: $0) }), let u = Decimal(string: units) else { return false }
+        return u >= top
+    }
+
     /// A typed amount the move can take.
     var amountFits: Bool {
         // Finishing, nothing more leaves your private balance (prd §1988).
@@ -672,7 +679,10 @@ final class PrivateMove {
                 stage = .preparing
                 let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
                                                             balanceToBalance: tag == nil && balanceToBalance == true,
-                                                            announce: true, step: { [weak self] s in
+                                                            announce: true,
+                                                            // Max sends what the notes hold, fee quoted now (2026-11-26).
+                                                            upTo: tag == nil && balanceToBalance != true && isMax(value),
+                                                            step: { [weak self] s in
                     await MainActor.run {
                         switch s {
                         case .opening: self?.stage = .opening
