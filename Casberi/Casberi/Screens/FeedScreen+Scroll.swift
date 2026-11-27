@@ -248,7 +248,14 @@ extension FeedScreen {
         let seen = fades && ActivitySeen.shared.has(thing.id)
         let words = thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let app = Self.activityAppName(thing.source)
-        return DSPushRow(title: Text(verbatim: words.isEmpty ? app : words),
+        // **AN OWN ACT READS AS IN ITS ROOM (prd §1987, user, of Home's
+        // "Received 5.214713 USDC privately o…" under the old wallet mark:
+        // "it should have new glyph and no verb right?"):** the act's glyph
+        // leads, where or who is the name, the amount stands on the right.
+        let acted = thing.source == "Wallet" ? WalletRowWords.read(words).flatMap { $0.act == nil ? nil : $0 } : nil
+        return DSPushRow(title: Text(verbatim: acted?.name ?? (words.isEmpty ? app : words)),
+                         fact: acted?.figure.map { Text(verbatim: $0) },
+                         factTone: seen ? DS.textSecondary : DS.textPrimary,
                          tint: seen ? DS.textSecondary : DS.textPrimary,
                          action: {
                              ActivitySeen.shared.mark(thing.id)
@@ -284,6 +291,10 @@ extension FeedScreen {
                                 fallback: thing.source, circular: true)
                         .frame(width: DS.Mark.row, height: DS.Mark.row)
                         .appCorner(thing.source, always: true)
+                } else if let act = acted?.act {
+                    WalletMarkView(mark: .kind(thing.kind, symbol: act.symbol, tint: Color(hex: act.hex)),
+                                   size: DS.Face.rowCircle)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
                 } else {
                     BridgeIcon(name: thing.source, size: DS.Mark.row)
                 }

@@ -75560,3 +75560,21 @@ The four private sends finished four ways: Privacy Pools on "View on Etherscan" 
 **Seen** on an iPhone 17 Pro simulator: Tacit's finished send (`-tacitReelSample pay`). **Not seen:** Privacy Pools', Railgun's and Aztec's finishes, which need a real send.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1991 — One sheet for every Activity row, and Home's own acts (2026-11-26)
+
+**User, of the Activity sheets canvas: "build it"; and of Home's "Received 5.214713 USDC privately o…" under the old wallet mark: "it should have new glyph and no verb right?"**
+
+1. **A sentence is not a name.** A receipt titled by its row's sentence listed its history "With Deposited 264.45 AZTEC". The history and the sheet's name take the other side's own name, a known label, else its tail ("With …187a").
+2. **The figure leads every transfer.** A transfer the bridge stamped no amount for reads its row's sentence for it, only in the exact shape verb, number, unit (`MoneyReceipt.said`): "Deposited 264.45 AZTEC" heads as "Deposited to …187a" over "−264.45 AZTEC".
+3. **An unnamed address wears what moved.** No name, no picture: the token's mark, never the placeholder person.
+4. **A spend is signed as its row is**: "−$6.50" on the sheet as in Activity, amending §1396's unsigned card figure; a refund keeps its plus.
+5. **Your own account is "Your public account"**, as Move names it, never "You" (amending the receipt's Account row).
+6. **Save says Name**: the tile names the address it saves.
+7. **Home's Activity row reads an own act as its room does** (§1987): the act's glyph, where or who as the name, the amount on the right.
+
+**Not built from the canvas:** "Send back" and the card's "Track" tiles, and the month's total under a card spend (the sheet already lists "This month" with its total where a card has more than one visit).
+
+**Seen** on an iPhone 17 Pro simulator over the demo: Blue Bottle's sheet at "−$6.50". **Not seen:** a deposit's sheet and Home's private receive row, which the demo does not carry; `wallet-row-words-selftest.sh` holds the row's words.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

@@ -137,6 +137,24 @@ struct MoneyReceipt: Equatable {
     /// The money, split so the number can carry the display ramp's monospaced
     /// digits while its unit sits a rung down. `number` already carries its own
     /// sign — a receipt states direction in the figure, not in a badge beside it.
+    /// **A ROW'S OWN SENTENCE, READ FOR ITS FIGURE (prd §1991):** "Deposited
+    /// 264.45 AZTEC" is the verb, the number and the unit. Only that exact
+    /// shape, a verb then a number then one word, is read; prose is not.
+    struct Said: Equatable {
+        let verb: String
+        let number: String
+        let unit: String?
+    }
+
+    static func said(_ title: String) -> Said? {
+        let words = actionTitle(title).split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        guard words.count >= 3, words[0].allSatisfy(\.isLetter),
+              words[1].first?.isNumber == true,
+              words[1].allSatisfy({ $0.isNumber || $0 == "." || $0 == "," }),
+              words[2].allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." }) else { return nil }
+        return Said(verb: words[0], number: words[1], unit: words[2].trimmingCharacters(in: CharacterSet(charactersIn: ".,")))
+    }
+
     struct Amount: Equatable {
         var number: String
         var unit: String?

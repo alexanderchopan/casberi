@@ -504,6 +504,13 @@ struct MoneySheetHead: View {
         let sent: Bool
         let usd: Double?
         let network: String?
+        /// **THE AMOUNT THE ROW'S SENTENCE SAYS (prd §1991):** a transfer the
+        /// bridge stamped no amount for ("Deposited 264.45 AZTEC") still
+        /// leads with its figure, and its face is the token, never a blank
+        /// person.
+        var said: MoneyReceipt.Said? = nil
+        /// The other side has no name: the face is the token (prd §1991).
+        var unnamedParty = false
     }
     /// The app it came from, the party row's word for a plain receipt.
     let source: String
@@ -616,6 +623,10 @@ struct MoneySheetHead: View {
             // person (prd §1349).
             if WalletStore.shared.watches(t.theirAddress) {
                 BridgeIcon(name: "Wallet", size: DS.Face.art, circular: true)
+            } else if t.unnamedParty, let unit = t.said?.unit ?? receipt.amount?.unit, !unit.isEmpty {
+                // An address with no name and no picture: what moved, not a
+                // placeholder person (prd §1991).
+                AssetMark(name: unit, size: DS.Face.art)
             } else {
                 WalletFace(address: t.theirAddress, size: DS.Face.art, circular: true)
             }
@@ -859,9 +870,14 @@ struct MoneySheetHead: View {
             let bare = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
             return ((t.sent ? "−" : "+") + bare, amount.unit)
         }
+        if let t = transfer, let said = t.said {
+            return ((t.sent ? "−" : "+") + said.number, said.unit)
+        }
+        // **SIGNED AS ITS ROW IS (prd §1991, user: "build it"):** a spend is
+        // "−$6.50" on the sheet as in Activity; a refund keeps its plus.
         if card != nil, let amount = receipt.amount {
             let bare = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
-            return (amount.number.hasPrefix("+") ? amount.number : bare, amount.unit)
+            return (amount.number.hasPrefix("+") ? amount.number : "−" + bare, amount.unit)
         }
         if let amount = receipt.amount {
             // A typographic minus, never the hyphen the amount was written with.

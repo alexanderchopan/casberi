@@ -3213,27 +3213,52 @@ struct ThingSheetView: View {
 
     /// The party's name for the history: the receipt's party, else its lead.
     private func moneyPartyName(_ r: MoneyReceipt) -> String {
+        // **A SENTENCE IS NOT A NAME (prd §1991):** a receipt titled by its
+        // row ("Deposited 264.45 AZTEC") listed its history "With Deposited
+        // 264.45 AZTEC". The other side's own name, else its tail.
+        if let cp = thing.counterpartyAddress, r.party == nil || r.party?.isEmpty == true
+            || r.party == MoneyReceipt.actionTitle(thing.title) || r.party.flatMap(MoneyReceipt.said) != nil {
+            return moneyCounterpartyName(cp)
+        }
         if let party = r.party, !party.isEmpty { return party }
         return r.lead
+    }
+
+    /// The other side by the name you gave it, a known one, else its tail.
+    private func moneyCounterpartyName(_ cp: String) -> String {
+        AddressBook.shared.name(for: cp) ?? WalletIngest.knownLabel(for: cp) ?? AddressTail.short(cp)
     }
 
     /// The two sides of a wallet transfer, for the box's faces (prd §1181).
     private func moneyTransfer(_ r: MoneyReceipt) -> MoneySheetHead.Transfer? {
         guard moneyHasPerson, let cp = thing.counterpartyAddress, let mine = thing.walletAddress,
               !mine.isEmpty else { return nil }
-        let mineLabel = WalletStore.shared.addresses
-            .first { $0.address.caseInsensitiveCompare(mine) == .orderedSame }
-            .map { $0.label.isEmpty ? WalletStore.shortAddress(mine) : $0.label } ?? WalletStore.shortAddress(mine)
+        // Your own account is named as Move names it, never "You" (prd §1991).
+        let mineLabel = YourAccountKey.address?.caseInsensitiveCompare(mine) == .orderedSame
+            ? String(localized: "Your public account")
+            : WalletStore.shared.addresses
+                .first { $0.address.caseInsensitiveCompare(mine) == .orderedSame }
+                .map { $0.label.isEmpty ? WalletStore.shortAddress(mine) : $0.label } ?? WalletStore.shortAddress(mine)
+        let sent = thing.transferDirection != "received"
+        // The row's sentence read for its figure when the bridge stamped none
+        // (prd §1991): the name line keeps its verb, "Deposited to …187a".
+        let said = r.amount == nil ? MoneyReceipt.said(thing.title) : nil
+        let who = moneyPartyName(r)
         // Your own other wallet goes by its own name; the receipt's party is
         // "Everyday to Savings" there (prd §1349).
         let theirName = WalletStore.shared.watches(cp)
-            ? MoneyReceiptSource.walletLabel(cp) ?? moneyPartyName(r) : moneyPartyName(r)
-        return MoneySheetHead.Transfer(
+            ? MoneyReceiptSource.walletLabel(cp) ?? who
+            : said.map { sent ? String(localized: "\($0.verb) to \(who)") : String(localized: "\($0.verb) from \(who)") } ?? who
+        var t = MoneySheetHead.Transfer(
             mineAddress: mine, mineLabel: mineLabel,
             theirAddress: cp, theirName: theirName,
-            sent: thing.transferDirection != "received",
+            sent: sent,
             usd: thing.transferUSD,
             network: WalletIngest.chainName(forContent: thing.content))
+        t.said = said
+        t.unnamedParty = thing.transferCounterparty == nil && AddressBook.shared.name(for: cp) == nil
+            && WalletIngest.knownLabel(for: cp) == nil
+        return t
     }
 
     /// This event and the others that overlap the four hours around it, as
@@ -3611,7 +3636,8 @@ struct ThingSheetView: View {
             if AddressBook.shared.entry(for: cp) == nil {
                 guard nameCounterpartyAction != nil else { return nil }
                 // Save asks who it is (prd §1775): someone you have, or a new name.
-                return VerbDial.Keep(label: String(localized: "Save"), glyph: "person.crop.circle.badge.plus") {
+                // Named for what it does to what (prd §1991): it names the address.
+                return VerbDial.Keep(label: String(localized: "Name"), glyph: "person.crop.circle.badge.plus") {
                     // With nobody to pick, the name field at once (prd §1967).
                     if AddToContact.asks(for: cp) { faceTarget = .addTo(cp) } else { nameCounterpartyAction?() }
                 }
