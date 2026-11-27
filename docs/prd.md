@@ -75610,3 +75610,17 @@ They drifted because each page drew its own body. Privacy Pools, Railgun and Azt
 **Seen** on an iPhone 17 Pro simulator over the demo: Earn's From list with the five farms, the farm page opening in the sheet, Holdings' TAC/ETH row at $159. **Not seen:** a real account's positions (no position exists to test with); `tacit-farms-selftest.sh` holds the rates on the measured figures.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1994 — Private TAC opens its page, one Max on every amount, and Tacit's send proof is bounded (amends §1981's "a Tacit row opens nothing", §1932's "Half and All") (2026-11-26)
+
+User, 2026-11-26: "when i press the tac token in my private tac balance in holdings nothing happens, it doens't open a token sheet", "when i got to send and try to send, it is stuck on proved for over 2 minutes", "please fix"; "the 'max' button is different on different screens. please make sure it is the same and not handrolled anywhere."
+
+1. **The private TAC row opens its page**, as Railgun's and Aztec's do (`WalletHolding`, "Tacit chain · Tacit"), with one verb, Send TAC (`.tacitSend`), which raises Move straight onto Tacit's Send (`ShellChrome.moveTacitOut`, `TacitOutSheet`): back to public or to another Tacit account. Its long press offers the same verb. The ETH and farm rows still open nothing.
+2. **One Max.** Every amount's quick keys come from `MoveQuickKeys`: `Key.max` ("Max") for the whole and `Key.share` ("25%", "50%") for a part, `MoveQuickKeys.shares` the row. Send, Swap, Earn, Railgun, Aztec, Privacy Pools and both Tacit sheets say "Max", never "All"; "Half" is "50%". Tacit's sheets gain 25% and 50%. Privacy Pools keeps its pool steps before Max; Railgun keeps its floor before 50%. Aztec's lit key keeps Aztec's ink (§1779).
+3. **A Tacit send's proof has an end** (as Make private's, §1973 item 23): past `TacitShield.proveLimit` (four minutes) the sheet says "Tacit took too long. Your TAC stays private. Try again"; nothing was handed, so nothing moved. The engine's spend waits for a DeFi read in flight before proving (`settle`), the farm read waits for a proof in flight, and each stage logs with its time (`tacitEngine| page | spend withdraw|pay …`: notes and tree, loading, proving, proved).
+
+**Not known:** why the phone's proof ran past two minutes. The spend proof (`w.spend`: the whole note tree from the leader, then halo2 on the page's one thread) was never measured on a phone; the logs above are how the next try says where it stands.
+
+**Seen** on an iPhone 17 Pro simulator over the demo: the TAC row's page and Send TAC landing on Tacit's Send with 25% · 50% · Max; every private Move opening (Privacy Pools in and send, Railgun in, back, send, swap and private, Aztec in and send, Earn in and out). The demo stops each at "Not in the demo", so no proof or send ran.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
