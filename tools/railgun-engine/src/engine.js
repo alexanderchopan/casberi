@@ -598,7 +598,9 @@ const methods = {
     const { transaction } = isETH
       ? await populateShieldBaseToken(V2, NETWORK, address, shieldPrivateKey, { tokenAddress: token, amount }, undefined)
       : await populateShield(V2, NETWORK, shieldPrivateKey, [{ tokenAddress: token, amount, recipientAddress: address }], [], undefined);
-    if (getAddress(transaction.to) !== getAddress(PROXY)) throw new Error(`shield goes to ${transaction.to}, not Railgun`);
+    // ETH goes in through the relay adapter, which wraps it (2026-11-27).
+    const shieldTo = isETH ? RELAY_ADAPT : PROXY;
+    if (getAddress(transaction.to) !== getAddress(shieldTo)) throw new Error(`shield goes to ${transaction.to}, not Railgun`);
     return {
       tx: { to: getAddress(transaction.to), data: transaction.data, value: hex(transaction.value ?? 0n) },
       approve: isETH ? null : { to: token, data: erc20.encodeFunctionData('approve', [PROXY, amount]), value: '0x0' },

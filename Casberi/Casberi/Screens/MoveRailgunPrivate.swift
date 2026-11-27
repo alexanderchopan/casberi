@@ -226,6 +226,14 @@ final class RailgunMove {
 
     var amountOK: Bool { picked != nil && amountProblem == nil }
 
+    /// Moving in, the picked token is worth less than the floor all told:
+    /// what it is worth, to say so (2026-11-27).
+    var pickedUnder: Double? {
+        guard mode == .deposit, let h = holding, let price = h.price,
+              !RailgunRouting.meetsFloor(units: h.units, decimals: h.decimals, price: price, floorUSD: Self.floorUSD) else { return nil }
+        return YourAccountOp.dollars(h.units, decimals: h.decimals, price: price)
+    }
+
     /// Picks the token; the typed amount stays.
     func pick(_ h: Holding) {
         token = h.contract
@@ -278,6 +286,7 @@ final class RailgunMove {
         ethUSD = await eth
         underFloor = nil
         var found: [Holding] = []
+        var under: [Holding] = []
         switch mode {
         case .deposit where DemoMode.isActive:
             // The demo's account holds only ETH and USDC on Ethereum; its
@@ -295,19 +304,38 @@ final class RailgunMove {
                 stage = .nothing; return
             }
             let net = YourAccountOp.ethereum
-            let dollar = YourAccountOp.dollar(on: net).contract?.lowercased()
+            // Every token Railgun takes, ETH and USDC too (2026-11-27, user:
+            // "user should be able to have the choice"). ETH keeps back the
+            // gas its own shield spends.
             for h in await YourAccountTokens.held(account, on: net) {
-                guard let contract = h.token.contract, contract.lowercased() != dollar,
-                      RailgunRouting.goesToRailgun(symbol: h.token.symbol, contract: contract, chainId: net.chainId),
-                      let price = h.price, price > 0 else { continue }
-                guard RailgunRouting.meetsFloor(units: h.units, decimals: h.token.decimals, price: price, floorUSD: Self.floorUSD) else {
-                    let usd = YourAccountOp.dollars(h.units, decimals: h.token.decimals, price: price)
+                let native = h.token.contract == nil && h.token.symbol.uppercased() == "ETH"
+                guard let contract = native ? RailgunRouting.eth : h.token.contract,
+                      RailgunRouting.goesToRailgun(symbol: h.token.symbol, contract: native ? nil : contract, chainId: net.chainId),
+                      let price = h.price, price > 0 else {
+                    NSLog("moveRailgun| in | skipped %@ | %@", h.token.symbol, h.price == nil ? "no price" : "not taken")
+                    continue
+                }
+                var units = h.units
+                if native, let held = Decimal(string: h.units) {
+                    let gas = (gasPriceWei ?? Decimal(2_000_000_000)) * Decimal(400_000) * 2
+                    let left = held - gas
+                    units = left > 0 ? PrivateMoney.plain(left) : "0"
+                }
+                // **UNDER THE FLOOR IS LISTED, AND SAYS WHY (2026-11-27,
+                // user: "they should be able to pick the token from the list
+                // and then get an error").** Listed after those that can go.
+                let usd = YourAccountOp.dollars(units, decimals: h.token.decimals, price: price)
+                if !RailgunRouting.meetsFloor(units: units, decimals: h.token.decimals, price: price, floorUSD: Self.floorUSD) {
                     if usd >= 0.01, usd > (underFloor?.usd ?? 0) { underFloor = Short(symbol: h.token.symbol, usd: usd) }
+                    guard usd >= 0.01 else { continue }
+                    under.append(Holding(contract: contract, symbol: h.token.symbol, decimals: h.token.decimals,
+                                         units: units, price: price))
                     continue
                 }
                 found.append(Holding(contract: contract, symbol: h.token.symbol, decimals: h.token.decimals,
-                                     units: h.units, price: price))
+                                     units: units, price: price))
             }
+            found += under
         case .takeBack, .swap:
             let store = RailgunHoldings.shared
             // Prices for the dollars and the cost, never a sync (prd §1728).
@@ -1401,6 +1429,12 @@ struct MoveRailgunSentence<Head: View>: View {
         })])
     }
 
+    /// The picked token is under Railgun's floor: the floor and your figure.
+    private var underWords: String? {
+        guard let usd = move.pickedUnder, let h = move.holding else { return nil }
+        return String(localized: "Railgun takes \(RailgunMove.floorText) or more. Your \(h.symbol) is \(RailgunMove.usd(usd)).")
+    }
+
     // MARK: - The foot
 
     private var ready: Bool {
@@ -1508,8 +1542,9 @@ struct MoveRailgunSentence<Head: View>: View {
                                 value: move.amount.isEmpty ? (open == .amount ? "0 \(move.holding?.symbol ?? "")" : nil)
                                     : "\(move.amount) \(move.holding?.symbol ?? "")",
                                 // The floor is a rule no menu shows: under Amount (prd §1992).
-                                note: move.mode == .deposit && open != .amount ? String(localized: "\(RailgunMove.floorText) or more") : nil,
-                                fieldNote: move.holding.flatMap { h in
+                                note: move.mode == .deposit && open != .amount
+                                    ? (underWords ?? String(localized: "\(RailgunMove.floorText) or more")) : nil,
+                                fieldNote: underWords.map { (text: $0, ink: DS.attentionInk) } ?? move.holding.flatMap { h in
                                     MoveFieldNote.against(typed: move.amount, have: MoveFieldNote.plain(units: h.units, decimals: h.decimals),
                                                           symbol: h.symbol)
                                 }) { toggle(.amount) })

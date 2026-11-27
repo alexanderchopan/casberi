@@ -190,13 +190,22 @@ enum RailgunPocket {
     static func shield(token: String, amount: String,
                        stage: @escaping @Sendable (YourAccountChain.Stage) async -> Void) async throws -> String? {
         guard let hexAmount = PrivateMoney.hex(amount) else { throw Failure.notWritten }
-        try await open(reason: nil)
+        let opened = try await open(reason: nil)
         let prepared = try await RailgunEngine.shared.prepareShield(token: token, amount: hexAmount)
-        guard prepared.tx.to.lowercased() == proxy, let approve = prepared.approve,
-              approve.to.lowercased() == token.lowercased(),
-              approve.data.lowercased() == approveCall(amount: hexAmount) else { throw Failure.notRailgun }
-        let calls = [(to: approve.to, data: approve.data, value: "0"),
+        let calls: [(to: String, data: String, value: String)]
+        if token.lowercased() == RailgunRouting.eth {
+            // **ETH IN (2026-11-27):** the relay adapter wraps it to WETH and
+            // shields it; no approval, and the value is exactly the amount.
+            guard let adapter = opened.relayAdapt?.lowercased(), prepared.tx.to.lowercased() == adapter,
+                  prepared.approve == nil, PrivateMoney.decimal(hex: prepared.tx.value) == amount else { throw Failure.notRailgun }
+            calls = [(to: prepared.tx.to, data: prepared.tx.data, value: amount)]
+        } else {
+            guard prepared.tx.to.lowercased() == proxy, let approve = prepared.approve,
+                  approve.to.lowercased() == token.lowercased(),
+                  approve.data.lowercased() == approveCall(amount: hexAmount) else { throw Failure.notRailgun }
+            calls = [(to: approve.to, data: approve.data, value: "0"),
                      (to: prepared.tx.to, data: prepared.tx.data, value: PrivateMoney.decimal(hex: prepared.tx.value))]
+        }
         let sent = try await YourAccountChain.privateCalls(calls, on: accountNetwork,
                                                            reason: String(localized: "Move to private"), stage: stage)
         let hash = landed(sent)

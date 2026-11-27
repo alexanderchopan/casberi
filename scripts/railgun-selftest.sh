@@ -55,8 +55,8 @@ var bad = 0
 func check(_ ok: Bool, _ what: String) { print(ok ? "  ✓ \(what)" : "  ✗ \(what)"); if !ok { bad += 1 } }
 let dai = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
 check(RailgunRouting.goesToRailgun(symbol: "DAI", contract: dai, chainId: 1), "DAI on Ethereum goes to Railgun")
-check(!RailgunRouting.goesToRailgun(symbol: "USDC", contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", chainId: 1), "USDC on Ethereum never goes to Railgun")
-check(!RailgunRouting.goesToRailgun(symbol: "ETH", contract: nil, chainId: 1), "ETH never goes to Railgun")
+check(RailgunRouting.goesToRailgun(symbol: "USDC", contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", chainId: 1), "USDC on Ethereum may go to Railgun (2026-11-27: the person picks)")
+check(RailgunRouting.goesToRailgun(symbol: "ETH", contract: nil, chainId: 1), "ETH on Ethereum may go to Railgun (2026-11-27)")
 check(!RailgunRouting.goesToRailgun(symbol: "WETH", contract: nil, chainId: 1), "a token with no contract never goes to Railgun")
 check(!RailgunRouting.goesToRailgun(symbol: "DAI", contract: dai, chainId: 8453), "nothing off Ethereum goes to Railgun")
 // §1727: any typed amount moves in at $10 worth or more.

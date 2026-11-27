@@ -6137,13 +6137,14 @@ struct MoveSentence: View {
             let searched: (String) -> Bool = { name in q.isEmpty || name.lowercased().contains(q) }
             // **EACH PLACE ON ITS OWN RULE (prd §1976, the Move audit of
             // 2026-11-26):** Privacy Pools takes ETH and USDC; Aztec takes
-            // USDC, ETH and WETH from Ethereum; Railgun any other Ethereum
-            // token; Tacit takes TAC. No place hangs off another's switch.
+            // USDC, ETH and WETH from Ethereum; Railgun every Ethereum token
+            // (2026-11-27, ETH and USDC too); Tacit takes TAC. No place hangs off another's switch.
             let toRailgun = RailgunPocket.available && with.map { held in
                 network == Op.ethereum && RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract,
                                                                        chainId: network.chainId)
             } ?? false
-            let poolsHere = PrivateMove.available && !toRailgun
+            // Both take ETH and USDC: both are offered, you pick (2026-11-27).
+            let poolsHere = PrivateMove.available
                 && (picked == nil || picked == "ETH" || picked == "USDC")
                 && (searched("Privacy Pools") || privateNet.lowercased().contains(q))
             let railgunHere = RailgunPocket.available && (with == nil || toRailgun) && searched("Railgun")

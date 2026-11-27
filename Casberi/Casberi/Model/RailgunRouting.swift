@@ -4,9 +4,12 @@ import Foundation
 /// items 1 and 2, §1721).** Foundation-only, so `railgun-selftest.sh`
 /// compiles it whole and unmodified.
 ///
-/// - **Routing is by token, and the person never picks.** On Ethereum, ETH
-///   and USDC go to Privacy Pools; any other token goes to Railgun. Off
-///   Ethereum, nothing goes to Railgun.
+/// - **The person picks (2026-11-27, user: "now that we added privacy
+///   providers user should be able to have the choice"; was "routing is by
+///   token", §1721).** On Ethereum Railgun takes every token, ETH (wrapped
+///   to WETH by its relay adapter) and USDC included; Privacy Pools still
+///   takes ETH and USDC, so for those both are offered. Off Ethereum,
+///   nothing goes to Railgun.
 /// - **The same $10 floor** as Privacy Pools: any typed amount moves in
 ///   at $10 worth or more at the price Casberi reads (§1727). A token with
 ///   no price has no floor to measure, so it is not offered in. Taking back
@@ -17,9 +20,13 @@ enum RailgunRouting {
     static let ethereumChainID = 1
     static let floorUSD: Double = 10
 
+    /// Native ETH, as the Railgun engine names it.
+    static let eth = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
     static func goesToRailgun(symbol: String, contract: String?, chainId: Int) -> Bool {
-        guard chainId == ethereumChainID, let contract, !contract.isEmpty else { return false }
-        return contract.lowercased() != ethereumUSDC && symbol.uppercased() != "ETH"
+        guard chainId == ethereumChainID else { return false }
+        if contract == nil || contract?.isEmpty == true { return symbol.uppercased() == "ETH" }
+        return true
     }
 
     /// Whether `units` of a token is worth `floorUSD` or more at `price`.
