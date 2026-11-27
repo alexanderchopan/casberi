@@ -81,12 +81,17 @@ struct MovePrivateSentence<Head: View>: View {
         // "shouldn't it have turned into a banner?").** The send goes on
         // under the toast; nothing on the sheet waits on you.
         .onChange(of: move.stage) { was, now in
-            if inTray, move.mode == .send, was == .opening, now == .preparing { chrome.moveTray = false }
+            if inTray, move.mode == .send, was == .opening, now == .preparing,
+               PrivateSendSteps.shared.sendAway(from: .privacyPools, landed: String(localized: "Sent from Privacy Pools")) {
+                chrome.moveTray = false
+            }
         }
         // Closed on a send still going: the toast says each step and the
         // row lands without the sheet (2026-11-27).
         .onDisappear {
             guard move.busy, move.mode == .send else { return }
+            // Closed by hand before Face ID was done: behind the sheet too.
+            PrivateSendSteps.shared.sendAway(from: .privacyPools, landed: String(localized: "Sent from Privacy Pools"))
             let chrome = chrome, context = context
             move.watcher = { m in MovePrivateToast.say(m, chrome: chrome, context: context) }
             MovePrivateToast.say(move, chrome: chrome, context: context)
@@ -1074,21 +1079,12 @@ struct MovePrivateSwitch: View {
 @MainActor
 enum MovePrivateToast {
     static func say(_ m: PrivateMove, chrome: ShellChrome, context: ModelContext) {
-        // No trailing "…": in a toast it reads as words cut off (2026-11-27,
-        // user: "should it say more after proving").
+        // The steps are the shell's capsule's (`MoveStepCapsule`, merged
+        // 2026-11-27); this lands the row, and says a failure's own words.
         switch m.stage {
-        case .opening: chrome.flash(String(localized: "Confirm your private send with Face ID"), mark: "Privacy Pools", seconds: 600)
-        case .preparing: chrome.flash(String(localized: "Preparing your private send"), mark: "Privacy Pools", seconds: 600)
-        case .proving:
-            chrome.flash(m.part.map { String(localized: "Proving send \($0.0) of \($0.1)") } ?? String(localized: "Proving your private send"),
-                         mark: "Privacy Pools", seconds: 600)
-        case .sending:
-            chrome.flash(m.part.map { String(localized: "Sending \($0.0) of \($0.1) privately") } ?? String(localized: "Sending privately"),
-                         mark: "Privacy Pools", seconds: 600)
         case .done(let hash):
             m.watcher = nil
             land(hash, move: m, chrome: chrome, context: context)
-            chrome.flash(String(localized: "Sent from Privacy Pools"), tone: .success, mark: "Privacy Pools", seconds: 3)
         case .failed(let words):
             m.watcher = nil
             chrome.flash(words, tone: .failure, mark: "Privacy Pools", seconds: 8)

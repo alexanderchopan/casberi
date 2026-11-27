@@ -261,6 +261,12 @@ final class PrivateMove {
         return max(maxParts.count, 1)
     }
 
+    /// The capsule's first step: Face ID, opening the account, reading the pool.
+    static var preparingStep: PrivateSendSteps.Step {
+        PrivateSendSteps.Step(key: .checking, running: String(localized: "Preparing your private send"),
+                              done: String(localized: "Prepared"))
+    }
+
     /// Which send of how many is going, while Max sends its notes.
     private(set) var part: (Int, Int)? { didSet { watcher?(self) } }
 
@@ -725,6 +731,14 @@ final class PrivateMove {
                 let parts = maxing ? max(maxParts.count, 1) : 1
                 part = nil
                 defer { part = nil }
+                // **ONE CAPSULE FOR EVERY PRIVATE SEND (2026-11-27, user: "go
+                // ahead and merge the toasts"):** Privacy Pools' steps run in
+                // `PrivateSendSteps`, so behind its sheet the shell's capsule
+                // draws it as it does Railgun's and Aztec's. It notifies by
+                // itself (`announce`), so the run is quiet.
+                let steps = PrivateSendSteps.shared
+                steps.forget(.move)
+                steps.begin(.move, plan: .init(steps: [Self.preparingStep, .proving, .sent(.ethereum)]), quiet: true)
                 let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
                                                             balanceToBalance: tag == nil && balanceToBalance == true,
                                                             announce: true,
@@ -737,13 +751,22 @@ final class PrivateMove {
                         switch s {
                         case .opening: self?.stage = .opening
                         case .preparing: self?.stage = .preparing
-                        case .proving: self?.stage = .proving
-                        case .sending: self?.stage = .sending
-                        case .part(let k, let n): self?.part = (k, n)
-                        case .relayed(let tx): self?.stage = .done(tx)
+                        case .proving:
+                            self?.stage = .proving
+                            steps.mark(.proving, from: .privacyPools)
+                        case .sending:
+                            self?.stage = .sending
+                            steps.mark(.sent, from: .privacyPools)
+                        case .part(let k, let n):
+                            self?.part = (k, n)
+                            steps.setPart(k, of: n, from: .privacyPools)
+                        case .relayed(let tx):
+                            self?.stage = .done(tx)
+                            steps.finish(from: .privacyPools)
                         }
                     }
                 })
+                steps.finish(from: .privacyPools)
                 stage = .done(hash)
             } else {
                 stage = .preparing
@@ -767,6 +790,7 @@ final class PrivateMove {
             NSLog("privateMove| ethereum | %@ | %@ %@ | %d s", mode == .send ? (balanceToBalance == true ? "balance to balance" : "sent") : "deposited",
                   amount, symbol, Int(Date().timeIntervalSince(started)))
         } catch {
+            PrivateSendSteps.shared.fail(Self.words(error, network: network), from: .privacyPools)
             stage = .failed(Self.words(error, network: network))
             NSLog("privateMove| ethereum failed | %@", String(describing: error))
         }

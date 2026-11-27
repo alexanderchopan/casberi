@@ -24,7 +24,7 @@ final class PrivateSendSteps {
     enum Kind: String { case move, app }
 
     /// Whose engine proves a send behind its sheet, so only its words reach it.
-    enum Source { case aztec, railgun }
+    enum Source { case aztec, railgun, privacyPools }
 
     /// The engines' step names, as their messages spell them.
     enum Key: String { case checking, proving, signing, sent, screening }
@@ -101,6 +101,12 @@ final class PrivateSendSteps {
         /// A swap inside your private balance (prd §1875): it is told as
         /// swapped, never as sent (§1881).
         var swap = false
+        /// Its own code tells you when it ends (Privacy Pools' send, which
+        /// notifies by itself): no second notification here.
+        var quiet = false
+        /// Max's send `part` of `parts`, one note each (2026-11-27).
+        var part: Int?
+        var parts: Int?
 
         var isRunning: Bool { ended == nil }
 
@@ -130,7 +136,7 @@ final class PrivateSendSteps {
     /// go through and whether anything left. Said once, by when it started.
     static func announceEnd(from old: Run?, to new: Run?) {
         guard let old, old.isRunning, let new, !new.isRunning, new.started == old.started,
-              let ok = new.ok else { return }
+              !new.quiet, let ok = new.ok else { return }
         // A private send is one this device PROVES (Aztec's, Railgun's): a
         // move-in or an Aave loan is signed on Ethereum, and is no private send.
         guard new.plan.steps.contains(where: { $0.key == .proving }) else { return }
@@ -162,8 +168,27 @@ final class PrivateSendSteps {
     private(set) var awayLanded: String?
 
     /// The caller starts the clock at its tap, before a cold engine has said anything.
-    func begin(_ kind: Kind, plan: Plan, swap: Bool = false) {
-        run = Run(kind: kind, plan: plan, started: .now, swap: swap)
+    func begin(_ kind: Kind, plan: Plan, swap: Bool = false, quiet: Bool = false) {
+        run = Run(kind: kind, plan: plan, started: .now, swap: swap, quiet: quiet)
+    }
+
+    /// Max's send `k` of `n`, from `source`'s send: behind the sheet or in it.
+    func setPart(_ k: Int, of n: Int, from source: Source) {
+        if source == awayFrom, var behind = away, behind.isRunning {
+            behind.part = k; behind.parts = n; away = behind
+        } else if var current = run, current.isRunning {
+            current.part = k; current.parts = n; run = current
+        }
+    }
+
+    /// `source`'s send ended well: behind the sheet if it went there.
+    func finish(from source: Source) {
+        if source == awayFrom, away?.isRunning == true { finishAway() } else { finish() }
+    }
+
+    /// `source`'s send failed: behind the sheet if it went there.
+    func fail(_ reason: String, from source: Source) {
+        if source == awayFrom, away?.isRunning == true { failAway(reason) } else { fail(reason) }
     }
 
     /// Move's running send leaves its sheet. One at a time: false while

@@ -153,7 +153,9 @@ struct StepCapsuleLabel: View {
             }
             // A send on Aztec wears its ink (prd §1779); one on Ethereum
             // and a failure keep the page's (prd §1806).
-            Text(verbatim: failed ? (run.swap ? String(localized: "Not swapped") : String(localized: "Not sent")) : run.ended == nil ? step.running : step.done)
+            // Max's sends count, "2 of 3" (2026-11-27).
+            let count = run.part.flatMap { k in run.parts.map { String(localized: " · \(k) of \($0)") } } ?? ""
+            Text(verbatim: failed ? (run.swap ? String(localized: "Not swapped") : String(localized: "Not sent")) : (run.ended == nil ? step.running : step.done) + count)
                 .dsText(.body17).foregroundStyle(failed || !run.plan.isAztec ? DS.textPrimary : DS.aztecInk).lineLimit(1)
             if !failed {
                 Text(verbatim: "· " + PrivateStepRows.seconds(run.started, run.ended ?? now))
