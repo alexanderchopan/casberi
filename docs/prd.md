@@ -75645,3 +75645,16 @@ Railgun's own contracts take any amount; the $10 was Privacy Pools' minimum copi
 **Seen** on the user's iPhone: 10.002 USDC moved into Railgun (`0xd3ca94f0…`), before the floor came off. **Not seen:** a move under $10.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1997 — Earn opens on the last reading and reads everything at once; its foot names no act while it reads (amends §1970's Olla read, §1897 item 7's foot) (2026-11-27)
+
+User, 2026-11-27: "earn takes a while to read. why", then, of a screenshot of Earn on "Reading…" over "Hold to deposit": "also says hold to deposit but it's not active and user may not be depositing".
+
+1. **Every read at once.** `LendMove.readChain` asked Aave's four markets, then Olla (its head block, then its archive call 30 days back, then each open request one by one), then Base's gas, then Ethereum's: five round trips or more in a row over Tor before the deck drew. Aave, Olla, both gas prices and the prices now go out together, and Olla's requests are read together; the deck waits on the slowest branch.
+2. **Earn opens on Home's reading.** Home reads the same markets for the same account into `LendMove.holdings`; a new Earn deck takes that reading (`take`), opens ready on it, and the read that follows replaces its figures in place, leaving the pick, the keys and the act as they stand. "Reading…" is drawn only with no reading of this account. A stale figure is no risk to money: every lend is simulated against the chain before Face ID.
+3. **Olla's price 30 days back is kept an hour** (`LendMove.ollaThen`): an hour is a 720th of the window, under the rate's last place.
+4. **No act before the page knows.** While Earn reads, the foot draws no word: "Hold to deposit" named a verb the person may not be taking, since Deposit · Withdraw is drawn only once the read says something is earning (§83: no dead controls).
+
+**Not seen:** built and run. This change was written in a Linux container with no Swift toolchain; the Python audits pass, the Swift build and the device check are owed.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

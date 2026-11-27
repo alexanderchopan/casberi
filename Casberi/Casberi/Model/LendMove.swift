@@ -287,17 +287,51 @@ final class LendMove {
 
     // MARK: - Reading
 
+    /// The account the last finished read was of: a reading stands for it.
+    private(set) var readFor: String?
+
     func read(account: String) async {
         if case .working = stage { return }
-        stage = .reading
+        // **EARN OPENS ON HOME'S READING (2026-11-27, user: "earn takes a
+        // while to read").** Home reads the same markets for the same account
+        // into `holdings`; a new deck stands on that reading at once and this
+        // read replaces its figures as they land, never "Reading…" over a page
+        // the phone already knows.
+        if readFor != account, self !== Self.holdings, Self.holdings.readFor == account {
+            take(Self.holdings)
+            settle()
+        }
+        // A refresh keeps the deck as it stands: the pick, the keys, the act.
+        let refreshing = stage == .ready && readFor == account
+        if !refreshing { stage = .reading }
+        async let priced = MainnetPrices.prices(for: AaveLend.markets.map(\.symbol))
         if YourAccountDemo.isDemo(account) {
             readDemo()
         } else {
             await readChain(account: account)
         }
-        let found = await MainnetPrices.prices(for: AaveLend.markets.map(\.symbol))
+        let found = await priced
         if found != prices { prices = found }
-        settle()
+        readFor = account
+        if stage == .reading { settle() }
+    }
+
+    /// Another deck's reading of the same account, figures only: the mode
+    /// and the pick stay this deck's.
+    private func take(_ other: LendMove) {
+        held = other.held
+        lent = other.lent
+        roundUps = other.roundUps
+        rates = other.rates
+        prices = other.prices
+        refused = other.refused
+        reserve = other.reserve
+        gasPriceWei = other.gasPriceWei
+        ollaShares = other.ollaShares
+        ollaRate = other.ollaRate
+        ollaRequests = other.ollaRequests
+        lentAnswered = other.lentAnswered
+        readFor = other.readFor
     }
 
     /// After a read or a pick: the first market with something to move,
@@ -330,26 +364,17 @@ final class LendMove {
     }
 
     private func readChain(account: String) async {
-        typealias Read = (key: String, held: String?, lent: String?, rate: Double?, aToken: String?)
-        let found: [Read] = await withTaskGroup(of: Read.self) { group in
-            for m in AaveLend.markets where m.place == .aave {
-                guard let net = YourAccountOp.networks.first(where: { $0.chainId == m.chainId }) else { continue }
-                group.addTask {
-                    let token = m.native ? YourAccountOp.eth : YourAccountOp.Token(symbol: m.symbol, decimals: m.decimals, contract: m.asset)
-                    async let have = YourAccountChain.balance(net, token, of: account)
-                    async let given = Self.call(net, to: m.aToken, data: AaveLend.lentCall(account: account))
-                    async let reserve = Self.call(net, to: m.pool, data: AaveLend.reserveDataCall(m))
-                    let r = await reserve
-                    return (Self.key(m), await have, await given.map(AaveLend.decimal(hex:)),
-                            r.flatMap(AaveLend.apy(reserveData:)), r.flatMap(AaveLend.aToken(reserveData:)))
-                }
-            }
-            var out: [Read] = []
-            for await r in group { out.append(r) }
-            return out
-        }
+        // **EVERY READ AT ONCE (2026-11-27).** Aave's markets, Olla and each
+        // network's gas price need no other's answer. Asked round after round
+        // (Aave, then Olla's block and its archive call, then Base's gas, then
+        // Ethereum's) they were five round trips over Tor before the deck drew;
+        // at once, the deck waits on the slowest branch alone.
+        async let aave = Self.readAave(account: account)
+        async let ollaHeard = readOlla(account: account)
+        async let gas = Self.gasPrices()
+        let found = await aave
         // Every market's aToken balance heard, or the reading is partial.
-        let ollaAnswered = await readOlla(account: account)
+        let ollaAnswered = await ollaHeard
         lentAnswered = found.count == AaveLend.markets.filter({ $0.place == .aave }).count && found.allSatisfy { $0.lent != nil }
             && ollaAnswered
         for r in found {
@@ -374,14 +399,52 @@ final class LendMove {
             }
             if let rate = r.rate { rates[r.key] = rate }
         }
-        for id in AaveLend.chainIds {
-            guard let net = YourAccountOp.networks.first(where: { $0.chainId == id }),
-                  let hex = try? await YourAccountChain.rpc(net, "eth_gasPrice", []) as? String,
-                  let price = Decimal(string: AaveLend.decimal(hex: hex)) else { continue }
+        for (id, price) in await gas {
             // Twice today's price for the most a lend of ETH has taken with
             // the account's own calls around it (246k measured, 600k kept).
             reserve[id] = Self.digits(price * 600_000 * 2)
             gasPriceWei[id] = price
+        }
+    }
+
+    private typealias Read = (key: String, held: String?, lent: String?, rate: Double?, aToken: String?)
+
+    /// Per Aave market, at once: what the account holds, what it has lent
+    /// and the reserve (the rate, the aToken).
+    private nonisolated static func readAave(account: String) async -> [Read] {
+        await withTaskGroup(of: Read.self) { group in
+            for m in AaveLend.markets where m.place == .aave {
+                guard let net = YourAccountOp.networks.first(where: { $0.chainId == m.chainId }) else { continue }
+                group.addTask {
+                    let token = m.native ? YourAccountOp.eth : YourAccountOp.Token(symbol: m.symbol, decimals: m.decimals, contract: m.asset)
+                    async let have = YourAccountChain.balance(net, token, of: account)
+                    async let given = Self.call(net, to: m.aToken, data: AaveLend.lentCall(account: account))
+                    async let reserve = Self.call(net, to: m.pool, data: AaveLend.reserveDataCall(m))
+                    let r = await reserve
+                    return (Self.key(m), await have, await given.map(AaveLend.decimal(hex:)),
+                            r.flatMap(AaveLend.apy(reserveData:)), r.flatMap(AaveLend.aToken(reserveData:)))
+                }
+            }
+            var out: [Read] = []
+            for await r in group { out.append(r) }
+            return out
+        }
+    }
+
+    /// Each Lend network's gas price, wei, at once.
+    private nonisolated static func gasPrices() async -> [(Int, Decimal)] {
+        await withTaskGroup(of: (Int, Decimal)?.self) { group in
+            for id in AaveLend.chainIds {
+                guard let net = YourAccountOp.networks.first(where: { $0.chainId == id }) else { continue }
+                group.addTask {
+                    guard let hex = try? await YourAccountChain.rpc(net, "eth_gasPrice", []) as? String,
+                          let price = Decimal(string: AaveLend.decimal(hex: hex)) else { return nil }
+                    return (id, price)
+                }
+            }
+            var out: [(Int, Decimal)] = []
+            for await r in group { if let r { out.append(r) } }
+            return out
         }
     }
 
@@ -483,32 +546,50 @@ final class LendMove {
         async let shares = Self.call(net, to: m.aToken, data: OllaStake.balanceCall(account: account))
         async let rate = Self.call(net, to: m.pool, data: OllaStake.assetsCall(shares: OllaStake.oneShare))
         async let ids = Self.call(net, to: m.pool, data: OllaStake.activeRequestsCall(account: account))
-        async let then = Self.rateBack(net, vault: m.pool)
+        let kept = Self.ollaThen.flatMap { Date.now.timeIntervalSince($0.at) < Self.ollaThenKept ? $0.price : nil }
+        async let then = Self.rateBack(net, vault: m.pool, kept: kept)
         let key = Self.key(m)
         if let h = await have { held[key] = h }
         let now = await rate.flatMap(OllaStake.amount)
         if let now { ollaRate = now }
-        if let now, let old = await then, let apy = OllaStake.apy(now: now, then: old) { rates[key] = apy }
+        let old = await then
+        if kept == nil, let old { Self.ollaThen = (old, .now) }
+        if let now, let old, let apy = OllaStake.apy(now: now, then: old) { rates[key] = apy }
         let heardShares = await shares.flatMap(OllaStake.amount)
         if let s = heardShares {
             ollaShares = s
             if let r = ollaRate { lent[key] = OllaStake.assets(forShares: s, rate: r) ?? lent[key] }
         }
         guard let list = await ids.flatMap(OllaStake.ids) else { return false }
-        var found: [OllaStake.Request] = []
-        for id in list {
-            guard let answer = await Self.call(net, to: m.pool, data: OllaStake.requestCall(id: id)),
-                  let r = OllaStake.request(id: id, answer) else { return false }
-            found.append(r)
+        // Every request at once, in Olla's order; one unread and the list is partial.
+        let answers = await withTaskGroup(of: (Int, OllaStake.Request?).self) { group in
+            for (i, id) in list.enumerated() {
+                group.addTask {
+                    let answer = await Self.call(net, to: m.pool, data: OllaStake.requestCall(id: id))
+                    return (i, answer.flatMap { OllaStake.request(id: id, $0) })
+                }
+            }
+            var out = [OllaStake.Request?](repeating: nil, count: list.count)
+            for await pair in group { out[pair.0] = pair.1 }
+            return out
         }
+        let found = answers.compactMap { $0 }
+        guard found.count == list.count else { return false }
         ollaRequests = found
         await tellOllaReady(m)
         return heardShares != nil && ollaRate != nil
     }
 
+    /// **THE PRICE 30 DAYS BACK, KEPT AN HOUR.** Two round trips in a row (the
+    /// head, then an archive call), and it moves with the window's start
+    /// alone: an hour is a 720th of the window, under the rate's last place.
+    private static var ollaThen: (price: String, at: Date)?
+    private static let ollaThenKept: TimeInterval = 3_600
+
     /// The share price 30 days back, off an archive read: nil where the node
     /// keeps no history, and then no rate is said.
-    private nonisolated static func rateBack(_ net: YourAccountOp.Network, vault: String) async -> String? {
+    private nonisolated static func rateBack(_ net: YourAccountOp.Network, vault: String, kept: String?) async -> String? {
+        if let kept { return kept }
         guard let headHex = try? await YourAccountChain.rpc(net, "eth_blockNumber", []) as? String,
               let head = Int(AaveLend.decimal(hex: headHex)), head > OllaStake.windowBlocks,
               let data = OllaStake.assetsCall(shares: OllaStake.oneShare) else { return nil }

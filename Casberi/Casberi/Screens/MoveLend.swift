@@ -531,7 +531,13 @@ struct MoveLendSentence<Head: View>: View {
         case .working:
             MoveFootWord(word: footVerb, ink: DS.textSecondary,
                          glyph: signing ? "faceid" : nil)
-        default:
+        case .reading:
+            // **NO ACT BEFORE THE PAGE KNOWS (2026-11-27, user: "also says
+            // hold to deposit but it's not active and user may not be
+            // depositing").** Deposit · Withdraw is drawn once the read says
+            // something is earning; until then the foot names no verb.
+            EmptyView()
+        case .ready:
             MoveHoldWord(word: move.claims ? String(localized: "Hold to claim")
                          : move.mode == .lend ? String(localized: "Hold to deposit") : String(localized: "Hold to withdraw"),
                          enabled: live && move.units != nil && !move.ollaUnderMinimum) {
