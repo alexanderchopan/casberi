@@ -281,20 +281,10 @@ struct MovePrivateSentence<Head: View>: View {
                 VStack(alignment: .leading, spacing: 0) {
                     MoveDeckFacts(facts: sendFacts.map { .init(name: $0.name, value: $0.value) })
                 }
-            } else if let held = move.held {
-                if move.onEthereum {
-                    // What moves in earns (prd §1563): the rate, read live, or nothing.
-                    let have = move.symbol == "USDC"
-                        ? move.usdcBalance.map { PrivateMoney.figure($0, decimals: 6, symbol: "USDC") }.map { String(localized: "\($0) in your account") }
-                        : String(localized: "\(held) ETH in your account")
-                    Text(verbatim: [have, store.yieldLine(symbol: move.symbol)].compactMap { $0 }
-                        .joined(separator: " · "))
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    if let short = move.usdcShort { usdcShortLine(short) }
-                } else {
-                    Text("\(held) test ETH in this build's account")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                }
+            } else if move.onEthereum, let short = move.usdcShort {
+                // What there is and earns is the Amount line's note (prd §1992);
+                // the minimum it misses stays the page's alert (§1938).
+                usdcShortLine(short)
             }
         case .needsFunds:
             // Why it asks for funds, in the figures the check uses: the
@@ -494,6 +484,7 @@ struct MovePrivateSentence<Head: View>: View {
                                 answered: typingDollars ? !dollars.isEmpty : !move.amount.isEmpty,
                                 value: typingDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
                                     : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil) : figure),
+                                note: typing ? nil : depositNote,
                                 accessory: flips ? AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { setDollars($0) }) : nil,
                                 fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { if !fixed { toggle(.amount) } })
         return out
@@ -696,6 +687,20 @@ struct MovePrivateSentence<Head: View>: View {
 
     /// The line under the field (prd §1989, was over the keys): the other
     /// unit's figure and the most it can move, or what is wrong, in amber.
+    /// **A NOTE ABOUT A LINE STANDS UNDER IT (prd §1992).** Moving in, what
+    /// your account holds and what it earns, under Amount, never at the
+    /// page's edge (the first sweep sheet drew it three ways).
+    private var depositNote: String? {
+        guard move.mode == .deposit, let held = move.held else { return nil }
+        guard move.onEthereum else { return String(localized: "\(held) test ETH in this build's account") }
+        // What moves in earns (prd §1563): the rate, read live, or nothing.
+        let have = move.symbol == "USDC"
+            ? move.usdcBalance.map { PrivateMoney.figure($0, decimals: 6, symbol: "USDC") }.map { String(localized: "\($0) in your account") }
+            : String(localized: "\(held) ETH in your account")
+        let parts = [have, store.yieldLine(symbol: move.symbol)].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
     private var amountLine: (words: String, ink: Color) {
         let typedFigure = inDollars ? "$\(dollars.isEmpty ? "0" : dollars)" : "\(move.amount.isEmpty ? "0" : move.amount) \(move.symbol)"
         let other: String? = {

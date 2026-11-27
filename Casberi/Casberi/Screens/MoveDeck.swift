@@ -117,15 +117,13 @@ struct MoveReceiptSteps: View {
                         }
                     }
                 }
+                // **ONE NOTE UNDER A LINE (prd §1992):** a resting line's note
+                // is the open field's caption, at its size and tucked under
+                // it; the first sweep drew a full row at the page's edge.
                 if s.on, s.id == "amount", let n = s.fieldNote {
                     MoveFieldNote(text: n.text, ink: n.ink)
-                }
-                if let note = s.note {
-                    MoveReceiptLine(label: "") {
-                        Text(verbatim: note).dsText(.body17)
-                            .foregroundStyle(s.aztec ? DS.aztecInk : DS.textSecondary)
-                            .lineLimit(1).minimumScaleFactor(0.8)
-                    }
+                } else if let note = s.note {
+                    MoveFieldNote(text: note, ink: s.aztec ? DS.aztecInk : DS.textSecondary)
                 }
             }
         }

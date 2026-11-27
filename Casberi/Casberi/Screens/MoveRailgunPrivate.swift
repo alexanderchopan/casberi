@@ -1143,11 +1143,8 @@ struct MoveRailgunSentence<Head: View>: View {
             // The amount in dollars, the floor beside it, and three choices
             // (prd §1728 item 1).
             // What you have and the sums are the amount's menu (prd §1802).
-            // The floor is still said: it is a rule, and no menu shows it.
-            if move.mode == .deposit {
-                Text(verbatim: String(localized: "\(RailgunMove.floorText) or more"))
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-            }
+            // The floor is still said, as the Amount line's note (§1992).
+            EmptyView()
         case .working(let words):
             // The steps stand in the foot; the sentence stands alone.
             if stepsRun == nil {
@@ -1509,6 +1506,8 @@ struct MoveRailgunSentence<Head: View>: View {
                                 answered: !move.amount.isEmpty,
                                 value: move.amount.isEmpty ? (open == .amount ? "0 \(move.holding?.symbol ?? "")" : nil)
                                     : "\(move.amount) \(move.holding?.symbol ?? "")",
+                                // The floor is a rule no menu shows: under Amount (prd §1992).
+                                note: move.mode == .deposit && open != .amount ? String(localized: "\(RailgunMove.floorText) or more") : nil,
                                 fieldNote: move.holding.flatMap { h in
                                     MoveFieldNote.against(typed: move.amount, have: MoveFieldNote.plain(units: h.units, decimals: h.decimals),
                                                           symbol: h.symbol)
