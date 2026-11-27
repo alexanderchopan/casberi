@@ -139,7 +139,19 @@ TARGETS=("${(@f)$(python3 - "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" "$
 import re, sys
 s = open(sys.argv[1]).read()
 live = open(sys.argv[2]).read()
-no_pick = set(re.findall(r'Seat\(name: "([^"]+)"[^)]*?landing: \.(?!pick)\w+\)', open(sys.argv[3]).read(), re.S))
+import os
+def seat_name(spelled):
+    # A seat named by a constant (`TacitAccount.name`, prd §1981) reads that
+    # constant's literal from its own file; a literal is itself.
+    if spelled.startswith('"'):
+        return spelled.strip('"')
+    m = re.fullmatch(r'(\w+)\.name', spelled)
+    path = m and os.path.join(os.path.dirname(sys.argv[3]), m.group(1) + ".swift")
+    lit = path and os.path.exists(path) and re.search(r'static let name = "([^"]+)"', open(path).read())
+    if not lit:
+        sys.exit(f"app-pages: cannot read the seat name {spelled}; the reader has drifted")
+    return lit.group(1)
+no_pick = {seat_name(n) for n in re.findall(r'Seat\(name: ("[^"]+"|\w+\.name),[^)]*?landing: \.(?!pick)\w+\)', open(sys.argv[3]).read(), re.S)}
 if not no_pick:
     sys.exit("app-pages: found no seat without a pick in RoomAccounts.swift; the reader has drifted")
 nothing = set(re.findall(r'"([^"]+)"', re.search(r'landsNothing: Set<String> = \[(.*?)\]', live, re.S).group(1)))
