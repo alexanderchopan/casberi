@@ -105,7 +105,7 @@ final class PrivateMove {
     private(set) var balance: String?
     private(set) var reserve: String?
     private(set) var sender: String?
-    var amount = "0.001"
+    var amount = ""
 
     /// Whether this build can move to private at all: Ethereum unless the
     /// kill switch is off; Sepolia in a DEBUG build.
@@ -280,6 +280,12 @@ final class PrivateMove {
         return NSDecimalNumber(decimal: whole).stringValue
     }
 
+    /// A figure someone typed stands through a read (2026-11-26, user: "i
+    /// can't enter .03 it jumps to .002": Try again swapped it for a step).
+    private func typed(_ figure: String) -> Bool {
+        (Decimal(string: figure) ?? 0) > 0
+    }
+
     /// A typed amount the move can take.
     var amountFits: Bool {
         // Finishing, nothing more leaves your private balance (prd §1988).
@@ -394,7 +400,7 @@ final class PrivateMove {
             if options.isEmpty {
                 stage = .needsFunds(sender ?? "")
             } else {
-                if !options.contains(amount) { amount = options[min(2, options.count - 1)] }
+                if !typed(amount), !options.contains(amount) { amount = options[min(2, options.count - 1)] }
                 stage = .ready
             }
             NSLog("privateMove| read | sender %@ | balance %@ | reserve %@ | %d choices",
@@ -419,7 +425,7 @@ final class PrivateMove {
         stage = .reading
         let options = choices
         guard !options.isEmpty else { stage = .nothingPrivate; return }
-        if !options.contains(amount) { amount = options[min(2, options.count - 1)] }
+        if !typed(amount), !options.contains(amount) { amount = options[min(2, options.count - 1)] }
         if !DemoMode.isActive, terms == nil,
            let url = URL(string: PrivacyNetwork.sepolia.relayerUrl + "/v1/details/evm/\(PrivacyNetwork.sepolia.chainId)"),
            let (data, http) = await IngestSupport.sendRequest(URLRequest(url: url), service: PrivacyEngine.service),
@@ -871,6 +877,20 @@ final class PrivateMove {
 
     /// What `words` says of an engine failure it has no words of its own
     /// for. A fresh address's move names its step instead (prd §1823).
+    /// The reason in a relayer's refusal ("HTTP 400: Bad Request: {…}"):
+    /// the body's `message`, `error` or `reason`, or nil.
+    static func relayerReason(_ message: String) -> String? {
+        guard let brace = message.firstIndex(of: "{"),
+              let data = String(message[brace...]).data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        func text(_ v: Any?) -> String? {
+            if let s = v as? String, !s.isEmpty { return s }
+            if let d = v as? [String: Any] { return text(d["message"]) ?? text(d["reason"]) }
+            return nil
+        }
+        return (text(json["message"]) ?? text(json["error"]) ?? text(json["reason"])).map { String($0.prefix(160)) }
+    }
+
     static var engineFallback: String { String(localized: "The private account could not be opened") }
 
     /// A failure in the sentence's words: short, and what to do where there is something.
@@ -894,6 +914,13 @@ final class PrivateMove {
             // The engine's own name rides the words (2026-11-26: a send
             // failed on the phone as "could not be opened", and no log
             // reaches here): what to report is on the screen.
+            // Refused is not silent (2026-11-26, user: "one time i get
+            // rejected"): the relayer's own reason, as it gave it.
+            if failure.name == "RelayerRejected" {
+                let why = relayerReason(failure.message)
+                return why.map { String(localized: "0xBow's relayer refused it: \($0)") }
+                    ?? String(localized: "0xBow's relayer refused it") + " (\(failure.message.prefix(160)))"
+            }
             if failure.name.hasPrefix("Relayer") {
                 return String(localized: "0xBow's relayer did not answer") + " (\(failure.name))"
             }

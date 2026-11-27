@@ -279,7 +279,7 @@ struct MovePrivateSentence<Head: View>: View {
                 // " · " parts at the page's edge was the one block on Move
                 // that read as a sentence of small print.
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value) }
+                    ForEach(sendFacts, id: \.name) { MoveFactRow(name: $0.name, value: $0.value, indented: false) }
                 }
             } else if let held = move.held {
                 if move.onEthereum {
@@ -863,7 +863,12 @@ struct MovePrivateSentence<Head: View>: View {
                         // where it stands, and the line under it the rest.
                         ScrollView {
                             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                if !move.acting {
+                                // **NO SENTENCE UNDER THE LINES (2026-11-26,
+                                // user: "is that send sentence the same style
+                                // our other sends are? … too close to the
+                                // selection rows"):** while the lines stand, a
+                                // failure is public Send's one amber line.
+                                if !move.acting, !failed {
                                     MoveFlow { sentence }
                                         .moveHoldFill()
                                         .allowsHitTesting(false)
@@ -875,6 +880,7 @@ struct MovePrivateSentence<Head: View>: View {
                                 #endif
                                 line
                             }
+                            .padding(.vertical, DS.Space.s2)
                         }
                         .scrollIndicators(.hidden)
                         .transition(.opacity)

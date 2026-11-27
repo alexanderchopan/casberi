@@ -1463,8 +1463,9 @@ struct MoveRailgunSentence<Head: View>: View {
                         // stands, the steps and the line the rest.
                         listBody {
                             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                                // While it goes the lines say it, as public Send's (prd §1980).
-                                if !move.acting {
+                                // While it goes the lines say it, as public Send's (prd §1980);
+                                // a failure under them is one amber line, no sentence.
+                                if !move.acting, !picking {
                                     MoveFlow { sentence }
                                         .moveHoldFill()
                                         .allowsHitTesting(false)
