@@ -75,6 +75,10 @@ enum WalletRowWords {
         let verbs: [(verb: String, joint: String?, act: WalletActionMark.Action, sign: String)] = [
             ("Received ", " from ", .received, "+"), ("Sent ", " to ", .sent, "−"),
             ("Deposited ", " into ", .deposited, ""), ("Withdrew ", " from ", .withdrew, ""),
+            // Into and back out of a private place (Railgun's, Privacy Pools'
+            // own rows, 2026-11-27): your money, moved, unsigned.
+            ("Shielded ", " into ", .deposited, ""), ("Put ", " into ", .deposited, ""),
+            ("Reclaimed ", " from ", .withdrew, ""),
             ("Minted ", " on ", .minted, "+"), ("Burned ", nil, .burned, "−"),
         ]
         guard let v = verbs.first(where: { s.hasPrefix($0.verb) }) else { return nil }
