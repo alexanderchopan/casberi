@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import WebKit
 
 /// THE PRIVACY POOLS ENGINE ON THE PHONE (prd §1540, §1541; built 2026-10-26).
@@ -82,6 +83,17 @@ final class PrivacyEngine: NSObject {
             view.isInspectable = true
             #endif
             view.navigationDelegate = self
+            // **IN THE WINDOW (2026-11-27, user: "proving on privacy pools
+            // takes a very long time. it often hangs and does nothing").** To
+            // WebKit a web view outside the window is a background page whose
+            // timers it freezes, as Railgun's sync measured (2026-11-07,
+            // `RailgunEngine`): 1×1, all but invisible, in no one's way.
+            view.alpha = 0.01
+            view.isUserInteractionEnabled = false
+            view.isAccessibilityElement = false
+            if let window = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first {
+                window.addSubview(view)
+            }
             webView = view
             view.load(URLRequest(url: URL(string: "\(Self.scheme)://engine/index.html")!))
             // A page that never says `ready` (a script that threw while
@@ -101,6 +113,7 @@ final class PrivacyEngine: NSObject {
     /// Drops the page, its keys and every prepared transaction with it.
     func stop() {
         webView?.configuration.userContentController.removeAllScriptMessageHandlers()
+        webView?.removeFromSuperview()
         webView = nil
         isReady = false
         network = nil

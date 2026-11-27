@@ -222,10 +222,11 @@ final class PrivateMove {
         let units: Decimal?
         switch mode {
         case .send:
-            // One note per send: the relayer refuses two (`largestNote`).
-            let held = Decimal(string: PrivateMoneyStore.shared.largestNote(chainId: network.chainId, symbol: symbol)) ?? 0
+            // **MAX IS EVERY NOTE (2026-11-27, user: "max should be all
+            // notes"):** one send per note, as the relayer takes them, each
+            // less its own fee (`maxParts`).
             guard let fee = fee.flatMap({ Decimal(string: $0) }) else { return nil }
-            units = held - fee
+            units = maxParts.reduce(Decimal(0)) { $0 + $1 - fee }
         case .deposit:
             if symbol == "USDC" { units = usdcBalance.flatMap { Decimal(string: $0) } }
             else { units = balance.flatMap { b in reserve.map { (Decimal(string: b) ?? 0) - (Decimal(string: $0) ?? 0) } } }
@@ -233,6 +234,30 @@ final class PrivateMove {
         guard let units, units > 0 else { return units == nil ? nil : "0" }
         return PrivateMoney.plain(units)
     }
+
+    /// **ONE NOTE PER SEND (2026-11-27).** 0xBow's relayer prices a
+    /// withdrawal at one note's gas and refuses two (`largestNote`), so your
+    /// private ETH, held in a note per deposit and per send's change, goes
+    /// one note per send. The notes Max sends: each worth more than its fee.
+    var maxParts: [Decimal] {
+        guard mode == .send, onEthereum, let fee = fee.flatMap({ Decimal(string: $0) }) else { return [] }
+        return PrivateMoneyStore.shared.noteWorths(chainId: network.chainId, symbol: symbol).filter { $0 > fee }
+    }
+
+    /// The most one send moves: the largest note less its fee.
+    var oneSend: Decimal? {
+        guard mode == .send, let fee = fee.flatMap({ Decimal(string: $0) }) else { return nil }
+        return (Decimal(string: PrivateMoneyStore.shared.largestNote(chainId: network.chainId, symbol: symbol)) ?? 0) - fee
+    }
+
+    /// The sends the typed amount takes: Max's notes, else one.
+    var sends: Int {
+        guard let units = PrivateMoney.baseUnits(amount, decimals: decimals), isMax(units) else { return 1 }
+        return max(maxParts.count, 1)
+    }
+
+    /// Which send of how many is going, while Max sends its notes.
+    private(set) var part: (Int, Int)?
 
     /// The least this token may move: the pool's smallest deposit moving
     /// in, else anything over nothing. Base units.
@@ -289,7 +314,7 @@ final class PrivateMove {
 
     /// Whether `units` (base units) is the most this token can move: Max, or
     /// within a hair of it.
-    private func isMax(_ units: String) -> Bool {
+    func isMax(_ units: String) -> Bool {
         guard let top = most.flatMap({ Decimal(string: $0) }), let u = Decimal(string: units) else { return false }
         return u >= top
     }
@@ -300,6 +325,8 @@ final class PrivateMove {
         if finishing != nil { return true }
         guard let units = PrivateMoney.baseUnits(amount, decimals: decimals).flatMap({ Decimal(string: $0) }), units > 0,
               let top = most.flatMap({ Decimal(string: $0) }) else { return false }
+        // Over one note, only Max: it alone sends a note per send.
+        if mode == .send, onEthereum, let one = oneSend, units > one, units < top { return false }
         return units <= top && units >= (Decimal(string: least) ?? 1)
     }
 
@@ -481,15 +508,20 @@ final class PrivateMove {
         let net = PrivateOnEthereum.accountNetwork
         let pool = network.yieldPool(for: Self.eth)
         if mode == .send {
-            await PrivateMoneyStore.shared.readYield()
+            // The rates, ETH's quote and USDC's, at once (2026-11-27: one after
+            // another over Tor, "reading Ethereum" took most of a minute).
             let asked = Date()
-            let quote: Quote = if let pool { await Self.relayerQuote(pool, network: network, to: recipient ?? account) } else { .noPool }
+            let to = recipient ?? account
+            let usdcPool = PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC") != "0"
+                ? network.yield.first(where: { !$0.native }) : nil
+            let net = network
+            async let rates: Void = PrivateMoneyStore.shared.readYield()
+            async let ethQuote: Quote = pool != nil ? Self.relayerQuote(pool!, network: net, to: to) : .noPool
+            async let usdcQuote: String? = usdcPool != nil ? Self.relayerFee(usdcPool!, network: net, to: to) : nil
+            let (quote, usdcAnswer, _) = await (ethQuote, usdcQuote, rates)
             relayerDirect = URL(string: network.relayerUrl)?.host().map { TorFallback.shared.happened($0, since: asked) } ?? false
             if case .fee(let fee) = quote { quotedFee = fee } else { quotedFee = nil }
-            if let usdcPool = network.yield.first(where: { !$0.native }),
-               PrivateMoneyStore.shared.spendable(chainId: network.chainId, symbol: "USDC") != "0" {
-                usdcFee = await Self.relayerFee(usdcPool, network: network, to: recipient ?? account)
-            }
+            if usdcPool != nil { usdcFee = usdcAnswer }
             guard mine == reads else { return }
             let options = self.options
             // A tag is paid in private USDC alone (prd §1874).
@@ -679,11 +711,16 @@ final class PrivateMove {
                 }
                 // Waiting on the engine (a background read may hold it) says so.
                 stage = .preparing
+                let maxing = tag == nil && balanceToBalance != true && isMax(value)
+                let parts = maxing ? max(maxParts.count, 1) : 1
+                part = nil
+                defer { part = nil }
                 let hash = try await PrivateOnEthereum.send(token: token, amount: value, to: to,
                                                             balanceToBalance: tag == nil && balanceToBalance == true,
                                                             announce: true,
                                                             // Max sends what the notes hold, fee quoted now (2026-11-26).
-                                                            upTo: tag == nil && balanceToBalance != true && isMax(value),
+                                                            upTo: maxing,
+                                                            parts: parts,
                                                             step: { [weak self] s in
                     await MainActor.run {
                         switch s {
@@ -691,6 +728,7 @@ final class PrivateMove {
                         case .preparing: self?.stage = .preparing
                         case .proving: self?.stage = .proving
                         case .sending: self?.stage = .sending
+                        case .part(let k, let n): self?.part = (k, n)
                         }
                     }
                 })
@@ -934,6 +972,9 @@ final class PrivateMove {
         if let failure = error as? PrivateOnEthereum.Failure {
             return failure == .noAccount ? String(localized: "Set up your account first")
                 : String(localized: "This could not be written, so nothing was signed")
+        }
+        if case PrivateOnEthereum.Failure.partly(let sent, let of, let why) = error {
+            return String(localized: "\(sent) of \(of) sends went. The rest stays private: \(why)")
         }
         if let failure = error as? PrivacyEngineWire.Failure {
             NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)

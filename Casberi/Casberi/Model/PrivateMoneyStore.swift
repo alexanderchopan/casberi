@@ -204,33 +204,58 @@ final class PrivateMoneyStore {
         let networks = chains.compactMap(PrivacyNetwork.forChain).filter { !$0.yield.isEmpty }
         guard !networks.isEmpty else { return }
         yieldRead = Date()
-        for network in networks {
-            for pool in network.yield {
-                let key = pool.share.lowercased()
-                if let rate = await Self.call(network, to: pool.share, data: PrivateYield.exchangeRateCall).flatMap({ PrivateYield.word($0, 0) }),
-                   rate != "0" {
-                    rates[key] = rate
-                    // The pool's smallest deposit in the token, at this rate
-                    // (prd §1567: round-ups move once they reach it).
-                    if let call = FreshAddress.assetsCall(token: pool.share),
-                       let config = await Self.call(network, to: network.entrypoint, data: call).flatMap(FreshAddress.assetConfig),
-                       config.enabled,
-                       let floor = FreshAddress.minimumBudget(minimumShares: config.minimum, exchangeRate: rate, shareDecimals: pool.shareDecimals) {
-                        minimums[key] = floor
-                    }
-                }
-                guard let fee = await Self.call(network, to: pool.share, data: PrivateYield.feeBpsCall).flatMap({ PrivateYield.word($0, 0) }).flatMap(Int.init),
-                      let reserve = PrivateYield.reserveDataCall(underlying: pool.underlying),
-                      let ray = await Self.call(network, to: PrivateYield.aavePool, data: reserve).flatMap(PrivateYield.liquidityRate),
-                      let apy = PrivateYield.apy(liquidityRateRay: ray, feeBps: fee) else {
-                    apys[key] = nil
-                    continue
-                }
-                apys[key] = apy
-                feeBps[key] = fee
-                NSLog("privateMoney| yield | %@ | rate %@ | fee %d bps | %.4f%%", pool.symbol, rates[key] ?? "-", fee, apy * 100)
+        // **AT ONCE, NOT IN TURN (2026-11-27, user: "it says 'reading
+        // ethereum' and that always takes a while").** Five calls a pool, two
+        // pools, each over Tor, were asked one after another; every call and
+        // every pool now goes at once.
+        let reads = await withTaskGroup(of: YieldRead.self) { group in
+            for network in networks {
+                for pool in network.yield { group.addTask { await Self.readPool(pool, on: network) } }
             }
+            return await group.reduce(into: [YieldRead]()) { $0.append($1) }
         }
+        for r in reads {
+            if let rate = r.rate { rates[r.key] = rate }
+            if let floor = r.floor { minimums[r.key] = floor }
+            guard let apy = r.apy, let fee = r.fee else {
+                apys[r.key] = nil
+                continue
+            }
+            apys[r.key] = apy
+            feeBps[r.key] = fee
+            NSLog("privateMoney| yield | %@ | rate %@ | fee %d bps | %.4f%%", r.symbol, rates[r.key] ?? "-", fee, apy * 100)
+        }
+    }
+
+    private struct YieldRead: Sendable {
+        let key: String, symbol: String
+        let rate: String?, floor: String?, fee: Int?, apy: Double?
+    }
+
+    /// One yield pool's rate, smallest deposit, fee and rate of return: four
+    /// calls, all at once.
+    private static func readPool(_ pool: PrivacyNetwork.YieldPool, on network: PrivacyNetwork) async -> YieldRead {
+        async let rateAnswer = call(network, to: pool.share, data: PrivateYield.exchangeRateCall)
+        async let configAnswer: String? = {
+            guard let c = FreshAddress.assetsCall(token: pool.share) else { return nil }
+            return await call(network, to: network.entrypoint, data: c)
+        }()
+        async let feeAnswer = call(network, to: pool.share, data: PrivateYield.feeBpsCall)
+        async let rayAnswer: String? = {
+            guard let reserve = PrivateYield.reserveDataCall(underlying: pool.underlying) else { return nil }
+            return await call(network, to: PrivateYield.aavePool, data: reserve)
+        }()
+        let (rateWord, config, feeWord, rayWord) = await (rateAnswer, configAnswer, feeAnswer, rayAnswer)
+        let rate = rateWord.flatMap { PrivateYield.word($0, 0) }.flatMap { $0 == "0" ? nil : $0 }
+        // The pool's smallest deposit in the token, at this rate (prd §1567:
+        // round-ups move once they reach it).
+        var floor: String?
+        if let rate, let c = config.flatMap(FreshAddress.assetConfig), c.enabled {
+            floor = FreshAddress.minimumBudget(minimumShares: c.minimum, exchangeRate: rate, shareDecimals: pool.shareDecimals)
+        }
+        let fee = feeWord.flatMap { PrivateYield.word($0, 0) }.flatMap(Int.init)
+        let apy = fee.flatMap { f in rayWord.flatMap(PrivateYield.liquidityRate).flatMap { PrivateYield.apy(liquidityRateRay: $0, feeBps: f) } }
+        return YieldRead(key: pool.share.lowercased(), symbol: pool.symbol, rate: rate, floor: floor, fee: fee, apy: apy)
     }
 
     /// One `eth_call` to the network's node through the engine's door.
@@ -320,6 +345,16 @@ final class PrivateMoneyStore {
     func largestNote(chainId: Int, symbol: String) -> String {
         notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol }
             .compactMap { Decimal(string: PrivateMoney.worth($0, rates: rates).amount) }.max().map(PrivateMoney.plain) ?? "0"
+    }
+
+    /// What each approved note of the token is worth, in the token, in the
+    /// account a send opens (the current root's, else every one's): Max sends
+    /// them one per send (2026-11-27, user: "max should be all notes").
+    func noteWorths(chainId: Int, symbol: String) -> [Decimal] {
+        let mine = notes.filter { $0.status == .approved && $0.chainId == chainId && $0.symbol == symbol }
+        let current = PrivateRootKey.currentID
+        let ours = mine.contains { $0.root == current } ? mine.filter { $0.root == current } : mine
+        return ours.compactMap { Decimal(string: PrivateMoney.worth($0, rates: rates).amount) }
     }
 
     /// How many approved notes the token is held in.

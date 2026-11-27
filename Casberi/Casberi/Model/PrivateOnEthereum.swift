@@ -33,7 +33,11 @@ enum PrivateOnEthereum {
     static var network: PrivacyNetwork { .ethereum }
     static var accountNetwork: YourAccountOp.Network { YourAccountOp.ethereum }
 
-    enum Failure: Error, Equatable { case noAccount, noRoot, notOwner, noPool, curve }
+    enum Failure: Error, Equatable {
+        case noAccount, noRoot, notOwner, noPool, curve
+        /// Max sent `sent` of its `of` notes and stopped: the rest stays private.
+        case partly(sent: Int, of: Int, why: String)
+    }
 
     /// Your account's address: the owner of every private account on Ethereum.
     static var owner: String? { YourAccountKey.address }
@@ -172,6 +176,7 @@ enum PrivateOnEthereum {
                      reason: String = String(localized: "Send from Privacy Pools"),
                      announce: Bool = false,
                      upTo: Bool = false,
+                     parts: Int = 1,
                      step: (@Sendable (SendStep) async -> Void)? = nil) async throws -> String {
         guard network.yieldPool(for: token) != nil, PrivateMoney.isAddress(to), let hex = PrivateMoney.hex(amount) else { throw Failure.noPool }
         guard let account = PrivateRootKey.currentID else { throw Failure.noRoot }
@@ -183,13 +188,13 @@ enum PrivateOnEthereum {
         let started = Int(Date().timeIntervalSince1970)
         guard announce else {
             let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, step: step)
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, parts: parts, step: step)
             settle(account: account, to: to)
             return tx
         }
         do {
             let tx = try await relayedSend(account: account, token: token, hex: hex, to: to,
-                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, step: step)
+                                           balanceToBalance: balanceToBalance, reason: reason, amount: amount, upTo: upTo, parts: parts, step: step)
             settle(account: account, to: to)
             Task { await Notifications.outcome(.moveSent, id: "pools:" + tx, place: "Privacy Pools",
                                                body: String(localized: "Sent on Ethereum"), mark: "Privacy Pools") }
@@ -222,10 +227,14 @@ enum PrivateOnEthereum {
     /// Where a send stands, so the foot says it (2026-11-26, user: "nothing
     /// happens" — it said Confirm with Face ID through the read, the proof
     /// and the relay).
-    enum SendStep: Sendable { case opening, preparing, proving, sending }
+    enum SendStep: Sendable {
+        case opening, preparing, proving, sending
+        /// Max's send `k` of `n`, one note each.
+        case part(Int, Int)
+    }
 
     private static func relayedSend(account: String, token: String, hex: String, to: String,
-                                    balanceToBalance: Bool, reason: String, amount: String, upTo: Bool,
+                                    balanceToBalance: Bool, reason: String, amount: String, upTo: Bool, parts: Int = 1,
                                     step: (@Sendable (SendStep) async -> Void)?) async throws -> String {
         try await PrivacyEngine.exclusive {
             await step?(.opening)
@@ -236,8 +245,14 @@ enum PrivateOnEthereum {
             // The relayer's fee holds a short while, and proving on the phone
             // can outlast it (measured 2026-11-18: "FeeCommitmentExpired", 11 s
             // late): prove and quote once more, then relay; nothing went out.
-            var relayed: PrivacyEngineWire.Relayed
+            // **MAX IS EVERY NOTE, ONE PER SEND (2026-11-27):** the relayer
+            // takes one note a send, so Max sends `parts` in a row, each the
+            // largest note the engine has not handed over yet (`upTo` fits it).
+            var relayed: PrivacyEngineWire.Relayed? = nil
+            for k in 1...max(parts, 1) {
+            if parts > 1 { await step?(.part(k, parts)) }
             var tries = 0
+            do {
             while true {
                 tries += 1
                 await step?(.proving)
@@ -255,6 +270,17 @@ enum PrivateOnEthereum {
                     NSLog("privateEthereum| fee quote stale before the relay (%@) | proving again", f.name)
                 }
             }
+            } catch let f as PrivacyEngineWire.Failure where f.name == "NoteTooSmall" && relayed != nil {
+                // What is left is worth less than a fee: Max is done.
+                NSLog("privateEthereum| max | stopped at %d of %d: the rest is under a fee", k - 1, parts)
+                break
+            } catch where relayed != nil {
+                // Some went: say how many, never "nothing was sent".
+                throw Failure.partly(sent: k - 1, of: parts, why: PrivateMove.words(error, network: network))
+            }
+            if parts > 1, let relayed { NSLog("privateEthereum| max | %d of %d relayed | %@", k, parts, relayed.tx) }
+            }
+            guard let relayed else { throw Failure.noPool }
             NSLog("privateEthereum| relayed | %@ | %@ | %@ to %@", balanceToBalance ? "balance to balance" : "paid out", relayed.tx, amount, YourAccount.short(to))
             if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after, root: account, network: network) }
             return relayed.tx

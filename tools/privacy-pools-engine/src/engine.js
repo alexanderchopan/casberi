@@ -185,8 +185,14 @@ function publicTx(tx) {
 
 // A note's token id is compared without case: the SDK keeps whatever case
 // the chain's event carried, and the app names ETH in its checksum case.
+// Notes this engine handed the relayer, kept out of the next send before
+// Ethereum has the transaction (Max sends one note per send, in a row,
+// 2026-11-27): a note relayed and not yet seen spent would be picked again.
+const relayedHere = new Set();
+
 function activeNotes(tokenId) {
-  return account.notes.getNotes({ status: NoteStatus.ACTIVE }).filter((n) => n.tokenId.toLowerCase() === tokenId.toLowerCase());
+  return account.notes.getNotes({ status: NoteStatus.ACTIVE })
+    .filter((n) => n.tokenId.toLowerCase() === tokenId.toLowerCase() && !relayedHere.has(String(n.commitment)));
 }
 
 // Picks the fewest ACTIVE notes, largest first, that cover `amount`.
@@ -234,13 +240,14 @@ async function prepareYieldWithdraw({ tokenId, amount, recipient, upTo = false }
     const have = activeNotes(pool.share).reduce((t, n) => (BigInt(n.value) > t ? BigInt(n.value) : t), 0n);
     for (let i = 0; i < 3 && BigInt(quote.amountSent) > have; i++) {
       shares -= BigInt(quote.amountSent) - have;
-      if (shares <= 0n) break;
+      if (shares <= 0n) throw Object.assign(new Error('the note left is worth less than the relayer\'s fee'), { name: 'NoteTooSmall' });
       quote = await ask(shares);
     }
   }
   const amountSent = BigInt(quote.amountSent);
+  const inputs = inputsFor(pool.share, amountSent);
   const r = await y.withdraw.prepareYieldWithdrawRelay({
-    inputCommitments: inputsFor(pool.share, amountSent),
+    inputCommitments: inputs,
     // The whole release, the relayer's fee in it: the router pays the fee
     // out of the shares (the proof's own fee is zero on this route).
     amount: amountSent,
@@ -250,7 +257,7 @@ async function prepareYieldWithdraw({ tokenId, amount, recipient, upTo = false }
     extraGas: false,
   });
   return {
-    handle: keep({ kind: 'yieldWithdraw', relayer, result: r }),
+    handle: keep({ kind: 'yieldWithdraw', relayer, result: r, inputs }),
     fee: { feeAmount: hex(BigInt(quote.feeAmount)), amountSent: hex(amountSent), amountReceived: hex(BigInt(quote.amountReceived)),
       gasPrice: hex(BigInt(quote.gasPrice)), txCost: hex(BigInt(quote.txCost)), minUnderlyingOut: hex(r.minUnderlyingOut),
       quotedUnderlyingOut: hex(r.quotedUnderlyingOut) },
@@ -502,6 +509,7 @@ const methods = {
     // is open now (finding 8).
     if (p.kind === 'yieldWithdraw') {
       const tx = await p.acct.relayer.relayWithdrawal(p.relayer, p.result.relayParams);
+      for (const c of p.inputs ?? []) relayedHere.add(String(c));
       return { tx, ms: Math.round(now() - t) };
     }
     const s = await session(p.kind, p.acct);

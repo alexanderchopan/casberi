@@ -488,7 +488,7 @@ struct MovePrivateSentence<Head: View>: View {
                                     // "0." and "0.000" drew "0" and the keys looked dead.
                                     : (move.amount.isEmpty ? (typing ? "0 \(move.symbol)" : nil)
                                         : typing ? "\(MoveSentence.grouped(move.amount)) \(move.symbol)" : figure),
-                                note: typing ? nil : depositNote,
+                                note: typing ? nil : (depositNote ?? maxWhy),
                                 accessory: flips ? AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { setDollars($0) }) : nil,
                                 fieldNote: typing ? (text: amountLine.words, ink: amountLine.ink) : nil) { if !fixed { toggle(.amount) } })
         return out
@@ -704,6 +704,28 @@ struct MovePrivateSentence<Head: View>: View {
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
+    /// **WHY MAX IS SEVERAL SENDS (2026-11-27, user: "user needs to know
+    /// tho why it is 5 sends").** Your private ETH is held in parts, one per
+    /// deposit and per send's change; 0xBow's relayer moves one a send, each
+    /// paying its fee. Said under the amount whenever Max is several.
+    private var maxWhy: String? {
+        guard move.mode == .send, let units = PrivateMoney.baseUnits(move.amount, decimals: move.decimals),
+              move.isMax(units), move.sends > 1 else { return nil }
+        let n = move.sends
+        let fees: String? = {
+            guard let f = move.fee.flatMap({ Decimal(string: $0) }) else { return nil }
+            let all = f * Decimal(n)
+            if move.symbol == "USDC" { return PrivateMoney.figure(PrivateMoney.plain(all), decimals: 6, symbol: "USDC") }
+            guard let price else { return PrivateMoney.figure(PrivateMoney.plain(all), decimals: 18, symbol: "ETH") }
+            var d = all, one = Decimal(1)
+            for _ in 0..<18 { one *= 10 }
+            d /= one
+            return "$" + (d * Decimal(price)).formatted(.number.precision(.fractionLength(2)))
+        }()
+        let fee = fees.map { String(localized: " · fees \($0)") } ?? ""
+        return String(localized: "Held in \(n) parts, and 0xBow's relayer moves one per send: \(n) sends\(fee)")
+    }
+
     private var amountLine: (words: String, ink: Color) {
         let typedFigure = inDollars ? "$\(dollars.isEmpty ? "0" : dollars)" : "\(move.amount.isEmpty ? "0" : move.amount) \(move.symbol)"
         let other: String? = {
@@ -714,13 +736,16 @@ struct MovePrivateSentence<Head: View>: View {
         let top = move.most.flatMap { PrivateMoney.number($0, decimals: move.decimals, places: tokenPlaces) }
         if let units = PrivateMoney.baseUnits(move.amount, decimals: move.decimals).flatMap({ Decimal(string: $0) }), units > 0 {
             if let most = move.most.flatMap({ Decimal(string: $0) }), units > most {
-                // Held in more than one note, a send moves one (`largestNote`):
-                // the rest is another send, never "more than you have".
-                if move.mode == .send, PrivateMoneyStore.shared.noteCount(chainId: move.network.chainId, symbol: move.symbol) > 1 {
-                    return (String(localized: "Up to \(top ?? "0") \(move.symbol) in one send · send the rest after"), DS.attentionInk)
-                }
                 return (String(localized: "More than you can send · up to \(top ?? "0") \(move.symbol)"), DS.attentionInk)
             }
+            // Over one note and short of Max: the relayer takes one note a
+            // send, so it is one note's worth, or Max for every note.
+            if move.mode == .send, move.onEthereum, let one = move.oneSend, units > one,
+               let most = move.most.flatMap({ Decimal(string: $0) }), units < most {
+                let oneShown = PrivateMoney.number(PrivateMoney.plain(one), decimals: move.decimals, places: tokenPlaces) ?? "0"
+                return (String(localized: "One send moves up to \(oneShown) \(move.symbol) · Max sends it all"), DS.attentionInk)
+            }
+            if let why = maxWhy { return (why, DS.textSecondary) }
             if units < (Decimal(string: move.least) ?? 1) {
                 let least = PrivateMoney.number(move.least, decimals: move.decimals, places: tokenPlaces) ?? move.least
                 return (String(localized: "At least \(least) \(move.symbol)"), DS.attentionInk)
@@ -972,9 +997,10 @@ struct MovePrivateSentence<Head: View>: View {
         case .opening: String(localized: "Confirm with Face ID")
         case .preparing: String(localized: "Preparing…")
         case .registering(let n): String(localized: "Setting up, \(n) of 2…")
-        case .proving: String(localized: "Proving…")
+        case .proving:
+            move.part.map { String(localized: "Proving \($0.0) of \($0.1)…") } ?? String(localized: "Proving…")
         case .sending:
-            move.mode == .send ? String(localized: "Sending…")
+            move.mode == .send ? (move.part.map { String(localized: "Sending \($0.0) of \($0.1)…") } ?? String(localized: "Sending…"))
                 : move.onEthereum ? String(localized: "Waiting for Ethereum…") : String(localized: "Waiting for Sepolia…")
         default: String(localized: "Send")
         }
