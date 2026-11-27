@@ -94,6 +94,26 @@ final class TacitAccount {
         var receiveNetwork: String? = nil
         /// Your farm positions (prd §1993); nil when they were not read.
         var farmed: [TacitFarms.Position]? = nil
+        /// **WHAT A SHARE WAS WORTH, A DAY APART (prd §1999).** The Tacit
+        /// chain's share price as read, one mark a day at most, the last 31
+        /// days: the rate is today's price against the oldest. Nil on a
+        /// reading kept before it was recorded.
+        var rateMarks: [RateMark]? = nil
+
+        /// **TACIT'S RATE, WHAT IT EARNED (prd §1999):** the share price now
+        /// against the oldest mark at least a day old, a year's worth. A
+        /// share is the pool over the shares, so only the chain's fees move
+        /// it; a deposit or a withdrawal, anyone's, does not. Nil under a day
+        /// of marks or with no rise; "about", never a promise.
+        func chainAPY(now: Date = .now) -> (apy: Double, days: Int)? {
+            guard let rate = chainRate, rate > 0,
+                  let then = rateMarks?.first(where: { now.timeIntervalSince($0.at) >= 86_400 }), then.rate > 0,
+                  rate > then.rate else { return nil }
+            let days = now.timeIntervalSince(then.at) / 86_400
+            let apy = pow(rate / then.rate, 365 / days) - 1
+            guard apy.isFinite, apy > 0, apy < 100 else { return nil }
+            return (apy, Int(days.rounded()))
+        }
 
         /// Private TAC in both places; nil when neither was read.
         var privateTACAll: Double? {
@@ -113,6 +133,12 @@ final class TacitAccount {
         }
 
         var eth: Double { held.map(\.eth).reduce(0, +) }
+    }
+
+    /// The Tacit chain's share price at one reading (prd §1999).
+    struct RateMark: Codable, Equatable {
+        let at: Date
+        let rate: Double
     }
 
     private var livePhase: Phase = .closed
@@ -136,8 +162,9 @@ final class TacitAccount {
                Held(chainId: 4663, network: "Robinhood", eth: 0.03, waiting: 0.01, pool: 0.10, reached: true)],
         asOf: .now, publicTAC: 240, privateTAC: 310, accountTAC: 55, defiTAC: 0,
         chainAddress: "tc1" + String(repeating: "3f", count: 40) + "c91d",
-        earnedTAC: 2.1, chainNotes: 12_135, earnedSince: Date.now.addingTimeInterval(-21 * 86_400),
-        receiveNetwork: "Ethereum", farmed: TacitFarms.demoPositions)
+        chainRate: 1.0123, earnedTAC: 2.1, chainNotes: 12_135, earnedSince: Date.now.addingTimeInterval(-21 * 86_400),
+        receiveNetwork: "Ethereum", farmed: TacitFarms.demoPositions,
+        rateMarks: [RateMark(at: Date.now.addingTimeInterval(-21 * 86_400), rate: 1.0055)])
     static let demoPrice = 3_850.0
     static let demoTacPrice = 0.78
 
@@ -341,7 +368,7 @@ final class TacitAccount {
                               chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, chainNotes: reading.chainNotes,
                               earnedSince: reading.earnedSince,
                               receiveNetwork: paidAt.map { $0.network.name } ?? reading.receiveNetwork,
-                              farmed: reading.farmed)
+                              farmed: reading.farmed, rateMarks: reading.rateMarks)
             keep(reading)
             if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
             if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
@@ -418,8 +445,26 @@ final class TacitAccount {
             r.earnedTAC = (r.earnedTAC ?? 0) + before * (rate - was)
         }
         if r.earnedSince == nil { r.earnedSince = .now }
+        // **THE FIRST MARK, FROM WHAT WAS EARNED (prd §1999).** A reading
+        // kept before marks were recorded holds the TAC its shares earned
+        // since `earnedSince`: the price then was the price now less what
+        // each share earned, exact while the shares were not changed.
+        if r.rateMarks == nil, let earned = r.earnedTAC, let since = r.earnedSince, let held = r.chainShares, held > 0,
+           rate - earned / held > 0 {
+            r.rateMarks = [RateMark(at: since, rate: rate - earned / held)]
+        }
+        r.rateMarks = Self.marked(r.rateMarks ?? [], rate: rate)
         r.chainShares = shares
         r.chainRate = rate
+    }
+
+    /// The marks with today's price: one a day at most, none past 31 days.
+    static func marked(_ marks: [RateMark], rate: Double, now: Date = .now) -> [RateMark] {
+        var out = marks.filter { now.timeIntervalSince($0.at) <= 31 * 86_400 }
+        if out.last.map({ now.timeIntervalSince($0.at) >= 86_400 }) ?? true {
+            out.append(RateMark(at: now, rate: rate))
+        }
+        return out
     }
 
     /// Your public TAC again, in your co-signer's wallet and your Casberi

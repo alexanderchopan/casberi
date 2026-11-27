@@ -566,17 +566,21 @@ struct MoveLendSentence<Head: View>: View {
 
     /// **TACIT (prd §1986), UNDER PRIVATE (prd §1998).** Private TAC earns a
     /// share of the Tacit chain's fees: Deposit is Make private (your public
-    /// TAC), Withdraw is back to public (your private TAC). No rate: Tacit
-    /// pays a share of fees, not a rate the app can read. Shown while a Tacit
-    /// account is connected, dimmed when empty (§1984).
+    /// TAC), Withdraw is back to public (your private TAC). Its rate is what
+    /// a share earned over the marks this phone kept (prd §1999, user:
+    /// "for the main tacit it should say the earn rate"), none under a day
+    /// of them. Shown while a Tacit account is connected, dimmed when empty
+    /// (§1984).
     private var tacitChoice: [MoveTokenChoice] {
         guard let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading else { return [] }
         let held = move.mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)
         let usd = TacitAccount.shared.tacPrice.map { held * $0 }
         let mode = move.mode
+        let rate = AaveLend.rateOnly(r.chainAPY()?.apy)
         return [MoveTokenChoice(id: "tacit|TAC", symbol: mode == .lend ? "Tacit" : "TAC", network: String(localized: "Tacit chain"),
                                 sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
-                                line: mode == .lend ? String(localized: "TAC · a share of fees") : String(localized: "Tacit chain"),
+                                line: mode == .lend ? (["TAC", rate].compactMap { $0 }.joined(separator: " · "))
+                                    : ([String(localized: "Tacit chain"), rate].compactMap { $0 }.joined(separator: " · ")),
                                 dim: held <= 0) {
             tacit(mode)
         }]

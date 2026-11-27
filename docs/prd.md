@@ -75669,3 +75669,13 @@ User, 2026-11-27: "earn takes a while to read. why", then, of a screenshot of Ea
 **Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass, the Swift build and the device check are owed.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1999 — Tacit's row in Earn says its rate: what a share earned, read off the marks this phone kept (amends §1986's "the row draws no rate", §1971 item 19d's "Tacit's APY is not computed") (user, 2026-11-27, of Earn's Tacit row: "for the main tacit it should say the earn rate")
+
+1. **The rate is what it earned, never a promise.** A share of the Tacit chain is its pool over its shares (`TacitAccount.apply`), so only the chain's fees move its price; a deposit or withdrawal, anyone's, does not. Each chain reading keeps the price as a mark (`Reading.rateMarks`), one a day at most, the last 31 days. The rate is today's price against the oldest mark at least a day old, a year's worth (`Reading.chainAPY`), drawn as Aave's are ("TAC · 12%" on Deposit's To list, "Tacit chain · 12%" on Withdraw's From). Under a day of marks, or with no rise, no rate is drawn.
+2. **The first mark from what was earned.** A reading kept before marks were recorded holds `earnedTAC` since `earnedSince`; its first mark is today's price less what each share earned, dated `earnedSince`. It is exact while your shares were not changed in that time; a withdrawal in it overstates the rate, a deposit understates it, and it ages out of the 31 days.
+3. The demo's reading carries a mark 21 days back (about 12%).
+
+**Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass, the Swift build and the device check are owed.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
