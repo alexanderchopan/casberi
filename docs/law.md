@@ -264,7 +264,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2184 of 2258 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2185 of 2259 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2450,6 +2450,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1997 — Earn opens on the last reading and reads everything at once; its foot names no act while it reads (amends §1970's Oll…
 - §1998 — Earn: To picks the place, From is your token with its network in words, and places stand under Public and Private (am…
 - §1999 — Tacit's row in Earn says its rate: what a share earned, read off the marks this phone kept (amends §1986's "the row d…
+- §2000 — Earn opens on your money; Deposit says what a year brings and how it comes back; Withdraw says what it earned; a plac…
 
 ## Dead rulings → what replaced them (generated)
 

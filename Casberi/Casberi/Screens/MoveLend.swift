@@ -21,11 +21,16 @@ struct MoveLendSentence<Head: View>: View {
     /// **TACIT EARNS (prd §1986):** its row opens Make private on Deposit and
     /// back to public on Withdraw, Tacit's own sheets.
     var tacit: ((LendMove.Mode) -> Void)? = nil
+    /// **A DOOR, NOT A DEAD ROW (prd §2000):** a place you hold nothing for
+    /// opens Swap to buy its token on its network.
+    var swapFor: ((YourAccountOp.Token, Int) -> Void)? = nil
     @ViewBuilder let head: () -> Head
 
     @State private var open: Blank?
     /// Tacit's farm page, raised from a farm row (prd §1993).
     @State private var farmPage = false
+    /// Every farm, past the first two (prd §2000).
+    @State private var allFarms = false
     /// The cost's list stands in the rows' place (prd §1876).
     @Environment(\.openURL) private var openURL
     @Environment(ShellChrome.self) private var chrome
@@ -38,14 +43,18 @@ struct MoveLendSentence<Head: View>: View {
     var body: some View {
         // **EARN IS A RECEIPT (prd §1931):** its name, Type · From · Amount,
         // what the open line asks, the foot. No sentence, no panel.
-        deck
+        // **EARN OPENS ON YOUR MONEY (prd §2000):** what is earning, then
+        // where more could; a row opens the deck on it.
+        Group {
+            if move.home { homeDeck.transition(.opacity) } else { deck.transition(.opacity) }
+        }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         // A word's choices make the sheet whole, and it stays whole (prd §1681b).
         .onChange(of: open) { _, now in if now != nil { chrome.moveTall = true } }
         // The deck opens on the keys once Aave is read: never an empty panel
         // under a sentence that asks how much (prd §1782).
         .onChange(of: live, initial: true) { _, on in
-            if on, open == nil, move.units == nil { withAnimation(DS.Motion.standard) { open = .amount } }
+            if on, !move.home, open == nil, move.units == nil { withAnimation(DS.Motion.standard) { open = .amount } }
         }
         .onChange(of: chrome.moveTall) { _, tall in
             if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
@@ -146,10 +155,13 @@ struct MoveLendSentence<Head: View>: View {
                     } else if move.ollaUnderMinimum {
                         Text("Olla takes back 100 stAZTEC or more")
                             .dsText(.body17).foregroundStyle(DS.attentionInk)
-                    } else if market.place == .olla, move.mode == .lend {
+                    } else if move.mode == .lend {
                         // **THE AUDIT GAP, SAID ONCE (prd §1970):** Olla's own docs
-                        // say its live StakingManager carries an unaudited change.
-                        DSFootnote("Withdrawing takes about a day. Olla's latest contract change isn't covered by its audit.")
+                        // say its live StakingManager carries an unaudited change;
+                        // its day to take back is a fact now (prd §2000). Aave
+                        // says where its rate comes from, and that it moves.
+                        DSFootnote(prose: market.place == .olla ? String(localized: "Olla's latest contract change isn't covered by its audit.")
+                                   : String(localized: "Aave lends it to borrowers; that is where the rate comes from, and it moves."))
                     }
                 }
             }
@@ -253,8 +265,16 @@ struct MoveLendSentence<Head: View>: View {
         // deck's `header`.
         MoveReceiptDeck(title: title, inTray: inTray, backDisabled: move.acting, back: {
             withAnimation(DS.Motion.standard) {
-                // Back is the menu, never the step before (prd §1911).
-                open = nil; back?()
+                // Back is Earn's home, never the step before (prd §1911,
+                // §2000); opened on one position, there is none: the menu.
+                open = nil
+                if move.onRow {
+                    back?()
+                } else {
+                    move.mode = .lend
+                    move.pick(nil, all: false)
+                    move.home = true
+                }
             }
         }, header: kindsShown && doneHash == nil ? AnyView(
             // The title is the Type (prd §1934): Deposit · Withdraw.
@@ -264,9 +284,17 @@ struct MoveLendSentence<Head: View>: View {
             ], disabled: move.acting)
         ) : nil, lines: {
             if move.stage == .reading {
-                MoveReceiptLine(label: "") {
-                    Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
+                // **READING DRAWS THE PAGE, EMPTY (prd §2000, §769):** the
+                // lines it will fill, their chips unfilled, no act.
+                VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+                    ForEach(Array([(String(localized: "To"), 96.0), (String(localized: "From"), 148.0), (String(localized: "Amount"), 84.0)].enumerated()), id: \.offset) { _, line in
+                        MoveReceiptLine(label: line.0) {
+                            Capsule().fill(DS.fillFaint).frame(width: line.1, height: MoveReceipt.chipHeight)
+                        }
+                    }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("Reading your balances and today's rates"))
             } else {
                 receiptLines
             }
@@ -314,7 +342,7 @@ struct MoveLendSentence<Head: View>: View {
             if move.mode == .lend {
                 if let m = market {
                     MoveReceiptLine(label: String(localized: "To")) {
-                        MoveChip(text: m.placeName, mark: MoveRowMark(token: m.placeName),
+                        MoveChip(text: String(localized: "\(m.placeName) · Public"), mark: MoveRowMark(token: m.placeName),
                                  tone: open == .place ? .open : .answered, disabled: !live) { toggle(.place) }
                     }
                 }
@@ -322,8 +350,10 @@ struct MoveLendSentence<Head: View>: View {
             } else {
                 fromLine
                 if market != nil {
+                    // Nothing to pick: words, never a chip that looks tappable (prd §2000).
                     MoveReceiptLine(label: String(localized: "To")) {
-                        MoveChip(text: String(localized: "Your public account"), tone: .answered, disabled: true) {}
+                        Text("Your public account").dsText(.body17).foregroundStyle(DS.textPrimary)
+                            .frame(minHeight: MoveReceipt.chipHeight)
                     }
                 }
             }
@@ -394,8 +424,31 @@ struct MoveLendSentence<Head: View>: View {
                     if let get = ollaYouGet {
                         MoveReceiptFact(label: String(localized: "You get"), value: get)
                     }
+                    // **WHAT IT EARNED, WITHDRAWING (prd §2000):** above what went
+                    // in, since this phone first read it; and the rate it earns.
+                    if hasAny, move.mode == .takeBack, !move.claims, let m = market {
+                        if let e = move.earned(m), let usd = move.dollars(e.units, in: m), usd >= 0.005 {
+                            MoveReceiptFact(label: String(localized: "Earned"),
+                                            value: String(localized: "\(LendMove.usd(usd)) since \(e.since.formatted(.dateTime.month(.abbreviated).day()))"))
+                        }
+                        if m.place == .aave, let rate = AaveLend.rateOnly(move.rates[LendMove.key(m)]) {
+                            MoveReceiptFact(label: String(localized: "Earns"), value: String(localized: "\(rate) today"))
+                        }
+                    }
                     if hasAny, let fact = rateFact {
                         MoveReceiptFact(label: fact.name, value: fact.value)
+                    }
+                    // **WHAT A YEAR WOULD BRING, AND HOW IT COMES BACK (prd
+                    // §2000):** the amount at today's rate, a figure and never
+                    // a promise; Olla's rate is the last 30 days'.
+                    if hasAny, move.mode == .lend, let m = market {
+                        if let units = move.units, let year = move.yearly(units, in: m), year >= 0.01 {
+                            MoveReceiptFact(label: String(localized: "In a year"),
+                                            value: m.place == .olla ? String(localized: "about \(LendMove.usd(year)), at the last 30 days' rate")
+                                                : String(localized: "about \(LendMove.usd(year)), at today's rate"))
+                        }
+                        MoveReceiptFact(label: String(localized: "Take back"),
+                                        value: m.place == .olla ? String(localized: "in about a day") : String(localized: "any time, at once"))
                     }
                     if market?.place == .olla, move.mode == .takeBack, !move.claims, hasAny {
                         MoveReceiptFact(label: String(localized: "Then"), value: String(localized: "Claim it here, we'll tell you"))
@@ -485,22 +538,31 @@ struct MoveLendSentence<Head: View>: View {
     /// and Private: Aave and Olla hold it in the open from your public
     /// account, the farms are Tacit's pools on Ethereum, and Tacit's TAC
     /// earns private. Each names what it takes and its rate today, and
-    /// trails what you have for it.
+    /// trails what you have for it, or the way to get some (prd §2000).
     private var placeRows: some View {
-        let lending = offered
-        let aave = lending.filter { $0.place == .aave }
-        let olla = lending.filter { $0.place == .olla }
-        var public_: [MoveTokenChoice] = []
-        if !aave.isEmpty { public_.append(placeChoice("Aave", aave)) }
-        if !olla.isEmpty { public_.append(placeChoice("Olla", olla)) }
-        var places = [MoveTokenPlace(id: "places", group: String(localized: "Public"), choices: public_)]
+        var places = [MoveTokenPlace(id: "places", group: String(localized: "Public"), choices: publicPlaces)]
         places += farmPlace
         places.append(MoveTokenPlace(id: "tacit", group: String(localized: "Private"), choices: tacitChoice))
         return MoveTokenGrid(places: places)
     }
 
+    /// Aave and Olla as places: every market not refused, Olla too when you
+    /// hold no AZTEC, since its row is now the way to buy some (prd §2000).
+    private var publicPlaces: [MoveTokenChoice] {
+        let markets = AaveLend.markets.filter { !move.refused.contains(LendMove.key($0)) }
+        let aave = markets.filter { $0.place == .aave }, olla = markets.filter { $0.place == .olla }
+        return (aave.isEmpty ? [] : [placeChoice("Aave", aave)]) + (olla.isEmpty ? [] : [placeChoice("Olla", olla)])
+    }
+
+    /// The token a market takes, to buy where there is none.
+    private func token(_ m: AaveLend.Market) -> YourAccountOp.Token {
+        m.native ? YourAccountOp.eth : YourAccountOp.Token(symbol: m.symbol, decimals: m.decimals, contract: m.asset)
+    }
+
     /// One place on To's list: its markets' tokens and rates, what you have
     /// for it in dollars; picked, its richest market with something to move.
+    /// Holding none of what it takes, "Swap for it" opens Swap to buy its
+    /// first token there (prd §2000), never a dimmed row.
     private func placeChoice(_ name: String, _ ms: [AaveLend.Market]) -> MoveTokenChoice {
         var tokens: [String] = []
         for m in ms where !tokens.contains(m.symbol) { tokens.append(m.symbol) }
@@ -512,19 +574,35 @@ struct MoveLendSentence<Head: View>: View {
         let has = ms.filter { (Decimal(string: move.available($0) ?? "0") ?? 0) > 0 }
         let line = [tokens.joined(separator: ", "), Self.rateSpan(ms.compactMap { move.rates[LendMove.key($0)] })]
             .compactMap { $0 }.joined(separator: " · ")
+        let buys = has.isEmpty && swapFor != nil && move.mode == .lend
         return MoveTokenChoice(id: "place|\(name)", symbol: name, network: networks.joined(separator: ", "),
                                sub: usd > 0 ? MoveSentence.money(usd, whole: true) : nil, line: line,
-                               picked: market?.placeName == name, dim: has.isEmpty) {
-            withAnimation(DS.Motion.standard) {
-                let pick = (has.first { $0.chainId == move.chainId && $0.symbol == move.symbol })
-                    ?? has.max { (worth($0) ?? 0) < (worth($1) ?? 0) } ?? ms[0]
-                move.chainId = pick.chainId
-                move.symbol = pick.symbol
-                move.pick(nil, all: false)
-                // More than one token or network: From asks which.
-                open = has.count > 1 ? .network : .amount
+                               picked: !move.home && market?.placeName == name, dim: has.isEmpty && !buys,
+                               door: buys ? String(localized: "Swap for it") : nil) {
+            if buys {
+                swapFor?(token(ms[0]), ms[0].chainId)
+            } else {
+                enter(.lend, place: has)
             }
         }
+    }
+
+    /// **INTO THE DECK (prd §2000).** From Earn's home or To's list: the
+    /// mode, the place's richest market with something to move (the one in
+    /// hand if it is one), and From open when there is more than one.
+    private func enter(_ mode: LendMove.Mode, place has: [AaveLend.Market]) {
+        withAnimation(DS.Motion.standard) {
+            move.mode = mode
+            if let pick = (has.first { $0.chainId == move.chainId && $0.symbol == move.symbol })
+                ?? has.max(by: { (worth($0) ?? 0) < (worth($1) ?? 0) }) {
+                move.chainId = pick.chainId
+                move.symbol = pick.symbol
+            }
+            move.pick(nil, all: false)
+            move.home = false
+            open = has.count > 1 ? .network : .amount
+        }
+        DSHaptic.selection()
     }
 
     /// "1.4–5.1%", or "5.1%" when the rates round alike: the facts, no
@@ -557,11 +635,15 @@ struct MoveLendSentence<Head: View>: View {
             }
         }
         let day = farms.endsAt.formatted(.dateTime.month(.abbreviated).day())
-        let rule = farms.active && farms.endsAt > .now
-            ? String(localized: "On Ethereum, paid in TAC until \(day). You join on Tacit's site.")
-            : String(localized: "Rewards ended \(day).")
-        return [MoveTokenPlace(id: "tacit-farms", title: String(localized: "Tacit farms"), group: String(localized: "Public"),
-                               rule: rule, choices: choices)]
+        // **THE RULE IS THE HEAD (prd §2000):** when, and where you join,
+        // in the grey head; two pools, the rest a tap away.
+        let title = farms.active && farms.endsAt > .now
+            ? String(localized: "Tacit farms · until \(day), on Tacit's site")
+            : String(localized: "Tacit farms · ended \(day)")
+        let folded = !allFarms && choices.count > 3
+        return [MoveTokenPlace(id: "tacit-farms", title: title, group: String(localized: "Public"),
+                               choices: folded ? Array(choices.prefix(2)) : choices,
+                               more: folded ? (words: String(localized: "\(choices.count - 2) more pools"), act: { allFarms = true }) : nil)]
     }
 
     /// **TACIT (prd §1986), UNDER PRIVATE (prd §1998).** Private TAC earns a
@@ -577,13 +659,145 @@ struct MoveLendSentence<Head: View>: View {
         let usd = TacitAccount.shared.tacPrice.map { held * $0 }
         let mode = move.mode
         let rate = AaveLend.rateOnly(r.chainAPY()?.apy)
+        // No public TAC to make private: the row buys some (prd §2000).
+        let buys = mode == .lend && held <= 0 && swapFor != nil
         return [MoveTokenChoice(id: "tacit|TAC", symbol: mode == .lend ? "Tacit" : "TAC", network: String(localized: "Tacit chain"),
-                                sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
+                                sub: buys ? nil : usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
                                 line: mode == .lend ? (["TAC", rate].compactMap { $0 }.joined(separator: " · "))
                                     : ([String(localized: "Tacit chain"), rate].compactMap { $0 }.joined(separator: " · ")),
-                                dim: held <= 0) {
-            tacit(mode)
+                                dim: held <= 0 && !buys, door: buys ? String(localized: "Swap for it") : nil) {
+            if buys, let tac = YourAccountTokens.appTokens[1]?.first?.token {
+                swapFor?(tac, 1)
+            } else {
+                tacit(mode)
+            }
         }]
+    }
+
+    // MARK: - Earn's home (prd §2000)
+
+    /// **EARN OPENS ON YOUR MONEY (prd §2000).** What is earning and what a
+    /// year of it comes to at today's rates; then each position, a door to
+    /// Withdraw; then where more could earn, a door to Deposit. No act in the
+    /// foot: every row is one.
+    private var homeDeck: some View {
+        MoveReceiptDeck(title: title, inTray: inTray, back: {
+            withAnimation(DS.Motion.standard) { back?() }
+        }, lines: {
+            homeHead
+        }, content: {
+            MoveDeckScroll {
+                MoveTokenGrid(places: [
+                    MoveTokenPlace(id: "earning", title: String(localized: "Earning"), choices: earningRows.map(\.choice)),
+                    MoveTokenPlace(id: "more", title: String(localized: "Earn more"), choices: moreRows),
+                ])
+            }
+        }, word: { EmptyView() })
+    }
+
+    @ViewBuilder private var homeHead: some View {
+        if move.readFor == nil {
+            // Reading: the figure's place, empty (prd §769).
+            Capsule().fill(DS.fillFaint).frame(width: 140, height: 52)
+                .accessibilityLabel(Text("Reading what is earning"))
+        } else {
+            let rows = earningRows
+            let total = rows.compactMap(\.usd).reduce(0, +)
+            let year = rows.compactMap(\.year).reduce(0, +)
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(verbatim: MoveSentence.money(total, whole: true))
+                    .dsText(.price52).monospacedDigit().foregroundStyle(DS.textPrimary)
+                    .contentTransition(.numericText())
+                Text(rows.isEmpty ? String(localized: "Nothing earning yet")
+                     : year >= 1 ? String(localized: "Earning about \(MoveSentence.money(year, whole: true)) a year at today's rates")
+                     : year > 0 ? String(localized: "Earning about \(LendMove.usd(year)) a year at today's rates")
+                     : String(localized: "Earning at today's rates"))
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+            }
+        }
+    }
+
+    private struct Earning {
+        let choice: MoveTokenChoice
+        let usd: Double?
+        let year: Double?
+    }
+
+    /// Each position earning: Aave's and Olla's markets with something lent,
+    /// and Tacit's private TAC. Its line says where, the rate, and what it
+    /// earned since this phone first read it; a tap opens Withdraw on it.
+    private var earningRows: [Earning] {
+        var out: [Earning] = []
+        for m in AaveLend.markets {
+            let key = LendMove.key(m)
+            guard let units = move.lent[key], (Decimal(string: units) ?? 0) > 0 else { continue }
+            let net = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? m.network
+            let earned = move.earned(m).flatMap { move.dollars($0.units, in: m) }.flatMap { $0 >= 0.005 ? String(localized: "earned \(LendMove.usd($0))") : nil }
+            let usd = move.dollars(units, in: m)
+            let line = [m.placeName, net, AaveLend.rateOnly(move.rates[key]), earned].compactMap { $0 }.joined(separator: " · ")
+            out.append(Earning(choice: MoveTokenChoice(id: "earning|\(key)", symbol: m.symbol, network: net,
+                                                       sub: usd.map { MoveSentence.money($0, whole: true) }
+                                                           ?? PrivateMoney.figure(units, decimals: m.decimals, symbol: ""),
+                                                       line: line) { withdraw(m) },
+                               usd: usd, year: move.yearly(units, in: m)))
+        }
+        if let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading, let held = r.privateTAC, held > 0 {
+            let price = TacitAccount.shared.tacPrice
+            let apy = r.chainAPY()?.apy
+            let earned = r.earnedTAC.flatMap { e in price.map { e * $0 } }.flatMap { $0 >= 0.005 ? String(localized: "earned \(LendMove.usd($0))") : nil }
+            let usd = price.map { held * $0 }
+            let line = ["Tacit", String(localized: "Private"), AaveLend.rateOnly(apy), earned].compactMap { $0 }.joined(separator: " · ")
+            out.append(Earning(choice: MoveTokenChoice(id: "earning|tacit", symbol: "TAC", network: String(localized: "Tacit chain"),
+                                                       sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
+                                                       line: line) { tacit(.takeBack) },
+                               usd: usd, year: usd.flatMap { u in apy.map { u * $0 } }))
+        }
+        return out.sorted { ($0.usd ?? 0) > ($1.usd ?? 0) }
+    }
+
+    /// Where more could earn: Aave and Olla, Tacit, and Tacit's farms as one
+    /// row that opens To's list on them.
+    private var moreRows: [MoveTokenChoice] {
+        var rows = publicPlaces + tacitChoice
+        if self.tacit != nil, TacitAccount.shared.connected, let farms = TacitAccount.shared.farms, !farms.pools.isEmpty {
+            let rates = farms.pools.compactMap { TacitFarms.rate($0, in: farms) }
+            let day = farms.endsAt.formatted(.dateTime.month(.abbreviated).day())
+            let live = farms.active && farms.endsAt > .now
+            let line = [String(localized: "\(farms.pools.count) pools"),
+                        live ? Self.farmSpan(rates) : nil,
+                        live ? String(localized: "until \(day)") : String(localized: "ended \(day)")]
+                .compactMap { $0 }.joined(separator: " · ")
+            rows.append(MoveTokenChoice(id: "farms", symbol: String(localized: "Tacit farms"), network: String(localized: "Ethereum"),
+                                        line: line) {
+                withAnimation(DS.Motion.standard) {
+                    move.mode = .lend
+                    move.home = false
+                    open = .place
+                }
+                DSHaptic.selection()
+            })
+        }
+        return rows
+    }
+
+    /// The farms' rates, low to high, in Tacit's own words.
+    static func farmSpan(_ rates: [Double]) -> String? {
+        guard let lo = rates.min(), let hi = rates.max(), let top = TacitFarms.rateWords(hi) else { return nil }
+        guard let low = TacitFarms.rateWords(lo), low != top else { return top }
+        return "\(low.dropLast())–\(top)"
+    }
+
+    /// Withdraw, opened on one position.
+    private func withdraw(_ m: AaveLend.Market) {
+        withAnimation(DS.Motion.standard) {
+            move.mode = .takeBack
+            move.chainId = m.chainId
+            move.symbol = m.symbol
+            move.pick(nil, all: false)
+            move.home = false
+            open = .amount
+        }
+        DSHaptic.selection()
     }
 
     /// Face ID has the act.

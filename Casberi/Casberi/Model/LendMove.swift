@@ -98,12 +98,21 @@ final class LendMove {
     /// Opened from a lent row (`opens`): its market, once.
     init(mode: Mode = .lend, opens: Bool = false) {
         self.mode = mode
+        self.home = !opens
+        self.onRow = opens
         if opens, let at = Self.opening {
             chainId = at.chainId
             symbol = at.symbol
             Self.opening = nil
         }
     }
+
+    /// **EARN OPENS ON YOUR MONEY (prd §2000).** Earn's first page is what
+    /// is earning and where more could; a deck opened on one position (a
+    /// lent row in Holdings) skips it.
+    var home: Bool
+    /// Opened on one position: back leaves Earn, as there is no home under it.
+    let onRow: Bool
 
     /// Holdings' reading of your account's lent money, kept between visits.
     static let holdings = LendMove(mode: .takeBack)
@@ -331,6 +340,7 @@ final class LendMove {
         ollaRate = other.ollaRate
         ollaRequests = other.ollaRequests
         lentAnswered = other.lentAnswered
+        basesKept = other.basesKept
         readFor = other.readFor
     }
 
@@ -399,6 +409,9 @@ final class LendMove {
             }
             if let rate = r.rate { rates[r.key] = rate }
         }
+        var heard = Set(found.filter { $0.lent != nil }.map(\.key))
+        if ollaAnswered, let olla = AaveLend.olla { heard.insert(Self.key(olla)) }
+        noteBases(account: account, heard: heard)
         for (id, price) in await gas {
             // Twice today's price for the most a lend of ETH has taken with
             // the account's own calls around it (246k measured, 600k kept).
@@ -507,9 +520,9 @@ final class LendMove {
                 }
             }
             switch sent.outcome {
-            case .landed(let tx, _): steps.finish(); stage = .done(tx ?? "")
+            case .landed(let tx, _): steps.finish(); moved(m, units: units, account: account); stage = .done(tx ?? "")
             // Taken and not seen yet: done, with no transaction to name.
-            case .pending: steps.finish(); stage = .done("")
+            case .pending: steps.finish(); moved(m, units: units, account: account); stage = .done("")
             case .dryRun: steps.clear(); stage = .ready
             }
         } catch let failure as YourAccountChain.Failure {
@@ -631,6 +644,93 @@ final class LendMove {
                                               assets: "1091078987799669200000")]
         }
         #endif
+    }
+
+    // MARK: - Earned (prd §2000)
+
+    /// **WHAT IT EARNED, AGAINST WHAT WENT IN.** A position's basis is what
+    /// it held when this phone first read it, plus what Earn moved in since,
+    /// less what it took back; what it holds above that is what it earned.
+    /// Kept on the phone per account and market; a claim moves nothing.
+    struct Basis: Codable, Equatable {
+        var units: String
+        let since: Date
+    }
+
+    private static let basisKey = "lend.basis.v1"
+    /// The bases as last read, so a body never decodes them (build 525).
+    private(set) var basesKept: [String: Basis] = [:]
+
+    private static func bases() -> [String: Basis] {
+        guard let data = UserDefaults.standard.data(forKey: basisKey),
+              let all = try? JSONDecoder().decode([String: Basis].self, from: data) else { return [:] }
+        return all
+    }
+
+    private func keep(_ all: [String: Basis]) {
+        basesKept = all
+        if let data = try? JSONEncoder().encode(all) { DefaultsWrite.set(data, forKey: Self.basisKey) }
+    }
+
+    private static func basisID(_ account: String, _ m: Market) -> String { account.lowercased() + "|" + key(m) }
+
+    /// Each position read whole: a first sight sets its basis, nothing held
+    /// drops it, and a basis above what is held (a move counted that did not
+    /// land) comes down to it.
+    private func noteBases(account: String, heard: Set<String>) {
+        var all = Self.bases()
+        let was = all
+        for m in AaveLend.markets where heard.contains(Self.key(m)) {
+            let id = Self.basisID(account, m)
+            let held = Decimal(string: lent[Self.key(m)] ?? "0") ?? 0
+            guard held > 0 else { all.removeValue(forKey: id); continue }
+            if let b = all[id] {
+                if let u = Decimal(string: b.units), u > held { all[id]?.units = Self.digits(held) }
+            } else {
+                all[id] = Basis(units: Self.digits(held), since: .now)
+            }
+        }
+        if all != was { keep(all) } else { basesKept = all }
+    }
+
+    /// A deposit adds to the basis; a withdrawal takes from it, all of it
+    /// drops it.
+    private func moved(_ m: Market, units: String, account: String) {
+        guard !claims else { return }
+        var all = Self.bases()
+        let id = Self.basisID(account, m)
+        let have = all[id].flatMap { Decimal(string: $0.units) } ?? 0, u = Decimal(string: units) ?? 0
+        switch mode {
+        case .lend:
+            all[id] = Basis(units: Self.digits(have + u), since: all[id]?.since ?? .now)
+        case .takeBack where self.all:
+            all.removeValue(forKey: id)
+        case .takeBack:
+            guard all[id] != nil else { return }
+            all[id]?.units = Self.digits(max(0, have - u))
+        }
+        keep(all)
+    }
+
+    /// What a position earned since its basis, in its token's base units,
+    /// and since when; nil with no basis or nothing above it.
+    func earned(_ m: Market) -> (units: String, since: Date)? {
+        guard let account = readFor else { return nil }
+        if YourAccountDemo.isDemo(account) {
+            // The demo's lent USDC on Base, invented as its figures are.
+            guard m.chainId == 8453, m.symbol == "USDC" else { return nil }
+            return ("1200000", Date.now.addingTimeInterval(-56 * 86_400))
+        }
+        guard let b = basesKept[Self.basisID(account, m)], let u = Decimal(string: b.units),
+              let held = Decimal(string: lent[Self.key(m)] ?? "0"), held > u else { return nil }
+        return (Self.digits(held - u), b.since)
+    }
+
+    /// About what an amount earns in a year at the market's rate today, in
+    /// dollars: a figure, never a promise (prd §2000).
+    func yearly(_ units: String, in m: Market) -> Double? {
+        guard let usd = dollars(units, in: m), let rate = rates[Self.key(m)] else { return nil }
+        return usd * rate
     }
 
     private static func digits(_ d: Decimal) -> String {

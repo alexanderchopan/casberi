@@ -1522,6 +1522,14 @@ struct MoveSentence: View {
                     withAnimation(DS.Motion.standard) {
                         if mode == .lend { tacitOpen = true } else { tacitPayTo = nil; tacitOutOpen = true }
                     }
+                }, swapFor: { token, chainId in
+                    // **EARN'S "SWAP FOR IT" (prd §2000):** Swap on that network,
+                    // the token Earn takes as what you get; From opens on what
+                    // you hold, as every Swap does (§1913).
+                    pickVerb(.swap)
+                    if let n = Op.networks.first(where: { $0.chainId == chainId }) { switchNetwork(n) }
+                    buy = Tokens.Listed(token: token, name: token.symbol, onList: true)
+                    buyOn = nil
                 }) { verbWord(lendWord) }
                     .opacity(tacitOpen || tacitOutOpen ? 0 : 1)
                     .transition(.opacity)

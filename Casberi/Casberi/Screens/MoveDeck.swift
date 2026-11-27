@@ -843,6 +843,10 @@ struct MoveTokenChoice: Identifiable {
     var line: String?
     var picked = false
     var dim = false
+    /// **A DOOR, NOT A DEAD ROW (prd §2000):** where there is nothing to
+    /// move, the trailing word says the way in ("Swap for it"), grey, and
+    /// the row is that door.
+    var door: String? = nil
     let act: () -> Void
 }
 
@@ -861,6 +865,8 @@ struct MoveTokenPlace: Identifiable {
     /// ("Aztec to Aztec only", prd §1898 item 4).
     var rule: String?
     let choices: [MoveTokenChoice]
+    /// "3 more pools": the rest of a long place, shown on a tap (prd §2000).
+    var more: (words: String, act: () -> Void)? = nil
 }
 
 /// **EVERY TOKEN LIST IN MOVE IS THIS ONE (prd §1910, user, 2026-11-19: "make
@@ -927,6 +933,19 @@ struct MoveTokenGrid: View {
                     .accessibilityLabel(Text(verbatim: [String(localized: "\(c.symbol) on \(c.network)"), c.sub, c.rate.map { String(localized: "Earns \($0) today") }, c.place].compactMap { $0 }.joined(separator: ". ")))
                     .accessibilityAddTraits(c.picked ? [.isButton, .isSelected] : .isButton)
                 }
+                if let more = place.more {
+                    Button {
+                        withAnimation(DS.Motion.standard) { more.act() }
+                        DSHaptic.selection()
+                    } label: {
+                        Text(verbatim: more.words).dsText(.body17).foregroundStyle(DS.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.leading, MoveReceipt.labelWidth)
+                            .walletRowPitch()
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowPress())
+                }
             }
         }
     }
@@ -944,7 +963,8 @@ struct MoveTokenGrid: View {
             : [figure || sub.isEmpty ? c.network : "\(c.network) · \(sub)", c.rate].compactMap { $0 }.joined(separator: " · "))
         return TokenRowLabel(symbol: c.symbol, line: line,
                              lineInk: !figure && !sub.isEmpty && c.subInk != DS.textSecondary ? c.subInk : DS.textSecondary,
-                             figure: figure ? sub : nil, figureInk: c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,
+                             figure: figure ? sub : c.door,
+                             figureInk: !figure && c.door != nil ? DS.textSecondary : c.subInk == DS.textSecondary ? DS.textPrimary : c.subInk,
                              picked: c.picked, grid: true, badge: c.place != nil ? c.badge : nil,
                              flightKey: flies ? MoveFlight.key(symbol: c.symbol, network: c.network) : nil)
     }
