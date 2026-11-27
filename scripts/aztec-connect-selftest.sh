@@ -189,8 +189,10 @@ away_mutant "an app's send goes away" 's/guard let current = run, current.kind =
 away_mutant "brought back over a running move" 's/guard let current = away, run?.isRunning != true else { return }/guard let current = away else { return }/'
 away_mutant "a send that went away stays in the sheet too" 's/^        run = nil$/        _ = run/'
 # The wiring no compiled function can prove: the sheet closes only after
-# every ask, one send at a time, and the shell draws it.
-awk '/try await AztecCoSign.approve\(/{a=NR} /steps.sendAway\(from: .aztec/{if(!s)s=NR} /AztecEngine.shared.call\("sendPrivately"/{c=NR} END{exit !(a && s && c && a<s && s<c)}' $AZTEC_MOVE \
+# every ask, one send at a time, and the shell draws it. (A move-in through
+# your Shield key goes away after its own Face ID, earlier in the file,
+# 2026-11-27: the send's is the one after the co-signer's approval.)
+awk '/try await AztecCoSign.approve\(/{a=NR} /steps.sendAway\(from: .aztec/{if(a && !s)s=NR} /AztecEngine.shared.call\("sendPrivately"/{c=NR} END{exit !(a && s && c && a<s && s<c)}' $AZTEC_MOVE \
   || { echo "✗ the sheet closes before Face ID and the co-signer answered, or after the send began (prd §1777)"; exit 1; }
 grep -q 'guard mode != .send || !anotherIsGoing else {' $AZTEC_MOVE \
   || { echo "✗ a second send can start while one is behind its sheet (prd §1777)"; exit 1; }

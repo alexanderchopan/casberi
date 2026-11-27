@@ -713,12 +713,25 @@ final class AztecMove {
                 let gas = try await gasPlan(asset)
                 if viaKey != nil {
                     let moved = amountUSD
+                    // **BEHIND ITS SHEET ONCE FACE ID HAS ANSWERED (2026-11-27,
+                    // amends §1806 item 3):** through your Shield key nothing
+                    // after Face ID asks anyone; the capsule says the rest.
+                    let faceID = String(localized: "Confirm with Face ID")
+                    var asked = false
                     let sent = try await ShieldBridge.depositFromKey(asset, units: units, gas: gas, sale: buysGas ? gasSale : nil, wraps: wraps) { words in
                         self.stage = .working(words)
+                        if words == faceID { asked = true; steps.mark(.signing) }
+                        else if asked, Self.kept !== self {
+                            steps.mark(.sent)
+                            if let onAway = self.onAway, steps.sendAway(from: .aztec, landed: String(localized: "Moved into Aztec")) {
+                                Self.kept = self
+                                onAway()
+                            }
+                        }
                     }
                     // Counted against the key's day (prd §1922).
                     if let moved { ShieldKey.noteMoved(moved) }
-                    steps.finish()
+                    if Self.kept === self, steps.away != nil { steps.finishAway(); Self.kept = nil } else { steps.finish() }
                     stage = .done(sent.transaction)
                     break
                 }

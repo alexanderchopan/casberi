@@ -761,7 +761,7 @@ final class RailgunMove {
                 _ = try await RailgunPocket.shield(token: picked.contract, amount: picked.units) { [weak self] s in
                     await self?.say(s)
                 }
-                steps.finish()
+                if Self.kept === self, steps.away != nil { steps.finishAway(); Self.kept = nil } else { steps.finish() }
                 stage = .done(String(localized: "Private in about an hour."))
             case .takeBack where toPrivate && viaFresh:
                 guard let plan = transferPlan else { return }
@@ -941,6 +941,14 @@ final class RailgunMove {
         case .sending, .landing:
             steps.mark(.sent)
             stage = .working(String(localized: "Sending…"))
+            // **MOVING IN GOES BEHIND ITS SHEET TOO (2026-11-27, user: "we
+            // want the toast banners here too", amends §1806 item 3):** Face
+            // ID was the last ask; the capsule says the rest.
+            if mode == .deposit, Self.kept !== self, let onAway,
+               steps.sendAway(from: .railgun, landed: String(localized: "Moved into Railgun")) {
+                Self.kept = self
+                onAway()
+            }
         }
     }
 
