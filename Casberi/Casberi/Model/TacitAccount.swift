@@ -378,6 +378,19 @@ final class TacitAccount {
         if let data = try? JSONEncoder().encode(farms) { DefaultsWrite.set(data, forKey: Self.farmsKey) }
     }
 
+    /// Earn's farms when none was read, or the last is over an hour old.
+    /// The farm read needs no key, so it never waits for the account to be
+    /// opened again: build 1094 read farms only on opening, and an account
+    /// opened before it showed no farms at all.
+    func readFarmsIfStale() async {
+        guard !DemoMode.isActive, !readingFarms,
+              liveFarms.map({ Date.now.timeIntervalSince($0.asOf) > 3_600 }) ?? true else { return }
+        readingFarms = true
+        defer { readingFarms = false }
+        await readFarms()
+    }
+    @ObservationIgnored private var readingFarms = false
+
     /// Whether `key` is the key the open account was made from.
     func isKey(_ key: [UInt8]) -> Bool {
         guard let keyPrint, livePhase == .open || livePhase == .reading else { return false }

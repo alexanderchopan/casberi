@@ -150,6 +150,11 @@ enum TacitEngineProbe {
                         let r = try await TacitEngine.shared.defi()
                         let worth = TacitEngineWire.tac(r.worth).map { "\($0)" } ?? r.worth
                         log("defi", ms(t), "worth \(worth) TAC · \(r.notes) notes · \(r.leaves) leaves · whole \(r.whole) · passes \(r.passes) · errors \(r.errors.joined(separator: ",")) · page \(r.ms) ms")
+                    case "farms":
+                        // Keyless: what Earn reads with no account open (prd §1993).
+                        let t = Date()
+                        let r = try await TacitEngine.shared.farms()
+                        log("farms", ms(t), "\(r.pools.count) pools · active \(r.active) · \(r.pools.map(\.pair).joined(separator: ","))")
                     default:
                         log(step, 0, "unknown step")
                     }

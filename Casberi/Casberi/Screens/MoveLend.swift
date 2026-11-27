@@ -49,6 +49,10 @@ struct MoveLendSentence<Head: View>: View {
             if !tall, open != nil { withAnimation(DS.Motion.standard) { open = nil } }
         }
         .task(id: account) {
+            // Tacit's farms, beside the markets' read (prd §1993).
+            if tacit != nil, TacitAccount.shared.connected {
+                Task { await TacitAccount.shared.readFarmsIfStale() }
+            }
             await move.read(account: account)
             #if DEBUG
             NSLog("[Casberi] moveLend| %@ | %@ | %@ | %@", move.mode == .lend ? "lend" : "takeBack", move.figure,
