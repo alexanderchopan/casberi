@@ -31,7 +31,9 @@ struct MoveLendSentence<Head: View>: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    enum Blank { case amount, network }
+    /// `place` is To's list on Deposit (Aave, Olla, Tacit, the farms);
+    /// `network` is From's (prd §1998).
+    enum Blank { case amount, network, place }
 
     var body: some View {
         // **EARN IS A RECEIPT (prd §1931):** its name, Type · From · Amount,
@@ -284,6 +286,8 @@ struct MoveLendSentence<Head: View>: View {
                     }
                 } else if open == .network {
                     MoveDeckScroll { fromRows }
+                } else if open == .place {
+                    MoveDeckScroll { placeRows }
                 } else {
                     // **THE RECEIPT IS THE DECK'S (prd §1927, §1929):** the
                     // facts under the steps, never between the sentence
@@ -295,28 +299,32 @@ struct MoveLendSentence<Head: View>: View {
         .animation(DS.Motion.standard, value: open)
     }
 
-    /// **TYPE · FROM · AMOUNT (prd §1931).** Deposit and Withdraw on the Type
-    /// line (user: "instead of an earn pill it could be deposit and instead of
-    /// take back it could be withdraw"), the market on From, the figure and
-    /// its quick shares on Amount.
+    /// **TO · FROM · AMOUNT (prd §1931, §1998).** Deposit and Withdraw in the
+    /// title (user: "instead of an earn pill it could be deposit and instead of
+    /// take back it could be withdraw"), the place on To (From, withdrawing),
+    /// the token on From, the figure and its quick shares on Amount.
     private var receiptLines: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
-            MoveReceiptLine(label: String(localized: "From")) {
+            // **TO PICKS THE PLACE (prd §1998; user, 2026-11-27: "aave isn't
+            // tappable. the earn places come up when i click from").**
+            // Depositing, To is where it earns, a choice under Public and
+            // Private; From is your token, its network in words. Withdrawing,
+            // the place is where the money comes from, so From holds it and
+            // To is your public account.
+            if move.mode == .lend {
                 if let m = market {
-                    MoveChip(text: "\(m.symbol) · \(move.network?.name ?? m.network)",
-                             mark: MoveRowMark(token: m.symbol, network: MoveSentence.networkMark(chainId: m.chainId)),
-                             tone: open == .network ? .open : .answered, disabled: !live) { toggle(.network) }
-                } else {
-                    MoveChip(text: String(localized: "Choose"), tone: .empty, disabled: !live) { toggle(.network) }
+                    MoveReceiptLine(label: String(localized: "To")) {
+                        MoveChip(text: m.placeName, mark: MoveRowMark(token: m.placeName),
+                                 tone: open == .place ? .open : .answered, disabled: !live) { toggle(.place) }
+                    }
                 }
-            }
-            // **FROM AND TO (prd §1970; user: "maybe its just in the from and
-            // to"):** the place is the token's, so To says it, Aave or Olla;
-            // taking back, it says your account. Nothing to pick.
-            if let m = market {
-                MoveReceiptLine(label: String(localized: "To")) {
-                    MoveChip(text: move.mode == .lend ? m.placeName : String(localized: "Your public account"),
-                             tone: .answered, disabled: true) {}
+                fromLine
+            } else {
+                fromLine
+                if market != nil {
+                    MoveReceiptLine(label: String(localized: "To")) {
+                        MoveChip(text: String(localized: "Your public account"), tone: .answered, disabled: true) {}
+                    }
                 }
             }
             MoveReceiptLine(label: String(localized: "Amount")) {
@@ -334,6 +342,19 @@ struct MoveLendSentence<Head: View>: View {
                                              have: MoveFieldNote.plain(units: move.available(m), decimals: m.decimals),
                                              symbol: m.symbol) {
                 MoveFieldNote(text: n.text, ink: n.ink)
+            }
+        }
+    }
+
+    /// From: the token and its network, in words.
+    private var fromLine: some View {
+        MoveReceiptLine(label: String(localized: "From")) {
+            if let m = market {
+                MoveChip(text: "\(m.symbol) · \(move.network?.name ?? m.network)",
+                         mark: MoveRowMark(token: m.symbol, network: MoveSentence.networkMark(chainId: m.chainId)),
+                         tone: open == .network ? .open : .answered, disabled: !live) { toggle(.network) }
+            } else {
+                MoveChip(text: String(localized: "Choose"), tone: .empty, disabled: !live) { toggle(.network) }
             }
         }
     }
@@ -408,50 +429,118 @@ struct MoveLendSentence<Head: View>: View {
         (move.market.flatMap { move.available($0) }.flatMap { Decimal(string: $0) } ?? 0) > 0
     }
 
-    /// **FROM IS A TOKEN ON A NETWORK (prd §1898 item 1):** every market Aave
-    /// takes here, with what you have of it (or have earning), as Send's
-    /// From rows; one with nothing is dimmed, never hidden. Move's one token
-    /// list (`MoveTokenGrid`, prd §1910): each network under its title.
-    private var fromRows: some View {
-        // Olla is offered only to someone with AZTEC there (prd §1970).
-        // By worth, richest first, as every Move list (prd §1986).
-        let worth: (AaveLend.Market) -> Double = { m in move.available(m).flatMap { move.dollars($0, in: m) } ?? 0 }
-        let markets = AaveLend.markets.filter { m in
+    /// The markets Earn offers: not refused, and Olla only to someone with
+    /// AZTEC or something there (prd §1970).
+    private var offered: [AaveLend.Market] {
+        AaveLend.markets.filter { m in
             !move.refused.contains(LendMove.key(m))
                 && (m.place != .olla || (Decimal(string: move.available(m) ?? "0") ?? 0) > 0 || move.anyOlla)
-        }.sorted { worth($0) > worth($1) }
-        // Tacit stands where its worth puts it; last when there is no price.
-        let worths = markets.map(worth)
-        let tacitAt = tacitWorth.map { w in worths.firstIndex { $0 < w } ?? worths.count } ?? worths.count
-        let choices: [MoveTokenChoice] = markets.map { m in
-            let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? ""
-            let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
-            let worth = move.available(m).flatMap { move.dollars($0, in: m) }
-            return MoveTokenChoice(id: LendMove.key(m), symbol: m.symbol, network: name, badge: MoveSentence.networkMark(chainId: m.chainId),
-                                   sub: worth.map { MoveSentence.money($0, whole: true) } ?? PrivateMoney.figure(move.available(m) ?? "0", decimals: m.decimals, symbol: ""),
-                                   // Today's rate on every choice, a dimmed one too (prd §1958).
-                                   // Withdrawing, the rate is what it still earns (prd §1972).
-                                   rate: AaveLend.rateOnly(move.rates[LendMove.key(m)]), place: m.placeName,
-                                   picked: m.chainId == move.chainId && m.symbol == move.symbol, dim: have <= 0) {
-                withAnimation(DS.Motion.standard) {
-                    move.chainId = m.chainId
-                    move.symbol = m.symbol
-                    move.pick(nil, all: false)
-                    move.settle()
-                    open = .amount
-                }
+        }
+    }
+
+    /// What a market's amount is worth in dollars, nil with no price.
+    private func worth(_ m: AaveLend.Market) -> Double? { move.available(m).flatMap { move.dollars($0, in: m) } }
+
+    /// One market as From's row: the token, its network in words, its rate
+    /// today (prd §1958, §1972), what there is trailing. One with nothing is
+    /// dimmed, never hidden.
+    private func choice(_ m: AaveLend.Market) -> MoveTokenChoice {
+        let name = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? m.network
+        let have = move.available(m).flatMap { Decimal(string: $0) } ?? 0
+        return MoveTokenChoice(id: LendMove.key(m), symbol: m.symbol, network: name,
+                               sub: worth(m).map { MoveSentence.money($0, whole: true) } ?? PrivateMoney.figure(move.available(m) ?? "0", decimals: m.decimals, symbol: ""),
+                               rate: AaveLend.rateOnly(move.rates[LendMove.key(m)]),
+                               picked: m.chainId == move.chainId && m.symbol == move.symbol, dim: have <= 0) {
+            withAnimation(DS.Motion.standard) {
+                move.chainId = m.chainId
+                move.symbol = m.symbol
+                move.pick(nil, all: false)
+                move.settle()
+                open = .amount
             }
         }
-        var all = choices
-        all.insert(contentsOf: tacitChoice, at: min(tacitAt, all.count))
-        return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: all)] + farmPlace)
+    }
+
+    /// **FROM (prd §1998, amending §1972's place on the row).** Depositing,
+    /// the tokens the place in To takes, from your public account, by worth.
+    /// Withdrawing, every place under Public or Private, its name a grey
+    /// head, as Holdings groups money (§1985): Aave, Olla and the farms you
+    /// are in under Public, Tacit's private TAC under Private.
+    private var fromRows: some View {
+        let byWorth: (AaveLend.Market, AaveLend.Market) -> Bool = { (worth($0) ?? 0) > (worth($1) ?? 0) }
+        if move.mode == .lend {
+            let here = offered.filter { $0.place == market?.place }.sorted(by: byWorth)
+            return MoveTokenGrid(places: [MoveTokenPlace(id: "lend", choices: here.map(choice))])
+        }
+        let aave = offered.filter { $0.place == .aave }.sorted(by: byWorth)
+        let olla = offered.filter { $0.place == .olla }
+        var places = [MoveTokenPlace(id: "aave", title: "Aave", group: String(localized: "Public"), choices: aave.map(choice))]
+        places.append(MoveTokenPlace(id: "olla", title: "Olla", group: String(localized: "Public"), choices: olla.map(choice)))
+        places += farmPlace
+        places.append(MoveTokenPlace(id: "tacit", title: "Tacit", group: String(localized: "Private"), choices: tacitChoice))
+        return MoveTokenGrid(places: places)
+    }
+
+    /// **TO, DEPOSITING (prd §1998).** Where the money earns, under Public
+    /// and Private: Aave and Olla hold it in the open from your public
+    /// account, the farms are Tacit's pools on Ethereum, and Tacit's TAC
+    /// earns private. Each names what it takes and its rate today, and
+    /// trails what you have for it.
+    private var placeRows: some View {
+        let lending = offered
+        let aave = lending.filter { $0.place == .aave }
+        let olla = lending.filter { $0.place == .olla }
+        var public_: [MoveTokenChoice] = []
+        if !aave.isEmpty { public_.append(placeChoice("Aave", aave)) }
+        if !olla.isEmpty { public_.append(placeChoice("Olla", olla)) }
+        var places = [MoveTokenPlace(id: "places", group: String(localized: "Public"), choices: public_)]
+        places += farmPlace
+        places.append(MoveTokenPlace(id: "tacit", group: String(localized: "Private"), choices: tacitChoice))
+        return MoveTokenGrid(places: places)
+    }
+
+    /// One place on To's list: its markets' tokens and rates, what you have
+    /// for it in dollars; picked, its richest market with something to move.
+    private func placeChoice(_ name: String, _ ms: [AaveLend.Market]) -> MoveTokenChoice {
+        var tokens: [String] = []
+        for m in ms where !tokens.contains(m.symbol) { tokens.append(m.symbol) }
+        let networks = ms.reduce(into: [String]()) { out, m in
+            let n = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? m.network
+            if !out.contains(n) { out.append(n) }
+        }
+        let usd = ms.compactMap(worth).reduce(0, +)
+        let has = ms.filter { (Decimal(string: move.available($0) ?? "0") ?? 0) > 0 }
+        let line = [tokens.joined(separator: ", "), Self.rateSpan(ms.compactMap { move.rates[LendMove.key($0)] })]
+            .compactMap { $0 }.joined(separator: " · ")
+        return MoveTokenChoice(id: "place|\(name)", symbol: name, network: networks.joined(separator: ", "),
+                               sub: usd > 0 ? MoveSentence.money(usd, whole: true) : nil, line: line,
+                               picked: market?.placeName == name, dim: has.isEmpty) {
+            withAnimation(DS.Motion.standard) {
+                let pick = (has.first { $0.chainId == move.chainId && $0.symbol == move.symbol })
+                    ?? has.max { (worth($0) ?? 0) < (worth($1) ?? 0) } ?? ms[0]
+                move.chainId = pick.chainId
+                move.symbol = pick.symbol
+                move.pick(nil, all: false)
+                // More than one token or network: From asks which.
+                open = has.count > 1 ? .network : .amount
+            }
+        }
+    }
+
+    /// "1.4–5.1%", or "5.1%" when the rates round alike: the facts, no
+    /// "best" (prd §1958 item 2).
+    static func rateSpan(_ apys: [Double]) -> String? {
+        guard let lo = apys.min(), let hi = apys.max(), let top = AaveLend.rateOnly(hi) else { return nil }
+        guard let low = AaveLend.rateOnly(lo), low != top else { return top }
+        return "\(low.dropLast())–\(top)"
     }
 
     /// **TACIT'S FARMS (prd §1993; user, 2026-11-26: "Farms in Earn").**
     /// Each pool Tacit pays TAC to, at the rate its own pools price, highest
     /// first; Withdraw lists the ones you are in. A farm is entered and left
     /// on Tacit's own page, so a row opens it: Casberi reads, Tacit moves.
-    /// Shown while a Tacit account is connected, as Tacit's own row (§1986).
+    /// Shown while a Tacit account is connected, as Tacit's own row (§1986),
+    /// under Public: the farms are pools on Ethereum (prd §1998).
     private var farmPlace: [MoveTokenPlace] {
         let tacit = TacitAccount.shared
         guard self.tacit != nil, tacit.connected, let farms = tacit.farms else { return [] }
@@ -462,9 +551,8 @@ struct MoveLendSentence<Head: View>: View {
         let choices = pools.map { p in
             let held = mine.first { $0.lpAsset == p.lpAsset }
             return MoveTokenChoice(id: "farm|\(p.lpAsset)", symbol: TacitFarms.name(p.pair), network: String(localized: "Ethereum"),
-                                   // The pair's two marks fill the face: no network badge.
                                    sub: held.flatMap { tacit.farmUSD($0) }.map { MoveSentence.money($0, whole: true) },
-                                   rate: TacitFarms.rateWords(TacitFarms.rate(p, in: farms)), place: "Tacit") {
+                                   rate: TacitFarms.rateWords(TacitFarms.rate(p, in: farms))) {
                 farmPage = true
             }
         }
@@ -472,31 +560,24 @@ struct MoveLendSentence<Head: View>: View {
         let rule = farms.active && farms.endsAt > .now
             ? String(localized: "On Ethereum, paid in TAC until \(day). You join on Tacit's site.")
             : String(localized: "Rewards ended \(day).")
-        return [MoveTokenPlace(id: "tacit-farms", title: String(localized: "Tacit farms"), rule: rule, choices: choices)]
+        return [MoveTokenPlace(id: "tacit-farms", title: String(localized: "Tacit farms"), group: String(localized: "Public"),
+                               rule: rule, choices: choices)]
     }
 
-    /// What Tacit's row is worth, to stand it among the rest.
-    private var tacitWorth: Double? {
-        guard let r = TacitAccount.shared.reading, let price = TacitAccount.shared.tacPrice else { return nil }
-        return (move.mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)) * price
-    }
-
-    /// **TACIT, BESIDE AAVE AND OLLA (prd §1986; user, 2026-11-26: "should
-    /// we put tacit in the Earn flow", "ok pls update earn").** Private TAC
-    /// earns a share of the Tacit chain's fees: Deposit is Make private (your
-    /// public TAC), Withdraw is back to public (your private TAC). No rate:
-    /// Tacit pays a share of fees, not a rate the app can read. Shown while
-    /// a Tacit account is connected, dimmed when empty (§1984).
+    /// **TACIT (prd §1986), UNDER PRIVATE (prd §1998).** Private TAC earns a
+    /// share of the Tacit chain's fees: Deposit is Make private (your public
+    /// TAC), Withdraw is back to public (your private TAC). No rate: Tacit
+    /// pays a share of fees, not a rate the app can read. Shown while a Tacit
+    /// account is connected, dimmed when empty (§1984).
     private var tacitChoice: [MoveTokenChoice] {
         guard let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading else { return [] }
         let held = move.mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)
         let usd = TacitAccount.shared.tacPrice.map { held * $0 }
         let mode = move.mode
-        return [MoveTokenChoice(id: "tacit|TAC", symbol: "TAC", network: String(localized: "Tacit chain"),
-                                // Public TAC is on Ethereum; private TAC on the Tacit chain.
-                                badge: mode == .lend ? MoveSentence.networkMark(chainId: 1) : nil,
+        return [MoveTokenChoice(id: "tacit|TAC", symbol: mode == .lend ? "Tacit" : "TAC", network: String(localized: "Tacit chain"),
                                 sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
-                                place: "Tacit", dim: held <= 0) {
+                                line: mode == .lend ? String(localized: "TAC · a share of fees") : String(localized: "Tacit chain"),
+                                dim: held <= 0) {
             tacit(mode)
         }]
     }

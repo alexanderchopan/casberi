@@ -75658,3 +75658,14 @@ User, 2026-11-27: "earn takes a while to read. why", then, of a screenshot of Ea
 **Not seen:** built and run. This change was written in a Linux container with no Swift toolchain; the Python audits pass, the Swift build and the device check are owed.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §1998 — Earn: To picks the place, From is your token with its network in words, and places stand under Public and Private (amends §1970's "the token decides the place" and To's "nothing to pick", §1972's place on the row and network on the badge, §1986's Tacit row in From, §1993's farms in From) (user, 2026-11-27: "earn is pretty wonky. aave isn't tappable. the earn places come up when i click from. eg which network / it's also not clear what is public or private"; of two shapes, "To picks the place")
+
+1. **Deposit: To, then From, then Amount.** To is the place, a chip that opens its list: under **Public**, Aave ("USDC, ETH · 1.4–5.1%") and Olla ("AZTEC · 31%"), then Tacit farms under its grey head with its one line; under **Private**, Tacit ("TAC · a share of fees"). Each trails what you have for it in dollars; one you have nothing for is dimmed. A rate span is the facts, low to high, never "best" (§1958 item 2). Picking Aave or Olla picks its richest market with something to move, and From opens when there is more than one; Tacit opens Make private and a farm opens Tacit's page, as before.
+2. **From is your token.** "USDC · Base" on the chip; its list holds only the tokens the place in To takes, each with its network in words and its rate ("USDC  Base · 5.1%   $248"), by worth. No badge stands in for a network.
+3. **Withdraw: From is the place the money comes from.** One list under Public (Aave, Olla, the farms you are in, each a grey head) and Private (Tacit's TAC), each row its token, network in words and rate; To stays your public account.
+4. A Public or Private head is drawn only where both kinds or more than one place stand (`MoveTokenGrid`): with no Tacit account connected, To lists Aave and Olla alone, all public.
+
+**Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass, the Swift build and the device check are owed.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
