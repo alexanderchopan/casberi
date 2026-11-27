@@ -299,11 +299,18 @@ const methods = {
   // key. Nothing leaves the phone but reads.
   async shieldProve({ rpcUrl, blocks, leader, units }) {
     if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
-    const c = await chainClient({ rpcUrl, blocks, leader });
+    // The return path's slot waits for the DeFi read (it reads the same pool
+    // logs), which takes minutes on a phone: ask for it now, so that wait
+    // runs beside the proof, not after it. Each stage is logged.
     const t = now();
+    say(`shield begins${defiRead ? ', DeFi read in flight' : ''}`);
+    const slot = nextBackIndex();
+    slot.then(() => say(`shield slot at ${Math.round(now() - t)} ms`), () => {});
+    const c = await chainClient({ rpcUrl, blocks, leader });
     const s = await c.shield(BigInt(units));
     const proveMs = Math.round(now() - t);
-    const index = await nextBackIndex();
+    say(`shield proved at ${proveMs} ms`);
+    const index = await slot;
     backIndex = null;
     const key = Uint8Array.from(identity);
     let back;
@@ -311,6 +318,7 @@ const methods = {
       back = '0x' + strip(poolUx().buildWrap({ walletPriv: key, amountWei: (BigInt(units) * 10n ** 10n).toString(), ticker: 'TAC', index }).commit).toLowerCase();
     } finally { key.fill(0); }
     const inbox = await s.inbox(back);
+    say(`shield inbox at ${Math.round(now() - t)} ms`);
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const sweepFee = BigInt(s.sweepFee ?? 0n);
     pending = { s, back, inbox, deadline, sweepFee, units: BigInt(units) };
