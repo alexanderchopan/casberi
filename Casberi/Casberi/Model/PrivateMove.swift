@@ -316,7 +316,12 @@ final class PrivateMove {
     /// within a hair of it.
     func isMax(_ units: String) -> Bool {
         guard let top = most.flatMap({ Decimal(string: $0) }), let u = Decimal(string: units) else { return false }
-        return u >= top
+        // Max is drawn rounded down to the keys' places (six for ETH, two
+        // for a dollar): within one of those of the top is Max (2026-11-27,
+        // on the phone: Max picked, "won't let me send").
+        var hair = Decimal(1)
+        for _ in 0..<max(decimals - (symbol == "USDC" ? 2 : 6), 0) { hair *= 10 }
+        return u >= top - hair
     }
 
     /// A typed amount the move can take.
