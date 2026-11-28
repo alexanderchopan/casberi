@@ -264,7 +264,7 @@ extension FeedScreen {
             walletRailgunRow(h, units: h.spendable, line: String(localized: "Ethereum"), pending: false, mask: mask)
         }
         ForEach(store.pendingShown) { h in
-            walletRailgunRow(h, units: h.pending, line: String(localized: "Private in about an hour"), pending: true, mask: mask)
+            walletRailgunRow(h, units: h.pending, line: RailgunHoldings.pendingWords(by: store.privateBy(h)), pending: true, mask: mask)
         }
     }
 
@@ -428,7 +428,7 @@ extension FeedScreen {
             // Still in Railgun's hour: its steps (prd §1787), nothing to move yet.
             if pending {
                 let item = OnItsWay.railgun(id: h.id, title: RailgunHoldings.figure(h.pending, decimals: h.decimals) + " " + h.symbol,
-                                            usd: store.usd(h, units: h.pending))
+                                            usd: store.usd(h, units: h.pending), privateBy: store.privateBy(h))
                 feedSheet = .onItsWay(item)
                 return
             }

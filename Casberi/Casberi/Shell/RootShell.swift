@@ -2407,6 +2407,8 @@ struct RootShell: View {
                 // …and the private watch, while a fresh address or a waiting
                 // deposit could change (prd §1562).
                 PrivateWatchTask.schedule()
+                // …and Railgun's sync, while the phone charges (prd §2009 item 4).
+                RailgunSyncTask.schedule()
             }
             // The "new since last seen" boundary a row's time tints against
             // (`ShapedRows.newSinceLastSeen`). Born as the hero widget's

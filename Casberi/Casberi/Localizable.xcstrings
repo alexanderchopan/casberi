@@ -164425,6 +164425,34 @@
         }
       }
     },
+    "Private by %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privado a las %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@までに非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@까지 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 前变为私密"
+          }
+        }
+      }
+    },
     "Private gas" : {
       "localizations" : {
         "es" : {
@@ -200230,6 +200258,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仍处于有效状态 — %@ 仍可使用此代币"
+          }
+        }
+      }
+    },
+    "Still being checked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún en revisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ確認中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 확인 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仍在检查中"
           }
         }
       }

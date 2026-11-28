@@ -49,7 +49,14 @@ enum FreshTx {
             if t == railgunProxy { return (d.hasPrefix(railgunShield) || d.hasPrefix(railgunTransact)) && carried.isEmpty }
             // A private swap (prd §1875): the classic relay adapter's proved
             // `relay`, carrying no ETH; never its 7702 twin.
-            if t == railgunRelayAdapt { return d.hasPrefix(railgunRelay) && carried.isEmpty }
+            if t == railgunRelayAdapt {
+                // Leftover gas going back (prd §2009 item 3): the adapter's
+                // multicall of `wrapBase` then `shield`, carrying the ETH.
+                if d.hasPrefix(railgunMulticall) {
+                    return !carried.isEmpty && d.contains(railgunWrapBase.dropFirst(2)) && d.contains(railgunShieldCall.dropFirst(2))
+                }
+                return d.hasPrefix(railgunRelay) && carried.isEmpty
+            }
             if railgunTokens.contains(where: { $0.contract.lowercased() == t }) {
                 guard d.hasPrefix(approve), d.count == 2 + 8 + 128, carried.isEmpty else { return false }
                 return String(d.dropFirst(10).prefix(64)) == String(repeating: "0", count: 24) + railgunProxy.dropFirst(2)
@@ -141,6 +148,11 @@ enum FreshTx {
     /// Its `relay((…)[],(bytes31,bool,uint256,(address,bytes,uint256)[]))`, from
     /// Railgun's own ABI (engine 9.9.1, V2/RelayAdapt).
     static let railgunRelay = "0x28223a77"
+    /// The adapter's `multicall(bool,(address,bytes,uint256)[])`, and the two
+    /// calls an ETH shield makes inside it (RelayAdapt's own ABI).
+    static let railgunMulticall = "0xe4899c13"
+    static let railgunWrapBase = "0xe9a059a3"
+    static let railgunShieldCall = "0x044a40c3"
     /// The most a fresh sender's unshield may use (measured 516,069 from a
     /// plain key, §1713 item 8), with room; estimated each time and held to it.
     static let railgunSendGas = 900_000

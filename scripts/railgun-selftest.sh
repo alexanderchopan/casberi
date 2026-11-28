@@ -102,7 +102,7 @@ use "$HOLD" 'for b in synced.balances {' "the Private block reads the engine's b
 use "$HOLD" 'RailgunPocket.hasWallet' "no root is made just to read (§1721 item 1)"
 use "$INGEST" 'await RailgunHoldings.shared.walletHolding()' "Railgun counts in the Wallet's number"
 use "$PRIV" 'walletRailgunRows(mask: mask)' "Holdings draws Railgun's rows in Private"
-use "$PRIV" 'String(localized: "Private in about an hour")' "a shield in screening reads as a state (§1713 item 5)"
+use "$PRIV" 'line: RailgunHoldings.pendingWords(by: store.privateBy(h)), pending: true' "a shield in screening reads as a state, by when (§1713 item 5, §2009)"
 use "$MOVE" 'RailgunRouting.goesToRailgun(symbol: held.token.symbol, contract: held.token.contract,' "Send's To names Railgun for a token that goes there (prd §1713 item 1, §1929)"
 use "$SENT" 'move.toSomeoneElse ? YourAccount.short(move.recipient ?? "") + "." : String(localized: "your account.")' "the recipient is your account, or someone else by their tail"
 use "$SENT" 'case .takeBack where toSomeoneElse:' "a send to someone else is the broadcaster's path, before taking back"
@@ -331,7 +331,7 @@ use "Casberi/Casberi/Model/RailgunEngine.swift" 'if line.hasPrefix("progress ") 
 use "Casberi/Casberi/Screens/PrivateStepRows.swift" ".onChange(of: railgunSync.firstReady)" "a first sync that finishes says so in a toast"
 use "$MOVEF" "self?.started(Self.swapStepsPlan, away: true)" "a swap's steps say swapping and swapped, never sent"
 use "$MOVEF" "self?.started(Self.swapFreshPlan, away: true)" "a new address's swap says it pays gas from your private ETH, never Checking"
-use "Casberi/Casberi/Model/FreshTx.swift" "if t == railgunRelayAdapt { return d.hasPrefix(railgunRelay) && carried.isEmpty }" "a new address of yours may send a private swap: the classic adapter's relay, no ETH"
+use "Casberi/Casberi/Model/FreshTx.swift" "return d.hasPrefix(railgunRelay) && carried.isEmpty" "a new address of yours may send a private swap: the classic adapter's relay, no ETH"
 grep -q 'railgunRelayAdapt = "0xac9f360ae85469b27aeddeafc579ef2d052ad405"' Casberi/Casberi/Model/FreshTx.swift \
   && echo "  ✓ that adapter is the classic one, never its 7702 twin" \
   || { echo "  ✗ the new address's swap is not held to the classic relay adapter"; fail=1; }
@@ -361,5 +361,15 @@ use "Casberi/Casberi/Screens/MoveSentence.swift" "goRailgun(.takeBack, contract:
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'toRow(e.name, sub: "Railgun · " + AddressTail.short(e.address)' "a saved Railgun address names its place in To (§1965a)"
 use "Casberi/Casberi/Screens/MoveSentence.swift" 'sub: "Ethereum · " + AddressTail.short(e.address)' "a public contact names its place in To"
 use "$MOVEF" '"\($0) · \(AddressTail.short(move.recipient ?? ""))"' "the receipt's To keeps the tail beside a saved name"
+use "Casberi/Casberi/Model/OnItsWay.swift" 'return by > now ? String(localized: "Private by' "a move in says by when it turns private (§2009)"
+use "Casberi/Casberi/Model/RailgunPocket.swift" "RailgunHoldings.shared.movedIn(token: token)" "a move in starts its hour when it leaves your account"
+use "$MOVEF" "let listed = await YourAccountTokens.list(YourAccountOp.ethereum, term: term)" "a private swap buys any token Uniswap lists"
+use "$MOVEF" "buyFound = listed.filter(\\.onList)" "and only tokens on the list, never a look-alike"
+use "Casberi/Casberi/Model/RailgunPocket.swift" "held > cost * 3 else { continue }" "leftover gas goes back only when worth three times its move"
+use "Casberi/Casberi/Model/RailgunPocket.swift" 'nonceAt: "latest"' "a sweep never waits behind a send MEV Blocker holds"
+use "Casberi/Casberi/Model/FreshTx.swift" "return !carried.isEmpty && d.contains(railgunWrapBase.dropFirst(2)) && d.contains(railgunShieldCall.dropFirst(2))" "a one-time address may shield its ETH through the adapter, nothing else"
+[[ $(grep -c "Task { await RailgunPocket.sweepLeftovers() }" "$MOVEF") -eq 3 ]] && echo "  ✓ every one-time sender's move sends its leftover back" || { echo "  ✗ a one-time sender's move leaves its gas behind"; fail=1; }
+use "Casberi/Casberi/Model/RailgunSyncTask.swift" "request.requiresExternalPower = true" "Railgun syncs in the background only on power"
+use "Casberi/Casberi/Info.plist" "com.casberi.app.railgunsync" "the background sync's id is permitted"
 if (( fail )); then echo "railgun-selftest: FAILED"; exit 1; fi
 echo "railgun-selftest: ok"

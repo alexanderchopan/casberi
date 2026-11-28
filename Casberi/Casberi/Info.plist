@@ -16,6 +16,7 @@
 	<array>
 		<string>com.casberi.app.walletsample</string>
 		<string>com.casberi.app.privatewatch</string>
+		<string>com.casberi.app.railgunsync</string>
 	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>
@@ -86,6 +87,7 @@
 		<string>audio</string>
 		<string>remote-notification</string>
 		<string>fetch</string>
+		<string>processing</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

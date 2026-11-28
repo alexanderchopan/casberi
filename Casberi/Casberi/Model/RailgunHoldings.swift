@@ -56,6 +56,43 @@ final class RailgunHoldings {
     static let interval: TimeInterval = 10 * 60
     private static let key = "railgun.holdings.v1"
 
+    /// **WHEN A MOVE IN TURNS PRIVATE (prd §2009):** when each token began
+    /// waiting on Railgun's screening, by token: the move in's own moment,
+    /// else the first reading that showed it waiting. Railgun lists a
+    /// shield about an hour after it lands, so the row says by when.
+    private(set) var pendingSince: [String: Date] =
+        (UserDefaults.standard.data(forKey: RailgunHoldings.sinceKey)
+            .flatMap { try? JSONDecoder().decode([String: Date].self, from: $0) }) ?? [:]
+    private static let sinceKey = "railgun.pendingSince.v1"
+
+    /// A move in just left your account: its hour starts now.
+    func movedIn(token: String) {
+        let id = token.lowercased() == RailgunRouting.eth ? RailgunPocket.weth : token.lowercased()
+        guard pendingSince[id] == nil else { return }
+        pendingSince[id] = .now
+        saveSince()
+    }
+
+    /// When Railgun should list this token's waiting part: an hour after it began.
+    func privateBy(_ h: Held) -> Date? { pendingSince[h.id].map { $0.addingTimeInterval(3600) } }
+
+    /// "Private by 4:12 PM" while the hour runs, "Still being checked" past it.
+    nonisolated static func pendingWords(by: Date?, now: Date = .now) -> String {
+        OnItsWay.railgunWait(by: by, now: now)
+    }
+
+    private func notePending(_ held: [Held]) {
+        var next: [String: Date] = [:]
+        for h in held where (Decimal(string: h.pending) ?? 0) > 0 { next[h.id] = pendingSince[h.id] ?? .now }
+        guard next != pendingSince else { return }
+        pendingSince = next
+        saveSince()
+    }
+
+    private func saveSince() {
+        if let data = try? JSONEncoder().encode(pendingSince) { UserDefaults.standard.set(data, forKey: Self.sinceKey) }
+    }
+
     private init() {
         let saved = UserDefaults.standard.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode(Reading.self, from: $0) }
@@ -160,6 +197,7 @@ final class RailgunHoldings {
                                  amount: amount, spendable: PrivateMoney.decimal(hex: b.spendable)))
             }
             announceReady(was: reading, now: held)
+            notePending(held)
             reading = held
             readAt = .now
             if let data = try? JSONEncoder().encode(Reading(account: account, held: held, at: .now)) {

@@ -126,6 +126,8 @@ struct CasberiApp: App {
             // The private watch (prd §1562): fresh addresses and approvals
             // while away, through Tor or not at all.
             PrivateWatchTask.register()
+            // Railgun, while the phone charges (prd §2009 item 4).
+            RailgunSyncTask.register()
         }
         // Publish the container so the background task can sweep the corpus
         // for notifications (prd §306) with no view above it. Must be the SAME

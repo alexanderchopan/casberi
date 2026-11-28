@@ -210,6 +210,7 @@ enum RailgunPocket {
                                                            reason: String(localized: "Move to private"), stage: stage)
         let hash = landed(sent)
         NSLog("railgunPocket| shielded | %@ | %@ of %@", hash ?? "not yet seen", amount, token)
+        RailgunHoldings.shared.movedIn(token: token)
         return hash
     }
 
@@ -327,6 +328,43 @@ enum RailgunPocket {
     /// The next send takes a new sender, whatever this one does.
     static func senderUsed(_ sender: (index: UInt32, address: String, root: String)) {
         UserDefaults.standard.set(Int(sender.index - FreshAddress.senderBase) + 1, forKey: senderKey(sender.root))
+    }
+
+    /// **LEFTOVER GAS GOES BACK (prd §2009 item 3).** A one-time sender is
+    /// funded at a fee ceiling it never all spends, and a send that never
+    /// lands spends none (2026-11-18: about $2 left on `...5eea`). What is
+    /// left on each sender used so far moves into Railgun as WETH, from that
+    /// address, when it is worth more than three times that move's own gas.
+    /// Run after a move of yours lands, never on its own.
+    static let leftoverShieldGas = 450_000
+    static func sweepLeftovers() async {
+        guard let network = PrivacyNetwork.forChain(FreshTx.railgunChain), let root = PrivateRootKey.currentID,
+              !DemoMode.isActive else { return }
+        let used = UserDefaults.standard.integer(forKey: senderKey(root))
+        guard used > 0, let fees = try? await PrivateRPC.fees(network) else { return }
+        let cost = Decimal(leftoverShieldGas) * Decimal(fees.maxFee)
+        for i in 0..<used {
+            let index = FreshAddress.senderBase + UInt32(i)
+            guard let address = try? FreshSigner.address(index, root: root),
+                  let read = try? await PrivateRPC.decimal(network, "eth_getBalance", [address, "latest"]),
+                  let held = Decimal(string: read), held > cost * 3 else { continue }
+            let amount = NSDecimalNumber(decimal: held - cost).stringValue
+            do {
+                guard let hexAmount = PrivateMoney.hex(amount) else { continue }
+                _ = try await open(reason: nil)
+                let prepared = try await RailgunEngine.shared.prepareShield(token: RailgunRouting.eth, amount: hexAmount)
+                guard prepared.tx.to.lowercased() == FreshTx.railgunRelayAdapt, prepared.approve == nil,
+                      PrivateMoney.decimal(hex: prepared.tx.value) == amount else { continue }
+                let hash = try await FreshSigner.send(to: prepared.tx.to, data: prepared.tx.data, value: prepared.tx.value,
+                                                      index: index, root: root, from: address, network: network,
+                                                      gas: leftoverShieldGas, tip: fees.tip, maxFee: fees.maxFee,
+                                                      nonceAt: "latest") { _, _ in }
+                RailgunHoldings.shared.movedIn(token: RailgunRouting.eth)
+                NSLog("railgunPocket| leftover gas back | %@ | %@ wei from %@", hash, amount, YourAccount.short(address))
+            } catch {
+                NSLog("railgunPocket| leftover gas stays | %@ | %@", YourAccount.short(address), String(describing: error))
+            }
+        }
     }
 
     /// This send's fresh sender: the next unused index under your root

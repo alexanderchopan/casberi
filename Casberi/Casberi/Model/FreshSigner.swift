@@ -51,9 +51,11 @@ enum FreshSigner {
     /// not a failure. Only the node's own refusal (`refused`) means the
     /// transaction is not out; no answer at all may still mean it is.
     static func send(to: String, data: String, value: String, index: UInt32, root: String, from: String,
-                     network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64,
+                     network: PrivacyNetwork, gas: Int, tip: UInt64, maxFee: UInt64, nonceAt: String = "pending",
                      kept: (_ hash: String, _ nonce: String) -> Void) async throws -> String {
-        let nonce = try await PrivateRPC.call(network, "eth_getTransactionCount", [from, "pending"]) as? String ?? "0x0"
+        // `latest` for a sweep (prd §2009): a send MEV Blocker holds and
+        // never mines must not leave the next one waiting behind it.
+        let nonce = try await PrivateRPC.call(network, "eth_getTransactionCount", [from, nonceAt]) as? String ?? "0x0"
         // **A RAILGUN RELAY IS RUN BEFORE IT IS SENT (prd §1894).** MEV
         // Blocker drops a transaction that would revert and says nothing:
         // a private swap read "Swapped" and was never mined (2026-11-18,

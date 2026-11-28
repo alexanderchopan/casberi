@@ -76,10 +76,19 @@ enum OnItsWay {
     }
 
     /// Moved into Railgun: its screening lists it in about an hour.
-    static func railgun(id: String, title: String, usd: Double?) -> Item {
+    /// `privateBy` says by when (prd §2009).
+    static func railgun(id: String, title: String, usd: Double?, privateBy: Date? = nil) -> Item {
         Item(id: "railgun:" + id, trip: .railgun, title: title, usd: usd,
-             steps: [String(localized: "Moved into Railgun"), String(localized: "Private in about an hour")],
+             steps: [String(localized: "Moved into Railgun"), railgunWait(by: privateBy)],
              current: 1, needs: nil)
+    }
+
+    /// "Private by 4:12 PM" while Railgun's hour runs, "Still being checked"
+    /// past it, "Private in about an hour" with no start known (prd §2009).
+    static func railgunWait(by: Date?, now: Date = .now) -> String {
+        guard let by else { return String(localized: "Private in about an hour") }
+        return by > now ? String(localized: "Private by \(by.formatted(date: .omitted, time: .shortened))")
+            : String(localized: "Still being checked")
     }
 
     /// Deposited for your private account: Aztec carries it, then this phone claims it.

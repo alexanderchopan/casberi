@@ -780,6 +780,8 @@ final class RailgunMove {
                 stage = .working(String(localized: "Confirm with Face ID"))
                 let hash = try await RailgunPocket.transferFromFresh(plan, unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
                 try await Self.mined(hash)
+                // What the one-time sender did not spend goes back (prd §2009 item 3).
+                Task { await RailgunPocket.sweepLeftovers() }
                 finishSteps()
                 stage = .done(String(localized: "Sent privately."))
             case .takeBack where toPrivate:
@@ -795,6 +797,8 @@ final class RailgunMove {
                 let hash = try await RailgunPocket.sendFromFresh(token: picked.contract, amount: picked.units, to: recipient ?? "",
                                                           unlocked: { [weak self] in self?.started(Self.sendFreshPlan, away: true) }) { _ in }
                 try await Self.mined(hash)
+                // What the one-time sender did not spend goes back (prd §2009 item 3).
+                Task { await RailgunPocket.sweepLeftovers() }
                 finishSteps()
                 stage = .done(sentWords)
             case .takeBack where toSomeoneElse:
@@ -810,6 +814,8 @@ final class RailgunMove {
                 stage = .working(String(localized: "Confirm with Face ID"))
                 let hash = try await RailgunPocket.swapFromFresh(plan, unlocked: { [weak self] in self?.started(Self.swapFreshPlan, away: true) }) { _ in }
                 try await Self.mined(hash)
+                // What the one-time sender did not spend goes back (prd §2009 item 3).
+                Task { await RailgunPocket.sweepLeftovers() }
                 finishSteps()
                 stage = .done(String(localized: "Swapped privately."))
             case .swap:
@@ -1040,6 +1046,9 @@ struct MoveRailgunSentence<Head: View>: View {
     @State private var costOpen = false
     /// The note to a private address is being written (prd §1877).
     @FocusState private var writing: Bool
+    /// What is typed in the buy list's search, and what Uniswap's list found (prd §2009).
+    @State private var buySearch = ""
+    @State private var buyFound: [RailgunMove.Buy] = []
     /// The Railgun address being named, and the name typed (prd §1965).
     @State private var saving: String?
     @State private var savingName = ""
@@ -1426,16 +1435,52 @@ struct MoveRailgunSentence<Head: View>: View {
     private func toggleBuy() { toggle(.buy) }
 
     /// What a swap can buy: Railgun's listed tokens on Ethereum, as Move's
-    /// one token list (prd §1910).
+    /// one token list (prd §1910), and **any token on Uniswap's list, found
+    /// by name or symbol (prd §2009 item 2)** in the same bar public Swap's
+    /// For searches in. What comes back is shielded as any token is.
     private var buyList: some View {
-        MoveTokenGrid(places: [MoveTokenPlace(id: "railgun", choices: move.buyChoices.map { b in
-            MoveTokenChoice(id: b.symbol, symbol: b.symbol, network: "Ethereum", badge: MoveSentence.networkMark(chainId: 1),
-                            picked: b == move.buy) {
-                withAnimation(DS.Motion.standard) { move.buy = b; open = .amount }
-                move.amountChanged()
-            }
-        })])
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            TextField(String(localized: "Search"), text: $buySearch,
+                      prompt: Text("Search").foregroundStyle(DS.textTertiary))
+                .dsText(.body17)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+                .padding(.horizontal, DS.Space.s3)
+                .frame(minHeight: DS.Hit.min)
+                .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .task(id: buySearch) { await findBuys() }
+            MoveTokenGrid(places: [MoveTokenPlace(id: "railgun", choices: shownBuys.map { b in
+                MoveTokenChoice(id: b.contract, symbol: b.symbol, network: "Ethereum", badge: MoveSentence.networkMark(chainId: 1),
+                                picked: b == move.buy) {
+                    withAnimation(DS.Motion.standard) { move.buy = b; open = .amount }
+                    move.amountChanged()
+                }
+            })])
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Railgun's seven with nothing typed; what Uniswap's list finds, typed.
+    private var shownBuys: [RailgunMove.Buy] {
+        let term = buySearch.trimmingCharacters(in: .whitespaces)
+        // Never the token being sold.
+        return term.isEmpty ? move.buyChoices : buyFound.filter { $0.contract.lowercased() != move.holding?.contract.lowercased() }
+    }
+
+    /// Uniswap's list on Ethereum, by what is typed, after a pause; only
+    /// tokens on the list, so a look-alike is never offered unasked.
+    private func findBuys() async {
+        let term = buySearch.trimmingCharacters(in: .whitespaces)
+        guard !term.isEmpty else { buyFound = []; return }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        let listed = await YourAccountTokens.list(YourAccountOp.ethereum, term: term)
+        guard !Task.isCancelled, term == buySearch.trimmingCharacters(in: .whitespaces) else { return }
+        buyFound = listed.filter(\.onList).compactMap { l in
+            guard let contract = l.token.contract else { return nil }
+            return RailgunMove.Buy(contract: contract, symbol: l.token.symbol, decimals: l.token.decimals)
+        }.prefix(24).map { $0 }
     }
 
     /// $10 · Half · All (prd §1728 item 1): each types its amount, exact;

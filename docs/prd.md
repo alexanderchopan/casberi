@@ -75794,3 +75794,16 @@ Measured first, on the user's phone (`perf.readings.v1`, 13 landed sends, builds
 1. **Warm-up.** Send within Aztec asks the engine's `warmSend` once the payments are whole (600 ms after the last change): the contracts, the token and how it will pay (`feeFor`, in the sends' own turn). The send after Face ID takes that pick (`takeWarm`) when the payments and the gas list are the same, no transaction reached Aztec since, and it is under 30 s old; otherwise it measures for itself as before. It never asks Face ID: an engine without the account does nothing.
 2. **Timed steps.** Each step (checking, proving, sent, done/failed) logs `sendStep` with its milliseconds since the send began, so one real send says whether checking, the proof or the block is the long part.
 3. **Unmeasured:** the saving itself, until a real send on a phone. The wait for `proposed` is kept: the next send chooses its gas only after this one landed.
+
+## §2009 — Railgun, round two: a move in says by when it turns private, a private swap buys any token Uniswap lists, a one-time sender's leftover gas goes back, and Railgun syncs while the phone charges (amends §1875's buy list, §1726's one-time senders, §1885's first sync) (user, 2026-11-28, of five Railgun gaps listed: "do 1-5"; the second, a broadcaster that takes prepaid fees, has nothing to build until one does) — BUILT
+
+1. **By when (item 5).** A token waiting on Railgun's screening reads "Private by 4:12 PM", and "Still being checked" past the hour, on its Holdings row and its On its way sheet. The hour starts when a move in leaves your account (`RailgunHoldings.movedIn`), else at the first reading that shows it waiting (`pendingSince`, kept on the phone).
+2. **Any token (item 4).** Swap's buy list keeps Railgun's seven, and a search bar over it finds any token on Uniswap's list on Ethereum, as public Swap's For does; off-list tokens are never offered. What comes back is shielded as any token is.
+3. **Leftover gas goes back (item 1).** After a move a one-time sender carried lands, every sender used so far that holds more than three times a shield's gas sends what is left into Railgun as WETH, from that address (`RailgunPocket.sweepLeftovers`), its nonce read at `latest` so a send MEV Blocker holds never blocks it. A one-time address may make exactly the adapter's `multicall` of `wrapBase` and `shield`, carrying ETH (`FreshTx.allowed`). Never reused: the next move still takes a new sender, so moves stay unlinked.
+4. **While the phone charges (item 3).** A background processing task (`com.casberi.app.railgunsync`, the `processing` background mode) asks iOS for a run on power and network, an hour out, where a Railgun wallet exists; it syncs and reads the balance. **UNMEASURED:** iOS decides if it runs; the engine's web view in the background has not run on a phone.
+
+**Not seen:** a sweep on mainnet (the ...5eea leftover is the first it would take), a search-found token swapped, the background run.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+**Checks.** `railgun-selftest.sh`: by when, the hour's start, the search and its list-only rule, the sweep's threshold, nonce and allowlist, all three moves sweeping, the task's power rule and permitted id.
