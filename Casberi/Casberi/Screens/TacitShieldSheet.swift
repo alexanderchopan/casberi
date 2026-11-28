@@ -24,6 +24,8 @@ struct TacitShieldSheet: View {
     var header: AnyView? = nil
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
+    /// Your public TAC is being read again (`readPublic`).
+    @State private var readingPublic = false
     private var walletHeld: Double { account.reading?.publicTAC ?? 0 }
     private var accountHeld: Double { account.reading?.accountTAC ?? 0 }
     /// Where it comes from: your Casberi account first when it holds TAC
@@ -87,11 +89,20 @@ struct TacitShieldSheet: View {
         .onAppear { shield.reset() }
         // The rate the receipt says (prd §2004), read once an hour.
         .task { await TacitAccount.shared.readChainYield() }
+        // **YOUR PUBLIC TAC, READ AS THE SHEET OPENS (user, 2026-11-27: "i
+        // am told i don't have any tac").** The last reading may never have
+        // read it; until this read answers, the sheet says it is reading.
+        .task {
+            guard !DemoMode.isActive else { return }
+            readingPublic = true
+            await account.readPublic()
+            readingPublic = false
+        }
     }
 
     private var busy: Bool {
         switch shield.step {
-        case .proving, .signing, .handing: true
+        case .proving, .readyToSign, .signing, .handing: true
         default: false
         }
     }
@@ -175,7 +186,7 @@ struct TacitShieldSheet: View {
 
     private var sending: Bool {
         switch shield.step {
-        case .proving, .signing, .handing, .arriving, .landed: return true
+        case .proving, .readyToSign, .signing, .handing, .arriving, .landed: return true
         default: return false
         }
     }
@@ -280,7 +291,14 @@ struct TacitShieldSheet: View {
             if stepsRun?.isRunning != true {
                 steps.forget(.move)
                 steps.begin(.move, plan: Self.plan, quiet: true)
+                // **THE PROOF GOES BEHIND THE SHEET (prd §2006):** it can take
+                // minutes and asks nobody; it waits at Ready to sign.
+                if let onAway = shield.onAway, steps.sendAway(from: .tacitIn, landed: String(localized: "Made private on Tacit")) {
+                    onAway()
+                }
             }
+        case .readyToSign:
+            DSHaptic.success()
         case .signing: steps.mark(.signing)
         case .handing:
             steps.mark(.sent)
@@ -314,6 +332,8 @@ struct TacitShieldSheet: View {
                 }
             case .proving:
                 MoveFootWord(word: String(localized: "Proving…"), ink: DS.textSecondary)
+            case .readyToSign:
+                MoveHoldWord(word: String(localized: "Hold to sign"), enabled: true) { shield.signNow() }
             case .signing:
                 MoveFootWord(word: String(localized: "Waiting for your co-signer"), ink: DS.textSecondary)
             case .handing:
@@ -347,6 +367,7 @@ struct TacitShieldSheet: View {
     }
 
     private var footWaiting: String {
+        if readingPublic, held <= 0 { return String(localized: "Reading your TAC") }
         guard let tac, tac > 0 else { return String(localized: "Type an amount") }
         if tac > held { return String(localized: "More than it holds") }
         switch account.phase {

@@ -118,7 +118,67 @@ enum TacitFarms {
         }.joined(separator: "/")
     }
 
-    /// Tacit's own farm page, where a farm is entered and left.
+    /// **WHAT THE DeFi POOL HOLDS FOR YOU (prd §2006).** Leaving a farm
+    /// pays back the pair's two coins and the reward, wTAC, all as private
+    /// notes in Tacit's DeFi pool. TAC and cTAC count as TAC; wTAC, the
+    /// farms' reward, stands as its own coin, said by its name (user: "if it
+    /// is wTac we need to say it"), priced as the TAC it unwraps to; every
+    /// other coin by the name Tacit's page gives it: cETH is ETH, cUSD is USD.
+    static func coins(_ held: [TacitEngineWire.Held]) -> (tac: Double, others: [String: Double]) {
+        var tac = 0.0
+        var others: [String: Double] = [:]
+        for h in held {
+            guard let amount = h.amount, amount > 0 else { continue }
+            if ["TAC", "cTAC"].contains(h.ticker) { tac += amount; continue }
+            others[coinName(h.ticker), default: 0] += amount
+        }
+        return (tac, others)
+    }
+
+    /// **A FARM YOU ARE IN STOPS PAYING (prd §2006).** Needs you says it a
+    /// week before this round's rewards end, and once they have while you
+    /// are still in: the position keeps its coins and earns nothing more
+    /// unless Tacit adds a round. Never for a farm you are not in.
+    struct Ask: Equatable, Identifiable {
+        let lpAsset: String
+        let pair: String
+        let endsAt: Date
+        let ended: Bool
+        var id: String { lpAsset }
+    }
+
+    /// How long before the end Needs you says it.
+    static let askAhead: TimeInterval = 7 * 86_400
+
+    static func asks(_ positions: [Position], in reading: Reading?, now: Date = .now) -> [Ask] {
+        guard let reading else { return [] }
+        let ended = !reading.active || reading.endsAt <= now
+        guard ended || reading.endsAt.timeIntervalSince(now) <= askAhead else { return [] }
+        return positions.filter { $0.shares > 0 }.map {
+            Ask(lpAsset: $0.lpAsset, pair: name($0.pair), endsAt: reading.endsAt, ended: ended)
+        }
+    }
+
+    /// "Stops paying Dec 19", or "Stopped paying Dec 19".
+    static func askLine(_ ask: Ask) -> String {
+        let day = ask.endsAt.formatted(.dateTime.month(.abbreviated).day())
+        return ask.ended ? String(localized: "Stopped paying \(day)") : String(localized: "Stops paying \(day)")
+    }
+
+    /// One coin the DeFi pool holds for you, by name.
+    struct Coin: Equatable, Identifiable {
+        let name: String
+        let amount: Double
+        var id: String { name }
+    }
+
+    /// A pool ticker as a coin's name: "cETH" is "ETH", "SPX" is "SPX".
+    static func coinName(_ ticker: String) -> String {
+        guard ticker.count > 1, ticker.first == "c", let second = ticker.dropFirst().first, second.isUppercase else { return ticker }
+        return String(ticker.dropFirst())
+    }
+
+    /// Tacit's own farm page, where a farm is entered.
     static let page = URL(string: "https://tacit.finance/farm/")!
 
     /// The demo's farms: the real pools as read on 2026-11-26.

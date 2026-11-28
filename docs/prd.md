@@ -75739,3 +75739,17 @@ Under Fee, You get and Arrives, Make private's receipt adds "Earned: about 12% a
 **Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2006 — Withdraw from a Tacit farm in Earn; what it pays back counts; Needs you when it stops paying; Make private proves behind its sheet (amends §1993's "entered and left on Tacit's page") (user, 2026-11-27: "ok lets build all your suggestions then", then "Yes, skip Join")
+
+1. **Withdraw, not Join.** A farm you are in is left from Casberi: Earn's Withdraw lists it, Earn's home lists it under Earning, and its Holdings row's page has Withdraw. Joining stays on Tacit's site (it needs private ETH and TAC in Tacit's DeFi pool, split to the pool's ratio, and a gas-paid send from your account; this round pays for three more weeks). Two verbs, Deposit and Withdraw; no Claim of its own.
+2. **Tacit's own three steps** (`dapp/farm-ops.js`, vendored at the pinned commit): claim what it earned (as wTAC, TAC 1:1), release the shares, take them out as the pair's two coins. Signed in the engine with your Tacit key; Tacit's relay proves and sends each step (and sees its amounts), so nothing is sent from your account and there is no Face ID. Each step reads the chain again, so Try again picks up where the last stopped. A relay that will not send for free says so; Casberi does not send it from your account.
+3. **The page:** From Tacit farm · Token the pair · Amount All (a position bonds whole); Earned, Earns today, You get, Fee (from the pool's first coin), Arrives; no footnote (user: "why do we need all this language"), the relay's view said once, in Settings' hosts. Done is one line, "Back in Tacit: 0.0512 ETH, 99.1 TAC and 3.42 wTAC" (user: "if it is wTac we need to say it"); Earned is "3.42 wTAC ($2.67)"; a failure is "Tacit is busy. Try again later" or "Tacit didn't finish. Try again". Once started it goes behind the sheet; the capsule reopens it.
+4. **What a farm pays back counts.** The DeFi read names every coin it holds: TAC and cTAC are TAC; wTAC is its own Tacit row, at TAC's price (it unwraps one for one); cETH adds to private ETH; any other coin stands as its own row, dollars only for Tacit's USD and wTAC.
+5. **Needs you:** a farm you are in, a week before its rewards end and after they have — "Stops paying Dec 19 · Withdraw". A rate drop is not said: the farm program keeps no history to measure it against.
+6. **Make private proves behind its sheet** (user: "if it needs that long it should be in the background"): the sheet goes at Proving, and the deposit waits at **Ready to sign** — a capsule tap reopens it on Hold to sign, and a notification says so while you are away. Past 50 minutes waiting it asks for a new proof (the deposit stands an hour).
+7. **Holdings' total adds Tacit** as Home's does (user: "i have 90 public and 83 private, but total shows only 112"): the portfolio's private venue never held Tacit.
+
+**Not seen:** a live withdrawal — the user is in no farm; drawn on the demo (`-tacitFarmOpen YES`, `-tacitFarmSample done|failed`). `tacit-engine-selftest.sh` holds each step to its method and nothing that joins; `tacit-farms-selftest.sh` holds the coins and the asks.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

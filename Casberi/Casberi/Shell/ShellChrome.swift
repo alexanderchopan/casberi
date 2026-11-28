@@ -268,6 +268,10 @@ final class ShellChrome {
     /// Move raised onto Tacit's Send: Holdings' private TAC row's page
     /// (back to public, or to another Tacit account). Cleared when the tray leaves.
     var moveTacitOut = false
+    /// Move raised onto Withdraw from a Tacit farm (prd §2006), by its pool's
+    /// LP-share asset id: a farm row in Holdings, or its capsule. Cleared
+    /// when the tray leaves.
+    var moveTacitFarm: String?
     /// Move raised onto Tacit's Make private: a failed one's capsule (prd
     /// §2005). Cleared when the tray leaves.
     var moveTacitIn = false

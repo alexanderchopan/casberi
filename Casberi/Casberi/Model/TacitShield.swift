@@ -27,6 +27,11 @@ final class TacitShield {
         case quoting
         case ready
         case proving
+        /// **PROVED BEHIND THE SHEET, WAITING FOR YOU (prd §2006; user,
+        /// 2026-11-27: "if it needs that long it should be in the
+        /// background").** The proof ran while you were elsewhere; the
+        /// co-signer's signature needs you, so it waits for the sheet again.
+        case readyToSign
         case signing(done: Int, of: Int)
         case handing
         case arriving
@@ -46,10 +51,34 @@ final class TacitShield {
         let steps = PrivateSendSteps.shared
         guard steps.awayFrom == .tacitIn else { return }
         switch step {
+        case .readyToSign: steps.mark(.signing, from: .tacitIn)
         case .arriving, .landed: steps.finish(from: .tacitIn)
         case .failed(let why): steps.fail(why, from: .tacitIn)
         default: break
         }
+    }
+
+    /// The proof is done and the sheet is gone: wait for you to open it and
+    /// hold to sign. A proof's deposit stands an hour (`deadline`), so a
+    /// wait past 50 minutes asks for a new one.
+    private func waitIfAway() async throws {
+        guard PrivateSendSteps.shared.awayFrom == .tacitIn else { return }
+        let since = Date()
+        step = .readyToSign
+        let tac = TacitAccountRows.amount(Double(units) / 1e8)
+        Task { await Notifications.outcome(.needsYou, id: "tacit:sign:\(Int(since.timeIntervalSince1970))", place: TacitAccount.name,
+                                           body: String(localized: "\(tac) TAC is proved. Open Casberi to sign it with your co-signer"),
+                                           mark: TacitAccount.name) }
+        await withCheckedContinuation { signGo = $0 }
+        if Date().timeIntervalSince(since) > 50 * 60 { throw Stop.tooLong }
+    }
+    @ObservationIgnored private var signGo: CheckedContinuation<Void, Never>?
+
+    /// The sheet is open again and you held to sign.
+    func signNow() {
+        guard case .readyToSign = step else { return }
+        signGo?.resume()
+        signGo = nil
     }
     private(set) var quote: TacitEngineWire.ShieldQuote?
     private(set) var units: UInt64 = 0
@@ -130,6 +159,7 @@ final class TacitShield {
                                                units: units, chainInbox: chainInbox, balance: balance, now: .now) {
                 throw Stop.refused(problem)
             }
+            try await waitIfAway()
             // 3. The first time, Tacit's message once more: the same key.
             if !alikeDone {
                 step = .signing(done: 0, of: signatures)
@@ -192,6 +222,7 @@ final class TacitShield {
                                                        chainInbox: chainInbox, balance: balance) {
                 throw Stop.refused(problem)
             }
+            try await waitIfAway()
             // The first time, Tacit's message once more: the same key.
             if !alikeDone {
                 step = .signing(done: 0, of: 2)
@@ -297,7 +328,16 @@ final class TacitShield {
         }
     }
 
+    /// Proved, signing or handing: nothing starts it again, nothing resets it.
+    var inFlight: Bool {
+        switch step {
+        case .proving, .readyToSign, .signing, .handing: true
+        default: false
+        }
+    }
+
     func reset() {
+        guard !inFlight else { return }
         step = .idle
         quote = nil
         units = 0

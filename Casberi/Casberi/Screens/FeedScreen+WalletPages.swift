@@ -185,7 +185,9 @@ extension FeedScreen {
         let orders = walletShowsPrivate ? YourAccountOrders.open.count : 0
         // Money on its way out of Aztec, to finish on Ethereum (prd §1700e).
         let exits = walletShowsPrivate ? AztecAccountStore.shared.pendingExits.count : 0
-        return rows + walletSignatureWarnings.count + nudges + cards + deposits + orders + exits
+        // A Tacit farm you are in stops paying (prd §2006).
+        let farms = walletShowsPrivate ? TacitAccount.shared.farmAsks.count : 0
+        return rows + walletSignatureWarnings.count + nudges + cards + deposits + orders + exits + farms
     }
 
     /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
@@ -1028,6 +1030,7 @@ extension FeedScreen {
         // A limit order waiting for its price (prd §1673 item 7).
         if walletShowsPrivate { WalletOrderAsks() }
         if walletShowsPrivate { WalletAztecExitAsks() }
+        if walletShowsPrivate { WalletFarmAsks() }
         Section {
             if onAll && RecoveryKeyNudge.shown { RecoveryKeyNudge().listRow }
             // The monthly check (prd §1515): one row when it is due.

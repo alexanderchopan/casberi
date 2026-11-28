@@ -15,7 +15,8 @@ import { makeChainWallet, worthOf } from '../vendor/dapp/tacit-chain-wallet.js';
 import { chainSeed } from '../vendor/dapp/tacit-chain-lane.js';
 import { secp, keccak_256, sha256, hexToBytes, bytesToHex } from '../vendor/dapp/vendor/tacit-deps.min.js';
 // Tacit's DeFi pool, its private pool on Ethereum: Tacit's own pool library
-// (vendor/dapp/confidential-pool-ux.js, MIT), for its `balance` read ONLY.
+// (vendor/dapp/confidential-pool-ux.js, MIT), for its `balance` read and,
+// since prd §2006, the three steps that leave a farm.
 // It is where a Tacit-chain deposit the chain does not take goes back to.
 import { makeConfidentialPoolUx } from '../vendor/dapp/confidential-pool-ux.js';
 import { setActiveNetwork } from '../vendor/dapp/confidential-deployments.js';
@@ -29,6 +30,10 @@ import { makeChainClient } from '../vendor/dapp/tacit-chain-client.js';
 import { makeTacitAddress } from '../vendor/dapp/tacit-address.js';
 import { makeHalo2System } from '../vendor/dapp/btc-pool-halo2-prover.js';
 import pin from '../vendor/dapp/btc-pool/pin.json';
+// Leaving a farm (prd §2006): Tacit's own farm steps, as its Earn tab takes
+// them. Each step is built and signed here with the account's key and
+// proved and sent by Tacit's relay; the app's own account sends nothing.
+import * as farmOps from '../vendor/dapp/farm-ops.js';
 
 const POSEIDON = { 2: poseidon2, 3: poseidon3, 4: poseidon4, 5: poseidon5 };
 const poseidon = (xs) => POSEIDON[xs.length](xs);
@@ -285,6 +290,77 @@ const methods = {
     } finally { key.fill(0); }
   },
 
+  // LEAVING A FARM (prd §2006), in Tacit's own three steps, each its own
+  // call so the app can say where it stands and pick up where it stopped:
+  // 1. `farmClaim`: harvest what the position has earned, as a wTAC note.
+  //    A harvest re-stamps the position, so it goes first: an unbond pays
+  //    out nothing unharvested.
+  // 2. `farmRelease`: unbond the position's shares back as an LP-share note.
+  //    The few seconds earned since the claim, under 0.01 TAC, are left to
+  //    the farm (Tacit's own rule, `HARVEST_WORTH`).
+  // 3. `farmTakeOut`: take each LP-share note of that pool out of the pool
+  //    as its two coins, the relay's fee from the first.
+  // Every step is signed here and proved and sent by Tacit's relay, which
+  // sees the step's witness; nothing is sent from your Casberi account.
+  async farmClaim({ lpAsset }) {
+    if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+    await settle('farm claim');
+    const key = Uint8Array.from(identity);
+    try {
+      const pos = await farmPosition(key, lpAsset);
+      if (!pos) return { claimed: '0x0', position: false };
+      if (!farmOps.unharvested(pos)) return { claimed: '0x0', position: true };
+      const t = now();
+      say('farm claim begins');
+      const r = await farmOps.harvest(poolUx(), key, pos).catch(farmStep('Claim'));
+      say(`farm claim settled at ${Math.round(now() - t)} ms`);
+      return { claimed: hex(r.net ?? r.reward ?? 0n), position: true, tx: String(r.txHash || '') };
+    } finally { key.fill(0); }
+  },
+
+  async farmRelease({ lpAsset }) {
+    if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+    await settle('farm release');
+    const key = Uint8Array.from(identity);
+    try {
+      const pos = await farmPosition(key, lpAsset);
+      if (!pos) return { shares: '0x0', position: false };
+      const t = now();
+      say('farm release begins');
+      const r = await farmOps.unbond(poolUx(), key, pos).catch(farmStep('Release'));
+      say(`farm release settled at ${Math.round(now() - t)} ms`);
+      return { shares: hex(r.shares ?? pos.shares ?? 0n), position: true, tx: String(r.txHash || '') };
+    } finally { key.fill(0); }
+  },
+
+  async farmTakeOut({ lpAsset }) {
+    if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
+    await settle('farm take out');
+    const key = Uint8Array.from(identity);
+    try {
+      const row = await farmPoolRow(lpAsset);
+      const ux = poolUx();
+      // The released note, read fresh with its witness: a scan right after
+      // the release may not have it yet, so a few passes, a few seconds apart.
+      let notes = [];
+      for (let pass = 0; pass < 6 && !notes.length; pass++) {
+        if (pass) await new Promise((r) => setTimeout(r, 5000));
+        const b = await ux.balance(key, { spent: true, positions: false, recent: 150 });
+        notes = farmOps.lpNotes(b.notes, row);
+      }
+      if (!notes.length) return { out: [], found: false };
+      const t = now();
+      const out = [];
+      for (const note of notes) {
+        say('farm take out begins');
+        const r = await farmOps.takeOut(ux, key, row, note).catch(farmStep('TakeOut'));
+        say(`farm take out settled at ${Math.round(now() - t)} ms`);
+        out.push(heldRow(r.assetA, r.netA), heldRow(r.assetB, r.dB));
+      }
+      return { out: out.filter(Boolean), found: true };
+    } finally { key.fill(0); }
+  },
+
   // What a deposit of `units` (TAC, 8 decimals) costs and lands as now.
   async shieldQuote({ rpcUrl, blocks, leader, units }) {
     const c = await chainClient({ rpcUrl, blocks, leader });
@@ -486,8 +562,49 @@ async function readDefi() {
     return {
       worth: hex(held ? held.value : 0n), notes: held?.notes?.length ?? 0, leaves: Number(r.leafCount ?? 0),
       whole: !r.reading, errors: Object.keys(r.diag?.errors || {}), passes, ms: Math.round(now() - t),
+      // Everything else the pool holds for you, by asset: what a farm you
+      // left paid back (the pair's two coins, and its reward as wTAC).
+      // `decimals` is the asset's in-pool unit; an LP share is left out.
+      held: Object.values(r.byAsset || {}).map((x) => heldRow(x.asset, x.value)).filter(Boolean),
     };
   } finally { key.fill(0); }
+}
+
+// One asset the DeFi pool holds for you, named: wTAC, the farms' reward, by
+// its id; an LP share or an asset with no ticker, nothing.
+function heldRow(asset, value) {
+  const id = String(asset || '').toLowerCase();
+  const farm = pool?.cfg?.farm;
+  if (farm?.rewardAsset && id === String(farm.rewardAsset).toLowerCase()) return { ticker: 'wTAC', value: hex(value), decimals: 8 };
+  const ticker = pool?.tickerOf?.(id);
+  if (!ticker) return null;
+  return { ticker: String(ticker), value: hex(value), decimals: Number(pool.assetByTicker?.[ticker]?.tacitDecimals ?? 8) };
+}
+
+// Your farm position in the pool `lpAsset` names, as the farm reads it now.
+async function farmPosition(key, lpAsset) {
+  const list = await poolUx().farmPositions({ walletPriv: key });
+  return list.find((p) => String(p.lpAsset).toLowerCase() === String(lpAsset).toLowerCase()) || null;
+}
+
+// The farm's pool row (its two coins and fee tier), for taking shares out.
+async function farmPoolRow(lpAsset) {
+  const ux = poolUx();
+  const a = await ux.farmProgram().aprInputs();
+  const p = a.pools.find((x) => String(x.lpAsset).toLowerCase() === String(lpAsset).toLowerCase());
+  if (!p?.amm) throw Object.assign(new Error('the farm has no pool for that share'), { name: 'NoFarm' });
+  const tier = (ux.cfg?.farm?.pools || []).find((x) => String(x.lpAsset).toLowerCase() === String(lpAsset).toLowerCase());
+  return { lpAsset: p.lpAsset, reserves: { assetA: p.amm.assetA, assetB: p.amm.assetB }, feeBps: Number(tier?.feeBps ?? 30) };
+}
+
+// A step the relay would not send for free names itself, so the app can say
+// "Tacit's relay is busy" instead of a raw error: Casberi does not send it
+// from your account (Tacit's page would, for a network fee).
+function farmStep(name) {
+  return (e) => {
+    if (farmOps.ownSend(e)) throw Object.assign(new Error(String(e?.message || 'the relay will not send this now')), { name: 'RelayBusy' });
+    throw Object.assign(new Error(String(e?.message || e)), { name: e?.name && e.name !== 'Error' ? e.name : name });
+  };
 }
 
 const bigintSafe = (_, v) => (typeof v === 'bigint' ? hex(v) : v);

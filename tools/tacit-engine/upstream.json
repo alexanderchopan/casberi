@@ -251,6 +251,10 @@
       "from": "dapp/evm-tx.js",
       "sha256": "4e36f5459252e32a10e7503f6f918ac3e6063168fa6b5351c0c2b90385014f1b"
     },
+    "vendor/dapp/farm-ops.js": {
+      "from": "dapp/farm-ops.js",
+      "sha256": "c5192cc45489dca57c209c438af0784fe092ab89164eb85ec426f79d5b80a061"
+    },
     "vendor/dapp/point-multiples.js": {
       "from": "dapp/point-multiples.js",
       "sha256": "5addc65bd95fb190db2cf93f6653211c650f0ce9981e087fce9784cf03c2694f"

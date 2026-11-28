@@ -39,7 +39,7 @@ struct MoveSentence: View {
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
          privately: PrivateMove.Mode? = nil, lending: LendMove.Mode? = nil,
          aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil,
-         tacitOut: Bool = false, tacitIn: Bool = false) {
+         tacitOut: Bool = false, tacitIn: Bool = false, tacitFarm: String? = nil) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
@@ -53,11 +53,15 @@ struct MoveSentence: View {
         let opensTacit = tacitOut && mode == nil && aztec == nil && railgun == nil && !lends
         // A failed Make private's capsule opens its sheet again (prd §2005).
         let opensTacitIn = tacitIn && mode == nil && aztec == nil && railgun == nil && !lends && !opensTacit
-        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil || opensTacit || opensTacitIn ? .send : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        // A farm row in Holdings, or its capsule, opens Withdraw on it (prd §2006).
+        let opensFarm = tacitFarm != nil && mode == nil && aztec == nil && railgun == nil && !lends && !opensTacit && !opensTacitIn
+        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil || opensTacit || opensTacitIn ? .send : lends || opensFarm ? .lend : opening ?? (arrival == nil ? .swap : .receive))
         _tacitOpen = State(initialValue: opensTacitIn)
         _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
         // A private TAC row's Send opens Tacit's own Send in Move.
         _tacitOutOpen = State(initialValue: opensTacit)
+        _tacitFarm = State(initialValue: opensFarm ? tacitFarm : nil)
+        _tacitFromEarn = State(initialValue: opensFarm)
         _fresh = State(initialValue: arrival != nil)
         _privateMode = State(initialValue: mode)
         _privateMove = State(initialValue: PrivateMove(mode: mode ?? .deposit))
@@ -83,7 +87,7 @@ struct MoveSentence: View {
         }
         _railgunMove = State(initialValue: railgunMove)
         _railgunOpen = State(initialValue: railgun != nil)
-        picksUpDraft = mode == nil && aztec == nil && railgun == nil && opening == nil && arrival == nil && !lends && !opensTacit
+        picksUpDraft = mode == nil && aztec == nil && railgun == nil && opening == nil && arrival == nil && !lends && !opensTacit && !opensTacitIn && !opensFarm
     }
 
     /// **LEND (prd §1674): a verb.** Picked, `MoveLendSentence` draws under
@@ -115,6 +119,8 @@ struct MoveSentence: View {
     @State private var tacitOutOpen = false
     /// Tacit's sheets opened from Earn (prd §2005): they wear Earn's title.
     @State private var tacitFromEarn = false
+    /// Withdraw from a Tacit farm (prd §2006), by its pool's LP-share id.
+    @State private var tacitFarm: String?
     /// A Tacit address typed in To (prd §1982): the private send's recipient.
     @State private var tacitPayTo: String?
     @State private var tacitAgainAmount: String?
@@ -1528,6 +1534,10 @@ struct MoveSentence: View {
                         tacitFromEarn = true
                         if mode == .lend { tacitOpen = true } else { tacitPayTo = nil; tacitOutOpen = true }
                     }
+                }, farm: { lpAsset in
+                    // Withdraw from a Tacit farm (prd §2006), Earn's title over it.
+                    DSHaptic.selection()
+                    withAnimation(DS.Motion.standard) { tacitFromEarn = true; tacitFarm = lpAsset }
                 }, privately: { mode in
                     // Aave, privately: Privacy Pools' move in, or its Send
                     // back to your account (2026-11-27).
@@ -1546,7 +1556,7 @@ struct MoveSentence: View {
                     buy = Tokens.Listed(token: token, name: token.symbol, onList: true)
                     buyOn = nil
                 }) { verbWord(lendWord) }
-                    .opacity(tacitOpen || tacitOutOpen ? 0 : 1)
+                    .opacity(tacitOpen || tacitOutOpen || tacitFarm != nil ? 0 : 1)
                     .transition(.opacity)
             }
             if railgunOpen, privateMode == nil, open != .verb {
@@ -1569,6 +1579,12 @@ struct MoveSentence: View {
                 TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil; tacitAgainAmount = nil; tacitFromEarn = false } },
                               payTo: tacitPayTo, startAmount: tacitAgainAmount,
                               header: tacitFromEarn && tacitPayTo == nil ? earnKinds(.takeBack) : nil)
+                    .transition(.opacity)
+            }
+            if let lpAsset = tacitFarm, privateMode == nil, open != .verb {
+                TacitFarmOutSheet(lpAsset: lpAsset,
+                                  leave: { withAnimation(DS.Motion.standard) { tacitFarm = nil; tacitFromEarn = false } },
+                                  header: farmKinds)
                     .transition(.opacity)
             }
             if tacitOpen, privateMode == nil, open != .verb {
@@ -1610,6 +1626,7 @@ struct MoveSentence: View {
         .animation(DS.Motion.standard, value: railgunOpen)
         .animation(DS.Motion.standard, value: tacitOpen)
         .animation(DS.Motion.standard, value: tacitOutOpen)
+        .animation(DS.Motion.standard, value: tacitFarm)
         .animation(DS.Motion.standard, value: verb)
     }
 
@@ -3400,11 +3417,12 @@ struct MoveSentence: View {
             open = nil
             // Receive opens on its three addresses, every time (prd §1803).
             receiveOther = false
-            guard v != verb || receipt != nil || privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || tacitOutOpen else { return }
+            guard v != verb || receipt != nil || privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || tacitOutOpen || tacitFarm != nil else { return }
             privateMode = nil
             railgunOpen = false
             tacitOpen = false
             tacitOutOpen = false
+            tacitFarm = nil
             tacitFromEarn = false
             aztecMode = nil
             verb = v
@@ -3474,17 +3492,39 @@ struct MoveSentence: View {
     /// **EARN'S TITLE OVER TACIT'S SHEETS (prd §2005).** Opened from Earn,
     /// Make private is Deposit and back to public is Withdraw: Earn goes
     /// home, and the other verb opens Tacit's other sheet.
+    /// Over a farm's Withdraw (prd §2006): Earn goes home, Deposit to
+    /// Earn's own Deposit, where the farms are listed; Withdraw is this page.
+    private var farmKinds: AnyView {
+        AnyView(MoveKindTitle(kinds: [
+            MoveKindTitle.Kind(id: "home", word: String(localized: "Earn"), on: false) {
+                withAnimation(DS.Motion.standard) {
+                    tacitFarm = nil; tacitFromEarn = false
+                    lendMove.mode = .lend
+                    lendMove.home = true
+                }
+            },
+            MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: false) {
+                withAnimation(DS.Motion.standard) {
+                    tacitFarm = nil; tacitFromEarn = false
+                    lendMove.mode = .lend
+                    lendMove.home = false
+                }
+            },
+            MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: true) {},
+        ], disabled: TacitFarmOut.shared.inFlight))
+    }
+
     private func earnKinds(_ on: LendMove.Mode) -> AnyView {
         AnyView(MoveKindTitle(kinds: [
             MoveKindTitle.Kind(id: "home", word: String(localized: "Earn"), on: false) {
                 withAnimation(DS.Motion.standard) {
-                    tacitOpen = false; tacitOutOpen = false; tacitPayTo = nil; tacitFromEarn = false
+                    tacitOpen = false; tacitOutOpen = false; tacitFarm = nil; tacitPayTo = nil; tacitFromEarn = false
                     lendMove.mode = .lend
                     lendMove.home = true
                 }
             },
             MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: on == .lend) {
-                withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil; tacitOpen = true }
+                withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitFarm = nil; tacitPayTo = nil; tacitOpen = true }
             },
             MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: on == .takeBack) {
                 withAnimation(DS.Motion.standard) { tacitOpen = false; tacitPayTo = nil; tacitOutOpen = true }
@@ -3995,7 +4035,7 @@ struct MoveSentence: View {
     /// Another sentence is mounted over this page (Lend, a private send,
     /// Receive privately): this one is hidden and takes no touch.
     private var coveredByAnother: Bool {
-        (privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || tacitOutOpen || verb == .lend) && open != .verb
+        (privateMode != nil || aztecMode != nil || railgunOpen || tacitOpen || tacitOutOpen || tacitFarm != nil || verb == .lend) && open != .verb
     }
 
     /// Whether this row's menu is up; closed by a tap outside it, the list
@@ -4309,7 +4349,7 @@ struct MoveSentence: View {
         guard verb == .send || verb == .swap || verb == .buy || verb == .deposit, open == nil, focus == nil, receipt == nil, stage == nil else { return }
         // Never from under a sentence Move has mounted over this one (a
         // private send, Receive privately, Lend): its menu rose over theirs.
-        guard privateMode == nil, aztecMode == nil, !railgunOpen, !tacitOpen, !tacitOutOpen, chrome.moveLend == nil else { return }
+        guard privateMode == nil, aztecMode == nil, !railgunOpen, !tacitOpen, !tacitOutOpen, tacitFarm == nil, chrome.moveLend == nil else { return }
         let pick = Self.unpicked
         guard let next = choiceRowList.first(where: { $0.value == pick })?.opens else { return }
         tapBlank(next == .amount && with == nil && verb != .deposit ? .with : next)

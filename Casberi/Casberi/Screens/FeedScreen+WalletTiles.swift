@@ -250,7 +250,12 @@ extension FeedScreen {
         // (prd §1716): every offered window holds two samples or more, so the
         // whole record's line is nil exactly when the window's is.
         let chart = TokenChart.from(samples: samples)
-        let total = portfolioShown.map(\.totalUSD).flatMap { $0 > 0 ? $0 : nil }
+        // **TACIT COUNTS HERE AS ON HOME (user, 2026-11-27: "i have 90 public
+        // and 83 private, but total shows only 112").** The portfolio's
+        // private venue is Privacy Pools, Railgun and Aztec; your Tacit
+        // account is read apart, so Home added it and this box did not.
+        let tacitUSD = walletShowsPrivatePlaces ? walletTacitUSD : 0
+        let total = portfolioShown.map { $0.totalUSD + tacitUSD }.flatMap { $0 > 0 ? $0 : nil }
         // The addresses' readings say nothing about an app the menu picked.
         let warnings = selectedSeat == nil ? walletLive.warnings : []
         let chips = selectedSeat == nil ? walletFaceChipEntries : []

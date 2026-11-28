@@ -70,7 +70,22 @@ struct MoveKindTitle: View {
     let kinds: [Kind]
     var disabled = false
 
+    /// **ONE SIZE FOR EVERY WORD (user, 2026-11-27, of Earn · Deposit ·
+    /// Withdraw: "why is withdraw in smaller font").** Each word shrank on its
+    /// own, so only the last that did not fit got smaller; the row now steps
+    /// down a rung as a whole until it fits.
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            row(.heading34)
+            row(.heading28)
+            row(.heading24)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .disabled(disabled)
+        .animation(DS.Motion.standard, value: kinds.map(\.on))
+    }
+
+    private func row(_ rung: DSTextStyle) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
             ForEach(kinds) { k in
                 Button {
@@ -79,19 +94,16 @@ struct MoveKindTitle: View {
                     DSHaptic.selection()
                 } label: {
                     Text(verbatim: k.word)
-                        .dsText(.heading34)
+                        .dsText(rung)
                         .foregroundStyle(k.on ? DS.textPrimary : DS.textSecondary)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                        .fixedSize()
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressSpring())
                 .accessibilityAddTraits(k.on ? [.isSelected, .isHeader] : [])
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .disabled(disabled)
-        .animation(DS.Motion.standard, value: kinds.map(\.on))
     }
 }
 

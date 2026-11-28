@@ -285,8 +285,8 @@ extension FeedScreen {
         if let reading = tacit.reading, tacit.countedUSD != nil {
             // Under Tacit's header each line is its networks (prd §1973
             // item 2); dollars only where there is a price.
-            if reading.eth > 0 {
-                walletTacitLine("ETH", held: WalletValue.held(reading.eth), fact: tacitEthLine(reading, place: false),
+            if reading.ethAll > 0 {
+                walletTacitLine("ETH", held: WalletValue.held(reading.ethAll), fact: tacitEthLine(reading, place: false),
                                 figure: tacit.usd.map { mask ?? WalletValue.exactMoney($0) },
                                 move: tacit.usd == nil ? nil : walletHoldingMoves[HoldingMoves.key("ETH")])
             }
@@ -328,16 +328,26 @@ extension FeedScreen {
                                                        usd: mask == nil ? tacit.privateTacUSD : nil,
                                                        line: String(localized: "Tacit chain · Tacit"), verbs: [.tacitSend]))
             }
+            // **WHAT A FARM PAID BACK (prd §2006):** every other coin the DeFi
+            // pool holds for you, its amount, dollars only for Tacit's USD.
+            ForEach(reading.defiOthers) { coin in
+                walletTacitLine(coin.name, held: WalletValue.held(coin.amount), fact: String(localized: "Tacit"),
+                                figure: tacit.usd(coin: coin.name, coin.amount).map { mask ?? WalletValue.exactMoney($0) }, move: nil)
+            }
             // **YOUR FARMS (prd §1993):** each position its pair, with the TAC
-            // it has earned and not claimed; its worth counts in Private.
-            // Entered and left on Tacit's page, from Earn, so the row opens
-            // nothing, as Tacit's other rows (§1981).
+            // it has earned and not claimed; its worth counts in Private. Its
+            // page has Withdraw, Earn's (prd §2006); joining is on Tacit's site.
             ForEach(reading.farmed ?? []) { position in
                 let earned = position.pendingTAC >= 0.0001
                     ? String(localized: "Tacit farm · earned \(TacitAccountRows.amount(position.pendingTAC))")
                     : String(localized: "Tacit farm")
-                walletTacitLine(TacitFarms.name(position.pair), held: nil, fact: earned,
-                                figure: tacit.farmUSD(position).map { mask ?? WalletValue.exactMoney($0) }, move: nil)
+                let name = TacitFarms.name(position.pair)
+                let usd = tacit.farmUSD(position)
+                let figure = usd.map { mask ?? WalletValue.exactMoney($0) }
+                walletTacitLine(name, held: nil, fact: earned, figure: figure, move: nil,
+                                holding: WalletHolding(id: "tacit:farm:" + position.lpAsset, symbol: name, figure: figure ?? name,
+                                                       usd: mask == nil ? usd : nil, line: String(localized: "Ethereum · Tacit farm"),
+                                                       verbs: [.tacitFarmWithdraw(lpAsset: position.lpAsset)]))
             }
         }
     }

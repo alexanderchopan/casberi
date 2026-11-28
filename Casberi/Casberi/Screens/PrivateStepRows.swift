@@ -240,6 +240,12 @@ struct MoveStepCapsule: View {
                     chrome.moveLend = kept.mode
                     chrome.moveTray = true
                     if let why { chrome.flash(why, tone: .failure, seconds: 6) }
+                } else if steps.awayFrom == .tacitIn, TacitShield.shared.step == .readyToSign {
+                    // Proved behind the sheet (prd §2006): the sheet again, on
+                    // its steps, Hold to sign in the foot.
+                    withAnimation(DS.Motion.standard) { steps.bringBack() }
+                    chrome.moveTacitIn = true
+                    chrome.moveTray = true
                 } else if steps.awayFrom == .tacitIn || steps.awayFrom == .tacitOut {
                     // Tacit's own sheet again, the reason said once more
                     // (prd §2005): it opens fresh, as every Move page does.
@@ -249,6 +255,12 @@ struct MoveStepCapsule: View {
                     if into { chrome.moveTacitIn = true } else { chrome.moveTacitOut = true }
                     chrome.moveTray = true
                     if let why { chrome.flash(why, tone: .failure, seconds: 6) }
+                } else if steps.awayFrom == .tacitFarm, let lpAsset = TacitFarmOut.shared.lpAsset {
+                    // The farm's Withdraw again (prd §2006): running, its
+                    // rows; failed, its reason and Try again.
+                    withAnimation(DS.Motion.standard) { steps.bringBack() }
+                    chrome.moveTacitFarm = lpAsset
+                    chrome.moveTray = true
                 } else if steps.awayFrom == .privacyPools {
                     // Privacy Pools keeps no sentence: its Send again, the
                     // reason said once more (the review of 2026-11-27).

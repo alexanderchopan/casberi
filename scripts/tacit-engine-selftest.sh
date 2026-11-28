@@ -142,6 +142,18 @@ grep -A6 "async outProve" "$JS" | grep -qF "c.prepareWithdraw(String(to), BigInt
 # one `client.send(` in `outHand`.
 [[ "$(grep -c "preparePay(" "$JS")" == "1" ]] || fail "a private pay is proved from somewhere new"
 grep -A6 "async payProve" "$JS" | grep -qF "c.preparePay(recipient, BigInt(units), {" || fail "the pay is not proved in payProve to the address asked"
+# Leaving a farm (prd §2006) is the fourth: Tacit's own three steps
+# (vendor/dapp/farm-ops.js), each once, each in its own method, proved and
+# sent by Tacit's relay. Nothing joins a farm, splits a note, or unwraps one
+# to a public address: those stay on Tacit's page.
+for step in "harvest:farmClaim" "unbond:farmRelease" "takeOut:farmTakeOut"; do
+  [[ "$(grep -c "farmOps\.${step%%:*}(" "$JS")" == "1" ]] || fail "a farm's ${step%%:*} is called from somewhere new"
+  grep -A24 "async ${step##*:}(" "$JS" | grep -qF "farmOps.${step%%:*}(" || fail "the farm's ${step%%:*} is not in ${step##*:}"
+done
+for verb in "farmOps.bond(" "lpBond(" "farmBond(" "farmOps.cut" "farmOps.redeem(" "farmRedeem(" "unwrap(" ".transfer(" "settleFromAccount" "selfSettle:" "walletSettle("; do
+  hasnt "$JS" "$verb" "the engine calls $verb: a farm is only left here, through Tacit's relay"
+done
+has "Casberi/Casberi/Model/NetworkReach.swift" '"api.tacit.finance",' "Tacit's relay is not declared"
 for verb in ".deposit(" ".withdraw(" ".sweep(" ".bridgeOut(" ".toV1(" "setArtifacts" ".spend(" ".publish(" ".makeNote(" ".submit(" "sendTransaction" "eth_sendRawTransaction"; do
   hasnt "$JS" "$verb" "the engine calls $verb: it reads only"
 done
@@ -184,4 +196,4 @@ if [[ -d tools/tacit-engine/node_modules/esbuild ]]; then
   (cd tools/tacit-engine && node build.mjs --check >/dev/null) || fail "tacit-engine.js is not what tools/tacit-engine builds"
   print "  ok   the bundle reproduces from the pinned wallet"
 fi
-print "✓ tacit engine: Tacit's own key rule, a view-only wallet, no host but the declared ones (7 mutations)"
+print "✓ tacit engine: Tacit's own key rule, a view-only wallet, a farm left only through Tacit's relay, no host but the declared ones (7 mutations)"

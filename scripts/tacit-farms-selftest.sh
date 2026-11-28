@@ -71,6 +71,22 @@ check(F.rateWords(0.045) == "4.5%", "a rate under 10% has no tenth")
 check(F.rateWords(nil) == nil && F.rateWords(0) == nil, "no rate draws a figure")
 check(F.name("TAC/cETH") == "TAC/ETH" && F.name("cETH/cBTC") == "ETH/BTC" && F.name("cETH/cUSD") == "ETH/cUSD", "the pair is not named as Tacit's page names it")
 
+// What a farm pays back (prd §2006): TAC and cTAC are TAC; wTAC is its own coin; cETH is ETH.
+let paid = F.coins([W.Held(ticker: "wTAC", value: h(342_000_000), decimals: 8), W.Held(ticker: "TAC", value: h(9_910_000_000), decimals: 8),
+                    W.Held(ticker: "cTAC", value: h(100_000_000), decimals: 8), W.Held(ticker: "cETH", value: h(5_120_000), decimals: 8),
+                    W.Held(ticker: "cUSDC", value: h(2_000_000), decimals: 6), W.Held(ticker: "SPX", value: "0x0", decimals: 8)])
+check(near(paid.tac, 100.1), "cTAC is not counted as TAC, or wTAC is")
+check(near(paid.others["wTAC"], 3.42), "wTAC is not its own coin")
+check(near(paid.others["ETH"], 0.0512) && near(paid.others["USDC"], 2) && paid.others["SPX"] == nil, "a coin is misnamed, misread, or nothing is kept")
+
+// Needs you: a week before the end, and after it, only for a farm you are in.
+let soon = F.Reading(pools: r.pools, active: true, endsAt: now.addingTimeInterval(3 * 86_400), asOf: now)
+let far = F.Reading(pools: r.pools, active: true, endsAt: now.addingTimeInterval(20 * 86_400), asOf: now)
+check(F.asks([mine], in: soon).count == 1 && F.asks([mine], in: soon).first?.ended == false, "a farm ending in three days is not said")
+check(F.asks([mine], in: far).isEmpty, "a farm ending in twenty days is said")
+check(F.asks([mine], in: ended).first?.ended == true, "an ended farm you are in is not said")
+check(F.asks([], in: ended).isEmpty, "a farm you are not in is said")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   the wire, ETH in TAC, every rate, a position's worth, and the words")
 SWIFT
@@ -94,5 +110,7 @@ mutate "the bonded share is ignored"         's/let bonded = worth \* min\(1, po
 mutate "ETH's price is inverted"             's/return p\.reserveB \/ p\.reserveA/return p.reserveA \/ p.reserveB/'
 mutate "an ended round still pays"           's/guard reading\.active, pool\.shares > 0/guard pool.shares > 0/'
 mutate "value units are not 8 decimals"      's/static let unit = 1e8/static let unit = 1e18/'
+mutate "wTAC is folded into TAC"             's/\["TAC", "cTAC"\]/["TAC", "cTAC", "wTAC"]/'
+mutate "Needs you speaks a month ahead"        's/static let askAhead: TimeInterval = 7 \* 86_400/static let askAhead: TimeInterval = 30 * 86_400/'
 mutate "cETH's side is not priced"           's/else if pool\.a == "cETH" \{ side = ethInTAC\.map \{ pool\.reserveA \* \$0 \} \}//'
-print "✓ tacit farms: rates from Tacit's own pools, positions, words (6 mutations)"
+print "✓ tacit farms: rates from Tacit's own pools, positions, what a farm pays back, Needs you (8 mutations)"

@@ -37,12 +37,14 @@ struct WalletHolding: Identifiable, Equatable {
         case railgunSwap(contract: String?)
         case aztecSend
         case tacitSend
+        /// Withdraw from a Tacit farm (prd §2006), by its pool's LP-share id.
+        case tacitFarmWithdraw(lpAsset: String)
 
         var id: Self { self }
 
         func title(_ symbol: String) -> String {
             switch self {
-            case .lendWithdraw: String(localized: "Withdraw \(symbol)")
+            case .lendWithdraw, .tacitFarmWithdraw: String(localized: "Withdraw \(symbol)")
             case .lendDeposit: String(localized: "Deposit \(symbol)")
             case .privateSend, .railgunSend, .aztecSend, .tacitSend: String(localized: "Send \(symbol)")
             case .railgunSwap: String(localized: "Swap \(symbol)")
@@ -52,7 +54,7 @@ struct WalletHolding: Identifiable, Equatable {
         /// The glyphs the token page wears for the same verbs (§1684).
         var icon: String {
             switch self {
-            case .lendWithdraw: "arrow.down"
+            case .lendWithdraw, .tacitFarmWithdraw: "arrow.down"
             case .lendDeposit: "plus"
             case .privateSend, .railgunSend, .aztecSend, .tacitSend: "arrow.up.right"
             case .railgunSwap: "arrow.left.arrow.right"
@@ -143,6 +145,10 @@ extension FeedScreen {
         case .tacitSend:
             DSHaptic.selection()
             chrome.moveTacitOut = true
+            chrome.moveTray = true
+        case .tacitFarmWithdraw(let lpAsset):
+            DSHaptic.selection()
+            chrome.moveTacitFarm = lpAsset
             chrome.moveTray = true
         }
     }

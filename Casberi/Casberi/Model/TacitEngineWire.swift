@@ -15,6 +15,7 @@ enum TacitEngineWire {
     enum Method: String, CaseIterable {
         case info, open, read, chain, defi, close
         case farms, farmed
+        case farmClaim, farmRelease, farmTakeOut
         case shieldQuote, shieldProve, shieldHand, shieldOffer, shieldStatus
         case outQuote, outProve, outHand, owed
         case payQuote, payProve, payCheck
@@ -241,6 +242,49 @@ enum TacitEngineWire {
         let errors: [String]
         let passes: Int
         let ms: Int
+        /// Everything the pool holds for you, by asset (prd §2006): what a
+        /// farm you left paid back. Nil from a page built before it.
+        let held: [Held]?
+    }
+
+    /// One asset Tacit's DeFi pool holds for you: its ticker, 0x-hex value in
+    /// the pool's own units, and how many decimals those units carry.
+    struct Held: Decodable, Equatable {
+        let ticker: String
+        let value: String
+        let decimals: Int
+
+        /// The amount in whole coins; nil for a value that is not 0x-hex.
+        var amount: Double? {
+            TacitEngineWire.number(value).map { $0 / pow(10, Double(decimals)) }
+        }
+    }
+
+    /// The farm a leave step acts on, by its pool's LP-share asset id.
+    struct FarmAsk: Encodable {
+        let lpAsset: String
+    }
+
+    /// A farm's claim (prd §2006): wTAC earned, 0x-hex value units, and
+    /// whether there was a position at all.
+    struct FarmClaimed: Decodable, Equatable {
+        let claimed: String
+        let position: Bool
+        let tx: String?
+    }
+
+    /// A farm's shares released back as an LP-share note.
+    struct FarmReleased: Decodable, Equatable {
+        let shares: String
+        let position: Bool
+        let tx: String?
+    }
+
+    /// What taking a pool's shares out paid back, coin by coin; `found`
+    /// false when no share of that pool was there to take out.
+    struct FarmTakenOut: Decodable, Equatable {
+        let out: [Held]
+        let found: Bool
     }
 
     /// Tacit's farms as its farm program reads them (prd §1993). Every

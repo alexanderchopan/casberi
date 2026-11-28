@@ -191,6 +191,21 @@ final class TacitEngine: NSObject {
         try await call(.farmed, Wire.Empty(), as: Wire.Farmed.self)
     }
 
+    /// Leaving a farm (prd §2006), Tacit's own three steps: claim what the
+    /// position earned, release its shares, take them out as the pair's two
+    /// coins. Each is signed in the page and proved and sent by Tacit's relay.
+    func farmClaim(lpAsset: String) async throws -> Wire.FarmClaimed {
+        try await call(.farmClaim, Wire.FarmAsk(lpAsset: lpAsset), as: Wire.FarmClaimed.self)
+    }
+
+    func farmRelease(lpAsset: String) async throws -> Wire.FarmReleased {
+        try await call(.farmRelease, Wire.FarmAsk(lpAsset: lpAsset), as: Wire.FarmReleased.self)
+    }
+
+    func farmTakeOut(lpAsset: String) async throws -> Wire.FarmTakenOut {
+        try await call(.farmTakeOut, Wire.FarmAsk(lpAsset: lpAsset), as: Wire.FarmTakenOut.self)
+    }
+
     // MARK: - Making TAC private
 
     private func shieldAsk(_ units: UInt64) -> Wire.ShieldAsk {

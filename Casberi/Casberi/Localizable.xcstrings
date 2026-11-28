@@ -2087,6 +2087,34 @@
         }
       }
     },
+    "%@ TAC is proved. Open Casberi to sign it with your co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TAC está probado. Abre Casberi para firmarlo con tu cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TACの証明が完了しました。Casberiを開いて共同署名者で署名してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TAC 증명이 완료되었습니다. Casberi를 열어 공동 서명자로 서명하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ TAC 已完成证明。打开 Casberi，用你的共同签名者签署"
+          }
+        }
+      }
+    },
     "%@ TAC is public again" : {
       "localizations" : {
         "es" : {
@@ -3166,6 +3194,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 和 %@ 已签名。"
+          }
+        }
+      }
+    },
+    "%@ and %@, private in Tacit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ and %2$@, private in Tacit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ y %2$@, privados en Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@と%2$@、Tacitで非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 및 %2$@, Tacit에서 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 和 %2$@，在 Tacit 中保持私密"
           }
         }
       }
@@ -6084,6 +6146,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 部署失败"
+          }
+        }
+      }
+    },
+    "%@ farm" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Granja %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ファーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 팜"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 农场"
           }
         }
       }
@@ -11696,6 +11786,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从 Aztec 转出 %@"
+          }
+        }
+      }
+    },
+    "%@ out of Tacit's farm" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ fuera de la granja de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@をTacitのファームから引き出し"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@를 Tacit 팜에서 인출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 退出 Tacit 农场"
           }
         }
       }
@@ -55550,6 +55668,34 @@
         }
       }
     },
+    "All · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전체 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部 · %@"
+          }
+        }
+      }
+    },
     "All, %@" : {
       "localizations" : {
         "es" : {
@@ -64027,6 +64173,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "后退15秒"
+          }
+        }
+      }
+    },
+    "Back in Tacit: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De vuelta en Tacit: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已回到 Tacit：%@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitに戻りました：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit으로 돌아왔습니다: %@"
           }
         }
       }
@@ -74628,6 +74802,34 @@
         }
       }
     },
+    "Claimed what it earned" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reclamado lo ganado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "獲得分を請求済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수익 청구됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已领取收益"
+          }
+        }
+      }
+    },
     "Claiming" : {
       "localizations" : {
         "es" : {
@@ -74680,6 +74882,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在领取令牌…"
+          }
+        }
+      }
+    },
+    "Claiming what it earned" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reclamando lo ganado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "獲得分を請求中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "수익 청구 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在领取收益"
           }
         }
       }
@@ -94140,6 +94370,34 @@
         }
       }
     },
+    "Ethereum · Tacit farm" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · Granja de Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · Tacitファーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · Tacit 팜"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ethereum · Tacit 农场"
+          }
+        }
+      }
+    },
     "Ethereum · a new address each time" : {
       "localizations" : {
         "es" : {
@@ -110714,6 +110972,34 @@
         }
       }
     },
+    "Hold to sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mantén para firmar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "長押しで署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "길게 눌러 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按住以签署"
+          }
+        }
+      }
+    },
     "Hold to swap" : {
       "localizations" : {
         "es" : {
@@ -116258,6 +116544,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "它的入口标签会从你的订阅流中消失。你关注的市场会保留，除非你移除它。"
+          }
+        }
+      }
+    },
+    "Its coins, private in Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sus monedas, privadas en Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのコイン、Tacitで非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "해당 코인, Tacit에서 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其代币，在 Tacit 中保持私密"
           }
         }
       }
@@ -138527,6 +138841,34 @@
         }
       }
     },
+    "Not in this farm" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No estás en esta granja"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このファームにはいません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 팜에 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不在此农场中"
+          }
+        }
+      }
+    },
     "Not in your addresses" : {
       "localizations" : {
         "es" : {
@@ -155101,6 +155443,62 @@
         }
       }
     },
+    "Out of the farm" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fuera de la granja"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ファームから引き出し済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팜에서 인출됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已退出农场"
+          }
+        }
+      }
+    },
+    "Out of the farm: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fuera de la granja: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ファームから引き出し済み：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팜에서 인출됨: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已退出农场：%@"
+          }
+        }
+      }
+    },
     "Out to %@" : {
       "localizations" : {
         "es" : {
@@ -170016,6 +170414,34 @@
         }
       }
     },
+    "Reading your TAC" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu TAC"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TACを読み取り中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "TAC 읽는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的 TAC"
+          }
+        }
+      }
+    },
     "Reading your accounts…" : {
       "localizations" : {
         "es" : {
@@ -174753,6 +175179,34 @@
         }
       }
     },
+    "Released your shares" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Participaciones liberadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シェアを解放しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지분 해제됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已释放你的份额"
+          }
+        }
+      }
+    },
     "Released — anyone can register it" : {
       "localizations" : {
         "es" : {
@@ -174805,6 +175259,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "发布"
+          }
+        }
+      }
+    },
+    "Releasing your shares" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Liberando tus participaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シェアを解放中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지분 해제 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在释放你的份额"
           }
         }
       }
@@ -200738,6 +201220,34 @@
         }
       }
     },
+    "Stopped paying %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejó de pagar el %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に支払い終了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 지급 종료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已于 %@ 停止支付"
+          }
+        }
+      }
+    },
     "Stopped tracking %@" : {
       "localizations" : {
         "es" : {
@@ -201014,6 +201524,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "停止接收新的钱包相关内容。已经到达的内容会保留，除非你将其删除。"
+          }
+        }
+      }
+    },
+    "Stops paying %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Deja de pagar el %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に支払い終了予定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 지급 종료 예정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将于 %@ 停止支付"
           }
         }
       }
@@ -203339,6 +203877,34 @@
         }
       }
     },
+    "Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit"
+          }
+        }
+      }
+    },
     "Tacit chain" : {
       "localizations" : {
         "es" : {
@@ -203619,6 +204185,34 @@
         }
       }
     },
+    "Tacit didn't finish. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit no terminó. Inténtalo de nuevo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 未完成。请重试"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitが完了しませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit이 완료하지 못했습니다. 다시 시도하세요"
+          }
+        }
+      }
+    },
     "Tacit didn't take the deposit. Try again" : {
       "localizations" : {
         "es" : {
@@ -203759,6 +204353,34 @@
         }
       }
     },
+    "Tacit farms · until %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Granjas de Tacit · hasta el %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitファーム · %@まで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 팜 · %@까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 农场 · 至 %@"
+          }
+        }
+      }
+    },
     "Tacit farms · until %@, on Tacit's site" : {
       "localizations" : {
         "es" : {
@@ -203783,6 +204405,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tacit 农场 · 截至 %@，在 Tacit 网站上"
+          }
+        }
+      }
+    },
+    "Tacit is busy. Try again later" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit está ocupado. Inténtalo más tarde"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 繁忙。请稍后重试"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitは混み合っています。後でもう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit이 바쁩니다. 나중에 다시 시도하세요"
           }
         }
       }
@@ -204095,6 +204745,34 @@
         }
       }
     },
+    "Tacit's relay fee, from the %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comisión del relé de Tacit, del %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitのリレー手数料、%@から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 릴레이 수수료, %@에서 차감"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 中继费用，从 %@ 中扣除"
+          }
+        }
+      }
+    },
     "Tacit, from an exchange" : {
       "localizations" : {
         "es" : {
@@ -204377,6 +205055,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将其取回"
+          }
+        }
+      }
+    },
+    "Taking out your coins" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirando tus monedas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コインを引き出し中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코인 인출 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在取出你的代币"
           }
         }
       }
@@ -220106,6 +220812,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已取回"
+          }
+        }
+      }
+    },
+    "Took out your coins" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Monedas retiradas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コインを引き出しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코인 인출됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取出你的代币"
           }
         }
       }
@@ -237626,6 +238360,34 @@
         }
       }
     },
+    "Withdrawing…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Retirando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "引き出し中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인출 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在提取…"
+          }
+        }
+      }
+    },
     "Withdrawn from Aave" : {
       "localizations" : {
         "es" : {
@@ -242090,6 +242852,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你已关注 %lld 个 — 已达上限。请先取消关注一个；为地址命名仍然不限量。"
+          }
+        }
+      }
+    },
+    "You're not in this farm anymore" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya no estás en esta granja"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このファームにはもう参加していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 팜에 더 이상 참여하지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已不在此农场中"
           }
         }
       }

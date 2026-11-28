@@ -21,6 +21,9 @@ struct MoveLendSentence<Head: View>: View {
     /// **TACIT EARNS (prd §1986):** its row opens Make private on Deposit and
     /// back to public on Withdraw, Tacit's own sheets.
     var tacit: ((LendMove.Mode) -> Void)? = nil
+    /// **WITHDRAW FROM A FARM (prd §2006):** a farm you are in opens its
+    /// Withdraw, by the pool's LP-share id. Joining stays on Tacit's site.
+    var farm: ((String) -> Void)? = nil
     /// Aave, privately: Privacy Pools' move in (Deposit) or its Send back to
     /// your account (Withdraw), raised by Move (2026-11-27).
     var privately: ((LendMove.Mode) -> Void)? = nil
@@ -72,6 +75,9 @@ struct MoveLendSentence<Head: View>: View {
                 Task { await TacitAccount.shared.readFarmsIfStale() }
                 // Tacit's rate, the last 30 days off its contract (prd §2002).
                 Task { await TacitAccount.shared.readChainYield() }
+                // Your public TAC, so Tacit's row never offers "Swap for it"
+                // over TAC an unread reading missed (user, 2026-11-27).
+                Task { await TacitAccount.shared.readPublic() }
             }
             await move.read(account: account)
             #if DEBUG
@@ -667,13 +673,16 @@ struct MoveLendSentence<Head: View>: View {
             return MoveTokenChoice(id: "farm|\(p.lpAsset)", symbol: TacitFarms.name(p.pair), network: String(localized: "Ethereum"),
                                    sub: held.flatMap { tacit.farmUSD($0) }.map { MoveSentence.money($0, whole: true) },
                                    rate: TacitFarms.rateWords(TacitFarms.rate(p, in: farms))) {
-                farmPage = true
+                // Withdrawing, your position's own page; depositing, Tacit's.
+                if move.mode == .takeBack, held != nil, let farm { farm(p.lpAsset) } else { farmPage = true }
             }
         }
         let day = farms.endsAt.formatted(.dateTime.month(.abbreviated).day())
         // **THE RULE IS THE HEAD (prd §2000):** when, and where you join,
         // in the grey head; two pools, the rest a tap away.
-        let title = farms.active && farms.endsAt > .now
+        let title = move.mode == .takeBack
+            ? (farms.active && farms.endsAt > .now ? String(localized: "Tacit farms · until \(day)") : String(localized: "Tacit farms · ended \(day)"))
+            : farms.active && farms.endsAt > .now
             ? String(localized: "Tacit farms · until \(day), on Tacit's site")
             : String(localized: "Tacit farms · ended \(day)")
         let folded = !allFarms && choices.count > 3
@@ -817,6 +826,24 @@ struct MoveLendSentence<Head: View>: View {
                                                        sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
                                                        line: line) { tacit(.takeBack) },
                                usd: usd, year: usd.flatMap { u in apy.map { u * $0 } }, earned: earned))
+        }
+        // **YOUR FARMS EARN TOO (prd §2006):** each position at its farm's
+        // rate today, a door to its Withdraw.
+        let tacitAccount = TacitAccount.shared
+        if self.tacit != nil, tacitAccount.connected, let farms = tacitAccount.farms {
+            for position in tacitAccount.reading?.farmed ?? [] {
+                guard let pool = farms.pools.first(where: { $0.lpAsset == position.lpAsset }) else { continue }
+                let rate = TacitFarms.rate(pool, in: farms)
+                let usd = tacitAccount.farmUSD(position)
+                let earned = tacitAccount.tacPrice.map { position.pendingTAC * $0 }
+                let line = [String(localized: "Tacit farm"), TacitFarms.rateWords(rate)].compactMap { $0 }.joined(separator: " · ")
+                out.append(Earning(choice: MoveTokenChoice(id: "earning|farm|\(position.lpAsset)", symbol: TacitFarms.name(position.pair),
+                                                           network: String(localized: "Ethereum"),
+                                                           sub: usd.map { MoveSentence.money($0, whole: true) }, line: line) {
+                                       if let farm { farm(position.lpAsset) } else { farmPage = true }
+                                   },
+                                   usd: usd, year: usd.flatMap { u in rate.map { u * $0 } }, earned: earned))
+            }
         }
         return out.sorted { ($0.usd ?? 0) > ($1.usd ?? 0) }
     }

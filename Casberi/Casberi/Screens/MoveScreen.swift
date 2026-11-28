@@ -59,7 +59,7 @@ struct MoveTrayPresenter: ViewModifier {
                               YourAccountFirstOpen.walked(yours)
                               chrome.walkClosed += 1
                           }
-                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveTacitOut = false; chrome.moveTacitIn = false; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false; chrome.moveAsk = nil }) {
+                          chrome.movePrivately = nil; chrome.moveAztec = nil; chrome.moveRailgun = nil; chrome.moveTacitOut = false; chrome.moveTacitIn = false; chrome.moveTacitFarm = nil; chrome.moveLend = nil; chrome.moveTall = false; chrome.moveWalk = false; chrome.moveAsk = nil }) {
             MoveTray()
                 .environment(chrome)
                 .environment(route)
@@ -80,6 +80,16 @@ struct MoveTrayPresenter: ViewModifier {
             }
             // A drafted send opens on Send too (`move-deck-sweep.sh`, prd §1992).
             if UserDefaults.standard.string(forKey: "moveSendDraft")?.isEmpty == false { chrome.moveAsk = "send" }
+            chrome.moveTray = true
+        }
+        // `-tacitFarmOpen YES` raises Withdraw on the demo's Tacit farm
+        // (prd §2006); pair with `-tacitFarmSample done|failed` for its ends.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "tacitFarmOpen"),
+                  let lp = TacitAccount.shared.reading?.farmed?.first?.lpAsset else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] tacitFarmOpen: %@", lp)
+            chrome.moveTacitFarm = lp
             chrome.moveTray = true
         }
         // `-ollaOpen lend|back` raises Earn on Olla's AZTEC, Deposit or
@@ -251,7 +261,7 @@ struct MoveScreen: View {
                 MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening,
                              privately: chrome.movePrivately,
                              lending: chrome.moveLend, aztecPrivately: chrome.moveAztec,
-                             railgunPrivately: chrome.moveRailgun, tacitOut: chrome.moveTacitOut, tacitIn: chrome.moveTacitIn)
+                             railgunPrivately: chrome.moveRailgun, tacitOut: chrome.moveTacitOut, tacitIn: chrome.moveTacitIn, tacitFarm: chrome.moveTacitFarm)
                     .transition(.opacity)
             } else if let mode = chrome.movePrivately, PrivateMove.available {
                 // No account yet, so no other verb can be tapped: Send's

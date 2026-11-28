@@ -73,8 +73,12 @@ final class TacitAccount {
         /// TAC in your Casberi account, on Ethereum: public too, and made
         /// private from there by a send. nil when not read.
         var accountTAC: Double? = nil
-        /// TAC held privately in Tacit's DeFi pool; nil when not read whole.
+        /// TAC held privately in Tacit's DeFi pool, wTAC a farm paid
+        /// included (prd §2006); nil when not read whole.
         var defiTAC: Double? = nil
+        /// Every other coin the DeFi pool holds for you, by name ("ETH",
+        /// "USD"): what leaving a farm paid back. Nil when not read.
+        var defiCoins: [String: Double]? = nil
         /// Your Tacit chain address (`tc1…`), for a sender of private TAC.
         var chainAddress: String? = nil
         /// Your Tacit chain shares and what one share was worth in TAC at
@@ -133,6 +137,16 @@ final class TacitAccount {
         }
 
         var eth: Double { held.map(\.eth).reduce(0, +) }
+
+        /// Private ETH in both pools: the private-ETH pool's and the DeFi
+        /// pool's, which a farm on an ETH pair pays back into.
+        var ethAll: Double { eth + (defiCoins?["ETH"] ?? 0) }
+
+        /// The DeFi pool's coins that are neither TAC nor ETH, largest first.
+        var defiOthers: [TacitFarms.Coin] {
+            (defiCoins ?? [:]).filter { $0.key != "ETH" && $0.value > 0 }
+                .map { TacitFarms.Coin(name: $0.key, amount: $0.value) }.sorted { $0.amount > $1.amount }
+        }
     }
 
     /// The Tacit chain's share price at one reading (prd §1999).
@@ -273,7 +287,7 @@ final class TacitAccount {
     var pageUSD: Double? {
         guard let reading else { return nil }
         let tac = reading.tac ?? 0
-        if reading.eth > 0, usd == nil { return nil }
+        if reading.ethAll > 0, usd == nil { return nil }
         if tac > 0, tacUSD == nil { return nil }
         return (usd ?? 0) + (tacUSD ?? 0)
     }
@@ -329,14 +343,25 @@ final class TacitAccount {
     /// is in your co-signer's own wallet. nil when nothing held has a price.
     var privateUSD: Double? {
         guard reading != nil, usd != nil || privateTacUSD != nil || farmUSD != nil else { return nil }
-        return (usd ?? 0) + (privateTacUSD ?? 0) + (farmUSD ?? 0)
+        return (usd ?? 0) + (privateTacUSD ?? 0) + (farmUSD ?? 0) + (reading?.defiOthers.compactMap { usd(coin: $0.name, $0.amount) }.reduce(0, +) ?? 0)
+    }
+
+    /// A DeFi pool coin in dollars: Tacit's USD at a dollar, wTAC at TAC's
+    /// price (it unwraps one for one); BTC and SPX stand as amounts, never a
+    /// guess (prd §2006).
+    func usd(coin: String, _ amount: Double) -> Double? {
+        switch coin {
+        case "USD": amount
+        case "wTAC": tacPrice.map { amount * $0 }
+        default: nil
+        }
     }
 
     /// The account's private ETH in dollars at the last reading; nil with no
     /// reading or no price.
     var usd: Double? {
         guard let reading, let ethPrice else { return nil }
-        return reading.eth * ethPrice
+        return reading.ethAll * ethPrice
     }
 
     func usd(_ held: Held) -> Double? {
@@ -416,15 +441,15 @@ final class TacitAccount {
             reading = Reading(coSigner: me, address: opened.address ?? reading.address,
                               receive: paidAt?.receive ?? reading.receive,
                               held: held, asOf: .now, publicTAC: reading.publicTAC, privateTAC: reading.privateTAC,
-                              privateElsewhere: reading.privateElsewhere, defiTAC: reading.defiTAC,
+                              privateElsewhere: reading.privateElsewhere, defiTAC: reading.defiTAC, defiCoins: reading.defiCoins,
                               chainAddress: reading.chainAddress, chainShares: reading.chainShares,
                               chainRate: reading.chainRate, earnedTAC: reading.earnedTAC, chainNotes: reading.chainNotes,
                               earnedSince: reading.earnedSince,
                               receiveNetwork: paidAt.map { $0.network.name } ?? reading.receiveNetwork,
                               farmed: reading.farmed, rateMarks: reading.rateMarks)
             keep(reading)
-            if let tac = await TacitPocket.publicTAC(of: coSigner) { update(me) { $0.publicTAC = tac } }
-            if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
+            if let tac = await Self.readTrying({ await TacitPocket.publicTAC(of: coSigner) }) { update(me) { $0.publicTAC = tac } }
+            if let account = YourAccountKey.address, let tac = await Self.readTrying({ await TacitPocket.publicTAC(of: account) }) {
                 update(me) { $0.accountTAC = tac }
             }
             await readPrice()
@@ -437,7 +462,7 @@ final class TacitAccount {
                 }
                 group.addTask { @MainActor in
                     guard let defi = await TacitPocket.defi() else { return }
-                    self.update(me) { $0.defiTAC = TacitEngineWire.tac(defi.worth).map { NSDecimalNumber(decimal: $0).doubleValue } }
+                    self.update(me) { Self.apply(defi, to: &$0) }
                     // Your farm positions after the DeFi read: the pool's
                     // logs it read are kept, so this pass reads only the farm's.
                     if let farmed = await TacitPocket.farmed() { self.update(me) { $0.farmed = farmed } }
@@ -448,6 +473,18 @@ final class TacitAccount {
         } catch {
             TacitEngine.shared.stop()
             livePhase = .failed(Self.words(error))
+        }
+    }
+
+    /// The DeFi read into a reading: every coin it names when the page says
+    /// them (prd §2006), its cTAC alone from a page built before.
+    static func apply(_ defi: TacitEngineWire.DefiReading, to reading: inout Reading) {
+        if let held = defi.held {
+            let coins = TacitFarms.coins(held)
+            reading.defiTAC = coins.tac
+            reading.defiCoins = coins.others
+        } else {
+            reading.defiTAC = TacitEngineWire.tac(defi.worth).map { NSDecimalNumber(decimal: $0).doubleValue }
         }
     }
 
@@ -524,10 +561,38 @@ final class TacitAccount {
     /// account: two balance reads, no key (after back to public, §1977).
     func readPublic() async {
         guard !DemoMode.isActive, let me = liveReading?.coSigner else { return }
-        if let tac = await TacitPocket.publicTAC(of: me) { update(me) { $0.publicTAC = tac } }
-        if let account = YourAccountKey.address, let tac = await TacitPocket.publicTAC(of: account) {
+        if let tac = await Self.readTrying({ await TacitPocket.publicTAC(of: me) }) { update(me) { $0.publicTAC = tac } }
+        if let account = YourAccountKey.address, let tac = await Self.readTrying({ await TacitPocket.publicTAC(of: account) }) {
             update(me) { $0.accountTAC = tac }
         }
+    }
+
+    /// **A PUBLIC READ IS TRIED THREE TIMES (user, 2026-11-27: "when i try
+    /// to make it private i am told i don't have any tac").** One read
+    /// through Tor that did not answer left your account's TAC unread, and
+    /// Make private took unread for none.
+    private static func readTrying(_ read: () async -> Double?) async -> Double? {
+        for attempt in 0..<3 {
+            if attempt > 0 { try? await Task.sleep(for: .seconds(Double(2 * attempt))) }
+            if let v = await read() { return v }
+        }
+        return nil
+    }
+
+    /// The farms you are in that stop paying within a week, or have (prd
+    /// §2006): Needs you's rows. None while the account is not connected.
+    var farmAsks: [TacitFarms.Ask] {
+        guard connected, let positions = reading?.farmed else { return [] }
+        return TacitFarms.asks(positions, in: farms)
+    }
+
+    /// The DeFi pool and your farm positions again, after a farm was left
+    /// (prd §2006): what it paid back, and the position gone.
+    func readDefiAndFarms(coSigner: String) async {
+        guard !DemoMode.isActive, TacitEngine.shared.isOpen else { return }
+        let me = coSigner.lowercased()
+        if let defi = await TacitPocket.defi() { update(me) { Self.apply(defi, to: &$0) } }
+        if let farmed = await TacitPocket.farmed() { update(me) { $0.farmed = farmed } }
     }
 
     /// Changes the kept reading in place, if it is still this co-signer's.
