@@ -267,22 +267,9 @@ struct MoveLendSentence<Head: View>: View {
             withAnimation(DS.Motion.standard) {
                 // Back is Earn's home, never the step before (prd §1911,
                 // §2000); opened on one position, there is none: the menu.
-                open = nil
-                if move.onRow {
-                    back?()
-                } else {
-                    move.mode = .lend
-                    move.pick(nil, all: false)
-                    move.home = true
-                }
+                if move.onRow { open = nil; back?() } else { goHome() }
             }
-        }, header: kindsShown && doneHash == nil ? AnyView(
-            // The title is the Type (prd §1934): Deposit · Withdraw.
-            MoveKindTitle(kinds: [
-                MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: move.mode == .lend) { flip(.lend) },
-                MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: move.mode == .takeBack) { flip(.takeBack) },
-            ], disabled: move.acting)
-        ) : nil, lines: {
+        }, header: doneHash == nil ? AnyView(kindTitle) : nil, lines: {
             if move.stage == .reading {
                 // **READING DRAWS THE PAGE, EMPTY (prd §2000, §769):** the
                 // lines it will fill, their chips unfilled, no act.
@@ -688,13 +675,16 @@ struct MoveLendSentence<Head: View>: View {
     private var homeDeck: some View {
         MoveReceiptDeck(title: title, inTray: inTray, back: {
             withAnimation(DS.Motion.standard) { back?() }
-        }, lines: {
+        }, header: AnyView(kindTitle), lines: {
             homeHead
         }, content: {
             MoveDeckScroll {
                 MoveTokenGrid(places: [
                     MoveTokenPlace(id: "earning", title: String(localized: "Earning"), choices: earningRows.map(\.choice)),
-                    MoveTokenPlace(id: "more", title: String(localized: "Earn more"), choices: moreRows),
+                    // **READY TO EARN (prd §2001; user: "earn more shows what i
+                    // am earning too doesn't it?"):** what you hold that a
+                    // place takes and is not in yet.
+                    MoveTokenPlace(id: "more", title: String(localized: "Ready to earn"), choices: moreRows),
                 ])
             }
         }, word: { EmptyView() })
@@ -815,9 +805,40 @@ struct MoveLendSentence<Head: View>: View {
     /// Face ID has the act.
     private var signing: Bool { if case .working(.signing) = move.stage { true } else { false } }
 
-    /// Earn and Take back are chips over the steps (§1911): there is
-    /// something to take back, or Take back is on.
-    private var kindsShown: Bool { move.anyLent || move.mode == .takeBack }
+    /// **EARN · DEPOSIT · WITHDRAW (prd §2001; user, 2026-11-27: "in the
+    /// title we should still show deposit and withdraw … kinda like how we
+    /// have gift cards and tokens besides themselves in buy").** The page you
+    /// are on in white, the others grey, a tap switches; always drawn, so
+    /// the two verbs are named before either is picked. Earn leads, the
+    /// verbs after it in the order you do them, not A–Z (amends §1934).
+    private var kindTitle: some View {
+        MoveKindTitle(kinds: [
+            MoveKindTitle.Kind(id: "home", word: String(localized: "Earn"), on: move.home) { goHome() },
+            MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: !move.home && move.mode == .lend) { kind(.lend) },
+            MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: !move.home && move.mode == .takeBack) { kind(.takeBack) },
+        ], disabled: move.acting)
+    }
+
+    /// Earn's home again: Deposit is where a deck opens from it next.
+    private func goHome() {
+        withAnimation(DS.Motion.standard) {
+            open = nil
+            move.mode = .lend
+            move.pick(nil, all: false)
+            move.home = true
+        }
+    }
+
+    /// Deposit or Withdraw from the title: on the deck, the other kind; from
+    /// the home, the richest market with something to move that way.
+    private func kind(_ mode: LendMove.Mode) {
+        guard move.home else { flip(mode); return }
+        move.mode = mode
+        let has = AaveLend.markets.filter {
+            !move.refused.contains(LendMove.key($0)) && (Decimal(string: move.available($0) ?? "0") ?? 0) > 0
+        }
+        enter(mode, place: has)
+    }
 
     /// From (the network), Amount.
     private var steps: [MoveDeckStep] {

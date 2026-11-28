@@ -75692,3 +75692,12 @@ User, 2026-11-27: "earn takes a while to read. why", then, of a screenshot of Ea
 **Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass, the Swift build and the device check are owed. Not measured: whether Swap quotes AZTEC on Ethereum.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2001 — Earn's title is Earn · Deposit · Withdraw, always; "Earn more" is "Ready to earn" (amends §1934's A–Z order and its "Deposit · Withdraw only once something is earning", §2000 item 1's "Earn more") (user, 2026-11-27: "earning vs earn more i'm confused by … or is it showing what i have that i can use to earn with?"; "ready to earn sounds good. also i think in the title we should still show deposit and withdraw b/c a user isn't necessarily clear … kinda like how we have gift cards and tokens besides themselves in buy")
+
+1. **Earn · Deposit · Withdraw stand in the title on every Earn page** (`MoveKindTitle`, `heading34`): the page you are on white, the others grey, a tap switches. Earn is the home; Deposit or Withdraw from the home opens the deck on the richest market with something to move that way (From open when there is more than one); on the deck the other verb flips as before, and Earn goes home. Earn leads and the verbs follow in the order you do them, not A–Z. A done receipt keeps the plain title.
+2. **"Ready to earn"** names the home's second list: what you hold that each place takes and is not in yet (Aave's figure is your unlent USDC and ETH, Tacit's your public TAC), never what is earning, which is the list above it.
+
+**Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
