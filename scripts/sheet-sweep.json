@@ -436,17 +436,18 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#thing"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "activity"
    ],
    "steps": [
     {
-     "tap": "button:=Wallet"
+     "wait": 8
     },
     {
-     "tap": "button:^Needs you. "
-    },
-    {
-     "tap": "button:~£200 → €235"
+     "tap": "button:~£120 → €141"
     }
    ],
    "anchor": "button:=Wise, Wise"
@@ -1201,26 +1202,27 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#aztecGas"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "holdings"
    ],
    "steps": [
     {
-     "wait": 2
-    },
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Holdings"
+     "wait": 8
     },
     {
      "maybe": "button:=All"
     },
     {
+     "swipeUp": 3
+    },
+    {
      "tap": "button:^Fee Juice"
     }
    ],
-   "anchor": "button:=Add gas"
+   "anchor": "button:=Add private gas"
   },
   {
    "id": "wallet-holding",
@@ -1228,11 +1230,21 @@
     "Screens/FeedScreen+Sheets.swift:feedSheet#walletHolding"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Wallet",
+    "-openSection",
+    "holdings"
    ],
    "steps": [
     {
-     "wait": 2
+     "wait": 8
+    },
+    {
+     "maybe": "button:=All"
+    },
+    {
+     "swipeUp": 3
     },
     {
      "tap": "button:^DAI"
