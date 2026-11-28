@@ -793,9 +793,18 @@ final class AztecMove {
                     }
                     stage = .done(out?["tx"] as? String ?? "")
                 } else if toEthereum {
-                    steps.begin(.move, plan: .send(.aztec))
+                    steps.begin(.move, plan: .send(.ethereum))
                     stage = .working(String(localized: "Sending…"))
-                    let exit = try await ShieldBridge.exit(asset, units: units, to: recipient, usd: amountUSD)
+                    // **OUT TO ETHEREUM GOES BEHIND ITS SHEET TOO (2026-11-27,
+                    // user: "shouldn't this sheet close", amends §1806 item 3):**
+                    // once Face ID and your co-signer answered, the proof and
+                    // the send need nobody, as a send within Aztec.
+                    let exit = try await ShieldBridge.exit(asset, units: units, to: recipient, usd: amountUSD) { [weak self] in
+                        guard let self, let onAway = self.onAway,
+                              steps.sendAway(from: .aztec, landed: String(localized: "On its way: finish it on Home in about an hour")) else { return }
+                        Self.kept = self
+                        onAway()
+                    }
                     // Out to Ethereum, its row at once too (prd §1953), naming
                     // what the recipient gets: the amount less Shield's 0.5%
                     // (prd §1988 item 3), never the gross.
@@ -805,6 +814,7 @@ final class AztecMove {
                                                                                     to: AddressTail.short(recipient)),
                                                   context: context)
                     }
+                    if Self.kept === self, steps.away != nil { steps.finishAway(); Self.kept = nil } else { steps.finish() }
                     stage = .done(exit.transaction)
                 }
                 await AztecAccountStore.shared.refresh()
@@ -1265,7 +1275,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         switch move.mode {
         case .deposit: String(localized: "Aztec carries it in minutes.")
         case .send:
-            move.toEthereum ? String(localized: "Proved. In about an hour Needs you offers Finish on Ethereum.")
+            // Said as what happens and what you do (2026-11-27, user: "i don't
+            // think that is clear"): ready in an hour, told, one tap on Home.
+            move.toEthereum ? String(localized: "It's ready to collect on Ethereum in about an hour. You'll be told, then tap Finish on Home to receive it.")
                 : move.paidInTheOpen ? String(localized: "Its gas was paid by your account, in the open.")
                 : PrivateFinish.took(sentTotal)
         }

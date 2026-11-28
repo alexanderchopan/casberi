@@ -398,7 +398,8 @@ extension ShieldBridge {
     /// a message for Shield's portal. `finish` withdraws it on Ethereum once
     /// Aztec's proof is there.
     @MainActor
-    static func exit(_ asset: Asset, units: String, to recipient: String, usd: Double? = nil) async throws -> AztecAccountStore.ShieldExit {
+    static func exit(_ asset: Asset, units: String, to recipient: String, usd: Double? = nil,
+                     unlocked: @MainActor () -> Void = {}) async throws -> AztecAccountStore.ShieldExit {
         guard !DemoMode.isActive else { throw Failure(message: String(localized: "The demo moves nothing")) }
         guard let account = YourAccountKey.address else { throw Failure(message: String(localized: "There is no account on this iPhone")) }
         guard let standing = await eligibility(account) else { throw Failure(message: String(localized: "Shield did not answer")) }
@@ -447,6 +448,8 @@ extension ShieldBridge {
         }
         try await PrivateRootKey.unlock(reason: String(localized: "Send \(asset.symbol) out of Aztec"))
         try await AztecCoSign.approve(String(localized: "Send \(PrivateMoney.figure(units, decimals: asset.decimals, symbol: asset.symbol)) from Aztec to \(recipient)"))
+        // Every ask is answered: the caller may let its sheet go (2026-11-27).
+        await unlocked()
         guard let out = try await AztecEngine.shared.call("shieldExit", [asset.symbol, units, recipient, text, AztecGas.unminted]) as? [String: Any],
               let transaction = out["tx"] as? String, let message = out["message"] as? String else {
             throw Failure(message: String(localized: "Aztec did not take this move"))
