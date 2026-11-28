@@ -79,6 +79,8 @@ struct TacitShieldSheet: View {
         .onAppear { shield.onAway = chrome.moveTray ? { chrome.moveTray = false } : nil }
         // Opens empty, as every Move page does: Max is a key (2026-11-27).
         .onAppear { shield.reset() }
+        // The rate the receipt says (prd §2004), read once an hour.
+        .task { await TacitAccount.shared.readChainYield() }
     }
 
     private var busy: Bool {
@@ -147,10 +149,10 @@ struct TacitShieldSheet: View {
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
             MoveDeckFacts(facts: [
-                .init(name: String(localized: "Fee"), value: feeWords),
-                .init(name: String(localized: "You get"), value: arrivesWords),
-                .init(name: String(localized: "Arrives"), value: String(localized: "In a minute")),
-            ])
+                MoveDeckFacts.Fact(name: String(localized: "Fee"), value: feeWords),
+                MoveDeckFacts.Fact(name: String(localized: "You get"), value: arrivesWords),
+                MoveDeckFacts.Fact(name: String(localized: "Arrives"), value: String(localized: "In a minute")),
+            ] + earnFacts)
             if case .failed(let why) = shield.step {
                 // A failure in the attention ink, as every private send's.
                 Text(verbatim: why).dsText(.body17).foregroundStyle(DS.attentionInk)
@@ -187,6 +189,27 @@ struct TacitShieldSheet: View {
         }
         guard let sweep = TacitPermit.number(q.sweepFee) else { return "—" }
         return Self.tacText(NSDecimalNumber(decimal: chain + sweep / pow(Decimal(10), 18)).doubleValue)
+    }
+
+    /// **WHAT IT EARNS (prd §2004; user: "add the rate to tacit's make
+    /// private sheet too").** What a share of the Tacit chain earned, as
+    /// Olla's says it (§1970), and what a year of it would add to what
+    /// arrives at that rate: figures, never a promise.
+    private var earnFacts: [MoveDeckFacts.Fact] {
+        guard let r = account.reading, let rate = account.earnRateOver(r), let pct = AaveLend.rateOnly(rate.apy) else { return [] }
+        var out: [MoveDeckFacts.Fact] = [
+            .init(name: String(localized: "Earned"), value: String(localized: "about \(pct) a year, last \(rate.days) days")),
+        ]
+        if let q = shield.quote, let arrives = TacitEngineWire.tac(q.arrives) {
+            let year = NSDecimalNumber(decimal: arrives).doubleValue * rate.apy
+            if year >= 0.0001 {
+                let usd = account.tacPrice.map { LendMove.usd(year * $0) }
+                out.append(.init(name: String(localized: "In a year"),
+                                 value: usd.map { String(localized: "about \(Self.tacText(year)) (\($0)), at that rate") }
+                                     ?? String(localized: "about \(Self.tacText(year)), at that rate")))
+            }
+        }
+        return out
     }
 
     private var arrivesWords: String {

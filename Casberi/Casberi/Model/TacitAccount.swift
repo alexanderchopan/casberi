@@ -196,7 +196,13 @@ final class TacitAccount {
     }
 
     /// The rate Earn shows: the chain's last 30 days, else the phone's marks.
-    func earnRate(_ r: Reading) -> Double? { chainYield ?? r.chainAPY()?.apy }
+    func earnRate(_ r: Reading) -> Double? { earnRateOver(r)?.apy }
+
+    /// The rate and the days it was earned over, for "last 30 days".
+    func earnRateOver(_ r: Reading) -> (apy: Double, days: Int)? {
+        if let chainYield { return (chainYield, Int(OllaStake.windowDays)) }
+        return r.chainAPY()
+    }
 
     /// The demo's Tacit account: sample money on both networks, open, read
     /// from nowhere (the demo reaches no host). Its pool sizes are the real

@@ -75719,3 +75719,11 @@ The rate drew nothing because §1999's marks need a day on this phone. The Tacit
 **Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2004 — Tacit's Make private says what it earns (user, 2026-11-28: "add the rate to tacit's make private sheet too")
+
+Under Fee, You get and Arrives, Make private's receipt adds "Earned: about 12% a year, last 30 days" (§2002's rate; the phone's marks, with their own days, where the node keeps no history) and, once quoted, "In a year: about N TAC ($X), at that rate": what arrives times the rate, at TAC's price now. Figures, never a promise, as Olla's (§1970). The sheet reads the rate on open, kept an hour.
+
+**Not seen:** built and run.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
