@@ -72,6 +72,13 @@ struct MovePrivateSentence<Head: View>: View {
                 withAnimation(DS.Motion.standard) { open = .recipient }
             }
         }
+        // **THE ACCOUNT OPENS WHILE YOU TYPE (2026-11-27):** sending from
+        // Privacy Pools on Ethereum, the engine opens and reads now, so Hold
+        // to send asks Face ID and proves at once (`PrivateOnEthereum.prewarm`).
+        .task(id: move.mode == .send && move.onEthereum && move.stage == .ready) {
+            guard move.mode == .send, move.onEthereum, move.stage == .ready, !DemoMode.isActive else { return }
+            await PrivateOnEthereum.prewarm()
+        }
         // Send opens whole: its rows and sentence clip in the short sheet.
         .onAppear {
             chrome.moveTall = true

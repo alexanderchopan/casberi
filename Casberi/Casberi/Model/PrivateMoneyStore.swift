@@ -296,6 +296,42 @@ final class PrivateMoneyStore {
         save()
     }
 
+    // MARK: - 0xBow's ruling, told and timed (2026-11-27)
+
+    /// How long your own deposits waited for 0xBow, the last ten, seconds.
+    private static let waitsKey = "privateMoney.approvalWaits.v1"
+
+    /// The middle of your own deposits' waits; nil until one was approved.
+    private static var waits: [Double] {
+        UserDefaults.standard.data(forKey: waitsKey).flatMap { try? JSONDecoder().decode([Double].self, from: $0) } ?? []
+    }
+
+    var typicalWait: TimeInterval? {
+        let waits = Self.waits.sorted()
+        return waits.isEmpty ? nil : waits[waits.count / 2]
+    }
+
+    /// **TOLD WHEN 0XBOW RULES.** Approved, the money is spendable and you
+    /// are told so (Railgun's and Tacit's say theirs); refused, you are told
+    /// it can be taken back. An approval's wait is kept to say the usual one.
+    private func ruled(_ note: PrivateMoney.Note, _ status: PrivateMoney.Status) {
+        let w = PrivateMoney.worth(note, rates: rates)
+        let figure = PrivateMoney.figure(w.amount, decimals: w.decimals, symbol: note.symbol)
+        switch status {
+        case .approved:
+            var waits = Self.waits
+            waits.append(Date().timeIntervalSince(note.at))
+            if let data = try? JSONEncoder().encode(Array(waits.suffix(10))) { DefaultsWrite.set(data, forKey: Self.waitsKey) }
+            Task { await Notifications.outcome(.readyToUse, id: "pools:approved:\(note.commitment)", place: "Privacy Pools",
+                                               body: String(localized: "\(figure) is private and ready to send"), mark: "Privacy Pools") }
+        case .rejected:
+            Task { await Notifications.outcome(.moveReturned, id: "pools:rejected:\(note.commitment)", place: "Privacy Pools",
+                                               body: String(localized: "\(figure) wasn't approved. Take it back from Holdings."), mark: "Privacy Pools") }
+        default:
+            break
+        }
+    }
+
     private func save() {
         guard let data = try? JSONEncoder().encode(notes) else { return }
         DefaultsWrite.set(data, forKey: Self.key)
@@ -499,8 +535,10 @@ final class PrivateMoneyStore {
             }
             NSLog("privateMoney| asp | %@… | %@", String(note.commitment.prefix(10)), status.rawValue)
             guard status != note.status, let i = notes.firstIndex(where: { $0.commitment == note.commitment }) else { continue }
+            let was = note.status
             notes[i].status = status
             save()
+            if was == .waiting { ruled(note, status) }
         }
     }
 

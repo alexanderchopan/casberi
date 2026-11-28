@@ -1,52 +1,52 @@
 {
-  "measured": "2026-10-27T06:44:32.058Z",
+  "measured": "2026-11-28T18:23:17.536Z",
   "mutation": null,
   "scenarios": {
     "eth": {
       "ok": true,
-      "seconds": 3,
-      "shares": "9987432368663144",
+      "seconds": 10,
+      "shares": "9977334990204054",
       "value": "10000000000000000",
       "spentWei": "9999990000000000",
       "refundWei": "10000000000",
       "underlyingNeeded": "9999990000000000",
       "gas": [
-        288607,
+        298957,
         50693,
-        916503
+        976066
       ],
-      "opGas": 1281679,
-      "poolShares": "111278782152202534555"
+      "opGas": 1351592,
+      "poolShares": "180002617400988122232"
     },
     "usdc": {
       "ok": true,
-      "seconds": 2,
-      "shares": "19907251061119587367",
+      "seconds": 10,
+      "shares": "19850498674594112717",
       "usdcSpent": "19999980",
       "gas": [
-        288607,
+        298957,
         50693,
         55558,
-        928015
+        983261
       ],
       "approvals": 1
     },
     "ragequit": {
       "ok": true,
-      "seconds": 19,
-      "shares": "9987432329234465",
-      "worth": "9999990039478253",
-      "ethBack": "9999990039478253",
+      "seconds": 76,
+      "shares": "9977334911798221",
+      "worth": "9999990039291935",
+      "ethBack": "9999990039291935",
       "wethLeft": "0",
       "gas": [
-        569446,
+        611475,
         46005,
-        267056,
+        268160,
         46806,
         48647
       ],
-      "opGas": 881044,
-      "recipient": "0x85cBbCf4fA7106EdE8d8ED9DDE5E66e657D58C49",
+      "opGas": 924165,
+      "recipient": "0xD28A88f89bd24830b3915459ED83679307cDB804",
       "calls": [
         "0x0eb42804bf897662af851370eaeadcdbec1b97ed 0x769284c2",
         "0x66051920d25af4e3596a8a46309f4d045f9d83b7 0x095ea7b3",
@@ -57,75 +57,108 @@
     },
     "withdraw": {
       "ok": true,
-      "seconds": 14,
+      "seconds": 72,
       "amount": "5000000000000000",
       "received": "5000000000000000",
       "relayedAfterAnotherOpen": true,
-      "gas": 1130676,
+      "gas": 1173731,
       "processor": "0x77613D670BB9fD48A9898D0eac8ebf21B566F960",
-      "feeShares": "47536028050168",
+      "feeShares": "204670286061118",
       "minUnderlyingOut": "4950000000000000"
+    },
+    "maxnotes": {
+      "ok": true,
+      "seconds": 73,
+      "notes": [
+        "11972801329635901",
+        "7981867521728263",
+        "4988667181478703"
+      ],
+      "sends": [
+        {
+          "send": 1,
+          "inputs": 1,
+          "amountSent": "11972801329635901",
+          "note": "11972801329635901",
+          "feeShares": "199715905594360"
+        },
+        {
+          "send": 2,
+          "inputs": 1,
+          "amountSent": "7981867521728263",
+          "note": "7981867521728263",
+          "feeShares": "202361017836601"
+        },
+        {
+          "send": 3,
+          "inputs": 1,
+          "amountSent": "4988667181478703",
+          "note": "4988667181478703",
+          "feeShares": "202361017041485"
+        }
+      ],
+      "after": "NoteTooSmall"
     },
     "fresh": {
       "ok": true,
-      "seconds": 7,
-      "paid": "4318863061023355",
-      "threshold": "4113202915260339",
-      "minUnderlying": "4005029436510339",
-      "reserve": "108173478750000",
-      "maxFee": "86538783",
-      "shares": "4205397659827995",
-      "gas": 910150,
-      "validatedGas": 910150,
-      "dust": "29414416092133",
+      "seconds": 18,
+      "paid": "4332052147939570",
+      "threshold": "4125763950418639",
+      "minUnderlying": "4009082920418639",
+      "reserve": "116681030000000",
+      "maxFee": "93344824",
+      "shares": "4205816611610781",
+      "gas": 969713,
+      "validatedGas": 969713,
+      "dust": "26167556055606",
       "status": "PENDING",
       "underRefused": true
     },
     "transfer": {
       "ok": true,
-      "seconds": 39,
+      "seconds": 177,
       "amountWei": "5000000000000000",
-      "sharesToB": "4993721059766597",
+      "sharesToB": "4988672013339081",
       "notesB": 1,
-      "gas": 833180,
+      "gas": 878560,
       "refusedUnregistered": "RecipientViewingKeyUnregistered"
     },
     "usdcsend": {
       "ok": true,
-      "seconds": 24,
+      "seconds": 57,
       "amount": "10000000",
       "received": "10000000",
-      "feeShares": "100536926919827008",
-      "gas": 1114140
+      "feeShares": "343314592150194302",
+      "gas": 1157207
     },
     "freshusdc": {
       "ok": true,
-      "seconds": 23,
+      "seconds": 49,
       "arrived": "25000000",
-      "gasPaidWei": "92048317130000",
-      "needWei": "92048317130000",
-      "shares": "24884061181594881477",
+      "gasPaidWei": "126222453000000",
+      "needWei": "126222453000000",
+      "shares": "24813114312573201096",
       "gas": [
         55570,
-        901695
+        983249
       ],
       "status": "PENDING"
     },
     "roundups": {
       "ok": true,
-      "seconds": 10,
-      "batch": "10546580",
-      "minUnderlying": "10046580",
-      "shares": "10497667956386934799",
+      "seconds": 15,
+      "batch": "10575300",
+      "minUnderlying": "10075300",
+      "shares": "10496243256831137226",
       "gas": [
         62248,
         55558,
-        928075
+        956512
       ],
       "refusedRideDroppedSendLands": true
     }
   },
-  "head": 26282337,
+  "head": 26515546,
   "account": {
     "kind": "SafeL2 1.4.1 proxy, made by SafeProxyFactory 1.4.1 with the app's setup",
     "singleton": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",

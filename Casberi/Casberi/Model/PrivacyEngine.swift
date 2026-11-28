@@ -46,6 +46,8 @@ final class PrivacyEngine: NSObject {
     private var webView: WKWebView?
     private var readyWaiters: [CheckedContinuation<Void, Error>] = []
     private var isReady = false
+    /// The page is loaded and answering (a warm account stands on it).
+    var running: Bool { isReady && webView != nil }
     private(set) var network: PrivacyNetwork?
 
     /// The page's Content-Security-Policy: its own scheme for script, data

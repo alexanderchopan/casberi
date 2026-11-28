@@ -709,7 +709,8 @@ extension FeedScreen {
         // Nobody waits on you (prd §1841): grey, and it says who it waits on.
         // Since when (prd §1938): the oldest deposit it sums, by day.
         case .waiting: ("clock", DS.textSecondary, PrivateMoney.beingChecked(since: PrivateMoneyStore.shared.notes
-            .filter { $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId }.map(\.at).min()), DS.textSecondary)
+            .filter { $0.status == .waiting && $0.symbol == row.symbol && $0.chainId == row.chainId }.map(\.at).min(),
+            usually: PrivateMoneyStore.shared.typicalWait), DS.textSecondary)
         case .refused: ("xmark.circle", DS.destructive, String(localized: "Not approved"), DS.destructiveInk)
         }
         // Its page, Send on it (user, 2026-11-21), as every holding's.

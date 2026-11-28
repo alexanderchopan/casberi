@@ -968,9 +968,8 @@ final class PrivateMove {
     /// The relayer's quote no longer stands: it expired, or gas rose past it
     /// while the phone proved. Nothing went out; a fresh quote and proof fix it.
     static func staleFee(_ f: PrivacyEngineWire.Failure) -> Bool {
-        f.name == "FeeCommitmentExpired"
-            || (f.name == "RelayerRejected" && (f.message.localizedCaseInsensitiveContains("no longer covers")
-                || f.message.localizedCaseInsensitiveContains("FeeCommitmentExpired")))
+        RelayerRefusal.kind(f.message) == .budgetShort ? false
+            : f.name == "FeeCommitmentExpired" || (f.name == "RelayerRejected" && RelayerRefusal.kind(f.message) == .staleFee)
     }
 
     /// The relayer asked us to slow down (HTTP 429): nothing went.
@@ -1019,6 +1018,12 @@ final class PrivateMove {
         }
         if let failure = error as? PrivacyEngineWire.Failure {
             NSLog("privateMove| engine | %@ | %@", failure.name, failure.message)
+            // **EVERY REFUSAL IN WORDS (2026-11-28):** 0xBow's relayer's
+            // answers sorted as 0xBow's own site sorts them (`RelayerRefusal`).
+            if failure.name.hasPrefix("Relayer") || failure.name == "FeeCommitmentExpired",
+               let said = RelayerRefusal.kind(failure.message).map(RelayerRefusal.words) {
+                return said
+            }
             // The engine's own name rides the words (2026-11-26: a send
             // failed on the phone as "could not be opened", and no log
             // reaches here): what to report is on the screen.
@@ -1066,3 +1071,67 @@ final class PrivateMove {
         return network.isTest ? String(localized: "Sepolia could not be reached") : String(localized: "Ethereum could not be reached")
     }
 }
+
+// MARK: - 0xBow's relayer, in words (BEGIN RelayerRefusal)
+
+/// **WHAT 0XBOW'S RELAYER SAID, SORTED (2026-11-28, user: "do all" of
+/// "word every relayer refusal").** The relayer answers a refusal in its own
+/// text; 0xBow's site sorts it into a handful of cases
+/// (privacy-pools-website-v2, services/transfer-outcome.ts) and so does this,
+/// each said as what happened, whether anything went, and what to do. Every
+/// case is a refusal before anything was sent. Foundation only, so
+/// `private-money-selftest.sh` compiles it alone.
+enum RelayerRefusal: Equatable {
+    /// HTTP 429: it is throttling this phone.
+    case busy
+    /// It prices every send at a fixed gas budget below what this one needs:
+    /// a fresh quote fails the same way ("relayer prices it at N gas").
+    case budgetShort
+    /// Gas moved past the quote while the phone proved: a fresh quote fixes it.
+    case staleFee
+    /// A send spending the same money is still pending on its side.
+    case inFlight
+    /// Its own wallet cannot pay gas: an outage on its side.
+    case outOfGas
+    /// It simulated the send and Ethereum would revert it (`PoolVault_…`).
+    case wouldRevert(String?)
+    /// No relayer answered the quote.
+    case unreachable
+
+    static func kind(_ message: String) -> RelayerRefusal? {
+        func has(_ pattern: String) -> Bool {
+            message.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+        }
+        if has(#"\bHTTP 429\b|Too Many Requests"#) { return .busy }
+        // Before the stale fee: both open with "no longer covers".
+        if has(#"relayer prices it at \d+ gas|relayer's gas budget is raised"#) { return .budgetShort }
+        if has(#"quoted relay fee no longer covers|FeeCommitmentExpired|Fee commitment expired"#) { return .staleFee }
+        if has(#"nullifier.{0,80}already in-flight"#) { return .inFlight }
+        if has(#"relayer's wallet cannot cover gas"#)
+            || (has(#"Relay failed:"#) && has(#"exceeds the balance of the account|insufficient funds for gas \* price \+ value"#)) {
+            return .outOfGas
+        }
+        if has(#"PoolVault transact failed|The contract function .?transact.? reverted|PoolVault_[A-Za-z]+"#) {
+            let name = message.range(of: #"PoolVault_[A-Za-z]+"#, options: .regularExpression)
+                .map { String(message[$0].dropFirst("PoolVault_".count)) }
+            return .wouldRevert(name)
+        }
+        if has(#"failed to quote|relayers failed"#) { return .unreachable }
+        return nil
+    }
+
+    static func words(_ kind: RelayerRefusal) -> String {
+        switch kind {
+        case .busy: String(localized: "0xBow's relayer is busy. Nothing was sent: try again in a minute.")
+        case .budgetShort: String(localized: "This send needs more gas than 0xBow's relayer pays right now. Nothing was sent: try again later.")
+        case .staleFee: String(localized: "Gas rose while it was proving, past 0xBow's quote. Nothing was sent: try again.")
+        case .inFlight: String(localized: "An earlier send from this money is still going through. Nothing was sent: wait for your balance to update, then try again.")
+        case .outOfGas: String(localized: "0xBow's relayer can't pay gas on Ethereum right now. Nothing was sent: try again later.")
+        case .wouldRevert(let name):
+            name.map { String(localized: "0xBow's relayer checked it and Ethereum would refuse it (\($0)). Nothing was sent: try again once your balance updates.") }
+                ?? String(localized: "0xBow's relayer checked it and Ethereum would refuse it. Nothing was sent: try again once your balance updates.")
+        case .unreachable: String(localized: "0xBow's relayer didn't answer. Nothing was sent: try again in a minute.")
+        }
+    }
+}
+// (END RelayerRefusal)

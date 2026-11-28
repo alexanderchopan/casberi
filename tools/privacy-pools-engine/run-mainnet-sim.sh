@@ -6,11 +6,12 @@
 cd "${0:A:h}"
 WRITE_RECORD=1 node mainnet-sim.mjs || { echo "MAINNET SIM FAILED"; exit 1; }
 tmp=$(mktemp)
-for m in devkeys value proof notowner wethwithdraw recipient openclears freshgas usdcgas transferto; do
+for m in devkeys value proof notowner wethwithdraw recipient openclears relayedagain freshgas usdcgas transferto; do
   case $m in
     devkeys|value|proof) s=eth ;;
     notowner|wethwithdraw) s=ragequit ;;
     recipient|openclears) s=withdraw ;;
+    relayedagain) s=maxnotes ;;
     freshgas) s=fresh ;;
     usdcgas) s=freshusdc ;;
     transferto) s=transfer ;;
@@ -22,4 +23,4 @@ for m in devkeys value proof notowner wethwithdraw recipient openclears freshgas
   fi
 done
 rm -f $tmp src/.engine-mutated.js
-echo "mainnet simulation: every move lands from a real Safe proxy; 10 of 10 mutations caught"
+echo "mainnet simulation: every move lands from a real Safe proxy; 11 of 11 mutations caught"

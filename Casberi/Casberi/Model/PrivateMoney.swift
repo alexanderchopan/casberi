@@ -268,10 +268,23 @@ enum PrivateMoney {
     static var beingChecked: String { String(localized: "Being checked by Privacy Pools") }
     /// With the day the deposit went in (prd §1938): "Being checked by
     /// Privacy Pools · since Nov 18", so a wait is never of unknown age.
-    static func beingChecked(since: Date?) -> String {
+    static func beingChecked(since: Date?, usually: TimeInterval? = nil) -> String {
         guard let since else { return beingChecked }
         let day = since.formatted(.dateTime.month(.abbreviated).day())
+        // **HOW LONG IT USUALLY TAKES (2026-11-27):** from your own deposits'
+        // approvals, never a figure written in; none until one was seen.
+        if let words = usuallyWords(usually) {
+            return String(localized: "Being checked by Privacy Pools · since \(day) · \(words)")
+        }
         return String(localized: "Being checked by Privacy Pools · since \(day)")
+    }
+
+    /// "usually about 20 min", "usually about 3 hours", from a typical wait.
+    static func usuallyWords(_ wait: TimeInterval?) -> String? {
+        guard let wait, wait > 0 else { return nil }
+        let minutes = Int((wait / 60).rounded())
+        if minutes < 90 { return String(localized: "usually about \(max(minutes, 1)) min") }
+        return String(localized: "usually about \(Int((wait / 3600).rounded())) hours")
     }
 
     /// "Since 2:14 PM" today, "Since Oct 19" before.

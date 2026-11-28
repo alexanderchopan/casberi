@@ -1448,5 +1448,36 @@ wmutate "a waiting step hides what it needs" 's/let step = needs \?\? steps\[cur
 wmutate "approval waits on you" 's/steps: addressSteps, current: 3, needs: nil/steps: addressSteps, current: 3, needs: "Waiting"/'
 use "$SENT" 'LedgerRow(id: "choiceFrom", name: Self.rowName(.from, verb: verb),' "Send lost its From row (prd §1779)"
 use "$SENT" 'goAztec(.send, recipient: AztecAddressText.isAztec(typed) ? typed.lowercased() : resolved?.address)' "From's private account drops the address already typed (prd §1779, §1988)"
+# ── 0xBow's relayer, in words (2026-11-28) ─────────────────────────────────
+# Every refusal 0xBow's own site sorts (services/transfer-outcome.ts) is sorted
+# here too, each said in plain words; the budget case never reads as a stale
+# fee, which would re-prove three times for a quote that cannot cover it.
+PMOVE=Casberi/Casberi/Model/PrivateMove.swift
+mkdir -p "$TMP/refusal"
+awk '/BEGIN RelayerRefusal/{f=1;next} /END RelayerRefusal/{f=0} f' "$PMOVE" > "$TMP/refusal/RelayerRefusal.swift"
+cat > "$TMP/refusal/main.swift" <<'SWIFT'
+import Foundation
+var bad = 0
+func is_(_ m: String, _ k: RelayerRefusal?, _ what: String) { if RelayerRefusal.kind(m) != k { print("✗ \(what): \(String(describing: RelayerRefusal.kind(m)))"); bad += 1 } }
+is_(#"HTTP 400: : {"message":"PPRouter withdrawToUnderlying rejected: the quoted relay fee no longer covers the transaction cost (fee worth 375932092332894 wei; cost "#, .staleFee, "a fee the gas rose past is stale (the phone, 2026-11-27)")
+is_(#"{"message":"RelaySwaps executeUnwrapped rejected: the quoted relay fee no longer covers the transaction cost (fee worth 1 wei; cost 2 wei = 3011116 gas × 1 wei/gas). This transaction needs 3011116 gas but the relayer prices it at 2300000 gas on this chain, so a new quote will not cover it until the relayer's gas budget is raised."}"#, .budgetShort, "a budget short of the gas is not a stale fee")
+is_(#"HTTP 429: : {"statusCode":429,"message":"ThrottlerException: Too Many Requests"}"#, .busy, "a 429 is busy (the phone, 2026-11-27)")
+is_("Nullifier 0xabc is already in-flight", .inFlight, "a nullifier in flight")
+is_("Relayer temporarily unavailable on chain 1: the relayer's wallet cannot cover gas for RelaySwaps.", .outOfGas, "the relayer's own wallet out of gas")
+is_("Relay failed: insufficient funds for gas * price + value", .outOfGas, "the relayer's node out of gas")
+is_("insufficient funds for gas * price + value", nil, "your own wallet's gas is not the relayer's")
+is_(#"PoolVault transact failed: The contract function "transact" reverted. (PoolVault_ProofContextMismatch)"#, .wouldRevert("ProofContextMismatch"), "a simulated revert names its reason")
+is_("All configured relayers failed to quote: Fast Relay: timeout", .unreachable, "no relayer answered")
+is_("something else entirely", nil, "an unknown answer keeps its own words")
+let all: [RelayerRefusal] = [.busy, .budgetShort, .staleFee, .inFlight, .outOfGas, .wouldRevert("X"), .wouldRevert(nil), .unreachable]
+for k in all { let w = RelayerRefusal.words(k); if !w.contains("Nothing was sent") || w.contains("{") || w.hasSuffix("…") { print("✗ \(k) says: \(w)"); bad += 1 } }
+exit(bad == 0 ? 0 : 1)
+SWIFT
+swiftc -Onone "$TMP/refusal/RelayerRefusal.swift" "$TMP/refusal/main.swift" -o "$TMP/refusal/run" 2>"$TMP/refusal/err" \
+  || { head -20 "$TMP/refusal/err"; echo "✗ RelayerRefusal does not compile alone"; exit 1; }
+"$TMP/refusal/run" || { echo "✗ a relayer refusal is sorted wrong or said unplainly"; exit 1; }
+use "$PMOVE" 'RelayerRefusal.kind(f.message) == .budgetShort ? false' "a budget short of the gas re-proves as if the fee were stale"
+use "$PMOVE" 'let said = RelayerRefusal.kind(failure.message).map(RelayerRefusal.words)' "a relayer refusal is no longer said in words"
+echo "  ok   0xBow's relayer: every refusal sorted and said (busy, budget, stale fee, in flight, out of gas, would revert, unreachable)"
 echo "  ok   simplified: the whole menu A–Z, a sentence that takes no touch, a row for every choice, private doors in view, Aztec in its own ink, Pay the gas, Home's places, On its way step by step, the public address's networks"
 echo "  ok   81 mutations"

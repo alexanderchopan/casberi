@@ -49,6 +49,8 @@ enum PrivateOnEthereum {
     @discardableResult
     static func open(_ id: String, reason: String?) async throws -> String {
         guard PrivateMainnet.on else { throw PrivacyNetwork.Refusal.notServed(network.chainId) }
+        // Any open replaces the engine's account: a warm one is gone.
+        warm = nil
         guard let owner else { throw Failure.noAccount }
         if let reason { try await PrivateRootKey.unlock(reason: reason) }
         guard var root = PrivateRootKey.root(id) else { throw Failure.noRoot }
@@ -225,6 +227,32 @@ enum PrivateOnEthereum {
         }
     }
 
+    // MARK: - Warm before the hold (2026-11-27)
+
+    /// **THE ACCOUNT OPENS WHILE YOU TYPE.** "Preparing" was opening your
+    /// private account in the engine and reading the pool, 30 to 60 s after
+    /// Face ID. Send's sheet opens it ahead (no Face ID: it reads, it never
+    /// spends); a hold within `warmFor` of it asks Face ID and proves at once.
+    /// Any other open replaces the account and forgets it (`open`).
+    private(set) static var warm: (id: String, at: Date)?
+    static let warmFor: TimeInterval = 120
+
+    static func prewarm() async {
+        guard let account = PrivateRootKey.currentID, PrivateMainnet.on else { return }
+        if let w = warm, w.id == account, Date().timeIntervalSince(w.at) < warmFor / 2 { return }
+        let t = Date()
+        do {
+            try await PrivacyEngine.exclusive {
+                _ = try await open(account, reason: nil)
+                PrivateMoneyStore.shared.reconcile(try await PrivacyEngine.shared.discover(), root: account, network: network)
+                warm = (account, .now)
+            }
+            NSLog("privateEthereum| warmed in %.1f s", Date().timeIntervalSince(t))
+        } catch {
+            NSLog("privateEthereum| warm failed | %@", String(describing: error))
+        }
+    }
+
     /// Where a send stands, so the foot says it (2026-11-26, user: "nothing
     /// happens" — it said Confirm with Face ID through the read, the proof
     /// and the relay).
@@ -241,10 +269,17 @@ enum PrivateOnEthereum {
                                     step: (@Sendable (SendStep) async -> Void)?) async throws -> String {
         try await PrivacyEngine.exclusive {
             await step?(.opening)
-            try await open(account, reason: reason)
-            await step?(.preparing)
             let engine = PrivacyEngine.shared
-            PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)
+            if let w = warm, w.id == account, Date().timeIntervalSince(w.at) < warmFor, engine.running {
+                // Opened and read while you typed (`prewarm`): Face ID alone.
+                try await PrivateRootKey.unlock(reason: reason)
+                await step?(.preparing)
+                NSLog("privateEthereum| warm | opened %d s ago", Int(Date().timeIntervalSince(w.at)))
+            } else {
+                try await open(account, reason: reason)
+                await step?(.preparing)
+                PrivateMoneyStore.shared.reconcile(try await engine.discover(), root: account, network: network)
+            }
             // Max's sends counted again from what the pool holds now.
             var parts = parts
             if parts > 1, let recount { parts = max(await recount(), 1) }
@@ -301,6 +336,8 @@ enum PrivateOnEthereum {
             // said "Sending" through the minute this read takes).
             await step?(.relayed(relayed.tx))
             if let after = try? await engine.discover() { PrivateMoneyStore.shared.reconcile(after, root: account, network: network) }
+            // Spent: the next send reads afresh.
+            warm = nil
             return relayed.tx
         }
     }

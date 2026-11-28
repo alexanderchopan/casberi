@@ -4,7 +4,7 @@
 // — nothing is ever signed or sent. No key here can sign a mainnet
 // transaction; the relayer's `/v1/relay/*` is refused before it leaves.
 //
-//   node mainnet-sim.mjs [scenario ...]     scenarios: eth usdc ragequit withdraw fresh transfer usdcsend
+//   node mainnet-sim.mjs [scenario ...]     scenarios: eth usdc ragequit withdraw maxnotes fresh transfer usdcsend
 //                                           freshusdc roundups (default: all)
 //   node mainnet-sim.mjs --mutate <name>    the same, with one thing broken on purpose: it must FAIL
 //
@@ -46,7 +46,7 @@ const args = process.argv.slice(2);
 const mutateAt = args.indexOf('--mutate');
 const MUTATION = mutateAt >= 0 ? args[mutateAt + 1] : null;
 const wanted = args.filter((a, i) => !a.startsWith('--') && (mutateAt < 0 || i !== mutateAt + 1));
-const SCENARIOS = wanted.length ? wanted : ['eth', 'usdc', 'ragequit', 'withdraw', 'fresh', 'transfer', 'usdcsend', 'freshusdc', 'roundups'];
+const SCENARIOS = wanted.length ? wanted : ['eth', 'usdc', 'ragequit', 'withdraw', 'maxnotes', 'fresh', 'transfer', 'usdcsend', 'freshusdc', 'roundups'];
 
 // ------------------------------------------------------------- the network
 // Read 2026-10-26 from 0xBow's production relayer (/v1/details/evm/1), its
@@ -85,7 +85,7 @@ const PROXY_FACTORY = '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67';
 // Nodes: state and simulation from PublicNode, logs from Tenderly's gateway
 // (the whole range in one read). The phone reads logs through Tor from MEV
 // Blocker in 50,000-block windows instead (measured, `PrivacyEngineWire`).
-const STATE_RPC = process.env.STATE_RPC ?? 'https://ethereum-rpc.publicnode.com';
+const STATE_RPC = process.env.STATE_RPC ?? 'https://ethereum.publicnode.com';
 const LOGS_RPC = process.env.LOGS_RPC ?? 'https://gateway.tenderly.co/public/mainnet';
 
 const say = (...a) => console.log(...a);
@@ -240,12 +240,28 @@ async function rpcAnswer({ method, params, id }) {
 // label (approved, and in the set) — see the header.
 const aspExtra = { labelHashes: [], root: null };
 
-async function engineNet({ url, method, headers, body }) {
+// The page's door now takes its body as base64 (`body64`, prd §1569a: binary
+// proofs), so every answer here is handed back that way; a body read as
+// text would reach the engine empty and every read "HTTP request failed".
+async function engineNet(request) {
+  const r = await engineNetText(request);
+  const bytes = r.bytes ?? Buffer.from(r.body ?? '', 'utf8');
+  return { status: r.status, headers: r.headers, body64: Buffer.from(bytes).toString('base64') };
+}
+
+async function engineNetText({ url, method, headers, body }) {
   const u = new URL(url);
   if (process.env.SIM_DEBUG && u.hostname !== 'sim.rpc.invalid') say('    net', method, url.slice(0, 160));
   if (u.hostname === 'sim.rpc.invalid') {
     const payload = JSON.parse(body);
-    const answer = Array.isArray(payload) ? await Promise.all(payload.map(rpcAnswer)) : await rpcAnswer(payload);
+    let answer;
+    try {
+      answer = Array.isArray(payload) ? await Promise.all(payload.map(rpcAnswer)) : await rpcAnswer(payload);
+    } catch (e) {
+      // Said, so a node that cannot answer is named, never "HTTP request failed".
+      say(`    sim rpc ${payload.method ?? 'batch'} failed: ${String(e.message ?? e).slice(0, 240)}`);
+      throw e;
+    }
     return { status: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify(answer) };
   }
   if (u.hostname === new URL(ETHEREUM.relayerUrl).hostname && u.pathname.startsWith('/v1/relay')) {
@@ -279,7 +295,7 @@ async function engineNet({ url, method, headers, body }) {
   const res = await nodeFetch(url, { method, headers, body: method === 'GET' ? undefined : body });
   const out = {};
   res.headers.forEach((v, k) => { out[k] = v; });
-  return { status: res.status, headers: out, body: await res.text() };
+  return { status: res.status, headers: out, bytes: new Uint8Array(await res.arrayBuffer()) };
 }
 
 // ------------------------------------------- circuits: the ceremony keys
@@ -337,6 +353,15 @@ if (MUTATION === 'openclears') {
   const anchor = "addressSchema: AddressSchema }, { logger: logger('relayer') });\n";
   if (!src.includes(anchor)) throw new Error('the openclears mutation found nothing to change');
   writeFileSync(join(here, 'src/.engine-mutated.js'), src.replace(anchor, anchor + '    prepared.clear();\n'));
+  await import('./src/.engine-mutated.js');
+} else if (MUTATION === 'relayedagain') {
+  // The engine as it was before 2026-11-27: a note handed to the relayer
+  // stays ACTIVE until discover sees it spent, so Max's next send picks it
+  // again (a double spend the relayer refuses).
+  const src = readFileSync(join(here, 'src/engine.js'), 'utf8');
+  const cut = " && !relayedHere.has(String(n.commitment))";
+  if (!src.includes(cut)) throw new Error('the relayedagain mutation found nothing to change');
+  writeFileSync(join(here, 'src/.engine-mutated.js'), src.replace(cut, ''));
   await import('./src/.engine-mutated.js');
 } else {
   await import('./src/engine.js');
@@ -737,6 +762,72 @@ for (const name of SCENARIOS) {
       out.withdraw = { amount: amount.toString(), received: got.toString(), relayedAfterAnotherOpen: true, gas: Number(BigInt(block.calls[0].gasUsed)), processor: sent.processorAddress,
         feeShares: BigInt(w.fee.feeAmount).toString(), minUnderlyingOut: BigInt(sent.minUnderlyingOut).toString() };
       say(`  relayed withdraw LANDS: the recipient got ${got} wei of native ETH (asked ${amount}); gas ${BigInt(block.calls[0].gasUsed)}`);
+    }
+
+    if (name === 'maxnotes') {
+      // MAX IS EVERY NOTE, ONE PER SEND (2026-11-27, on the phone: 0xBow's
+      // relayer prices a withdrawal at one input note's gas and refuses two).
+      // Three deposits make three notes; Max (`upTo`, the whole balance
+      // asked) must spend exactly one note a send, the largest not yet handed
+      // to the relayer, never one already relayed before discover sees it
+      // spent, and with nothing left it must say NoteTooSmall.
+      await newFork([A]);
+      const reg = await openAndRegister();
+      const sizes = [12n * 10n ** 15n, 8n * 10n ** 15n, 5n * 10n ** 15n];
+      const made = [];
+      for (const [i, budget] of sizes.entries()) {
+        const { d } = await yieldDeposit(ETH, budget, i === 0 ? reg : null, `${Number(budget) / 1e18} ETH into ppETH`);
+        made.push(d);
+      }
+      // 0xBow's approval stood in for, for all three labels (see `withdraw`).
+      for (const d of made) aspExtra.labelHashes.push(d.labelHash);
+      const leaves = (await (await nodeFetch(`${ETHEREUM.aspUrl}/association-set/leaves?chainId=1&entrypoint=${ETHEREUM.entrypoint}`)).json()).leaves;
+      const merkle = new MerkleService({ hashService: await PoseidonHashService.create() });
+      const all = [...leaves, ...made.map((d) => d.labelHash)].map((x) => toHex(BigInt(x)));
+      aspExtra.root = toHex(BigInt((await merkle.generateMerkleProof(all, all.at(-1))).root));
+      fork.overrides = { ...fork.overrides, [ETHEREUM.aspRegistry]: { code: `0x7f${pad(aspExtra.root).slice(2)}60005260206000f3` } };
+      const found = await engine('discover');
+      const mine = made.map((d) => found.notes.find((n) => n.commitment.toLowerCase() === d.commitment.toLowerCase()));
+      if (mine.some((n) => !n)) throw new Error(`not every deposit was discovered (${found.notes.length} notes)`);
+      const values = mine.map((n) => BigInt(n.value)).sort((x, y) => (y > x ? 1 : -1));
+      say(`  three notes: ${values.join(', ')} shares, all ${[...new Set(mine.map((n) => n.status))].join('/')}`);
+      const whole = sizes.reduce((x, y) => x + y, 0n);
+      const recipient = getAddress(toHex(crypto.getRandomValues(new Uint8Array(20))));
+      const spent = [];
+      const checks = [];
+      for (let k = 0; k < 3; k++) {
+        // A quote can expire while the proof is made: quoted and proved
+        // again, once, as the app does (`PrivateMove.staleFee`).
+        let w;
+        for (let tries = 0; ; tries++) {
+          w = await engine('prepareWithdraw', { tokenId: ETH, amount: toHex(whole), recipient, upTo: true });
+          try { await engine('relay', { handle: w.handle }); break; } catch (e) {
+            if (tries > 0 || e.engine?.name !== 'FeeCommitmentExpired') throw e;
+            say(`  send ${k + 1}: the quote expired before the relay, proved again`);
+          }
+        }
+        const sent = relayCaptured.at(-1);
+        const nIn = sent.inputNullifierNumber;
+        const nullifier = String(sent.proof.publicSignals[0]);
+        const amountSent = BigInt(w.fee.amountSent);
+        // One input; at most the k-th largest note; more than the next one
+        // (so it is the largest left, not a smaller one).
+        if (nIn !== 1) throw new Error(`send ${k + 1}: ${nIn} input notes, the relayer takes one`);
+        if (amountSent > values[k]) throw new Error(`send ${k + 1}: releases ${amountSent} shares from a note of ${values[k]}`);
+        if (k + 1 < values.length && amountSent <= values[k + 1]) throw new Error(`send ${k + 1}: ${amountSent} shares fits a smaller note than the largest left (${values[k]})`);
+        if (spent.includes(nullifier)) throw new Error(`send ${k + 1}: spends a note already handed to the relayer`);
+        spent.push(nullifier);
+        checks.push({ send: k + 1, inputs: nIn, amountSent: amountSent.toString(), note: values[k].toString(), feeShares: BigInt(w.fee.feeAmount).toString() });
+        say(`  send ${k + 1} of 3: one note (${values[k]} shares), ${amountSent} released, fee ${BigInt(w.fee.feeAmount)}`);
+      }
+      // Nothing left: Max says so, never a send of nothing.
+      let left;
+      try {
+        await engine('prepareWithdraw', { tokenId: ETH, amount: toHex(whole), recipient, upTo: true });
+      } catch (e) { left = e.engine?.name; }
+      if (left !== 'NoteTooSmall') throw new Error(`with every note handed over, Max answered ${left ?? 'a send'}, not NoteTooSmall`);
+      say('  every note handed over: Max answers NoteTooSmall');
+      out.maxnotes = { notes: values.map(String), sends: checks, after: left };
     }
 
     if (name === 'fresh') {
