@@ -59086,30 +59086,30 @@
         }
       }
     },
-    "Anyone on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move tokens in from your public account: ETH and USDC go to Privacy Pools instead, where they earn. Anything else is private in about an hour, once Railgun checks it." : {
+    "Anyone on Ethereum can pay your Railgun address, in any token. It's usually yours to use within minutes. You can also move any token in from your public account. For ETH and USDC you pick Railgun or Privacy Pools, where they earn. A move in is private in about an hour, once Railgun checks it." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cualquiera en Ethereum puede pagar a tu dirección de Railgun, en cualquier token. Normalmente puedes usarlo en minutos. También puedes traer tokens desde tu cuenta pública: ETH y USDC van a Privacy Pools, donde rinden. Lo demás pasa a ser privado en una hora aproximadamente, cuando Railgun lo revisa."
+            "value" : "Cualquiera en Ethereum puede pagar a tu dirección de Railgun, en cualquier token. Normalmente puedes usarlo en minutos. También puedes mover cualquier token desde tu cuenta pública. Para ETH y USDC eliges Railgun o Privacy Pools, donde generan rendimiento. Lo que mueves se vuelve privado en aproximadamente una hora, cuando Railgun lo revisa."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum上の誰でも、あらゆるトークンであなたのRailgunアドレスに支払えます。通常は数分で使えます。公開アカウントからトークンを移すこともできます。ETHとUSDCは代わりにPrivacy Poolsへ入り、利息が付きます。それ以外はRailgunの確認後、約1時間でプライベートになります。"
+            "value" : "Ethereum上の誰でも、あらゆるトークンであなたのRailgunアドレスに支払えます。通常は数分で使えます。公開アカウントからどのトークンでも移すこともできます。ETHとUSDCはRailgunか、利回りが付くPrivacy Poolsかを選べます。移したものはRailgunの確認後、約1時間で非公開になります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum의 누구나 어떤 토큰으로든 내 Railgun 주소로 보낼 수 있습니다. 보통 몇 분 안에 쓸 수 있습니다. 공개 계정에서 토큰을 옮겨올 수도 있습니다. ETH와 USDC는 대신 Privacy Pools로 가서 수익을 냅니다. 그 외는 Railgun이 확인하면 약 1시간 후 비공개가 됩니다."
+            "value" : "Ethereum의 누구나 어떤 토큰으로든 내 Railgun 주소로 보낼 수 있습니다. 보통 몇 분 안에 사용할 수 있습니다. 공개 계정에서 어떤 토큰이든 옮겨 올 수도 있습니다. ETH와 USDC는 Railgun 또는 수익이 붙는 Privacy Pools 중에서 고릅니다. 옮긴 금액은 Railgun이 확인한 뒤 약 1시간 후 비공개가 됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ethereum 上的任何人都可以用任意代币向你的 Railgun 地址付款。通常几分钟内即可使用。你也可以从公开账户转入代币:ETH 和 USDC 会改为进入 Privacy Pools 赚取收益。其他代币在 Railgun 检查后约一小时变为私密。"
+            "value" : "Ethereum 上的任何人都可以用任意代币向你的 Railgun 地址付款。通常几分钟内即可使用。你也可以从公开账户转入任意代币。ETH 和 USDC 可以选择 Railgun 或 Privacy Pools（在那里会产生收益）。转入的资金在 Railgun 检查后约一小时变为私密。"
           }
         }
       }
@@ -172424,12 +172424,6 @@
             "value" : "Listo para firmar · toca"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "可以签署 · 轻点"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -172440,6 +172434,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "서명 준비됨 · 탭"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以签署 · 轻点"
           }
         }
       }
@@ -245508,12 +245508,6 @@
             "value" : "Tu cuenta de Tacit no se abrió. Inténtalo de nuevo"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的 Tacit 账户未打开。请重试"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -245524,6 +245518,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tacit 계정이 열리지 않았습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Tacit 账户未打开。请重试"
           }
         }
       }
@@ -256474,6 +256474,34 @@
         }
       }
     },
+    "any amount moves in. Railgun takes 0.25%." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "se mueve cualquier cantidad. Railgun cobra un 0,25 %."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どんな金額でも移せます。Railgunは0.25%を受け取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "어떤 금액이든 옮길 수 있습니다. Railgun은 0.25%를 가져갑니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任何金额都可以转入。Railgun 收取 0.25%。"
+          }
+        }
+      }
+    },
     "any time, at once" : {
       "localizations" : {
         "es" : {
@@ -264910,34 +264938,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "转移价值"
-          }
-        }
-      }
-    },
-    "moving in starts at $10 of a token Casberi can price. Railgun takes 0.25%." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "mover hacia dentro empieza en 10 $ de un token al que Casberi pueda poner precio. Railgun cobra un 0,25 %."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "移し入れは、Casberiが価格を付けられるトークンで$10から。Railgunの手数料は0.25%です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "옮겨오기는 Casberi가 가격을 매길 수 있는 토큰 $10부터 가능합니다. Railgun은 0.25%를 받습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "转入起点为 Casberi 能定价的代币 $10。Railgun 收取 0.25%。"
           }
         }
       }
