@@ -74286,6 +74286,12 @@
         }
       }
     },
+    "Claim %@ moved out of Aztec" : {
+
+    },
+    "Claim in about %lld min, on Ethereum" : {
+
+    },
     "Claim it here, we'll tell you" : {
       "localizations" : {
         "es" : {
@@ -74313,6 +74319,19 @@
           }
         }
       }
+    },
+    "Claim on Ethereum: %@ to %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Claim on Ethereum: %1$@ to %2$@"
+          }
+        }
+      }
+    },
+    "Claim soon, on Ethereum" : {
+
     },
     "Claim to your account" : {
       "localizations" : {
@@ -74342,6 +74361,9 @@
         }
       }
     },
+    "Claimed" : {
+
+    },
     "Claimed %@" : {
       "localizations" : {
         "es" : {
@@ -74369,6 +74391,9 @@
           }
         }
       }
+    },
+    "Claimed by your account" : {
+
     },
     "Claimed for you" : {
       "localizations" : {
@@ -74426,6 +74451,12 @@
         }
       }
     },
+    "Claimed from your public account, so it's linked to you" : {
+
+    },
+    "Claiming" : {
+
+    },
     "Claiming the token…" : {
       "localizations" : {
         "es" : {
@@ -74453,6 +74484,9 @@
           }
         }
       }
+    },
+    "Claiming…" : {
+
     },
     "Claude answers on this key now." : {
       "localizations" : {
@@ -115702,6 +115736,9 @@
         }
       }
     },
+    "It's ready to claim on Ethereum in about an hour. You'll be told, then tap Claim on Home to receive it." : {
+
+    },
     "Italic" : {
       "localizations" : {
         "es" : {
@@ -148156,6 +148193,9 @@
           }
         }
       }
+    },
+    "On its way: claim it on Home in about an hour" : {
+
     },
     "On its way: private in about an hour." : {
       "localizations" : {
@@ -186121,6 +186161,9 @@
         }
       }
     },
+    "Send to another Aztec account in about 20 seconds; who, what and how much stay private. Or send out to any Ethereum address, your public account included; it arrives as WETH. Shield takes 0.5%. About an hour later, claim it on Ethereum from Home, one Face ID." : {
+
+    },
     "Send to anyone with Railgun, and it stays private: only they can see it. Or send to anyone on Ethereum: a Railgun broadcaster, or a one-time address of yours paying gas from your private ETH, sends it for you, so your public account never shows up. You see the cost before you send. You can also send back to your public account." : {
       "localizations" : {
         "es" : {
@@ -199472,6 +199515,9 @@
         }
       }
     },
+    "Still waiting on Tacit's chain. Claim it later from here" : {
+
+    },
     "Still waiting on Tacit's chain. Collect it later from here" : {
       "localizations" : {
         "es" : {
@@ -203444,6 +203490,9 @@
           }
         }
       }
+    },
+    "Tacit owes nothing to claim yet. Claim it later from here" : {
+
     },
     "Tacit owes nothing to collect yet. Collect it later from here" : {
       "localizations" : {
@@ -257048,6 +257097,9 @@
         }
       }
     },
+    "claim on Ethereum in about an hour" : {
+
+    },
     "clear to withdraw" : {
       "localizations" : {
         "es" : {
@@ -266285,6 +266337,9 @@
           }
         }
       }
+    },
+    "on Ethereum in about an hour, plus Ethereum gas to claim" : {
+
     },
     "on Ethereum in about an hour, plus Ethereum gas to finish" : {
       "localizations" : {
