@@ -261,6 +261,15 @@ struct MoveStepCapsule: View {
                     withAnimation(DS.Motion.standard) { steps.bringBack() }
                     chrome.moveTacitFarm = lpAsset
                     chrome.moveTray = true
+                } else if steps.awayFrom == .move {
+                    // Move again, on the sentence it kept (`moveDraft`), the
+                    // reason said once more (prd §2007).
+                    let why = run.reason
+                    withAnimation(DS.Motion.standard) { steps.clearAway() }
+                    // Straight onto its verb, past the phone's menu.
+                    if let d = chrome.moveDraft { chrome.moveAsk = d.verb == .send ? "send" : "swap" }
+                    chrome.moveTray = true
+                    if let why { chrome.flash(why, tone: .failure, seconds: 6) }
                 } else if steps.awayFrom == .privacyPools {
                     // Privacy Pools keeps no sentence: its Send again, the
                     // reason said once more (the review of 2026-11-27).

@@ -40,6 +40,9 @@ enum MoveMenu {
     @MainActor static func pick(_ verb: Verb, _ chrome: ShellChrome) {
         DSHaptic.selection()
         chrome.moveAsk = verb.rawValue
+        // A verb's page is whole (prd §1869): the sheet rises to its full
+        // height at once, never short and then tall once the page mounts.
+        chrome.moveTall = true
         withAnimation(DS.Motion.standard) { chrome.moveMenu = false }
         chrome.moveTray = true
     }
@@ -50,6 +53,22 @@ enum MoveMenu {
     @MainActor static func close(_ chrome: ShellChrome) {
         withAnimation(DS.Motion.standard) { chrome.moveMenu = false }
     }
+}
+
+/// **THE MENU'S OWN VIEWS READ ITS FLAG (prd §2007; user, 2026-11-27: "when
+/// i press move sometimes there is a delay before the verbs show or a
+/// jitter").** `RootShell` read `chrome.moveMenu` in its own body, so every
+/// press of Move re-evaluated the root of the app, the feed under it
+/// included, in the frame the verbs were meant to rise in. These two read
+/// it instead: a press now invalidates the dim and the verbs, nothing else.
+struct MoveMenuDimLayer: View {
+    @Environment(ShellChrome.self) private var chrome
+    var body: some View { if chrome.moveMenu { MoveMenuDim() } }
+}
+
+struct MoveMenuVerbsLayer: View {
+    @Environment(ShellChrome.self) private var chrome
+    var body: some View { if chrome.moveMenu { MoveMenuVerbs() } }
 }
 
 /// The page under the menu, dimmed: a tap on it puts the menu away.

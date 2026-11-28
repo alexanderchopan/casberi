@@ -1934,6 +1934,12 @@ struct MoveSentence: View {
         .task(id: crossingWatch?.id) { await watchCrossing() }
         .task(id: sweepKey) { await resweep() }
         .task(id: previewKey) { await repreview() }
+        // The phone's own number for opening Move (prd §2007).
+        .onAppear {
+            guard let raised = chrome.moveRaisedAt else { return }
+            chrome.moveRaisedAt = nil
+            PerfReadings.record("MoveOpen", ms: Date().timeIntervalSince(raised) * 1000, note: "\(verb)")
+        }
         .task(id: checkKey) { await recheck() }
         .task(id: "\(to)|\(zkMoneyFresh)") { await resolve() }
         // A deposit address's proof holds for its day, and how long the
@@ -5687,13 +5693,26 @@ struct MoveSentence: View {
     private func repreview() async {
         let key = previewKey
         guard !key.isEmpty else { return }
-        try? await Task.sleep(for: .milliseconds(YourAccountDemo.isDemo(account) ? 150 : 700))
+        // **A SHORTER BEAT BEFORE IT IS ASKED (prd §2007):** 0.4 s after the
+        // last change, down from 0.7: the tap waits on this preview, and on
+        // the phone it is the longest wait before Face ID.
+        try? await Task.sleep(for: .milliseconds(YourAccountDemo.isDemo(account) ? 150 : 400))
+        var first = true
         while !Task.isCancelled {
             if stage != nil {
                 try? await Task.sleep(for: .seconds(2))
                 continue
             }
-            let p = await Chain.preview(signing, account: account, roundUp: nil)
+            // Timed, its requests counted: how long a sentence takes to be
+            // ready to sign, and whether its reads ran one after another.
+            let log = IngestSupport.TripLog()
+            let began = Date()
+            let p = await IngestSupport.$tripLog.withValue(log) { await Chain.preview(signing, account: account, roundUp: nil) }
+            if first, !YourAccountDemo.isDemo(account), !Task.isCancelled {
+                PerfReadings.record("MovePreview", ms: Date().timeIntervalSince(began) * 1000,
+                                    note: "\(network.name) · \(Self.tripWords(log))")
+            }
+            first = false
             guard !Task.isCancelled, key == previewKey else { return }
             withAnimation(DS.Motion.standard) { preview = p; previewFor = key }
             #if DEBUG
@@ -9028,6 +9047,23 @@ struct MoveSentence: View {
                           amount: Op.sum(a.amount, b.amount), quote: q, to: a.to)
     }
 
+    /// "8 requests, slowest 0.6s, 3.1s in all": a read's round trips, and
+    /// their sum beside the wall clock says whether they ran one by one.
+    static func tripWords(_ log: IngestSupport.TripLog) -> String {
+        let trips = log.read.trips
+        guard !trips.isEmpty else { return "no requests" }
+        let slowest = trips.map(\.seconds).max() ?? 0
+        let sum = trips.map(\.seconds).reduce(0, +)
+        return String(format: "%d requests, slowest %.1fs, %.1fs in all", trips.count, slowest, sum)
+    }
+
+    /// Whether this send began the capsule's run, and whether it has gone
+    /// behind its sheet (prd §2007).
+    @MainActor private final class AwayMark {
+        var began = false
+        var went = false
+    }
+
     private func sign() {
         guard stage == nil else { return }
         // A price places a CoW order (prd §1673); Now swaps (prd §1683).
@@ -9057,6 +9093,27 @@ struct MoveSentence: View {
         clock = MoveClock()
         let tripLog = IngestSupport.TripLog()
         trips = tripLog
+        // **BEHIND ITS SHEET ONCE THE LAST SIGNATURE IS IN (prd §2007; user,
+        // 2026-11-27, of Swap: "user has to wait on the sheet once they have
+        // signed").** As Earn's and every private move's (§2003): from
+        // Sending on, nobody is asked anything, so the tray closes and the
+        // shell's capsule says the rest, the toast the end. A failure turns
+        // the capsule amber, and its tap opens Move on this sentence again.
+        let steps = PrivateSendSteps.shared
+        let swaps = batch.contains { if case .swap = $0 { true } else { false } }
+        let away = AwayMark()
+        let tapped = Date()
+        let awayWords: (running: String, done: String) = sweeping
+            ? (String(localized: "Sweeping on \(net.name)"), String(localized: "Swept on \(net.name)"))
+            : swaps ? (String(localized: "Swapping on \(net.name)"), String(localized: "Swapped on \(net.name)"))
+            : (String(localized: "Sending on \(net.name)"), String(localized: "Sent on \(net.name)"))
+        if inTray, steps.run?.isRunning != true {
+            steps.forget(.move)
+            steps.begin(.move, plan: .init(steps: [.checking, .signing,
+                                                   .init(key: .sent, running: awayWords.running, done: awayWords.done)]),
+                        swap: swaps && !sweeping)
+            away.began = true
+        }
         // **FACE ID AT THE TAP (prd §1687, user: "the preparing stage is
         // where it lags").** Asked now, beside the reads; the operation's
         // signature takes what it passed. Turned down, the send stops at once.
@@ -9114,7 +9171,22 @@ struct MoveSentence: View {
                         try await YourAccountKey.$ahead.withValue(unlock) {
                             try await Self.spend(batch, on: net, account: account, roundUp: nil, ride: ride, reason: reason,
                                                  said: { line in await MainActor.run { say(line) } }) { s in
-                                await MainActor.run { advance(to: s) }
+                                await MainActor.run {
+                                    advance(to: s)
+                                    guard away.began else { return }
+                                    switch s {
+                                    case .signing, .cosigning: steps.mark(.signing, from: away.went ? .move : nil)
+                                    case .sending, .landing:
+                                        steps.mark(.sent, from: away.went ? .move : nil)
+                                        if !away.went, steps.sendAway(from: .move, landed: awayWords.done) {
+                                            away.went = true
+                                            chrome.moveTray = false
+                                            PerfReadings.record("MoveClosed", ms: Date().timeIntervalSince(tapped) * 1000,
+                                                                note: net.name)
+                                        }
+                                    case .preparing: break
+                                    }
+                                }
                             }
                         }
                     }
@@ -9170,6 +9242,11 @@ struct MoveSentence: View {
                 }
                 let sent = done.sent
                 stage = nil
+                // The capsule's end, behind the sheet or in it.
+                if away.began {
+                    if case .dryRun = sent.outcome { if away.went { steps.clearAway() } else { steps.clear() } }
+                    else { steps.finish(from: .move) }
+                }
                 let took = timed(sent.outcome)
                 chrome.refreshRooms()
                 // Landed or still on its way, the transaction is gone from the
@@ -9280,7 +9357,14 @@ struct MoveSentence: View {
                 _ = timed(nil)
                 // Face ID turned down at the tap stopped the reads (prd §1687):
                 // whatever they threw, nothing was signed.
+                if unlock?.refused == true, away.began { steps.clear() }
                 if unlock?.refused == true { say(String(localized: "Not sent"), failure: true); return }
+                // Behind its sheet, the capsule says it and keeps the sentence.
+                if away.began {
+                    if away.went { chrome.moveDraft = keptDraft }
+                    steps.fail(failure.message, from: .move)
+                    if !away.went { steps.clear() }
+                }
                 // A stale fact could explain it (prd §1602): read afresh.
                 Task { await Chain.forgetFacts(net, account); await Chain.readAhead(account, on: net) }
                 #if DEBUG
@@ -9294,6 +9378,10 @@ struct MoveSentence: View {
                 NSLog("moveSign: not sent %@", String(describing: error))
                 #endif
                 // Face ID cancelled, or the Enclave refused: nothing left the phone.
+                if away.began {
+                    if away.went { chrome.moveDraft = keptDraft; steps.fail(String(localized: "Not sent"), from: .move) }
+                    else { steps.clear() }
+                }
                 say(String(localized: "Not sent"), failure: true)
             }
         }
@@ -9755,18 +9843,29 @@ struct MoveSentence: View {
         quoteNote = nil
         quoteFrom = nil
         guard verb == .swap, let with, let buy, YourAccountSwap.supported(network), let units, !over else { staleBack = nil; return }
-        try? await Task.sleep(for: .milliseconds(500))
+        // 0.3 s after the last key, down from 0.5 (prd §2007).
+        try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
         do {
             let q: YourAccountSwap.Quote
+            let log = IngestSupport.TripLog()
+            let began = Date()
             if let on = crossTo, let arrives = crossBuy {
                 // To another network: Across's fee asked, the calls written
                 // here (prd §1555).
-                q = try await Chain.crossQuote(network, to: on, sell: with.token, buy: arrives, amount: units, account: account)
+                q = try await IngestSupport.$tripLog.withValue(log) {
+                    try await Chain.crossQuote(network, to: on, sell: with.token, buy: arrives, amount: units, account: account)
+                }
             } else {
-                q = try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
+                q = try await IngestSupport.$tripLog.withValue(log) {
+                    try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
+                }
             }
             guard !Task.isCancelled else { return }
+            if !YourAccountDemo.isDemo(account) {
+                PerfReadings.record("MoveQuote", ms: Date().timeIntervalSince(began) * 1000,
+                                    note: "\(network.name) · \(Self.tripWords(log))")
+            }
             withAnimation(DS.Motion.standard) { quote = q; staleBack = nil }
             // A pair's first price lands with one tick; a re-price is silent.
             let pair = "\(network.chainId)|\(with.id)|\(buy.id)"

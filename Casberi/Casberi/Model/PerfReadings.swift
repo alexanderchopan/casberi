@@ -58,7 +58,7 @@ enum PerfReadings {
 
     /// Fixed order, because the screen reads top-down as "open → sweep → ask"
     /// and a dictionary's order would shuffle it per launch.
-    static let spans = ["Launch", "LaunchStore", "ChipsWalk", "ForegroundSweep", "AskFirstPaint", "AskSettled", "SweepStalls", "MoveSend", "WalletOpen", "WalletCurrent", "WalletPass"]
+    static let spans = ["Launch", "LaunchStore", "ChipsWalk", "ForegroundSweep", "AskFirstPaint", "AskSettled", "SweepStalls", "MoveSend", "MoveOpen", "MoveQuote", "MovePreview", "MoveClosed", "WalletOpen", "WalletCurrent", "WalletPass"]
 
     static let storeKey = "perf.readings.v1"
     static let keepPerSpan = 20
@@ -172,6 +172,10 @@ enum PerfReadings {
         case "AskSettled": return "Ask → settled"
         case "SweepStalls": return "Worst stall during a sweep"
         case "MoveSend": return "Move: tap → sent (prd §1602)"
+        case "MoveOpen": return "Move: tap → page drawn (prd §2007)"
+        case "MoveQuote": return "Move: amount → swap quote"
+        case "MovePreview": return "Move: sentence → ready to sign"
+        case "MoveClosed": return "Move: tap → page closed, signed"
         case "WalletOpen": return "Wallet: tap → drawn"
         case "WalletCurrent": return "Wallet: asked → live total"
         case "WalletPass": return "Wallet: sweep pass"

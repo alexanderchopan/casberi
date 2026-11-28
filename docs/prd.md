@@ -75756,3 +75756,19 @@ Under Fee, You get and Arrives, Make private's receipt adds "Earned: about 12% a
 **Not seen:** a live withdrawal — the user is in no farm; drawn on the demo (`-tacitFarmOpen YES`, `-tacitFarmSample done|failed`). `tacit-engine-selftest.sh` holds each step to its method and nothing that joins; `tacit-farms-selftest.sh` holds the coins and the asks.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2007 — Move never keeps you on a page once you have signed; Move's own timings (extends §2003 to Swap, Send and Sweep) (user, 2026-11-27: "i want all of move to feel exceedingly simple, and highly performant … in swap … user has to wait on the sheet once they have signed", then "ok lets do all")
+
+Measured first, on the user's phone (`perf.readings.v1`, 13 landed sends, builds 990–1095): a send takes 22 s at the median — preparing 7.8 s (worst 21), the co-signer 8.5 s, sending 0.6 s, landing 7.7 s (worst 17).
+
+1. **Swap, Send and Sweep go behind the sheet once the last signature is in** (`PrivateSendSteps.Source.move`), as Earn and every private move do (§2003): from Sending on nobody is asked anything, so the tray closes, the shell's capsule says "Swapping on Base", and the toast says "Swapped on Base". That is the landing wait, a third of a send, off the page. A failure turns the capsule amber; its tap opens Move on the sentence again (`moveDraft`), the reason said once more. **Buy stays on its page**: the code it bought is drawn there.
+2. **The wait before Face ID is the preview** (§1509, §1610): a tap waits for the operation being prepared, and a tap that found it ready prepared in 1 s. So the beats before asking are shorter — the quote 0.3 s after the last key (was 0.5), the preview 0.4 s after the sentence settles (was 0.7).
+3. **Move's own numbers, on the phone** (Settings › Diagnostics, `PerfReadings`): `MoveOpen` (tap → page drawn), `MoveQuote` (amount → swap quote), `MovePreview` (sentence → ready to sign, with its requests, the slowest, and their sum, which beside the wall clock says whether they ran one by one), `MoveClosed` (tap → page closed, signed). What is cut next is whatever these say is longest.
+4. **Not done, on purpose:** warming Aztec's and Railgun's engines when Move opens (memory, unmeasured), and asking the co-signer beside the preparation (a signature asked for before the last check has passed). Earn already opens on Home's reading (2026-11-27), and a send is already prepared ahead and asks Face ID at the tap (§1601, §1687).
+
+5. **Pressing Move re-rendered the root of the app** (user: "when i press move sometimes there is a delay before the verbs show or a jitter"): `RootShell` read `chrome.moveMenu` in its own body. The dim and the verbs read it themselves now (`MoveMenuDimLayer`, `MoveMenuVerbsLayer`), so a press invalidates those two and nothing else.
+6. **A verb's sheet rises at the tap, the first time too** (user: "sometimes when i click a verb there is a delay"). Measured on a Debug simulator (`MoveOpen`): the first Move page after a launch took 1.4–1.5 s to mount and every one after it 0.05 s; a profile put three quarters of it in the Swift runtime building the page's types on first use, all before the sheet moved. Asking for the top-level types ahead (34 ms) changed nothing and was removed. So the first open presents the sheet empty and mounts the page 30 ms later (`MoveTray.mountedOnce`): the rise is the system's animation and runs while the page is built. And a verb's sheet rises to its full height at once (`moveTall` set at the pick), never short and then tall.
+
+**Not seen:** a real swap going behind its sheet — the demo's account signs nothing. The pattern is Earn's own.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

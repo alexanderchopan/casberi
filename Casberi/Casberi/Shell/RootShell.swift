@@ -2571,7 +2571,7 @@ struct RootShell: View {
 
             // Move's menu dims the page under the band (prd §1852): a layer
             // before the cluster, so the button and the verbs stand over it.
-            if chrome.moveMenu { MoveMenuDim() }
+            MoveMenuDimLayer()
             if !composerOpen {
                 // The floating cluster (whisper + bar) renders as one
                 // coordinated glass system (2026-07-23) — the container gives
@@ -2639,7 +2639,7 @@ struct RootShell: View {
                             // The demo's mark rides the page's title row now
                             // (`demoTagOnTitle`, prd §1389), never the band:
                             // the bar unfolds across the width and would meet it.
-                            if chrome.moveMenu { MoveMenuVerbs() }
+                            MoveMenuVerbsLayer()
                             PlaceTabBar(open: openPlaceTab)
                         }
                     } else if padShell.railInset == 0 || !sceneState.route.path.isEmpty {

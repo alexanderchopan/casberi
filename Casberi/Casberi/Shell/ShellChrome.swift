@@ -237,7 +237,12 @@ final class ShellChrome {
     /// the Mac's ⌘F, the Feed's "an app" way in.
     var librarySearch = 0
     /// Move, raised as a tray from its tab (prd §1442): an act, not a place.
-    var moveTray = false
+    var moveTray = false {
+        didSet { if moveTray, !oldValue { moveRaisedAt = Date() } }
+    }
+    /// When Move was last raised, for "tap → page drawn" (`PerfReadings`,
+    /// prd §2007); taken by the page that draws.
+    @ObservationIgnored var moveRaisedAt: Date?
     /// Move's verbs stand over the page, above its button (prd §1852): the
     /// phone's menu, in place of the tray's first page.
     var moveMenu = false

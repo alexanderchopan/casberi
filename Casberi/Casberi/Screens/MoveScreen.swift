@@ -30,12 +30,33 @@ struct MoveTray: View {
     @Environment(ShellChrome.self) private var chrome
     static let short: PresentationDetent = .fraction(0.6)
 
+    /// **THE SHEET RISES AT THE TAP, THE FIRST TIME TOO (prd §2007; user,
+    /// 2026-11-27: "sometimes when i click a verb there is a delay").**
+    /// Measured: the first Move page after a launch takes 1.4 s to mount (a
+    /// Debug simulator; 0.05 s every time after), three quarters of it the
+    /// Swift runtime building the page's types on first use, all of it
+    /// before the sheet moved. So the first open presents an empty sheet and
+    /// mounts the page a frame later: the rise is the system's animation and
+    /// runs while the page is built. Once per launch; after that the page
+    /// mounts with the sheet, as it did.
+    @MainActor private static var mountedOnce = false
+    @State private var ready = MoveTray.mountedOnce
+
     var body: some View {
         DSTray(title: "Move", height: 600, detents: [Self.short, .large], titled: false,
                selection: Binding(get: { chrome.moveTall ? .large : Self.short },
                                   set: { chrome.moveTall = $0 == .large }),
                flushBottom: true) {
-            MoveScreen(inTray: true)
+            if ready {
+                MoveScreen(inTray: true)
+            } else {
+                Color.clear
+                    .task {
+                        try? await Task.sleep(for: .milliseconds(30))
+                        Self.mountedOnce = true
+                        ready = true
+                    }
+            }
         }
     }
 }

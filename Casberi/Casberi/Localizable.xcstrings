@@ -64151,12 +64151,6 @@
             "value" : "De vuelta en Tacit, en privado"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已回到 Tacit，保持私密"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -64167,6 +64161,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tacit으로 돌아왔습니다, 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已回到 Tacit，保持私密"
           }
         }
       }
@@ -113049,12 +113049,6 @@
             "value" : "En unos minutos, privado en Tacit"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "几分钟内，在 Tacit 中保持私密"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -113065,6 +113059,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "몇 분 안에, Tacit에서 비공개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几分钟内，在 Tacit 中保持私密"
           }
         }
       }
@@ -185613,12 +185613,6 @@
             "value" : "Verlos en Posiciones"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "在持仓中查看"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -185629,6 +185623,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "보유 자산에서 보기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在持仓中查看"
           }
         }
       }
@@ -187305,6 +187305,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正从你的私密余额发送…"
+          }
+        }
+      }
+    },
+    "Sending on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviando en %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上发送"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で送信中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 보내는 중"
           }
         }
       }
@@ -203108,6 +203136,34 @@
         }
       }
     },
+    "Swapping on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiando en %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上兑换"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で交換中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 교환 중"
+          }
+        }
+      }
+    },
     "Swapping on Ethereum" : {
       "localizations" : {
         "es" : {
@@ -203478,6 +203534,34 @@
         }
       }
     },
+    "Sweeping on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Barriendo en %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上归集"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@でスイープ中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 스윕 중"
+          }
+        }
+      }
+    },
     "Swept" : {
       "localizations" : {
         "es" : {
@@ -203502,6 +203586,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已清扫"
+          }
+        }
+      }
+    },
+    "Swept on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Barrido en %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %@ 上归集"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@でスイープ済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 스윕됨"
           }
         }
       }
@@ -233900,12 +234012,6 @@
             "value" : "Lo que ganó"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "其收益"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -233916,6 +234022,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "획득한 수익"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其收益"
           }
         }
       }
