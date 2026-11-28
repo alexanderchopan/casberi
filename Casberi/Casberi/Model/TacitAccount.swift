@@ -151,6 +151,53 @@ final class TacitAccount {
     private var liveTacPrice: Double?
     private var liveTacMove: Double?
 
+    // MARK: - The Tacit chain's rate (prd §2002)
+
+    /// **WHAT A SHARE EARNED, THE LAST 30 DAYS (prd §2002; user, 2026-11-28:
+    /// "i can't tell what it'll earn b/c it doesn't say the rate").** The
+    /// Tacit chain's contract on Ethereum holds its pool and its shares; a
+    /// share is the pool over the shares, each with the contract's virtual 1
+    /// TAC, so only the chain's fees move it. Read now and 216,000 blocks
+    /// back (an archive read, as Olla's rate), a year's worth: what it
+    /// earned, never a promise, for anyone, open or not. Nil where the node
+    /// keeps no history; then the marks this phone kept (§1999) stand in.
+    private(set) var chainYield: Double?
+    private var chainYieldAt: Date?
+
+    func readChainYield() async {
+        guard !DemoMode.isActive else { return }
+        if let at = chainYieldAt, Date.now.timeIntervalSince(at) < 3_600 { return }
+        guard let net = YourAccountOp.networks.first(where: { $0.chainId == 1 }) else { return }
+        async let now = Self.sharePrice(net, at: "latest")
+        guard let headHex = try? await YourAccountChain.rpc(net, "eth_blockNumber", []) as? String,
+              let head = Int(AaveLend.decimal(hex: headHex)), head > OllaStake.windowBlocks else { return }
+        let then = await Self.sharePrice(net, at: "0x" + String(head - OllaStake.windowBlocks, radix: 16))
+        guard let n = await now, let t = then, t > 0, n >= t else { return }
+        let apy = pow(n / t, 365 / OllaStake.windowDays) - 1
+        guard apy.isFinite, apy >= 0, apy < 100 else { return }
+        chainYield = apy
+        chainYieldAt = .now
+    }
+
+    /// One share in TAC at a block: (pool + 1) / (shares + 1), in TAC.
+    private nonisolated static func sharePrice(_ net: YourAccountOp.Network, at block: String) async -> Double? {
+        async let pool = chainWord(net, "pool()", at: block)
+        async let shares = chainWord(net, "shares()", at: block)
+        guard let p = await pool, let s = await shares else { return nil }
+        return (p / 1e8 + 1) / (s / 1e8 + 1)
+    }
+
+    /// A one-word view of the Tacit chain's contract, in its 8-decimal units.
+    private nonisolated static func chainWord(_ net: YourAccountOp.Network, _ signature: String, at block: String) async -> Double? {
+        let data = SafeABI.hex(YourAccount.sel(signature))
+        guard let hex = try? await YourAccountChain.rpc(net, "eth_call", [["to": TacitChain.blocks, "data": data], block]) as? String,
+              hex.count >= 66 else { return nil }
+        return Double(AaveLend.decimal(hex: hex))
+    }
+
+    /// The rate Earn shows: the chain's last 30 days, else the phone's marks.
+    func earnRate(_ r: Reading) -> Double? { chainYield ?? r.chainAPY()?.apy }
+
     /// The demo's Tacit account: sample money on both networks, open, read
     /// from nowhere (the demo reaches no host). Its pool sizes are the real
     /// ones read on 2026-11-24.

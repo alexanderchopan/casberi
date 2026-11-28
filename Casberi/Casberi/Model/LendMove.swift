@@ -114,6 +114,12 @@ final class LendMove {
     /// Opened on one position: back leaves Earn, as there is no home under it.
     let onRow: Bool
 
+    /// **A MOVE GOING ON BEHIND ITS SHEET (prd §2003).** Kept here while the
+    /// capsule draws it, so its task and its words outlive the sheet.
+    static var kept: LendMove?
+    /// Closes the sheet; nil where Earn is a page, which stays.
+    var onAway: (() -> Void)?
+
     /// Holdings' reading of your account's lent money, kept between visits.
     static let holdings = LendMove(mode: .takeBack)
 
@@ -497,6 +503,14 @@ final class LendMove {
             stage = .failed(String(localized: "This could not be written"))
             return
         }
+        // What the toast says once it lands behind the sheet (prd §2003).
+        let landed: String = switch (m.place, mode) {
+        case (.olla, _) where claims: String(localized: "Claimed from Olla")
+        case (.olla, .lend): String(localized: "Deposited on Olla")
+        case (.olla, .takeBack): String(localized: "Asked Olla for it back")
+        case (.aave, .lend): String(localized: "Deposited on Aave")
+        case (.aave, .takeBack): String(localized: "Withdrawn from Aave")
+        }
         let reason = switch (m.place, mode) {
         case (.olla, _) where claims: String(localized: "Claim \(figure) from Olla")
         case (.olla, .lend): String(localized: "Deposit \(figure) on Olla")
@@ -512,24 +526,38 @@ final class LendMove {
             let sent = try await YourAccountChain.lendCalls(calls.map { ($0.to, $0.data, $0.value) }, on: net, reason: reason) { s in
                 await MainActor.run {
                     self.stage = .working(s)
+                    // Behind its sheet, the marks go to the capsule's run.
+                    let away: PrivateSendSteps.Source? = Self.kept === self ? .earn : nil
                     switch s {
-                    case .signing, .cosigning: steps.mark(.signing)
-                    case .sending, .landing: steps.mark(.sent)
+                    case .signing, .cosigning: steps.mark(.signing, from: away)
+                    case .sending, .landing:
+                        steps.mark(.sent, from: away)
+                        // **BEHIND ITS SHEET ONCE FACE ID HAS ANSWERED (prd
+                        // §2003; user: "make sure the same happens for the
+                        // others too aave etc"):** nothing after asks anyone;
+                        // the shell's capsule says the rest, the toast the end.
+                        if Self.kept !== self, let onAway = self.onAway, steps.sendAway(from: .earn, landed: landed) {
+                            Self.kept = self
+                            onAway()
+                        }
                     case .preparing: break
                     }
                 }
             }
             switch sent.outcome {
-            case .landed(let tx, _): steps.finish(); moved(m, units: units, account: account); stage = .done(tx ?? "")
+            case .landed(let tx, _): steps.finish(from: .earn); moved(m, units: units, account: account); stage = .done(tx ?? "")
             // Taken and not seen yet: done, with no transaction to name.
-            case .pending: steps.finish(); moved(m, units: units, account: account); stage = .done("")
+            case .pending: steps.finish(from: .earn); moved(m, units: units, account: account); stage = .done("")
             case .dryRun: steps.clear(); stage = .ready
             }
+            if Self.kept === self { Self.kept = nil }
         } catch let failure as YourAccountChain.Failure {
-            steps.fail(failure.message)
+            // Behind its sheet, the capsule turns amber and keeps this deck
+            // to open again (`PrivateStepRows`).
+            steps.fail(failure.message, from: .earn)
             stage = .failed(failure.message)
         } catch {
-            steps.fail(error.localizedDescription)
+            steps.fail(error.localizedDescription, from: .earn)
             stage = .failed(error.localizedDescription)
         }
     }

@@ -39,7 +39,26 @@ final class TacitOut {
         case failed(String)
     }
 
-    private(set) var step: Step = .idle
+    private(set) var step: Step = .idle {
+        didSet { Self.followAway(step) }
+    }
+    /// Closes the sheet once proving starts; nil where it stays.
+    var onAway: (() -> Void)?
+
+    /// **BEHIND ITS SHEET (prd §2003):** from proving on nobody is asked but
+    /// your account's Face ID to collect, which iOS draws over anything; the
+    /// capsule's run hears the rest from here.
+    private static func followAway(_ step: Step) {
+        let steps = PrivateSendSteps.shared
+        guard steps.awayFrom == .tacit else { return }
+        switch step {
+        case .handing, .landing: steps.mark(.sent, from: .tacit)
+        case .collecting: steps.mark(.signing, from: .tacit)
+        case .done: steps.finish(from: .tacit)
+        case .failed(let why): steps.fail(why, from: .tacit)
+        default: break
+        }
+    }
     private(set) var quote: TacitEngineWire.OutQuote?
     private(set) var units: UInt64 = 0
     /// TAC the contract owes `owedTo` and nobody has collected, 18 decimals.

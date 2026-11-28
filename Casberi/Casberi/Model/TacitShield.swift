@@ -34,7 +34,23 @@ final class TacitShield {
         case failed(String)
     }
 
-    private(set) var step: Step = .idle
+    private(set) var step: Step = .idle {
+        didSet { Self.followAway(step) }
+    }
+    /// Closes the sheet once the co-signer has signed; nil where it stays.
+    var onAway: (() -> Void)?
+
+    /// **BEHIND ITS SHEET (prd §2003):** once handed, the capsule's run
+    /// hears the rest from here, the sheet being gone.
+    private static func followAway(_ step: Step) {
+        let steps = PrivateSendSteps.shared
+        guard steps.awayFrom == .tacit else { return }
+        switch step {
+        case .arriving, .landed: steps.finish(from: .tacit)
+        case .failed(let why): steps.fail(why, from: .tacit)
+        default: break
+        }
+    }
     private(set) var quote: TacitEngineWire.ShieldQuote?
     private(set) var units: UInt64 = 0
     private(set) var proveMs: Int?

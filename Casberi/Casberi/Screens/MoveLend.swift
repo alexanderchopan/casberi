@@ -63,6 +63,8 @@ struct MoveLendSentence<Head: View>: View {
             // Tacit's farms, beside the markets' read (prd §1993).
             if tacit != nil, TacitAccount.shared.connected {
                 Task { await TacitAccount.shared.readFarmsIfStale() }
+                // Tacit's rate, the last 30 days off its contract (prd §2002).
+                Task { await TacitAccount.shared.readChainYield() }
             }
             await move.read(account: account)
             #if DEBUG
@@ -73,6 +75,8 @@ struct MoveLendSentence<Head: View>: View {
         .onChange(of: doneHash) { _, hash in
             if hash != nil { DSHaptic.success() }
         }
+        // In the tray, a move goes behind it once Face ID has answered (prd §2003).
+        .onAppear { move.onAway = inTray ? { chrome.moveTray = false } : nil }
         .sheet(isPresented: $farmPage) {
             DSWebSheet(url: TacitFarms.page) { farmPage = false }
         }
@@ -650,7 +654,7 @@ struct MoveLendSentence<Head: View>: View {
         let held = move.mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)
         let usd = TacitAccount.shared.tacPrice.map { held * $0 }
         let mode = move.mode
-        let rate = AaveLend.rateOnly(r.chainAPY()?.apy)
+        let rate = AaveLend.rateOnly(TacitAccount.shared.earnRate(r))
         // No public TAC to make private: the row buys some (prd §2000).
         let buys = mode == .lend && held <= 0 && swapFor != nil
         return [MoveTokenChoice(id: "tacit|TAC", symbol: mode == .lend ? "Tacit" : "TAC", network: String(localized: "Tacit chain"),
@@ -746,7 +750,7 @@ struct MoveLendSentence<Head: View>: View {
         }
         if let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading, let held = r.privateTAC, held > 0 {
             let price = TacitAccount.shared.tacPrice
-            let apy = r.chainAPY()?.apy
+            let apy = TacitAccount.shared.earnRate(r)
             let earned = r.earnedTAC.flatMap { e in price.map { e * $0 } }
             let usd = price.map { held * $0 }
             let line = ["Tacit", String(localized: "Private"), AaveLend.rateOnly(apy)].compactMap { $0 }.joined(separator: " · ")

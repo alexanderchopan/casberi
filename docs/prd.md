@@ -75701,3 +75701,21 @@ User, 2026-11-27: "earn takes a while to read. why", then, of a screenshot of Ea
 **Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2002 — Tacit's rate is what a share earned over the last 30 days, read off the Tacit chain's contract (amends §1999's marks-only rate) (user, 2026-11-28: "i tried to do max earn for tac and i can't tell what it'll earn b/c it doesn't say the rate in earning or earn more")
+
+The rate drew nothing because §1999's marks need a day on this phone. The Tacit chain's contract on Ethereum (`TacitChain.blocks`) holds `pool()` and `shares()`; a share is (pool + 1 TAC) over (shares + 1 TAC), the contract's virtual TAC, so only the chain's fees move it. `TacitAccount.readChainYield` reads both now and 216,000 blocks back (an archive read, as Olla's §1970), a year's worth (`chainYield`), kept an hour, for anyone, account open or not; Earn draws it on Tacit's rows in Earning and Ready to earn, and Withdraw's From. Where the node keeps no history, the phone's marks (§1999) stand in (`TacitAccount.earnRate`). The demo reads nothing and keeps its marks.
+
+**Not seen:** built and run.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2003 — Earn and Tacit go behind their sheets: the capsule says the rest, the toast the end (extends §1806 and the 2026-11-27 move-ins to Aave, Olla and Tacit) (user, 2026-11-28: "on earning we just made the sends have toasts in another session so user doesn't have to keep the sheet open. can you do that for these too"; "we need to make sure the same happens for the others too aave etc")
+
+1. **Aave and Olla** (`LendMove`): once your account is sending (Face ID and the co-signer answered), the Move tray closes and the run goes to the shell's capsule (`PrivateSendSteps.sendAway(from: .earn)`); the toast says "Deposited on Aave", "Withdrawn from Aave", "Deposited on Olla", "Asked Olla for it back" or "Claimed from Olla". `LendMove.kept` holds the move while it goes. A failure turns the capsule amber; its tap opens Earn on that market with the reason said again.
+2. **Tacit, Make private** (`TacitShield`): behind the sheet once handed (your co-signer has signed); "Made private on Tacit". **Back to public and sends from Tacit** (`TacitOut`): behind the sheet from proving on, since nothing after asks anyone but your account's Face ID to collect, which iOS draws over anything; "Back in your account" or "Sent from Tacit". Each model follows its own steps once its sheet is gone (`followAway`). A failure's tap puts the capsule away.
+3. Where Move is a page (iPad), nothing closes, as §1806.
+
+**Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

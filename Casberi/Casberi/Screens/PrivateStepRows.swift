@@ -230,6 +230,16 @@ struct MoveStepCapsule: View {
                     chrome.moveRailgun = .init(contract: kept.wanted, takeBack: kept.mode != .swap, recipient: kept.recipient,
                                                swap: kept.mode == .swap)
                     chrome.moveTray = true
+                } else if let kept = LendMove.kept, steps.awayFrom == .earn {
+                    // Earn on the market that failed, the reason said again
+                    // (prd §2003): a new deck reads it fresh.
+                    let why = run.reason
+                    withAnimation(DS.Motion.standard) { steps.clearAway() }
+                    LendMove.opening = (kept.chainId, kept.symbol)
+                    LendMove.kept = nil
+                    chrome.moveLend = kept.mode
+                    chrome.moveTray = true
+                    if let why { chrome.flash(why, tone: .failure, seconds: 6) }
                 } else if steps.awayFrom == .privacyPools {
                     // Privacy Pools keeps no sentence: its Send again, the
                     // reason said once more (the review of 2026-11-27).

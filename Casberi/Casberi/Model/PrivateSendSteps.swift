@@ -24,7 +24,9 @@ final class PrivateSendSteps {
     enum Kind: String { case move, app }
 
     /// Whose engine proves a send behind its sheet, so only its words reach it.
-    enum Source { case aztec, railgun, privacyPools }
+    /// Whose move a run is. Earn (Aave, Olla) and Tacit go behind their
+    /// sheets too (prd §2003): your account's Face ID is drawn over anything.
+    enum Source { case aztec, railgun, privacyPools, earn, tacit }
 
     /// The engines' step names, as their messages spell them.
     enum Key: String { case checking, proving, signing, sent, screening }

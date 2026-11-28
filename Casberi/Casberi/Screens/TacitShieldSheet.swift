@@ -11,6 +11,7 @@ struct TacitShieldSheet: View {
     @Bindable var shield = TacitShield.shared
     @Bindable var account = TacitAccount.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(ShellChrome.self) private var chrome
     @State private var amount = ""
     @State private var source: TacitShield.Source?
     /// Drawn inside Move, over Send's sentence (prd §1976), not as a sheet:
@@ -74,6 +75,8 @@ struct TacitShieldSheet: View {
         }
         // The shared steps follow the shield's own (2026-11-27).
         .onChange(of: shield.step) { _, now in follow(now) }
+        // In Move's tray the send goes behind it (prd §2003).
+        .onAppear { shield.onAway = chrome.moveTray ? { chrome.moveTray = false } : nil }
         // Opens empty, as every Move page does: Max is a key (2026-11-27).
         .onAppear { shield.reset() }
     }
@@ -241,7 +244,12 @@ struct TacitShieldSheet: View {
                 steps.begin(.move, plan: Self.plan, quiet: true)
             }
         case .signing: steps.mark(.signing)
-        case .handing: steps.mark(.sent)
+        case .handing:
+            steps.mark(.sent)
+            // The co-signer has signed: nothing more asks you (prd §2003).
+            if let onAway = shield.onAway, steps.sendAway(from: .tacit, landed: String(localized: "Made private on Tacit")) {
+                onAway()
+            }
         case .arriving, .landed: steps.finish()
         case .failed(let why): steps.fail(why)
         default: break

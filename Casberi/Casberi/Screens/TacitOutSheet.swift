@@ -94,6 +94,8 @@ struct TacitOutSheet: View {
         }
         // The shared steps follow the send's own (2026-11-27).
         .onChange(of: out.step) { _, now in follow(now) }
+        // In Move's tray the send goes behind it (prd §2003).
+        .onAppear { out.onAway = chrome.moveTray ? { chrome.moveTray = false } : nil }
         .onAppear {
             out.payTo = payTo
             out.reset()
@@ -241,6 +243,11 @@ struct TacitOutSheet: View {
             if stepsRun?.isRunning != true {
                 steps.forget(.move)
                 steps.begin(.move, plan: Self.plan(collects: payTo == nil), quiet: true)
+                // Proving needs nobody (prd §2003): the capsule says the rest.
+                if let onAway = out.onAway,
+                   steps.sendAway(from: .tacit, landed: payTo == nil ? String(localized: "Back in your account") : String(localized: "Sent from Tacit")) {
+                    onAway()
+                }
             }
         case .handing, .landing: steps.mark(.sent)
         case .collecting: steps.mark(.signing)

@@ -264,7 +264,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-2186 of 2260 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+2188 of 2262 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a, §1568, §1681, §1700a, §1758, §1881, §1931, §1964b)
@@ -2452,6 +2452,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1999 — Tacit's row in Earn says its rate: what a share earned, read off the marks this phone kept (amends §1986's "the row d…
 - §2000 — Earn opens on your money; Deposit says what a year brings and how it comes back; Withdraw says what it earned; a plac…
 - §2001 — Earn's title is Earn · Deposit · Withdraw, always; "Earn more" is "Ready to earn" (amends §1934's A–Z order and its "…
+- §2002 — Tacit's rate is what a share earned over the last 30 days, read off the Tacit chain's contract (amends §1999's marks-…
+- §2003 — Earn and Tacit go behind their sheets: the capsule says the rest, the toast the end (extends §1806 and the 2026-11-27…
 
 ## Dead rulings → what replaced them (generated)
 
