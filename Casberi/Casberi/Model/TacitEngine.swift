@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import WebKit
 import CryptoKit
 
@@ -76,6 +77,18 @@ final class TacitEngine: NSObject {
             view.isInspectable = true
             #endif
             view.navigationDelegate = self
+            // **IN THE WINDOW (2026-11-27, on the phone: "it is reading the
+            // fee … and is taking a while").** Outside the window WebKit
+            // treats the page as a background one and freezes its timers, as
+            // Railgun's sync and Privacy Pools' proof measured; likely why a
+            // send's proof stood past two minutes (§1994). 1×1, all but
+            // invisible, in no one's way.
+            view.alpha = 0.01
+            view.isUserInteractionEnabled = false
+            view.isAccessibilityElement = false
+            if let window = UIApplication.shared.connectedScenes.compactMap({ ($0 as? UIWindowScene)?.keyWindow }).first {
+                window.addSubview(view)
+            }
             webView = view
             view.load(URLRequest(url: URL(string: "\(Self.scheme)://engine/index.html")!))
             // A page that never says `ready` fails its waiters instead of
@@ -95,6 +108,7 @@ final class TacitEngine: NSObject {
     /// Drops the page, and the key and notes with it.
     func stop() {
         webView?.configuration.userContentController.removeAllScriptMessageHandlers()
+        webView?.removeFromSuperview()
         webView = nil
         isReady = false
         let wasOpen = isOpen
