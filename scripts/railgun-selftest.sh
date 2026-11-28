@@ -109,7 +109,8 @@ use "$SENT" 'case .takeBack where toSomeoneElse:' "a send to someone else is the
 # §1727: the amount is typed, the $10 floor holds on what is typed, and
 # nothing moves on an amount the line objects to.
 # §1926: typed on Move's own keypad, never the iPhone's decimal pad.
-use "$SENT" 'MoveKeypad(text: $move.amount,' "the amount is not typed on Move's own keypad (prd §1926)"
+use "$SENT" 'MoveKeypad(text: inDollars' "the amount is not typed on Move's own keypad (prd §1926)"
+use "$SENT" ': $move.amount,' "the keypad no longer types the token's amount when not in dollars (2026-11-27)"
 ! grep -q '.keyboardType(.decimalPad)' "$SENT" || { echo "  ✗ the iPhone's decimal pad is back on Railgun's sentence (prd §1926)"; exit 1; }
 use "$SENT" 'if mode == .deposit, !RailgunRouting.meetsFloor(units: units, decimals: h.decimals, price: h.price, floorUSD: Self.floorUSD) {' "a typed amount under \$10 worth does not move in"
 use "$SENT" 'guard let picked, amountOK, !DemoMode.isActive else { return }' "nothing runs on an amount the line objects to"
