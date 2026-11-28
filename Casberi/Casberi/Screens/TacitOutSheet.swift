@@ -110,8 +110,10 @@ struct TacitOutSheet: View {
         }
         // The shared steps follow the send's own (2026-11-27).
         .onChange(of: out.step) { _, now in follow(now) }
-        // The rate Withdraw says (prd §2005), read once an hour.
+        // The rate Withdraw says (prd §2005), read once an hour, and
+        // Ethereum's gas for the fee in dollars.
         .task { if payTo == nil { await TacitAccount.shared.readChainYield() } }
+        .task { if payTo == nil { await TacitAccount.shared.readGasPrice() } }
         // In Move's tray the send goes behind it (prd §2003).
         .onAppear { out.onAway = chrome.moveTray ? { chrome.moveTray = false } : nil }
         .onAppear {
@@ -244,11 +246,14 @@ struct TacitOutSheet: View {
         toCoSigner = coSignerPicked
     }
 
+    /// Back to public, in dollars as every Earn page says its fee (user,
+    /// 2026-11-27): Tacit's cut and the claim's gas from your account. A
+    /// pay stays on the Tacit chain, a Send and no Ethereum fee: in TAC.
     private var feeWords: String {
         guard let q = out.quote, let fee = TacitEngineWire.tac(q.fee) else { return "—" }
-        let text = TacitShieldSheet.tacText(NSDecimalNumber(decimal: fee).doubleValue)
-        // A pay stays on the Tacit chain: no Ethereum fee.
-        return payTo == nil ? String(localized: "\(text) and the network fee") : text
+        let tac = NSDecimalNumber(decimal: fee).doubleValue
+        let text = TacitShieldSheet.tacText(tac)
+        return payTo == nil ? (account.feeCost(tac: tac, accountGas: true)?.amount ?? text) : text
     }
 
     // MARK: - Sending

@@ -99,10 +99,15 @@ struct TacitFarmOutSheet: View {
     }
 
     private var facts: [MoveDeckFacts.Fact] {
+        // In dollars, as every Earn page says its fee: the relay's cut is
+        // paid in the pool's first coin, ETH or TAC.
         let fee = out.feeFor == lpAsset ? out.fee : nil
+        let cost = fee.flatMap { f in
+            f.coin == "ETH" ? account.feeCost(eth: f.amount) : f.coin == "TAC" ? account.feeCost(tac: f.amount) : nil
+        }
         return [
             .init(name: String(localized: "Fee"),
-                  value: fee.map { String(localized: "about \(TacitAccountRows.amount($0.amount)) \($0.coin)") } ?? "—"),
+                  value: cost?.amount ?? fee.map { String(localized: "about \(TacitAccountRows.amount($0.amount)) \($0.coin)") } ?? "—"),
             .init(name: String(localized: "Arrives"), value: String(localized: "In a few minutes, private in Tacit")),
         ]
     }

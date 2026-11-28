@@ -586,6 +586,41 @@ final class TacitAccount {
         return TacitFarms.asks(positions, in: farms)
     }
 
+    // MARK: - Fees, as Earn says them
+
+    /// Ethereum's gas price, wei, for a fee that includes your account's own
+    /// send; nil until read.
+    private(set) var ethGasWei: Decimal?
+
+    /// Reads Ethereum's gas price, as Earn's Aave rows read theirs.
+    func readGasPrice() async {
+        if DemoMode.isActive { ethGasWei = 400_000_000; return }
+        guard let hex = try? await YourAccountChain.rpc(YourAccountOp.ethereum, "eth_gasPrice", []) as? String,
+              let wei = Decimal(string: AaveLend.decimal(hex: hex)) else { return }
+        ethGasWei = wei
+    }
+
+    /// Gas a call from your Casberi account takes, with its own calls
+    /// around it: Earn's measured figure for a lend (`LendMove.gas`).
+    static let accountGas = LendMove.gas
+
+    /// **ONE FEE, IN DOLLARS, AS EVERY EARN PAGE SAYS IT (user, 2026-11-27:
+    /// "shouldn't they all be consistent?").** Tacit's cut in TAC, plus ETH
+    /// a step pays (a farm's relay fee), plus the gas of a send from your
+    /// account, as one figure: "about $0.42", or "under $0.01". Nil while a
+    /// part has no price.
+    func feeCost(tac: Double = 0, eth: Double = 0, accountGas: Bool = false) -> PrivateCost? {
+        var usd = 0.0
+        if tac > 0 { guard let tacPrice else { return nil }; usd += tac * tacPrice }
+        var ethTotal = eth
+        if accountGas {
+            guard let gas = ethGasWei else { return nil }
+            ethTotal += NSDecimalNumber(decimal: Decimal(Self.accountGas) * gas / pow(10, 18)).doubleValue
+        }
+        if ethTotal > 0 { guard let ethPrice else { return nil }; usd += ethTotal * ethPrice }
+        return PrivateCost(usd: usd, parts: [])
+    }
+
     /// The DeFi pool and your farm positions again, after a farm was left
     /// (prd §2006): what it paid back, and the position gone.
     func readDefiAndFarms(coSigner: String) async {

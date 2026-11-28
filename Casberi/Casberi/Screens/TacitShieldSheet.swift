@@ -89,6 +89,8 @@ struct TacitShieldSheet: View {
         .onAppear { shield.reset() }
         // The rate the receipt says (prd §2004), read once an hour.
         .task { await TacitAccount.shared.readChainYield() }
+        // Ethereum's gas, for the fee in dollars (2026-11-27).
+        .task { await TacitAccount.shared.readGasPrice() }
         // **YOUR PUBLIC TAC, READ AS THE SHEET OPENS (user, 2026-11-27: "i
         // am told i don't have any tac").** The last reading may never have
         // read it; until this read answers, the sheet says it is reading.
@@ -204,14 +206,18 @@ struct TacitShieldSheet: View {
     /// top in TAC (the permit's value is the amount plus it), so it adds in;
     /// from your Casberi account there is no sweep, and the send pays its
     /// own gas, as every send does.
+    /// In dollars, as every Earn page says its fee (user, 2026-11-27):
+    /// Tacit's cut, the sweep's from your co-signer's wallet, or your
+    /// account's own send's gas from your Casberi account.
     private var feeWords: String {
         guard let q = shield.quote, let cut = TacitPermit.number(q.fee) else { return "—" }
-        let chain = cut / pow(Decimal(10), 8)
+        let chain = NSDecimalNumber(decimal: cut / pow(Decimal(10), 8)).doubleValue
         if from == .account {
-            return String(localized: "\(Self.tacText(NSDecimalNumber(decimal: chain).doubleValue)) and the network fee")
+            return account.feeCost(tac: chain, accountGas: true)?.amount ?? Self.tacText(chain)
         }
         guard let sweep = TacitPermit.number(q.sweepFee) else { return "—" }
-        return Self.tacText(NSDecimalNumber(decimal: chain + sweep / pow(Decimal(10), 18)).doubleValue)
+        let tac = chain + NSDecimalNumber(decimal: sweep / pow(Decimal(10), 18)).doubleValue
+        return account.feeCost(tac: tac)?.amount ?? Self.tacText(tac)
     }
 
     /// **WHAT IT EARNS (prd §2004; user: "add the rate to tacit's make
