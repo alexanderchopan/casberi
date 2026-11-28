@@ -1528,6 +1528,15 @@ struct MoveSentence: View {
                         tacitFromEarn = true
                         if mode == .lend { tacitOpen = true } else { tacitPayTo = nil; tacitOutOpen = true }
                     }
+                }, privately: { mode in
+                    // Aave, privately: Privacy Pools' move in, or its Send
+                    // back to your account (2026-11-27).
+                    if mode == .lend {
+                        goPrivate(.deposit)
+                    } else {
+                        goPrivate(.send)
+                        privateMove.pay(tag: nil, address: YourAccountKey.address)
+                    }
                 }, swapFor: { token, chainId in
                     // **EARN'S "SWAP FOR IT" (prd §2000):** Swap on that network,
                     // the token Earn takes as what you get; From opens on what
@@ -5742,7 +5751,9 @@ struct MoveSentence: View {
     /// A tile's dollars (prd §1904 item 11): whole dollars from ten up, so
     /// "$324" fits Home's column; under ten, with cents.
     static func money(_ usd: Double, whole: Bool) -> String {
-        guard whole, usd >= 10 else { return money(usd) }
+        // Whole dollars from $1 (2026-11-27, user, of Earn's "$2.00" beside
+        // "$39": "i'd rather not show the decimals"); cents only under $1.
+        guard whole, usd >= 1 else { return money(usd) }
         return usd.formatted(.currency(code: "USD").precision(.fractionLength(0)))
     }
 

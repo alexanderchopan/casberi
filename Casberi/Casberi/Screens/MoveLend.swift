@@ -21,6 +21,9 @@ struct MoveLendSentence<Head: View>: View {
     /// **TACIT EARNS (prd §1986):** its row opens Make private on Deposit and
     /// back to public on Withdraw, Tacit's own sheets.
     var tacit: ((LendMove.Mode) -> Void)? = nil
+    /// Aave, privately: Privacy Pools' move in (Deposit) or its Send back to
+    /// your account (Withdraw), raised by Move (2026-11-27).
+    var privately: ((LendMove.Mode) -> Void)? = nil
     /// **A DOOR, NOT A DEAD ROW (prd §2000):** a place you hold nothing for
     /// opens Swap to buy its token on its network.
     var swapFor: ((YourAccountOp.Token, Int) -> Void)? = nil
@@ -562,6 +565,7 @@ struct MoveLendSentence<Head: View>: View {
         var places = [MoveTokenPlace(id: "aave", title: "Aave", group: String(localized: "Public"), choices: aave.map(choice))]
         places.append(MoveTokenPlace(id: "olla", title: "Olla", group: String(localized: "Public"), choices: olla.map(choice)))
         places += farmPlace
+        places.append(MoveTokenPlace(id: "aave-private", title: "Aave", group: String(localized: "Private"), choices: aavePrivateChoice))
         places.append(MoveTokenPlace(id: "tacit", title: "Tacit", group: String(localized: "Private"), choices: tacitChoice))
         return MoveTokenGrid(places: places)
     }
@@ -574,7 +578,7 @@ struct MoveLendSentence<Head: View>: View {
     private var placeRows: some View {
         var places = [MoveTokenPlace(id: "places", group: String(localized: "Public"), choices: publicPlaces)]
         places += farmPlace
-        places.append(MoveTokenPlace(id: "tacit", group: String(localized: "Private"), choices: tacitChoice))
+        places.append(MoveTokenPlace(id: "tacit", group: String(localized: "Private"), choices: aavePrivateChoice + tacitChoice))
         return MoveTokenGrid(places: places)
     }
 
@@ -676,6 +680,25 @@ struct MoveLendSentence<Head: View>: View {
         return [MoveTokenPlace(id: "tacit-farms", title: title, group: String(localized: "Public"),
                                choices: folded ? Array(choices.prefix(2)) : choices,
                                more: folded ? (words: String(localized: "\(choices.count - 2) more pools"), act: { allFarms = true }) : nil)]
+    }
+
+    /// **AAVE, PRIVATELY (2026-11-27, user: "if we have aave public and aave
+    /// private shouldn't we list both?").** Privacy Pools' ETH and USDC are
+    /// Aave positions (prd §1563): what you hold there earns Aave's rate. Its
+    /// row names that, at today's rates; Deposit opens Privacy Pools' move in,
+    /// Withdraw its Send back to your account. Its figure is Home's.
+    private var aavePrivateChoice: [MoveTokenChoice] {
+        guard privately != nil, PrivateMove.available else { return [] }
+        let store = PrivateMoneyStore.shared
+        let rate = Self.rateSpan(Array(store.apys.values))
+        let usd = FeedScreen.privatePlaces.first { $0.id == FeedScreen.homePoolsPlace }?.usd
+        let mode = move.mode
+        return [MoveTokenChoice(id: "aave-private", symbol: "Aave", network: "Privacy Pools",
+                                sub: usd.flatMap { $0 > 0 ? MoveSentence.money($0, whole: true) : nil },
+                                line: ["Privacy Pools", "ETH, USDC", rate].compactMap { $0 }.joined(separator: " · "),
+                                dim: mode == .takeBack && (usd ?? 0) <= 0) {
+            privately?(mode)
+        }]
     }
 
     /// **TACIT (prd §1986), UNDER PRIVATE (prd §1998).** Private TAC earns a
