@@ -215,8 +215,13 @@ awk '/guard ok == true, let run = steps.away else/{g=NR} /steps.clearAway\(\)/{i
 RAILGUN_MOVE=Casberi/Casberi/Screens/MoveRailgunPrivate.swift
 [[ $(grep -c 'started(.send(.ethereum), away: true)' $RAILGUN_MOVE) -ge 2 ]] \
   || { echo "✗ a Railgun send to someone stays in its sheet (prd §1806)"; exit 1; }
-grep -q 'started(Self.takeBackPlan) }' $RAILGUN_MOVE \
-  || { echo "✗ taking back from Railgun leaves its sheet before your account has signed (prd §1806)"; exit 1; }
+# Taking back goes behind its sheet too (2026-11-27, amends §1806 item 3): its
+# signing is your account's Face ID, which iOS draws over anything, and the
+# capsule's marks follow it there.
+grep -q 'started(Self.takeBackPlan, away: true)' $RAILGUN_MOVE \
+  || { echo "✗ taking back from Railgun keeps its sheet open (2026-11-27)"; exit 1; }
+grep -q 'steps.mark(.signing, from: away)' $RAILGUN_MOVE \
+  || { echo "✗ a take-back behind its sheet: the capsule never hears it signing"; exit 1; }
 grep -q 'if away, let onAway, PrivateSendSteps.shared.sendAway(from: .railgun, landed: landed) {' $RAILGUN_MOVE \
   || { echo "✗ Railgun's sheet closes before Face ID, or over another send (prd §1806)"; exit 1; }
 grep -q '.task(id: move.mode) { if RailgunMove.kept !== move { await move.read() } }' $RAILGUN_MOVE \

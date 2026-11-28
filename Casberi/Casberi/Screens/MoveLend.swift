@@ -27,6 +27,10 @@ struct MoveLendSentence<Head: View>: View {
     @ViewBuilder let head: () -> Head
 
     @State private var open: Blank?
+    /// $ | token on the amount (2026-11-27, user: "on withdraw in earn there
+    /// isn't a toggle same in deposit"), a dollar token aside (§1989).
+    @State private var inDollars = false
+    @State private var dollars = ""
     /// Tacit's farm page, raised from a farm row (prd §1993).
     @State private var farmPage = false
     /// Every farm, past the first two (prd §2000).
@@ -300,7 +304,14 @@ struct MoveLendSentence<Head: View>: View {
                                 MoveQuickKeys.Key.share(p, on: p == 100 && move.all) { pickShare(p) }
                             }, disabled: !live)
                         }
-                        MoveKeypad(text: typed, places: min(move.market?.decimals ?? 6, 6), disabled: !live,
+                        MoveKeypad(text: inDollars
+                                       ? Binding(get: { dollars }, set: {
+                                           dollars = $0
+                                           let t = MoveDollars.units(fromUSD: $0, price: earnPrice, places: min(move.market?.decimals ?? 6, 6))
+                                           move.pick(t.isEmpty ? nil : t, all: false)
+                                       })
+                                       : typed,
+                                   places: inDollars ? 2 : min(move.market?.decimals ?? 6, 6), disabled: !live,
                                    keyHeight: MoveSentence.bigKeyHeight, big: true)
                     }
                 } else if open == .network {
@@ -351,18 +362,25 @@ struct MoveLendSentence<Head: View>: View {
             MoveReceiptLine(label: String(localized: "Amount")) {
                 // While typing, the field shows what was typed (2026-11-27):
                 // `figure` rounds, so "0." and "0.000" drew "0".
-                let typedShown = open == .amount && !move.all && !move.claims
+                let typedShown = open == .amount && inDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
+                    : open == .amount && !move.all && !move.claims
                     ? move.amount.flatMap { $0.isEmpty ? nil : "\(MoveSentence.grouped($0)) \(move.market?.symbol ?? move.symbol)" }
                     : nil
                 MoveChip(text: typedShown ?? move.figure, tone: open == .amount ? .open : (move.units == nil ? .empty : .answered),
-                         caret: open == .amount, disabled: !live, placeholder: typedShown == nil && move.units == nil) { toggle(.amount) }
+                         caret: open == .amount, disabled: !live, placeholder: typedShown == nil && move.units == nil,
+                         accessory: open == .amount ? earnSwitch : nil) { toggle(.amount) }
             }
             // What the figure means, under the field (prd §1989).
             if open == .amount, let m = market,
                let n = MoveFieldNote.against(typed: typed.wrappedValue,
                                              have: MoveFieldNote.plain(units: move.available(m), decimals: m.decimals),
                                              symbol: m.symbol) {
-                MoveFieldNote(text: n.text, ink: n.ink)
+                // Typed in dollars, the token it works out to.
+                if inDollars, n.ink != DS.attentionInk, let a = move.amount, !a.isEmpty {
+                    MoveFieldNote(text: "≈ \(a) \(m.symbol)", ink: DS.textSecondary)
+                } else {
+                    MoveFieldNote(text: n.text, ink: n.ink)
+                }
             }
         }
     }
@@ -381,7 +399,25 @@ struct MoveLendSentence<Head: View>: View {
     }
 
     /// A share of what there is: All is every unit, as Use all was.
+    /// Today's price of the market's token, for $ | token.
+    private var earnPrice: Double? {
+        move.market.flatMap { move.prices[$0.symbol.lowercased()] }.flatMap { $0 > 0 ? $0 : nil }
+    }
+
+    /// $ | token beside the open amount; none for a dollar token or no price.
+    private var earnSwitch: AnyView? {
+        guard let m = move.market, earnPrice != nil,
+              !["USDC", "USDT", "DAI", "GHO", "USDS", "PYUSD", "USDG"].contains(m.symbol.uppercased()) else { return nil }
+        return AnyView(MoveUnitSwitch(symbol: m.symbol, dollars: inDollars) { on in
+            withAnimation(DS.Motion.standard) {
+                inDollars = on
+                if on { dollars = MoveDollars.usd(from: typed.wrappedValue, price: earnPrice) }
+            }
+        })
+    }
+
     private func pickShare(_ p: Int) {
+        inDollars = false
         guard let m = market, let have = move.available(m).flatMap({ Decimal(string: $0) }) else { return }
         if p == 100 {
             move.pick(nil, all: true)

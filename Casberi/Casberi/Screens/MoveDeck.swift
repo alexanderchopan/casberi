@@ -885,7 +885,11 @@ struct MoveTokenGrid: View {
                     Text(verbatim: title)
                         .dsText(.body17)
                         .foregroundStyle(place.ink == DS.textPrimary ? DS.textSecondary : place.ink)
-                        .padding(.top, DS.Space.s1)
+                        // Room over and under it, so it never touches the
+                        // rows (2026-11-27, user, of Earn's "Tacit farms" line:
+                        // "the text is touching need some space").
+                        .padding(.top, DS.Space.s3)
+                        .padding(.bottom, DS.Space.s2)
                         .accessibilityAddTraits(.isHeader)
                 }
                 if let rule = place.rule {
