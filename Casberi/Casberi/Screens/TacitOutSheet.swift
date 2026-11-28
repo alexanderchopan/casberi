@@ -16,6 +16,9 @@ struct TacitOutSheet: View {
     /// Opened from Earn: Earn · Deposit · Withdraw in the title's place (prd §2005).
     var header: AnyView? = nil
     @State private var amount = ""
+    /// $ | TAC (`TacitDollars`).
+    @State private var inDollars = false
+    @State private var dollars = ""
     @State private var toCoSigner = false
     /// The Tacit address being named after a send (prd §1983).
     @State private var saving: String?
@@ -52,9 +55,10 @@ struct TacitOutSheet: View {
                     MoveDeckKeys {
                         MoveQuickKeys(keys: MoveQuickKeys.shares.map { p in
                             let text = TacitShieldSheet.maxText(most * Double(p) / 100)
-                            return .share(p, on: amount == text) { amount = text }
+                            return .share(p, on: amount == text) { inDollars = false; amount = text }
                         })
-                        MoveKeypad(text: $amount, places: 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
+                        MoveKeypad(text: inDollars ? Binding(get: { dollars }, set: { dollars = $0; amount = TacitDollars.tac(fromUSD: $0) }) : $amount,
+                                   places: inDollars ? 2 : 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
                     }
                 } else if open == .to, !sending {
                     deckList { toChoices }
@@ -85,6 +89,16 @@ struct TacitOutSheet: View {
             Button("Cancel", role: .cancel) { saving = nil }
         } message: {
             Text(verbatim: saving.map { AddressTail.short($0) } ?? "")
+        }
+        // **THE SCAN STARTS WITH THE SHEET (2026-11-27, user: "it says
+        // reading the fee, which takes a while, a long while").** A quote
+        // scans the chain for your notes first; the engine keeps what it
+        // scanned, so one scan while you type makes your own quote quick.
+        .task {
+            guard TacitEngine.shared.isOpen, out.quote == nil, !DemoMode.isActive else { return }
+            let t = Date()
+            _ = try? await (payTo == nil ? TacitEngine.shared.outQuote(units: 1) : TacitEngine.shared.payQuote(units: 1))
+            NSLog("tacitOut| scanned ahead in %.1f s", Date().timeIntervalSince(t))
         }
         .task(id: amount) {
             try? await Task.sleep(for: .milliseconds(500))
@@ -134,8 +148,14 @@ struct TacitOutSheet: View {
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
                                 value: payTo == nil ? "TAC · Ethereum" : "TAC · Tacit chain", mark: mark, fixed: true) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
-                                value: amount.isEmpty ? (open == .amount ? "0 TAC" : nil) : "\(amount) TAC",
-                                fieldNote: MoveFieldNote.against(typed: amount, have: TacitShieldSheet.maxText(most), symbol: "TAC")) { toggle(.amount) })
+                                value: TacitDollars.value(amount: amount, dollars: dollars, inDollars: inDollars, typing: open == .amount),
+                                accessory: TacitDollars.price == nil ? nil : AnyView(MoveUnitSwitch(symbol: "TAC", dollars: inDollars) { on in
+                                    withAnimation(DS.Motion.standard) {
+                                        inDollars = on
+                                        if on { dollars = TacitDollars.usd(fromTAC: amount) }
+                                    }
+                                }),
+                                fieldNote: TacitDollars.note(amount: amount, have: TacitShieldSheet.maxText(most), inDollars: inDollars)) { toggle(.amount) })
         return out
     }
 

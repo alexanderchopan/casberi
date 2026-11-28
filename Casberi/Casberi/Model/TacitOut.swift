@@ -124,9 +124,11 @@ final class TacitOut {
         guard let u = TacitShield.units(tac), TacitEngine.shared.isOpen else { quote = nil; step = .idle; return }
         units = u
         step = .quoting
+        let asked = Date()
         do {
             quote = payTo == nil ? try await TacitEngine.shared.outQuote(units: u)
                 : try await TacitEngine.shared.payQuote(units: u)
+            NSLog("tacitOut| quoted in %.1f s", Date().timeIntervalSince(asked))
             if units == u { step = .ready }
         } catch {
             step = .failed(TacitAccount.words(error))

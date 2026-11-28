@@ -13,6 +13,9 @@ struct TacitShieldSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
     @State private var amount = ""
+    /// $ | TAC (`TacitDollars`).
+    @State private var inDollars = false
+    @State private var dollars = ""
     @State private var source: TacitShield.Source?
     /// Drawn inside Move, over Send's sentence (prd §1976), not as a sheet:
     /// its foot leads with Move's way back, and Done goes back to Move.
@@ -50,9 +53,10 @@ struct TacitShieldSheet: View {
                     MoveDeckKeys {
                         MoveQuickKeys(keys: MoveQuickKeys.shares.map { p in
                             let text = Self.maxText(held * Double(p) / 100)
-                            return .share(p, on: amount == text) { amount = text }
+                            return .share(p, on: amount == text) { inDollars = false; amount = text }
                         })
-                        MoveKeypad(text: $amount, places: 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
+                        MoveKeypad(text: inDollars ? Binding(get: { dollars }, set: { dollars = $0; amount = TacitDollars.tac(fromUSD: $0) }) : $amount,
+                                   places: inDollars ? 2 : 8, keyHeight: MoveSentence.bigKeyHeight, big: true)
                     }
                 } else if open == .from, !sending {
                     deckList { fromChoices }
@@ -107,8 +111,14 @@ struct TacitShieldSheet: View {
         out.append(MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
                                 value: "TAC · Ethereum", mark: MoveRowMark(token: "TAC"), fixed: true) {})
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount, answered: !amount.isEmpty,
-                                value: amount.isEmpty ? (open == .amount ? "0 TAC" : nil) : "\(amount) TAC",
-                                fieldNote: MoveFieldNote.against(typed: amount, have: Self.maxText(held), symbol: "TAC")) { toggle(.amount) })
+                                value: TacitDollars.value(amount: amount, dollars: dollars, inDollars: inDollars, typing: open == .amount),
+                                accessory: TacitDollars.price == nil ? nil : AnyView(MoveUnitSwitch(symbol: "TAC", dollars: inDollars) { on in
+                                    withAnimation(DS.Motion.standard) {
+                                        inDollars = on
+                                        if on { dollars = TacitDollars.usd(fromTAC: amount) }
+                                    }
+                                }),
+                                fieldNote: TacitDollars.note(amount: amount, have: Self.maxText(held), inDollars: inDollars)) { toggle(.amount) })
         return out
     }
 
