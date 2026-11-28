@@ -254,10 +254,15 @@ grep -q "    reached: sendsReached," $MAIN \
 (( $(grep -c "\.send({ from: me" $MAIN) == 2 )) \
   || { echo "✗ a send in main.js goes around sendOwn (two are allowed: sendOwn's own, and the legacy gas claim)"; exit 1; }
 (cd $ENGINE && node test/private-fees.test.mjs) || { echo "✗ the private gas checks failed"; exit 1; }
-fees_mutant() { # name, perl expression
+fees_mutant() { # name, perl expression, [address: also derive the contract's address]
+  # Only a mutant of the pinned address needs the address derived. That
+  # derivation starts native `bb` helpers, which have hung idle under load
+  # (52 min on 2026-11-28, on a mutant of the send logic), so the logic
+  # mutants run the logic alone; the unmutated run above still derives it.
+  local skip=1; [[ ${3:-} == address ]] && skip=
   perl -0pe "$2" $FEES_SRC > $TMP/private-fees.js
   cmp -s $FEES_SRC $TMP/private-fees.js && { echo "✗ mutation '$1' changed nothing"; exit 1; }
-  if (cd $ENGINE && FEES=$TMP/private-fees.js node test/private-fees.test.mjs >/dev/null 2>&1); then
+  if (cd $ENGINE && SKIP_ADDRESS=$skip FEES=$TMP/private-fees.js node test/private-fees.test.mjs >/dev/null 2>&1); then
     echo "✗ mutation '$1' passed: the private gas checks cannot see it"; exit 1
   fi
   echo "✓ mutation '$1' fails the private gas checks"
@@ -267,7 +272,7 @@ fees_mutant "a mint that failed its measure is sent at the fixed limits" 's/UNME
 fees_mutant "a private payment is measured past the balance" "s/await estimate\('private', balance\)/await estimate('private', ceiling)/"
 fees_mutant "a send that reached Aztec is sent again" 's/    if \(reached\(\) !== before\) throw first;[^\n]*\n//'
 fees_mutant "the second failure hides the first" 's/    \} catch \{\n      throw first;/    } catch (second) {\n      throw second;/'
-fees_mutant "the pinned address is not the one the bytecode derives" 's/0x0516ebb4/0x0516ebb5/'
+fees_mutant "the pinned address is not the one the bytecode derives" 's/0x0516ebb4/0x0516ebb5/' address
 fees_mutant "two sends choose how to pay at once" 's/    const mine = last\.then\(run\);/    const mine = Promise.resolve().then(run);/'
 (( $(grep -c "return ownTurn(() => sendPaying({" $MAIN) == 2 )) \
   || { echo "✗ Casberi's sends, or an app's, no longer take turns: two can be offered the same gas deposit"; exit 1; }
