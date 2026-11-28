@@ -1032,6 +1032,10 @@ struct MoveRailgunSentence<Head: View>: View {
     /// amount on Move's keys, or the note.
     private enum Blank { case token, buy, amount, note }
     @State private var open: Blank?
+    /// $ | token on the amount (2026-11-27, user: "railgun also lacks the
+    /// toggle in send"), a dollar token aside (§1989).
+    @State private var inDollars = false
+    @State private var dollars = ""
     /// The cost's list stands in the receipt's place (prd §1876).
     @State private var costOpen = false
     /// The note to a private address is being written (prd §1877).
@@ -1067,6 +1071,8 @@ struct MoveRailgunSentence<Head: View>: View {
             if on, open == nil, move.amount.isEmpty { withAnimation(DS.Motion.standard) { open = .amount } }
         }
         // The token's places at most, and every figure asks again (prd §1727).
+        // Another token types in its own unit first.
+        .onChange(of: move.token) { _, _ in inDollars = false; dollars = "" }
         .onChange(of: move.amount) { _, now in
             let places = move.holding?.decimals ?? 18
             if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
@@ -1498,11 +1504,18 @@ struct MoveRailgunSentence<Head: View>: View {
                             let quick = RailgunMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
-                                    p == .floor ? MoveQuickKeys.Key(id: value, word: chipWord(p), on: move.amount == value) { move.amount = value }
-                                        : MoveQuickKeys.Key.share(p == .quarter ? 25 : p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
+                                    p == .floor ? MoveQuickKeys.Key(id: value, word: chipWord(p), on: move.amount == value) { inDollars = false; move.amount = value }
+                                        : MoveQuickKeys.Key.share(p == .quarter ? 25 : p == .half ? 50 : 100, on: move.amount == value) { inDollars = false; move.amount = value }
                                 })
                             }
-                            MoveKeypad(text: $move.amount, places: min(move.holding?.decimals ?? 6, 6),
+                            MoveKeypad(text: inDollars
+                                           ? Binding(get: { dollars }, set: {
+                                               dollars = $0
+                                               move.amount = MoveDollars.units(fromUSD: $0, price: move.holding?.price,
+                                                                               places: min(move.holding?.decimals ?? 6, 6))
+                                           })
+                                           : $move.amount,
+                                       places: inDollars ? 2 : min(move.holding?.decimals ?? 6, 6),
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
                     } else if open == .token, picking {
@@ -1570,14 +1583,29 @@ struct MoveRailgunSentence<Head: View>: View {
         }
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
                                 answered: !move.amount.isEmpty,
-                                value: move.amount.isEmpty ? (open == .amount ? "0 \(move.holding?.symbol ?? "")" : nil)
+                                value: open == .amount && inDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
+                                    : move.amount.isEmpty ? (open == .amount ? "0 \(move.holding?.symbol ?? "")" : nil)
                                     : "\(move.amount) \(move.holding?.symbol ?? "")",
                                 // The floor is a rule no menu shows: under Amount (prd §1992).
                                 note: move.mode == .deposit && open != .amount
                                     ? (underWords ?? (RailgunMove.floorUSD > 0 ? String(localized: "\(RailgunMove.floorText) or more") : nil)) : nil,
+                                accessory: move.holding.flatMap { h in
+                                    guard (h.price ?? 0) > 0, !["USDC", "USDT", "DAI"].contains(h.symbol.uppercased()) else { return nil }
+                                    return AnyView(MoveUnitSwitch(symbol: h.symbol, dollars: inDollars) { on in
+                                        withAnimation(DS.Motion.standard) {
+                                            inDollars = on
+                                            if on { dollars = MoveDollars.usd(from: move.amount, price: h.price) }
+                                        }
+                                    })
+                                },
                                 fieldNote: underWords.map { (text: $0, ink: DS.attentionInk) } ?? move.holding.flatMap { h in
-                                    MoveFieldNote.against(typed: move.amount, have: MoveFieldNote.plain(units: h.units, decimals: h.decimals),
-                                                          symbol: h.symbol)
+                                    let against = MoveFieldNote.against(typed: move.amount, have: MoveFieldNote.plain(units: h.units, decimals: h.decimals),
+                                                                        symbol: h.symbol)
+                                    // Typed in dollars, the token it works out to.
+                                    if inDollars, !move.amount.isEmpty, against?.ink != DS.attentionInk {
+                                        return (text: "≈ \(move.amount) \(h.symbol)", ink: DS.textSecondary)
+                                    }
+                                    return against
                                 }) { toggle(.amount) })
         if move.toPrivate {
             out.append(MoveDeckStep(id: "note", word: String(localized: "Note"), on: open == .note,

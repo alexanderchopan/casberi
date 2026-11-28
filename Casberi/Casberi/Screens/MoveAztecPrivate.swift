@@ -857,6 +857,10 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     private enum Blank { case token, recipient, amount }
     @State private var open: Blank?
+    /// $ | token on the amount (2026-11-27, user: "the amount also doesn't
+    /// have the toggle"), USDC aside: a dollar is a dollar (§1989).
+    @State private var inDollars = false
+    @State private var dollars = ""
     /// The cost's list stands in the rows' place (prd §1876).
     @State private var costOpen = false
     @State private var typed = ""
@@ -885,6 +889,8 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         // failed, never read over (prd §1777).
         .task(id: move.mode) { if AztecMove.kept !== move { await move.read() } }
         .onAppear { if AztecMove.kept === move { PrivateSendSteps.shared.bringBack() } }
+        // Another token types in its own unit first.
+        .onChange(of: move.symbol) { _, _ in inDollars = false; dollars = "" }
         .onDisappear {
             guard AztecMove.kept === move else { return }
             if case .working = move.stage {
@@ -1419,11 +1425,16 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                             let quick = AztecMove.Pick.allCases.compactMap { p in move.amount(for: p).map { (p, $0) } }
                             if !quick.isEmpty {
                                 MoveQuickKeys(keys: quick.map { p, value in
-                                    MoveQuickKeys.Key.share(p == .quarter ? 25 : p == .half ? 50 : 100, on: move.amount == value) { move.amount = value }
+                                    MoveQuickKeys.Key.share(p == .quarter ? 25 : p == .half ? 50 : 100, on: move.amount == value) { inDollars = false; move.amount = value }
                                 }, onInk: DS.aztecInk)
                             }
-                            MoveKeypad(text: Binding(get: { move.amount }, set: { move.amount = $0 }),
-                                       places: min(move.decimals, 6),
+                            MoveKeypad(text: inDollars
+                                           ? Binding(get: { dollars }, set: {
+                                               dollars = $0
+                                               move.amount = MoveDollars.units(fromUSD: $0, price: aztecPrice, places: min(move.decimals, 6))
+                                           })
+                                           : Binding(get: { move.amount }, set: { move.amount = $0 }),
+                                       places: inDollars ? 2 : min(move.decimals, 6),
                                        keyHeight: MoveSentence.bigKeyHeight, big: true)
                         }
                     } else if open == .token, live {
@@ -1458,6 +1469,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
 
     /// To (where it goes: back to Send's recipients for a move-in), Token,
     /// Amount; a send from Aztec asks To in its own list.
+    /// Today's price of the token picked (the move reads them), for $ | token.
+    private var aztecPrice: Double? { move.prices[move.symbol].flatMap { $0 > 0 ? $0 : nil } }
+
     private var steps: [MoveDeckStep] {
         var out: [MoveDeckStep] = []
         // **THE SENTENCE'S WORDS ARE THE LINES (prd §1931), AZTEC'S IN ITS INK
@@ -1503,11 +1517,21 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                                 aztec: move.mode == .send) { toggle(.token) })
         out.append(MoveDeckStep(id: "amount", word: String(localized: "Amount"), on: open == .amount,
                                 answered: !move.amount.isEmpty,
-                                value: move.amount.isEmpty ? (open == .amount ? "0 \(move.symbol)" : nil) : "\(move.amount) \(move.symbol)",
+                                value: open == .amount && inDollars ? "$" + (dollars.isEmpty ? "0" : MoveSentence.grouped(dollars))
+                                    : move.amount.isEmpty ? (open == .amount ? "0 \(move.symbol)" : nil) : "\(move.amount) \(move.symbol)",
+                                accessory: aztecPrice == nil || move.symbol == "USDC" ? nil
+                                    : AnyView(MoveUnitSwitch(symbol: move.symbol, dollars: inDollars) { on in
+                                        withAnimation(DS.Motion.standard) {
+                                            inDollars = on
+                                            if on { dollars = MoveDollars.usd(from: move.amount, price: aztecPrice) }
+                                        }
+                                    }),
                                 // Its own line, "$25.00 · you have $120.00" (§1700y), under the field (§1989).
                                 fieldNote: move.amountLine.map { line in
                                     let over = (Decimal(string: move.units ?? "0") ?? 0) > (Decimal(string: move.available ?? "0") ?? 0)
-                                    return (text: line, ink: over ? DS.attentionInk : DS.textSecondary)
+                                    // Typed in dollars, the token it works out to.
+                                    let worked = inDollars && !over && !move.amount.isEmpty
+                                    return (text: worked ? "≈ \(move.amount) \(move.symbol)" : line, ink: over ? DS.attentionInk : DS.textSecondary)
                                 }) { toggle(.amount) })
         return out
     }
