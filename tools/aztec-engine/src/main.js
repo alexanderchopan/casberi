@@ -305,6 +305,17 @@ const WARM_FOR = 30_000;
 let warmFee = null;
 const warmKey = (symbol, pays, gasJSON) =>
   JSON.stringify([symbol, pays.map(p => [String(p.to).toLowerCase(), String(p.units)]), gasJSON || '[]']);
+// One warm-up at a time, outside the sends' turn (measured 2026-11-28: each
+// change of the amount queued its own ~6 s measure in that turn, and the send
+// waited 29 s behind five of them). A change while one runs keeps only the
+// newest; a send drops what is waiting and, for the same payments, waits for
+// the one running instead of measuring again.
+let warmRun = null;
+let warmNext = null;
+let sendingOwn = 0;
+async function warmJoin(key) {
+  if (warmRun?.key === key) await warmRun.promise.catch(() => {});
+}
 function takeWarm(key) {
   const w = warmFee;
   warmFee = null;
@@ -316,13 +327,19 @@ function takeWarm(key) {
 function sendOwn(wallet, interaction, gasJSON, ownHolds, payments = 1, key = null) {
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const wait = { waitForStatus: 'proposed', timeout: 1800 };
-  return ownTurn(() => sendPaying({
-    pay: async () => (key && takeWarm(key)) || feeFor(wallet, interaction, gasJSON, payments),
+  sendingOwn++;
+  warmNext = null;
+  const run = ownTurn(() => sendPaying({
+    pay: async () => {
+      if (key) await warmJoin(key);
+      return (key && takeWarm(key)) || feeFor(wallet, interaction, gasJSON, payments);
+    },
     send: async options => (await interaction.send({ from: me, ...(options ?? {}), wait })).receipt,
     reached: sendsReached,
     ownHolds,
     log,
   }));
+  return run.finally(() => { sendingOwn--; });
 }
 
 // What the account holds of its own Fee Juice; nothing when it cannot be read.
@@ -593,11 +610,26 @@ const own = {
     const sends = pays.map(p => token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(p.to), BigInt(p.units), 0n));
     const interaction = sends.length === 1 ? sends[0] : new BatchCall(wallet, sends);
     const key = warmKey(symbol, pays, gasJSON);
-    // In the sends' own turn, so it never measures beside a send under way.
-    const picked = await ownTurn(async () => ({ picked: await feeFor(wallet, interaction, gasJSON, pays.length), reached: sendsReached() }));
-    warmFee = { key, picked: picked.picked, reached: picked.reached, at: Date.now() };
-    log('sendWarmed', { took: ms() - started, how: picked.picked.how, pays: pays.length });
-    return { warm: true };
+    // Never beside a send, never two at once: the newest change waits, the rest are dropped.
+    if (sendingOwn) return { warm: false };
+    if (warmRun) {
+      warmNext = [symbol, paysJSON, gasJSON];
+      return { warm: 'later' };
+    }
+    const reached = sendsReached();
+    const promise = feeFor(wallet, interaction, gasJSON, pays.length);
+    warmRun = { key, promise };
+    try {
+      const picked = await promise;
+      warmFee = { key, picked, reached, at: Date.now() };
+      log('sendWarmed', { took: ms() - started, how: picked.how, pays: pays.length });
+      return { warm: true };
+    } finally {
+      warmRun = null;
+      const next = warmNext;
+      warmNext = null;
+      if (next && !sendingOwn) own.warmSend(...next).catch(() => {});
+    }
   },
   // PAY MANY (prd §1952): every payment one private transfer, all in ONE
   // transaction, so one proof, one fee and one Face ID. Aztec's entrypoint
