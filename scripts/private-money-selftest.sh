@@ -124,7 +124,7 @@ use "$SENT" 'toRow("Privacy Pools", sub: privateNet, image: "brand-privacy-pools
 use "$SENT" 'toRow("Railgun", sub: String(localized: "Ethereum"), image: "brand-railgun") {' "Railgun is no longer a recipient for the tokens that go there (prd §1929)"
 # Named by its chain alone, as every place, since prd §1985.
 use "$SENT" 'toRow("Aztec", sub: "Aztec", image: "brand-aztec") {' "your private account on Aztec is no longer a recipient in To (prd §1779, §1923, §1985)"
-use "$SENT" 'listRow("Aztec", sub: "Aztec", image: "brand-aztec") {' "your private account on Aztec is no longer a From, or lost its own noun (prd §1779, §1985)"
+use "$SENT" 'listRow("Aztec", sub: "Aztec", trailing: figure(places[FeedScreen.homeAztecPlace]), image: "brand-aztec") {' "your private account on Aztec is no longer a From, or lost its own noun (prd §1779, §1985)"
 # No Private switch in Send (prd §1700f item 11), and no private "network"
 # either (prd §1719): private money is rows in Send's token list.
 use "$SENT" 'MoveTokenPlace(id: "pools", title: "Privacy Pools", group: String(localized: "Private"), choices: privateChoices(pools, badge: badge)),' "private money is no longer tiles in Send's token list, under its network (prd §1719, §1904, §1910)"
