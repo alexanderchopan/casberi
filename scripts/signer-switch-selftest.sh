@@ -120,48 +120,48 @@ wiring() {
   local link="$1" sheet="$2" plist="$3"
   strip() { grep -v '^[[:space:]]*//' "$1"; }
   local SIGN; SIGN=$(strip "$link" | awk '/static func sign\(typedData/,/^    }/')
-  print -r -- "$SIGN" | grep -q 'if SignerSwitch.closes(end) { close(pairing) }' \
+  print -r -- "$SIGN" | grep 'if SignerSwitch.closes(end) { close(pairing) }' >/dev/null \
     || { echo "  ✗ sign no longer lets a session go by SignerSwitch.closes"; return 1; }
-  print -r -- "$SIGN" | grep -q 'guard SignerSwitch.pairsAfresh(end, kept: wasKept) else { throw error }' \
+  print -r -- "$SIGN" | grep 'guard SignerSwitch.pairsAfresh(end, kept: wasKept) else { throw error }' >/dev/null \
     || { echo "  ✗ sign no longer pairs afresh by SignerSwitch.pairsAfresh"; return 1; }
-  print -r -- "$SIGN" | grep -q 'switching: switching' \
+  print -r -- "$SIGN" | grep 'switching: switching' >/dev/null \
     || { echo "  ✗ sign's request does not hear Use another wallet"; return 1; }
-  print -r -- "$SIGN" | grep -q 'sent: { sent.withLock { $0 = true }' \
+  print -r -- "$SIGN" | grep 'sent: { sent.withLock { $0 = true }' >/dev/null \
     || { echo "  ✗ sign no longer knows whether the request went (Cancel keeps a silent wallet)"; return 1; }
-  strip "$link" | awk '/private static func ending\(/,/^    }/' | grep -q 'if Task.isCancelled { return .cancelled(sent: sent) }' \
+  strip "$link" | awk '/private static func ending\(/,/^    }/' | grep 'if Task.isCancelled { return .cancelled(sent: sent) }' >/dev/null \
     || { echo "  ✗ a Cancel is no longer read as the person's"; return 1; }
-  strip "$link" | grep -q 'case .switched: throw Failure.switched' \
+  strip "$link" | grep 'case .switched: throw Failure.switched' >/dev/null \
     || { echo "  ✗ request never ends on Use another wallet"; return 1; }
-  strip "$link" | awk '/static func answer\(to ids/,/^    }/' | grep -q 'for await _ in switching { return .switched }' \
+  strip "$link" | awk '/static func answer\(to ids/,/^    }/' | grep 'for await _ in switching { return .switched }' >/dev/null \
     || { echo "  ✗ the wait does not listen for Use another wallet"; return 1; }
   # §1516/§1601's address check stays exactly as it was.
-  strip "$link" | awk '/static func connect\(signer/,/^    }/' | grep -q 'throw Failure.notTheSigner(accounts.first?.address ?? "")' \
+  strip "$link" | awk '/static func connect\(signer/,/^    }/' | grep 'throw Failure.notTheSigner(accounts.first?.address ?? "")' >/dev/null \
     || { echo "  ✗ a wallet connected as another address is no longer refused"; return 1; }
 
-  strip "$sheet" | grep -q 'DSDoorRow(icon: "arrow.triangle.swap", label: "Use another wallet") { ask.useAnother() }' \
+  strip "$sheet" | grep 'DSDoorRow(icon: "arrow.triangle.swap", label: "Use another wallet") { ask.useAnother() }' >/dev/null \
     || { echo "  ✗ the kept sheet has no Use another wallet"; return 1; }
-  strip "$sheet" | awk '/func useAnother\(\)/,/^    }/' | grep -q 'switches.fire()' \
+  strip "$sheet" | awk '/func useAnother\(\)/,/^    }/' | grep 'switches.fire()' >/dev/null \
     || { echo "  ✗ Use another wallet tells no one"; return 1; }
   local CO; CO=$(strip "$sheet" | awk '/static func coSigner\(owner/,/^    }/')
-  print -r -- "$CO" | grep -q 'switching: ask.switches' && print -r -- "$CO" | grep -q 'ask.offerSwitch()' \
+  print -r -- "$CO" | grep 'switching: ask.switches' >/dev/null && print -r -- "$CO" | grep 'ask.offerSwitch()' >/dev/null \
     || { echo "  ✗ the co-signer's ask does not hear Use another wallet"; return 1; }
   local BATCH; BATCH=$(strip "$sheet" | awk '/private func sign\(_ typedData/,/^        }$/')
-  print -r -- "$BATCH" | grep -q 'switching: ask.switches' && print -r -- "$BATCH" | grep -q 'ask.offerSwitch()' \
+  print -r -- "$BATCH" | grep 'switching: ask.switches' >/dev/null && print -r -- "$BATCH" | grep 'ask.offerSwitch()' >/dev/null \
     || { echo "  ✗ a several-network ask does not hear Use another wallet"; return 1; }
   # The row shows only once the request listens, or a quick tap is lost.
-  print -r -- "$BATCH" | grep -q 'sent: { ask.ask(kept: nil) })' \
+  print -r -- "$BATCH" | grep 'sent: { ask.ask(kept: nil) })' >/dev/null \
     || { echo "  ✗ a several-network ask shows Use another wallet before it listens"; return 1; }
   # A re-paired wallet's door is its own session's, never the one let go.
-  print -r -- "$SIGN" | grep -q 'asked = (pairing, door(of: pairing.topic))' \
+  print -r -- "$SIGN" | grep 'asked = (pairing, door(of: pairing.topic))' >/dev/null \
     || { echo "  ✗ a fresh pairing's door may be the wallet just let go"; return 1; }
-  print -r -- "$BATCH" | grep -A3 'catch YourAccountSignerLink.Failure.switched' | grep -q 'YourAccountSignerLink.close(current)' \
+  print -r -- "$BATCH" | grep -A3 'catch YourAccountSignerLink.Failure.switched' | grep 'YourAccountSignerLink.close(current)' >/dev/null \
     || { echo "  ✗ a several-network ask keeps the wallet it moved off"; return 1; }
-  print -r -- "$BATCH" | grep -A3 'catch YourAccountSignerLink.Failure.switched' | grep -q 'held.withLock { $0 = nil }' \
+  print -r -- "$BATCH" | grep -A3 'catch YourAccountSignerLink.Failure.switched' | grep 'held.withLock { $0 = nil }' >/dev/null \
     || { echo "  ✗ a several-network ask does not pair again"; return 1; }
-  strip "$sheet" | grep -q 'SignerSwitch.doors(pairing: url, installed: { installed.contains($0) })' \
+  strip "$sheet" | grep 'SignerSwitch.doors(pairing: url, installed: { installed.contains($0) })' >/dev/null \
     || { echo "  ✗ the pairing's doors are not one per installed wallet"; return 1; }
   # Every finish of the sheet finishes both signals.
-  strip "$sheet" | awk '/    func done\(\)/,/^    }/' | grep -q 'switches.finish()' \
+  strip "$sheet" | awk '/    func done\(\)/,/^    }/' | grep 'switches.finish()' >/dev/null \
     || { echo "  ✗ the sheet done leaves Use another wallet listening"; return 1; }
 
   # `canOpenURL` answers only for a declared scheme.
@@ -169,7 +169,7 @@ wiring() {
   local schemes=( ${(f)"$(grep -o 'scheme: "[a-z0-9-]*"' "$PURE" | sed 's/scheme: "\(.*\)"/\1/')"} )
   (( ${#schemes} >= 7 )) || { echo "  ✗ the wallet list was not read (${#schemes} schemes)"; return 1; }
   for scheme in $schemes; do
-    sed -n '/LSApplicationQueriesSchemes/,/<\/array>/p' "$plist" | grep -q "<string>$scheme</string>" \
+    sed -n '/LSApplicationQueriesSchemes/,/<\/array>/p' "$plist" | grep "<string>$scheme</string>" >/dev/null \
       || { echo "  ✗ $scheme is not in LSApplicationQueriesSchemes, so its door never shows"; return 1; }
   done
   return 0
