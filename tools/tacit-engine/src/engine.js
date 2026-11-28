@@ -377,9 +377,13 @@ const methods = {
   },
 
   // What a deposit of `units` (TAC, 8 decimals) costs and lands as now.
+  // **BEFORE ANY SIGNATURE (prd §2008; user, 2026-11-27: "you sign before
+  // you read the fee"):** the fee is the chain's, the same for every
+  // account, so with no account open it is asked through a client on a
+  // throwaway key that proves nothing and is never handed anything.
   async shieldQuote({ rpcUrl, blocks, leader, units }) {
-    const c = await chainClient({ rpcUrl, blocks, leader });
-    nextBackIndex();
+    const c = identity ? await chainClient({ rpcUrl, blocks, leader }) : quoteClient({ rpcUrl, blocks, leader });
+    if (identity) nextBackIndex();
     const q = await c.quote('shield', BigInt(units));
     return { fee: hex(q.fee), arrives: hex(q.arrives), cap: q.cap == null ? null : hex(q.cap), sweepFee: hex(q.sweepFee ?? 0n) };
   },
@@ -559,6 +563,25 @@ async function chainClient({ rpcUrl, blocks, leader }) {
   const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
   client = makeChainClient({ cfg: { blocks, leader }, rpcCall, priv: Uint8Array.from(identity), system, storage });
   return client;
+}
+
+// A chain client for a quote alone, before an account is open: a random
+// key, no prover, kept only for quotes (`shieldQuote`). It reads the
+// chain's fee and cap and nothing of anyone's.
+let quoter = null;
+function quoteClient({ rpcUrl, blocks, leader }) {
+  if (quoter) return quoter;
+  const rpcCall = async (method, params) => {
+    const r = await fetch(rpcUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.message || 'rpc error');
+    return j.result;
+  };
+  const mem = new Map();
+  const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const system = () => { throw new Error('a quote proves nothing'); };
+  quoter = makeChainClient({ cfg: { blocks, leader }, rpcCall, priv: secp.utils.randomPrivateKey(), system, storage });
+  return quoter;
 }
 
 // The DeFi read itself (`defi`), in passes until the library says it has

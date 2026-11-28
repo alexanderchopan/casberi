@@ -108,6 +108,9 @@ final class PrivateSendSteps {
         /// Its own code tells you when it ends (Privacy Pools' send, which
         /// notifies by itself): no second notification here.
         var quiet = false
+        /// What the run waits on you for ("Ready to sign · tap"): the
+        /// capsule says it in place of the step, and does not spin.
+        var waitingOnYou: String?
         /// Max's send `part` of `parts`, one note each (2026-11-27).
         var part: Int?
         var parts: Int?
@@ -291,6 +294,12 @@ final class PrivateSendSteps {
         }
         guard let current = run, current.isRunning, key != .checking else { return }
         run = Self.advanced(current, step: key.rawValue, body: [:])
+    }
+
+    /// The run waits on you, or no longer does: behind its sheet or in it.
+    func waitOnYou(_ words: String?, from source: Source) {
+        if source == awayFrom, var behind = away, behind.isRunning { behind.waitingOnYou = words; away = behind }
+        else if var current = run, current.isRunning { current.waitingOnYou = words; run = current }
     }
 
     /// The caller's own success, of the sheet's own run.

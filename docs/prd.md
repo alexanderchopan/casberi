@@ -75772,3 +75772,13 @@ Measured first, on the user's phone (`perf.readings.v1`, 13 landed sends, builds
 **Not seen:** a real swap going behind its sheet — the demo's account signs nothing. The pattern is Earn's own.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2008 — Make private shows its fee before any signature, opens your account at the hold, and says "Ready to sign" (amends §2006 item 6) (user, 2026-11-27: "in the toasts it says your cosigner signs but nothing happens", "it signed in the beginning", "the tacit flow is kinda weird b/c you sign before you read the fee", then "build both fixes")
+
+1. **The fee before any signature.** Tacit's fee and cap are the chain's, the same for every account, so the quote is read with no account open (`shieldQuote` through a client on a throwaway key that proves nothing and is never handed anything). Typing an amount shows the fee at once.
+2. **Your account opens at the hold.** "Connect" before the fee is gone: Hold to send opens your Tacit account then (your wallet signs Tacit's message, the foot says "Your co-signer signs"), and the proof follows. Your very first deposit still asks the wallet to sign Tacit's message a second time, to check it signs the same each time (§1971); that check is a safety rule and is kept.
+3. **Proved behind the sheet, it says it waits on you.** §2006 item 6's capsule said "Your co-signer signs" while nothing asked the wallet: the permit waited for a tap no word mentioned. The capsule now says **"Ready to sign · tap"** in the verb's pink, no spinner (`Run.waitingOnYou`), and in Casberi with Move closed the page comes back by itself, Hold to sign in its foot (`TacitShield.onReadyToSign`).
+
+**Not seen:** a real deposit — the demo signs nothing, and the user's phone runs 1098.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

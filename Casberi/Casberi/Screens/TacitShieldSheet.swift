@@ -85,6 +85,17 @@ struct TacitShieldSheet: View {
         .onChange(of: shield.step) { _, now in follow(now) }
         // In Move's tray the send goes behind it (prd §2003).
         .onAppear { shield.onAway = chrome.moveTray ? { chrome.moveTray = false } : nil }
+        // Its proof done behind the sheet, the page comes back by itself
+        // while you are in Casberi with Move closed (prd §2008).
+        .onAppear {
+            let chrome = chrome
+            TacitShield.onReadyToSign = {
+                guard UIApplication.shared.applicationState == .active, !chrome.moveTray else { return }
+                PrivateSendSteps.shared.bringBack()
+                chrome.moveTacitIn = true
+                chrome.moveTray = true
+            }
+        }
         // Opens empty, as every Move page does: Max is a key (2026-11-27).
         .onAppear { shield.reset() }
         // The rate the receipt says (prd §2004), read once an hour.
@@ -104,7 +115,7 @@ struct TacitShieldSheet: View {
 
     private var busy: Bool {
         switch shield.step {
-        case .proving, .readyToSign, .signing, .handing: true
+        case .opening, .proving, .readyToSign, .signing, .handing: true
         default: false
         }
     }
@@ -188,7 +199,7 @@ struct TacitShieldSheet: View {
 
     private var sending: Bool {
         switch shield.step {
-        case .proving, .readyToSign, .signing, .handing, .arriving, .landed: return true
+        case .opening, .proving, .readyToSign, .signing, .handing, .arriving, .landed: return true
         default: return false
         }
     }
@@ -336,6 +347,9 @@ struct TacitShieldSheet: View {
                     shield.reset()
                     if let tac { Task { await shield.quote(tac: tac) } }
                 }
+            case .opening:
+                // Your wallet signs Tacit's message: the account opens here.
+                MoveFootWord(word: String(localized: "Your co-signer signs"), ink: DS.textSecondary)
             case .proving:
                 MoveFootWord(word: String(localized: "Proving…"), ink: DS.textSecondary)
             case .readyToSign:
@@ -368,8 +382,9 @@ struct TacitShieldSheet: View {
     }
 
     private var canSend: Bool {
+        // Open or not: the account opens at the hold (prd §2008).
         guard !DemoMode.isActive, coSigner != nil, let tac, tac > 0, tac <= held, shield.quote != nil else { return false }
-        return TacitEngine.shared.isOpen
+        return true
     }
 
     private var footWaiting: String {

@@ -26,6 +26,8 @@ final class TacitShield {
         case idle
         case quoting
         case ready
+        /// Your wallet signs Tacit's message: the account opens at the hold.
+        case opening
         case proving
         /// **PROVED BEHIND THE SHEET, WAITING FOR YOU (prd §2006; user,
         /// 2026-11-27: "if it needs that long it should be in the
@@ -65,6 +67,12 @@ final class TacitShield {
         guard PrivateSendSteps.shared.awayFrom == .tacitIn else { return }
         let since = Date()
         step = .readyToSign
+        // **IT WAITS ON YOU, AND SAYS SO (prd §2008; user, 2026-11-27: "in
+        // the toasts it says your cosigner signs but nothing happens").**
+        // The capsule says "Ready to sign"; in Casberi with Move closed, the
+        // page comes back by itself, Hold to sign in its foot.
+        PrivateSendSteps.shared.waitOnYou(String(localized: "Ready to sign · tap"), from: .tacitIn)
+        Self.onReadyToSign?()
         let tac = TacitAccountRows.amount(Double(units) / 1e8)
         Task { await Notifications.outcome(.needsYou, id: "tacit:sign:\(Int(since.timeIntervalSince1970))", place: TacitAccount.name,
                                            body: String(localized: "\(tac) TAC is proved. Open Casberi to sign it with your co-signer"),
@@ -74,9 +82,13 @@ final class TacitShield {
     }
     @ObservationIgnored private var signGo: CheckedContinuation<Void, Never>?
 
+    /// Brings Make private back once its proof waits on you; set by its sheet.
+    static var onReadyToSign: (() -> Void)?
+
     /// The sheet is open again and you held to sign.
     func signNow() {
         guard case .readyToSign = step else { return }
+        PrivateSendSteps.shared.waitOnYou(nil, from: .tacitIn)
         signGo?.resume()
         signGo = nil
     }
@@ -109,7 +121,10 @@ final class TacitShield {
         return UInt64((tac * 1e8).rounded(.down))
     }
 
-    /// What `tac` would cost and land as now. The account must be open.
+    /// What `tac` would cost and land as now. **No account need be open
+    /// (prd §2008; user, 2026-11-27: "you sign before you read the fee"):**
+    /// the fee is the chain's, the same for everyone, so it is read before
+    /// any signature and the account is opened at the hold.
     func quote(tac: Double) async {
         // The demo reaches nothing: its quote is the one read off the chain
         // on 2026-11-25 for 23.85 TAC, scaled (the fee does not scale).
@@ -120,7 +135,7 @@ final class TacitShield {
             step = .ready
             return
         }
-        guard let u = Self.units(tac), TacitEngine.shared.isOpen else { quote = nil; step = .idle; return }
+        guard let u = Self.units(tac) else { quote = nil; step = .idle; return }
         units = u
         step = .quoting
         do {
@@ -138,8 +153,20 @@ final class TacitShield {
     enum Source: Equatable { case wallet, account }
 
     /// Proves, checks, asks the co-signer, hands it to the leader, and waits.
+    /// **THE ACCOUNT OPENS AT THE HOLD (prd §2008):** closed, your wallet
+    /// signs Tacit's message now, after you have seen the fee, never before.
     func send(coSigner: String, from source: Source = .wallet) async {
-        guard case .ready = step, let quote, units > 0, TacitEngine.shared.isOpen else { return }
+        guard case .ready = step, units > 0 else { return }
+        if !TacitEngine.shared.isOpen {
+            step = .opening
+            await TacitAccount.shared.open(coSigner: coSigner)
+            for _ in 0..<360 where !TacitEngine.shared.isOpen {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+            guard TacitEngine.shared.isOpen else { step = .failed(String(localized: "Your Tacit account didn't open. Try again")); return }
+            step = .ready
+        }
+        guard let quote else { return }
         if source == .account { await sendFromAccount(coSigner: coSigner, quote: quote); return }
         let alikeDone = UserDefaults.standard.bool(forKey: Self.alikeKey(coSigner))
         let signatures = alikeDone ? 1 : 2
@@ -331,7 +358,7 @@ final class TacitShield {
     /// Proved, signing or handing: nothing starts it again, nothing resets it.
     var inFlight: Bool {
         switch step {
-        case .proving, .readyToSign, .signing, .handing: true
+        case .opening, .proving, .readyToSign, .signing, .handing: true
         default: false
         }
     }

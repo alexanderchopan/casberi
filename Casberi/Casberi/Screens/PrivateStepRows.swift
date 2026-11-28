@@ -147,6 +147,11 @@ struct StepCapsuleLabel: View {
         HStack(spacing: DS.Space.s2) {
             if failed {
                 Image(systemName: "exclamationmark.circle.fill").dsGlyph(.body).foregroundStyle(DS.attention)
+            } else if let waiting = run.waitingOnYou, run.ended == nil {
+                // Waiting on you: said in the verb's pink, no spinner (prd §2008).
+                Image(systemName: "hand.tap.fill").dsGlyph(.body).foregroundStyle(DS.pickInk)
+                Text(verbatim: waiting).dsText(.body17).foregroundStyle(DS.pickInk)
+                    .lineLimit(1).minimumScaleFactor(0.75)
             } else if run.ended != nil {
                 Image(systemName: "checkmark.circle.fill").dsGlyph(.body).foregroundStyle(DS.confirm)
             } else {
@@ -156,11 +161,13 @@ struct StepCapsuleLabel: View {
             // and a failure keep the page's (prd §1806).
             // Max's sends count, "2 of 3" (2026-11-27).
             let count = run.part.flatMap { k in run.parts.map { String(localized: " · \(k) of \($0)") } } ?? ""
+            if run.waitingOnYou == nil || run.ended != nil || failed {
             Text(verbatim: failed ? (run.swap ? String(localized: "Not swapped") : String(localized: "Not sent")) : (run.ended == nil ? step.running : step.done) + count)
                 .dsText(.body17).foregroundStyle(failed || !run.plan.isAztec ? DS.textPrimary : DS.aztecInk)
                 // Never cut off with "…": smaller first (the review of 2026-11-27).
                 .lineLimit(1).minimumScaleFactor(0.75)
-            if !failed {
+            }
+            if !failed, run.waitingOnYou == nil {
                 Text(verbatim: "· " + PrivateStepRows.seconds(run.started, run.ended ?? now))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
             }

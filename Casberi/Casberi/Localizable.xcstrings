@@ -172416,6 +172416,34 @@
         }
       }
     },
+    "Ready to sign · tap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Listo para firmar · toca"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以签署 · 轻点"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名の準備ができました · タップ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 준비됨 · 탭"
+          }
+        }
+      }
+    },
     "Ready to submit" : {
       "localizations" : {
         "es" : {
@@ -187317,12 +187345,6 @@
             "value" : "Enviando en %@"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在 %@ 上发送"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -187333,6 +187355,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@에서 보내는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上发送"
           }
         }
       }
@@ -203144,12 +203172,6 @@
             "value" : "Intercambiando en %@"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在 %@ 上兑换"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -203160,6 +203182,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@에서 교환 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上兑换"
           }
         }
       }
@@ -203542,12 +203570,6 @@
             "value" : "Barriendo en %@"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "正在 %@ 上归集"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -203558,6 +203580,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@에서 스윕 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上归集"
           }
         }
       }
@@ -203598,12 +203626,6 @@
             "value" : "Barrido en %@"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已在 %@ 上归集"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -203614,6 +203636,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@에서 스윕됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %@ 上归集"
           }
         }
       }
@@ -245468,6 +245496,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的 TAC 已在 Tacit 链上私密"
+          }
+        }
+      }
+    },
+    "Your Tacit account didn't open. Try again" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta de Tacit no se abrió. Inténtalo de nuevo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Tacit 账户未打开。请重试"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitアカウントが開きませんでした。もう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 계정이 열리지 않았습니다. 다시 시도하세요"
           }
         }
       }
