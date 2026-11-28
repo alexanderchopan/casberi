@@ -809,11 +809,16 @@ struct MoveLendSentence<Head: View>: View {
             let net = YourAccountOp.networks.first { $0.chainId == m.chainId }?.name ?? m.network
             let earned = move.earned(m).flatMap { move.dollars($0.units, in: m) }
             let usd = move.dollars(units, in: m)
-            let line = [m.placeName, net, AaveLend.rateOnly(move.rates[key])].compactMap { $0 }.joined(separator: " · ")
+            // The network rides the mark as a badge (prd §1972), so the line
+            // and the dollars fit the row unclipped (user, 2026-11-28).
+            let line = [m.placeName, AaveLend.rateOnly(move.rates[key])].compactMap { $0 }.joined(separator: " · ")
             out.append(Earning(choice: MoveTokenChoice(id: "earning|\(key)", symbol: m.symbol, network: net,
-                                                       sub: usd.map { MoveSentence.money($0, whole: true) }
-                                                           ?? PrivateMoney.figure(units, decimals: m.decimals, symbol: ""),
-                                                       line: line) { withdraw(m) },
+                                                       // Dollars or nothing: a raw amount shown while the
+                                                       // price reads was a different number, clipped
+                                                       // (user, 2026-11-28: "264..." then $2).
+                                                       badge: MoveSentence.networkMark(chainId: m.chainId),
+                                                       sub: usd.map { MoveSentence.money($0, whole: true) },
+                                                       place: m.placeName, line: line) { withdraw(m) },
                                usd: usd, year: move.yearly(units, in: m), earned: earned))
         }
         if let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading, let held = r.privateTAC, held > 0 {
@@ -823,7 +828,7 @@ struct MoveLendSentence<Head: View>: View {
             let usd = price.map { held * $0 }
             let line = ["Tacit", String(localized: "Private"), AaveLend.rateOnly(apy)].compactMap { $0 }.joined(separator: " · ")
             out.append(Earning(choice: MoveTokenChoice(id: "earning|tacit", symbol: "TAC", network: String(localized: "Tacit chain"),
-                                                       sub: usd.map { MoveSentence.money($0, whole: true) } ?? "\(TacitAccountRows.amount(held)) TAC",
+                                                       sub: usd.map { MoveSentence.money($0, whole: true) },
                                                        line: line) { tacit(.takeBack) },
                                usd: usd, year: usd.flatMap { u in apy.map { u * $0 } }, earned: earned))
         }

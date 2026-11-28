@@ -75782,3 +75782,15 @@ Measured first, on the user's phone (`perf.readings.v1`, 13 landed sends, builds
 **Not seen:** a real deposit — the demo signs nothing, and the user's phone runs 1098.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2010 — Earn's rows wear Olla's mark and never clip their dollars; a position shows dollars or nothing (user, 2026-11-28: "in earn / ready to earn the olla icon isn't showing", "it shows 264... then $2 … i'd like it to be accurate and also never use ...")
+
+1. **Olla's mark ships** as `brand-olla` (the user's file, 2026-11-28), so `AssetMark("Olla")` draws it in Ready to earn, and `ProtocolMark` names Olla as a venue.
+2. **A position is dollars or nothing.** Earning's rows no longer fall back to a raw amount while the price reads (Olla's stAZTEC count, Tacit's TAC); the dollars arrive in place.
+3. **The figure is never cut.** `TokenRowLabel`'s grid figure keeps its width (`fixedSize`, first priority) and the line gives way; Earning's lines drop the network word, which rides the mark as a badge (§1972), so "Olla · 31%" and the dollars fit.
+
+## §2011 — Faster sends on Aztec: the send measures how it pays while you choose, and every step is timed (user, 2026-11-28: "yes lets do 4")
+
+1. **Warm-up.** Send within Aztec asks the engine's `warmSend` once the payments are whole (600 ms after the last change): the contracts, the token and how it will pay (`feeFor`, in the sends' own turn). The send after Face ID takes that pick (`takeWarm`) when the payments and the gas list are the same, no transaction reached Aztec since, and it is under 30 s old; otherwise it measures for itself as before. It never asks Face ID: an engine without the account does nothing.
+2. **Timed steps.** Each step (checking, proving, sent, done/failed) logs `sendStep` with its milliseconds since the send began, so one real send says whether checking, the proof or the block is the long part.
+3. **Unmeasured:** the saving itself, until a real send on a phone. The wait for `proposed` is kept: the next send chooses its gas only after this one landed.

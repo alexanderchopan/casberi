@@ -296,11 +296,28 @@ const ownTurn = inTurn();
 // Payments one Aztec transaction carries (prd §1952): Aztec's APP_MAX_CALLS.
 const MAX_PAYS = 5;
 
-function sendOwn(wallet, interaction, gasJSON, ownHolds, payments = 1) {
+// FASTER SENDS (2026-11-28): Send measures how it will pay while the person
+// is still choosing, so the send after Face ID goes straight to its proof.
+// A warm pick is used once, for the same payments and gas list only, while
+// no other transaction has reached Aztec since it was measured and for
+// WARM_FOR ms at most (the fee per gas it read can move).
+const WARM_FOR = 30_000;
+let warmFee = null;
+const warmKey = (symbol, pays, gasJSON) =>
+  JSON.stringify([symbol, pays.map(p => [String(p.to).toLowerCase(), String(p.units)]), gasJSON || '[]']);
+function takeWarm(key) {
+  const w = warmFee;
+  warmFee = null;
+  if (!w || w.key !== key || w.reached !== sendsReached() || Date.now() - w.at > WARM_FOR) return null;
+  log('sendWarmUsed', { age: Date.now() - w.at, how: w.picked.how });
+  return w.picked;
+}
+
+function sendOwn(wallet, interaction, gasJSON, ownHolds, payments = 1, key = null) {
   const me = AztecAddress.fromStringUnsafe(accountAddress);
   const wait = { waitForStatus: 'proposed', timeout: 1800 };
   return ownTurn(() => sendPaying({
-    pay: () => feeFor(wallet, interaction, gasJSON, payments),
+    pay: async () => (key && takeWarm(key)) || feeFor(wallet, interaction, gasJSON, payments),
     send: async options => (await interaction.send({ from: me, ...(options ?? {}), wait })).receipt,
     reached: sendsReached,
     ownHolds,
@@ -554,9 +571,33 @@ const own = {
     const me = AztecAddress.fromStringUnsafe(accountAddress);
     const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
     const send = token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(to), BigInt(units), 0n);
-    const { receipt, paid, gasNonce } = await sendOwn(wallet, send, gasJSON);
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, send, gasJSON, undefined, 1, warmKey(symbol, [{ to, units }], gasJSON));
     log('sentPrivately', { tx: receipt.txHash.toString(), status: receipt.status, paid });
     return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
+  },
+  // Send's warm-up (2026-11-28): everything a send does before its proof,
+  // done while the person is still on the page: the contracts, and how it
+  // will pay, measured once. Only on an engine that already holds the
+  // account: it never asks for Face ID.
+  async warmSend(symbol, paysJSON, gasJSON) {
+    if (!walletPromise) return { warm: false };
+    const started = ms();
+    const pays = JSON.parse(paysJSON);
+    if (!Array.isArray(pays) || pays.length < 1 || pays.length > MAX_PAYS) return { warm: false };
+    const wallet = await getWallet();
+    await registerShield(wallet);
+    const asset = SHIELD.assets.find(a => a.symbol === symbol);
+    if (!asset) return { warm: false };
+    const me = AztecAddress.fromStringUnsafe(accountAddress);
+    const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
+    const sends = pays.map(p => token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(p.to), BigInt(p.units), 0n));
+    const interaction = sends.length === 1 ? sends[0] : new BatchCall(wallet, sends);
+    const key = warmKey(symbol, pays, gasJSON);
+    // In the sends' own turn, so it never measures beside a send under way.
+    const picked = await ownTurn(async () => ({ picked: await feeFor(wallet, interaction, gasJSON, pays.length), reached: sendsReached() }));
+    warmFee = { key, picked: picked.picked, reached: picked.reached, at: Date.now() };
+    log('sendWarmed', { took: ms() - started, how: picked.picked.how, pays: pays.length });
+    return { warm: true };
   },
   // PAY MANY (prd §1952): every payment one private transfer, all in ONE
   // transaction, so one proof, one fee and one Face ID. Aztec's entrypoint
@@ -573,7 +614,8 @@ const own = {
     const token = await Contract.at(AztecAddress.fromStringUnsafe(asset.token), shieldToken, wallet);
     const sends = pays.map(p => token.methods.transfer_private_to_private(me, AztecAddress.fromStringUnsafe(p.to), BigInt(p.units), 0n));
     const interaction = sends.length === 1 ? sends[0] : new BatchCall(wallet, sends);
-    const { receipt, paid, gasNonce } = await sendOwn(wallet, interaction, gasJSON, undefined, pays.length);
+    const key = warmKey(symbol, pays, gasJSON);
+    const { receipt, paid, gasNonce } = await sendOwn(wallet, interaction, gasJSON, undefined, pays.length, key);
     log('sentPrivatelyMany', { tx: receipt.txHash.toString(), status: receipt.status, paid, pays: pays.length });
     return { tx: receipt.txHash.toString(), status: String(receipt.status), paid, gasNonce };
   },

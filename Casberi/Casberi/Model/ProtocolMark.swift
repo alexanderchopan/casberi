@@ -29,6 +29,7 @@ enum ProtocolMark {
     static let venues: [(name: String, mark: String)] = [
         ("Uniswap", "uniswap"),
         ("Aave", "aave"),
+        ("Olla", "olla"),
         ("Morpho", "morpho"),
         ("Spark", "spark"),
         ("Privacy Pools", "privacy-pools"),

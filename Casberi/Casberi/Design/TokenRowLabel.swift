@@ -50,7 +50,10 @@ struct TokenRowLabel: View {
             .layoutPriority(1)
             Spacer(minLength: DS.Space.s2)
             if let figure {
+                // The figure is never cut (user, 2026-11-28: "never use ..."):
+                // it keeps its width and the line beside it gives way.
                 Text(verbatim: figure).dsText(.price17).monospacedDigit().foregroundStyle(figureInk).lineLimit(1)
+                    .fixedSize().layoutPriority(2)
             }
         }
         .walletRowPitch()

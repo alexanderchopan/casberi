@@ -443,6 +443,27 @@ final class AztecMove {
         }
         return out + [(recipient, units)]
     }
+    /// **FASTER SENDS (2026-11-28):** the payments a send within Aztec would
+    /// make, as the engine's warm-up takes them, once they are whole; nil
+    /// while anything is missing. Its change re-measures (the view's task).
+    var warmPlan: String? {
+        guard mode == .send, stage == .ready, toAztec, amountOK, let every = allPays,
+              let json = try? JSONSerialization.data(withJSONObject: every.map { ["to": $0.to.lowercased(), "units": $0.units] }),
+              let text = String(data: json, encoding: .utf8) else { return nil }
+        return symbol + "|" + text
+    }
+
+    /// Everything the send does before its proof, done while the person is
+    /// still on the page: how it will pay, measured once by the engine, used
+    /// by the send if nothing changed (`warmSend`, main.js). Never asks Face
+    /// ID; a failure only means the send measures for itself.
+    func warm() async {
+        guard let plan = warmPlan, let bar = plan.firstIndex(of: "|") else { return }
+        try? await Task.sleep(for: .milliseconds(600))
+        guard !Task.isCancelled, warmPlan == plan else { return }
+        _ = try? await AztecEngine.shared.call("warmSend", [String(plan[..<bar]), String(plan[plan.index(after: bar)...]), AztecGas.unminted])
+    }
+
     /// Add another keeps the line and starts the next (prd §1952): an Aztec
     /// account on the line, an amount that fits, room for one more.
     var canAddAnother: Bool {
@@ -898,6 +919,9 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         // A send kept behind its sheet is shown as it stands, running or
         // failed, never read over (prd §1777).
         .task(id: move.mode) { if AztecMove.kept !== move { await move.read() } }
+        // Measured while you choose, so the send after Face ID goes straight
+        // to its proof (2026-11-28, faster sends).
+        .task(id: move.warmPlan) { await move.warm() }
         .onAppear { if AztecMove.kept === move { PrivateSendSteps.shared.bringBack() } }
         // Another token types in its own unit first.
         .onChange(of: move.symbol) { _, _ in inDollars = false; dollars = "" }

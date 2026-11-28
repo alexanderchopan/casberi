@@ -10,18 +10,26 @@
 //   - sent: the `node_sendTx` request leaving through the app (net-shim.js).
 // One send is watched at a time; a claim proving beside it is not one.
 const post = value => globalThis.webkit?.messageHandlers?.engineStep?.postMessage(JSON.stringify(value));
+// Each step also logs how long after the send began it came (2026-11-28,
+// "faster sends"): checking is ours, proving the phone's, sent to done the
+// block's, so one real send says which part to shorten.
+const timed = step => globalThis.webkit?.messageHandlers?.engineLog?.postMessage(JSON.stringify({
+  event: 'sendStep', detail: { step, kind: watching?.kind, after: Math.round(performance.now() - (watching?.began ?? 0)) },
+}));
 
 let watching = null;
 
 export function watchSend(kind) {
-  watching = { kind, proving: false, sent: false };
+  watching = { kind, proving: false, sent: false, began: performance.now() };
   post({ step: 'checking', kind });
+  timed('checking');
 }
 
 export function sawProof() {
   if (!watching || watching.proving) return;
   watching.proving = true;
   post({ step: 'proving', kind: watching.kind });
+  timed('proving');
 }
 
 // Every transaction handed to Aztec's node, watched or not: a send that
@@ -34,6 +42,7 @@ export function sawSendTx() {
   if (!watching || watching.sent) return;
   watching.sent = true;
   post({ step: 'sent', kind: watching.kind });
+  timed('sent');
 }
 
 export function endSend(ok, reason) {
@@ -42,6 +51,7 @@ export function endSend(ok, reason) {
   // A failure's own words ride along (prd §1700x): the row it failed at says them.
   if (!ok && reason) end.reason = String(reason).slice(0, 200);
   post(end);
+  timed(end.step);
   watching = null;
 }
 
