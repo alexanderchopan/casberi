@@ -302,6 +302,21 @@ const methods = {
   //    as its two coins, the relay's fee from the first.
   // Every step is signed here and proved and sent by Tacit's relay, which
   // sees the step's witness; nothing is sent from your Casberi account.
+  // What taking a farm's shares out costs now (prd §2006): Tacit's relay fee,
+  // in the pool's first coin, which the take-out pays from that coin. A read:
+  // nothing is built or signed. The coins themselves the app works out from
+  // the pool's reserves, which the farm read already holds.
+  async farmQuote({ lpAsset }) {
+    const ux = poolUx();
+    const row = await farmPoolRow(lpAsset);
+    let a = row.reserves.assetA, b = row.reserves.assetB;
+    if (BigInt(a) > BigInt(b)) [a, b] = [b, a];
+    const ticker = ux.poolTickerOf(String(a).toLowerCase());
+    const fee = await ux.gasAwareMinFee(ticker, 'lpremove');
+    const coin = heldRow(a, fee);
+    return { fee: hex(fee), ticker: coin ? coin.ticker : String(ticker || ''), decimals: coin ? coin.decimals : 8 };
+  },
+
   async farmClaim({ lpAsset }) {
     if (!identity) throw Object.assign(new Error('the account is not open'), { name: 'NotOpen' });
     await settle('farm claim');

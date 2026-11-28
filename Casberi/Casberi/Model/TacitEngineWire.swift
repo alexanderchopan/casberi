@@ -15,7 +15,7 @@ enum TacitEngineWire {
     enum Method: String, CaseIterable {
         case info, open, read, chain, defi, close
         case farms, farmed
-        case farmClaim, farmRelease, farmTakeOut
+        case farmClaim, farmRelease, farmTakeOut, farmQuote
         case shieldQuote, shieldProve, shieldHand, shieldOffer, shieldStatus
         case outQuote, outProve, outHand, owed
         case payQuote, payProve, payCheck
@@ -263,6 +263,14 @@ enum TacitEngineWire {
     /// The farm a leave step acts on, by its pool's LP-share asset id.
     struct FarmAsk: Encodable {
         let lpAsset: String
+    }
+
+    /// What taking a farm's shares out costs now: Tacit's relay fee, 0x-hex
+    /// in `ticker`'s pool units of `decimals`.
+    struct FarmQuote: Decodable, Equatable {
+        let fee: String
+        let ticker: String
+        let decimals: Int
     }
 
     /// A farm's claim (prd §2006): wTAC earned, 0x-hex value units, and

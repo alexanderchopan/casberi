@@ -40,6 +40,24 @@ final class TacitFarmOut {
     /// What came back: TAC claimed, and the pair's coins by name.
     private(set) var claimedTAC: Double = 0
     private(set) var paid: [String: Double] = [:]
+    /// Tacit's relay fee for the take-out, read before you hold: the coin
+    /// it comes from and how much; nil until read.
+    private(set) var fee: (coin: String, amount: Double)?
+    private(set) var feeFor: String?
+    /// When the steps began, for "Took 2 min 40 s".
+    private(set) var startedAt: Date?
+    private(set) var tookSeconds: Int?
+
+    /// Reads the fee for leaving `lpAsset` (no key, nothing signed).
+    func quote(_ lpAsset: String) async {
+        if DemoMode.isActive { fee = ("ETH", 0.0004); feeFor = lpAsset; return }
+        guard TacitEngine.shared.isOpen else { return }
+        guard let q = try? await TacitEngine.shared.farmQuote(lpAsset: lpAsset),
+              let units = TacitEngineWire.number(q.fee) else { return }
+        fee = (TacitFarms.coinName(q.ticker), units / pow(10, Double(q.decimals)))
+        feeFor = lpAsset
+    }
+
     /// Closes the sheet once the steps start; nil where it stays.
     var onAway: (() -> Void)?
 
@@ -83,6 +101,8 @@ final class TacitFarmOut {
         self.lpAsset = lpAsset
         claimedTAC = 0
         paid = [:]
+        startedAt = .now
+        tookSeconds = nil
         do {
             step = .claiming
             let claimed = try await TacitEngine.shared.farmClaim(lpAsset: lpAsset)
@@ -97,6 +117,7 @@ final class TacitFarmOut {
             // Nothing bonded and nothing to take out: the farm was already left.
             if !claimed.position, !released.position, !out.found { throw Stop.nothingThere }
             for h in out.out { if let a = h.amount { paid[TacitFarms.coinName(h.ticker), default: 0] += a } }
+            tookSeconds = startedAt.map { Int(Date().timeIntervalSince($0)) }
             step = .done
             notifyDone()
         } catch let stop as Stop {
@@ -173,6 +194,7 @@ final class TacitFarmOut {
         } else {
             claimedTAC = 3.42
             paid = ["ETH": 0.0512, "TAC": 99.1]
+            tookSeconds = 160
             step = .done
         }
     }

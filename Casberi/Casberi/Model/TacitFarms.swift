@@ -165,6 +165,33 @@ enum TacitFarms {
         return ask.ended ? String(localized: "Stopped paying \(day)") : String(localized: "Stops paying \(day)")
     }
 
+    /// **WHAT A WITHDRAWAL PAYS BACK (prd §2006):** the position's share of
+    /// each side of the pool, the fee taken from the coin it is paid in, and
+    /// what it earned as wTAC. Read before you hold, so Withdraw can say it in
+    /// figures; "about", because a trade can move the pool first.
+    static func payout(_ position: Position, in reading: Reading, fee: (coin: String, amount: Double)? = nil) -> [Coin] {
+        guard let pool = reading.pools.first(where: { $0.lpAsset == position.lpAsset }), pool.shares > 0 else { return [] }
+        let share = position.shares / pool.shares
+        let names = name(pool.pair).split(separator: "/").map(String.init)
+        // A side Tacit names no ticker for (SPX) takes its name from the pair.
+        let a = pool.a.isEmpty ? (names.first { $0 != coinName(pool.b) } ?? "") : coinName(pool.a)
+        let b = pool.b.isEmpty ? (names.first { $0 != coinName(pool.a) } ?? "") : coinName(pool.b)
+        var out: [Coin] = []
+        for (coin, reserve) in [(a, pool.reserveA), (b, pool.reserveB)] where !coin.isEmpty {
+            let gross = reserve * share
+            let net = fee.map { $0.coin == coin ? gross - $0.amount : gross } ?? gross
+            out.append(Coin(name: coin, amount: max(0, net)))
+        }
+        if position.pendingTAC > 0 { out.append(Coin(name: "wTAC", amount: position.pendingTAC)) }
+        return out
+    }
+
+    /// The day this round of rewards ends, "Dec 19"; nil once it has.
+    static func untilDay(_ reading: Reading, now: Date = .now) -> String? {
+        guard reading.active, reading.endsAt > now else { return nil }
+        return reading.endsAt.formatted(.dateTime.month(.abbreviated).day())
+    }
+
     /// One coin the DeFi pool holds for you, by name.
     struct Coin: Equatable, Identifiable {
         let name: String

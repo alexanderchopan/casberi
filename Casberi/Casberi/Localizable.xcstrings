@@ -3198,40 +3198,6 @@
         }
       }
     },
-    "%@ and %@, private in Tacit" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ and %2$@, private in Tacit"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@ y %2$@, privados en Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@と%2$@、Tacitで非公開"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@ 및 %2$@, Tacit에서 비공개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@ 和 %2$@，在 Tacit 中保持私密"
-          }
-        }
-      }
-    },
     "%@ and %lld more" : {
       "localizations" : {
         "en" : {
@@ -64177,18 +64143,40 @@
         }
       }
     },
+    "Back in Tacit, private" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De vuelta en Tacit, en privado"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已回到 Tacit，保持私密"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacitに戻りました（非公開）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit으로 돌아왔습니다, 비공개"
+          }
+        }
+      }
+    },
     "Back in Tacit: %@" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "De vuelta en Tacit: %@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "已回到 Tacit：%@"
           }
         },
         "ja" : {
@@ -64201,6 +64189,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tacit으로 돌아왔습니다: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已回到 Tacit：%@"
           }
         }
       }
@@ -113047,6 +113041,34 @@
         }
       }
     },
+    "In a few minutes, private in Tacit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En unos minutos, privado en Tacit"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "几分钟内，在 Tacit 中保持私密"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "数分以内、Tacitで非公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "몇 분 안에, Tacit에서 비공개"
+          }
+        }
+      }
+    },
     "In a minute" : {
       "localizations" : {
         "es" : {
@@ -116544,34 +116566,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "它的入口标签会从你的订阅流中消失。你关注的市场会保留，除非你移除它。"
-          }
-        }
-      }
-    },
-    "Its coins, private in Tacit" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sus monedas, privadas en Tacit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "そのコイン、Tacitで非公開"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "해당 코인, Tacit에서 비공개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "其代币，在 Tacit 中保持私密"
           }
         }
       }
@@ -185611,6 +185605,34 @@
         }
       }
     },
+    "See them in Holdings" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Verlos en Posiciones"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在持仓中查看"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保有資産で見る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 자산에서 보기"
+          }
+        }
+      }
+    },
     "Seed host" : {
       "localizations" : {
         "es" : {
@@ -204193,12 +204215,6 @@
             "value" : "Tacit no terminó. Inténtalo de nuevo"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 未完成。请重试"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -204209,6 +204225,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tacit이 완료하지 못했습니다. 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 未完成。请重试"
           }
         }
       }
@@ -204417,12 +204439,6 @@
             "value" : "Tacit está ocupado. Inténtalo más tarde"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 繁忙。请稍后重试"
-          }
-        },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
@@ -204433,6 +204449,12 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Tacit이 바쁩니다. 나중에 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tacit 繁忙。请稍后重试"
           }
         }
       }
@@ -204741,34 +204763,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tacit 费用上涨，请重试"
-          }
-        }
-      }
-    },
-    "Tacit's relay fee, from the %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Comisión del relé de Tacit, del %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacitのリレー手数料、%@から"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 릴레이 수수료, %@에서 차감"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tacit 中继费用，从 %@ 中扣除"
           }
         }
       }
@@ -233894,6 +233888,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它有什么用"
+          }
+        }
+      }
+    },
+    "What it earned" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que ganó"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其收益"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "獲得した分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "획득한 수익"
           }
         }
       }

@@ -63,49 +63,74 @@ struct TacitFarmOutSheet: View {
 
     // MARK: - The deck
 
+    /// From the farm, All of it: a farm bonds a position whole.
     private var deckSteps: [MoveDeckStep] {
         let usd = position.flatMap { account.farmUSD($0) }
         return [
             MoveDeckStep(id: "from", word: String(localized: "From"), answered: true,
-                         value: String(localized: "Tacit farm"), fixed: true) {},
-            MoveDeckStep(id: "token", word: String(localized: "Token"), answered: true,
-                         value: "\(pair) · Ethereum", mark: MoveRowMark(token: coins.first ?? "TAC"), fixed: true) {},
-            // A farm bonds a position whole, so all of it comes out.
+                         value: String(localized: "\(pair) farm"), mark: MoveRowMark(token: coins.first ?? "TAC"), fixed: true) {},
             MoveDeckStep(id: "amount", word: String(localized: "Amount"), answered: true,
                          value: usd.map { String(localized: "All · \(MoveSentence.money($0, whole: false))") } ?? String(localized: "All"),
                          fixed: true) {},
         ]
     }
 
-    /// What it earned, what comes back, the fee, when; then what the relay
-    /// sees, the one line a private move owes (prd §748: privacy is kept).
+    /// **WHAT YOU GET, IN FIGURES (user, 2026-11-27: "build them all").**
+    /// Each coin the position comes back as, read off the pool's reserves,
+    /// the fee taken from its coin; what it earned as wTAC; then the fee and
+    /// when it lands.
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
+            if let position, let farms = account.farms {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("You get").dsText(.body17).foregroundStyle(DS.textSecondary)
+                    ForEach(TacitFarms.payout(position, in: farms, fee: out.feeFor == lpAsset ? out.fee : nil)) { coin in
+                        coinRow(coin, about: coin.name != "wTAC")
+                    }
+                }
+            }
             MoveDeckFacts(facts: facts)
             if case .failed(let why) = out.step, out.lpAsset == lpAsset {
                 Text(verbatim: why).dsText(.body17).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .task(id: lpAsset) { await out.quote(lpAsset) }
     }
 
     private var facts: [MoveDeckFacts.Fact] {
-        var out: [MoveDeckFacts.Fact] = []
-        if let earned = position?.pendingTAC, earned >= 0.0001 {
-            let tac = "\(TacitAccountRows.amount(earned)) wTAC"
-            let usd = account.tacPrice.map { LendMove.usd(earned * $0) }
-            out.append(.init(name: String(localized: "Earned"), value: usd.map { "\(tac) (\($0))" } ?? tac))
+        let fee = out.feeFor == lpAsset ? out.fee : nil
+        return [
+            .init(name: String(localized: "Fee"),
+                  value: fee.map { String(localized: "about \(TacitAccountRows.amount($0.amount)) \($0.coin)") } ?? "—"),
+            .init(name: String(localized: "Arrives"), value: String(localized: "In a few minutes, private in Tacit")),
+        ]
+    }
+
+    /// Four significant places at most: "0.0512", "99.1", "1,204".
+    static func figure(_ amount: Double) -> String {
+        amount >= 1 ? TacitAccountRows.amount(amount)
+            : amount.formatted(.number.precision(.significantDigits(1...3)))
+    }
+
+    /// One coin coming back: its mark, its name (wTAC says it is what it
+    /// earned), the amount; "about" until it lands.
+    private func coinRow(_ coin: TacitFarms.Coin, about: Bool) -> some View {
+        HStack(spacing: DSRoomChassis.headGap) {
+            AssetMark(name: coin.name, size: DS.Mark.row)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: coin.name).dsText(.heading17).foregroundStyle(DS.textPrimary)
+                if coin.name == "wTAC" {
+                    Text("What it earned").dsText(.fact15).foregroundStyle(DS.textSecondary)
+                }
+            }
+            Spacer(minLength: DS.Space.s2)
+            Text(verbatim: about ? String(localized: "about \(Self.figure(coin.amount))") : Self.figure(coin.amount))
+                .dsText(.heading17).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
-        if let pool, let farms = account.farms, let rate = TacitFarms.rateWords(TacitFarms.rate(pool, in: farms)) {
-            out.append(.init(name: String(localized: "Earns"), value: String(localized: "\(rate) today")))
-        }
-        out.append(.init(name: String(localized: "You get"),
-                         value: coins.count == 2 ? String(localized: "\(coins[0]) and \(coins[1]), private in Tacit") : String(localized: "Its coins, private in Tacit")))
-        // Tacit takes it from the pool's first coin (`lpRemove`'s A side).
-        let feeCoin = pool.map { TacitFarms.coinName($0.a) }.flatMap { $0.isEmpty ? nil : $0 } ?? coins.first ?? "TAC"
-        out.append(.init(name: String(localized: "Fee"), value: String(localized: "Tacit's relay fee, from the \(feeCoin)")))
-        out.append(.init(name: String(localized: "Arrives"), value: String(localized: "In a few minutes")))
-        return out
+        .frame(minHeight: MoveDeck.rowHeight)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - The steps
@@ -138,16 +163,35 @@ struct TacitFarmOutSheet: View {
         }
     }
 
-    /// Where it landed: the coins and what it earned, private in Tacit.
+    /// **WHERE IT LANDED (prd §1990's one finish, with the coins under it):**
+    /// the headline and how long it took, each coin that came back, and the
+    /// door to Holdings, where they now are.
     @ViewBuilder private var finish: some View {
         if case .done = out.step {
-            // What came back, then where it is; wTAC said once, if earned.
-            PrivateFinishLines(headline: out.paidWords.isEmpty ? String(localized: "Out of the farm")
-                                   : String(localized: "Back in Tacit: \(out.paidWords)"),
-                               note: nil)
-                .onAppear { chrome.rain(sources: ["Wallet"]) }
-                .padding(.top, DS.Space.s6)
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                PrivateFinishLines(headline: String(localized: "Back in Tacit, private"),
+                                   note: PrivateFinish.took(out.tookSeconds))
+                    .onAppear { chrome.rain(sources: ["Wallet"]) }
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(paidCoins) { coin in coinRow(coin, about: false) }
+                }
+                DSPushRow(title: Text("See them in Holdings"), action: {
+                    DSHaptic.selection()
+                    out.finish()
+                    chrome.moveTray = false
+                    chrome.openWalletPage(.holdings, fromActivity: nil)
+                }) { EmptyView() }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, DS.Space.s6)
         }
+    }
+
+    /// The coins that came back, the earned wTAC last.
+    private var paidCoins: [TacitFarms.Coin] {
+        var coins = out.paid.sorted { $0.key < $1.key }.map { TacitFarms.Coin(name: $0.key, amount: $0.value) }
+        if out.claimedTAC > 0 { coins.append(TacitFarms.Coin(name: "wTAC", amount: out.claimedTAC)) }
+        return coins
     }
 
     // MARK: - The foot

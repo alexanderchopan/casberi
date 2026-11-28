@@ -79,6 +79,17 @@ check(near(paid.tac, 100.1), "cTAC is not counted as TAC, or wTAC is")
 check(near(paid.others["wTAC"], 3.42), "wTAC is not its own coin")
 check(near(paid.others["ETH"], 0.0512) && near(paid.others["USDC"], 2) && paid.others["SPX"] == nil, "a coin is misnamed, misread, or nothing is kept")
 
+// What a withdrawal pays back: the position's share of each side, the fee
+// off the coin it is paid in, what it earned as wTAC; a side with no ticker
+// named from the pair.
+let back = F.payout(mine, in: r, fee: (coin: "ETH", amount: 0.01))
+check(back.map(\.name) == ["ETH", "TAC", "wTAC"], "the coins coming back are not ETH, TAC and wTAC")
+check(near(back.first { $0.name == "ETH" }?.amount, 0.0416475, 0.0001), "the fee is not taken off the ETH, or the share is wrong")
+check(near(back.first { $0.name == "TAC" }?.amount, 100.027124, 0.000001), "TAC is not the position's share of the pool")
+check(near(back.first { $0.name == "wTAC" }?.amount, 3.42), "what it earned is not wTAC")
+let spx = F.Position(pair: "SPX/TAC", lpAsset: "0x6aee", shares: 508_265_523_775 * 0.01, pendingTAC: 0)
+check(F.payout(spx, in: r).map(\.name) == ["SPX", "TAC"], "a side with no ticker is not named from the pair, or nothing earned shows")
+
 // Needs you: a week before the end, and after it, only for a farm you are in.
 let soon = F.Reading(pools: r.pools, active: true, endsAt: now.addingTimeInterval(3 * 86_400), asOf: now)
 let far = F.Reading(pools: r.pools, active: true, endsAt: now.addingTimeInterval(20 * 86_400), asOf: now)
@@ -112,5 +123,6 @@ mutate "an ended round still pays"           's/guard reading\.active, pool\.sha
 mutate "value units are not 8 decimals"      's/static let unit = 1e8/static let unit = 1e18/'
 mutate "wTAC is folded into TAC"             's/\["TAC", "cTAC"\]/["TAC", "cTAC", "wTAC"]/'
 mutate "Needs you speaks a month ahead"        's/static let askAhead: TimeInterval = 7 \* 86_400/static let askAhead: TimeInterval = 30 * 86_400/'
+mutate "the fee is taken off every coin"       's/\$0\.coin == coin \? gross - \$0\.amount : gross/gross - \$0.amount/'
 mutate "cETH's side is not priced"           's/else if pool\.a == "cETH" \{ side = ethInTAC\.map \{ pool\.reserveA \* \$0 \} \}//'
-print "✓ tacit farms: rates from Tacit's own pools, positions, what a farm pays back, Needs you (8 mutations)"
+print "✓ tacit farms: rates from Tacit's own pools, positions, what a farm pays back, a withdrawal's figures, Needs you (9 mutations)"

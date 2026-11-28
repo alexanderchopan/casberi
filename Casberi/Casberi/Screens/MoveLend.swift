@@ -836,7 +836,10 @@ struct MoveLendSentence<Head: View>: View {
                 let rate = TacitFarms.rate(pool, in: farms)
                 let usd = tacitAccount.farmUSD(position)
                 let earned = tacitAccount.tacPrice.map { position.pendingTAC * $0 }
-                let line = [String(localized: "Tacit farm"), TacitFarms.rateWords(rate)].compactMap { $0 }.joined(separator: " · ")
+                // The rate stops on a day: said beside it (user, 2026-11-27).
+                let until = TacitFarms.untilDay(farms).map { String(localized: "to \($0)") }
+                // One line, never clipped (2026-11-27): the rate and its day.
+                let line = [TacitFarms.rateWords(rate), until].compactMap { $0 }.joined(separator: " ")
                 out.append(Earning(choice: MoveTokenChoice(id: "earning|farm|\(position.lpAsset)", symbol: TacitFarms.name(position.pair),
                                                            network: String(localized: "Ethereum"),
                                                            sub: usd.map { MoveSentence.money($0, whole: true) }, line: line) {
@@ -858,7 +861,9 @@ struct MoveLendSentence<Head: View>: View {
             let live = farms.active && farms.endsAt > .now
             // One line, no more (user, 2026-11-27: "clipping"): the rates;
             // the day stands in To's head for the farms.
-            let line = live ? (Self.farmSpan(rates) ?? "") : String(localized: "ended \(day)")
+            // The rates, the day they stop, and that joining leaves the app.
+            let line = live ? [Self.farmSpan(rates), String(localized: "to \(day)")]
+                .compactMap { $0 }.joined(separator: " · ") : String(localized: "ended \(day)")
             rows.append(MoveTokenChoice(id: "farms", symbol: String(localized: "Tacit farms"), network: String(localized: "Ethereum"),
                                         line: line) {
                 withAnimation(DS.Motion.standard) {

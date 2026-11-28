@@ -335,6 +335,9 @@ KNOWN_PROPER: set[str] = {
     # In-app surfaces referenced by name — the chips and screens a sentence
     # points at ("add one from Apps", "washes the top of All").
     "All", "Apps", "Pinned", "Home", "Settings",
+    # The Wallet's Holdings page, named by a door to it ("See them in
+    # Holdings", a farm's Withdraw done, prd §2006).
+    "Holdings",
     # Facet tags (§308) — naming a tag, not describing an action.
     "Release", "Review",
     # Weekday and month abbreviations: a date stamp, not a shout.
