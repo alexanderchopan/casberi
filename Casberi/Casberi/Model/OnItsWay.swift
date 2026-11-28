@@ -104,7 +104,7 @@ enum OnItsWay {
         Item(id: "tacit-out:" + id, trip: .tacit, title: title, usd: usd,
              steps: paid ? [String(localized: "Proved on your iPhone"), String(localized: "Tacit is taking it")]
                 : [String(localized: "Proved on your iPhone"), String(localized: "Tacit is taking it"),
-                   String(localized: "Collected by your account")],
+                   String(localized: "Claimed by your account")],
              current: collecting ? 2 : 1, needs: nil)
     }
 }

@@ -352,8 +352,8 @@ final class TacitOut {
         var words: String {
             switch self {
             case .refused: return String(localized: "Tacit's chain didn't take it. Your TAC stays private")
-            case .slow: return String(localized: "Still waiting on Tacit's chain. Collect it later from here")
-            case .nothingOwed: return String(localized: "Tacit owes nothing to collect yet. Collect it later from here")
+            case .slow: return String(localized: "Still waiting on Tacit's chain. Claim it later from here")
+            case .nothingOwed: return String(localized: "Tacit owes nothing to claim yet. Claim it later from here")
             case .badAddress: return String(localized: "That isn't an Ethereum address")
             case .tooLong: return String(localized: "Tacit took too long. Your TAC stays private. Try again")
             }

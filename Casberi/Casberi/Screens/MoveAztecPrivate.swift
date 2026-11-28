@@ -349,7 +349,7 @@ final class AztecMove {
         case .deposit: String(localized: "private in 5 to 15 minutes")
         // Finish's Ethereum gas is paid later, from your account, and has no
         // measured figure to count yet: said, never left out (prd §1988 item 4).
-        case .send where toEthereum: String(localized: "on Ethereum in about an hour, plus Ethereum gas to finish")
+        case .send where toEthereum: String(localized: "on Ethereum in about an hour, plus Ethereum gas to claim")
         case .send: String(localized: "who, what and how much stay private")
         }
     }
@@ -801,7 +801,7 @@ final class AztecMove {
                     // the send need nobody, as a send within Aztec.
                     let exit = try await ShieldBridge.exit(asset, units: units, to: recipient, usd: amountUSD) { [weak self] in
                         guard let self, let onAway = self.onAway,
-                              steps.sendAway(from: .aztec, landed: String(localized: "On its way: finish it on Home in about an hour")) else { return }
+                              steps.sendAway(from: .aztec, landed: String(localized: "On its way: claim it on Home in about an hour")) else { return }
                         Self.kept = self
                         onAway()
                     }
@@ -1000,7 +1000,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
             // withdraw is sent from your account, so a payout to someone else
             // links your public account to it on Ethereum. Said, as a fact.
             if live, move.finishLinksYou {
-                out.append((String(localized: "Finished from your public account, so it's linked to you"), "", DS.textPrimary))
+                out.append((String(localized: "Claimed from your public account, so it's linked to you"), "", DS.textPrimary))
             }
         }
         if live {
@@ -1223,7 +1223,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
                 .compactMap { $0 }.joined(separator: " · ")
         case .send:
             if move.toEthereum {
-                return [String(localized: "Through Shield"), String(localized: "0.5% fee"), String(localized: "finish on Ethereum in about an hour")]
+                return [String(localized: "Through Shield"), String(localized: "0.5% fee"), String(localized: "claim on Ethereum in about an hour")]
                     .joined(separator: " · ")
             }
             return String(localized: "Who, what and how much stay private · about 20 seconds")
@@ -1277,7 +1277,7 @@ struct MoveAztecPrivateSentence<Head: View>: View {
         case .send:
             // Said as what happens and what you do (2026-11-27, user: "i don't
             // think that is clear"): ready in an hour, told, one tap on Home.
-            move.toEthereum ? String(localized: "It's ready to collect on Ethereum in about an hour. You'll be told, then tap Finish on Home to receive it.")
+            move.toEthereum ? String(localized: "It's ready to claim on Ethereum in about an hour. You'll be told, then tap Claim on Home to receive it.")
                 : move.paidInTheOpen ? String(localized: "Its gas was paid by your account, in the open.")
                 : PrivateFinish.took(sentTotal)
         }

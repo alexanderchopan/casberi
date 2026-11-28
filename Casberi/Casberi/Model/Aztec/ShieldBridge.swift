@@ -519,7 +519,7 @@ extension ShieldBridge {
         case .ready(let calldata):
             let sent = try await YourAccountChain.privateCalls(
                 [(to: asset.portal, data: calldata, value: "0")], on: YourAccountOp.ethereum,
-                reason: String(localized: "Finish moving \(asset.symbol) out of Aztec"), stage: stage)
+                reason: String(localized: "Claim \(asset.symbol) moved out of Aztec"), stage: stage)
             if case .landed(let transaction, _) = sent.outcome {
                 AztecAccountStore.shared.markExitWithdrawn(exit.transaction, withdrawal: transaction ?? "landed")
             }

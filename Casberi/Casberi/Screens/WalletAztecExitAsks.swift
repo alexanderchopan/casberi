@@ -44,10 +44,13 @@ struct WalletAztecExitAsks: View {
         let working = finishing == exit.id
         let figure = BalancePrivacy.shared.amount(AztecAccountStore.figure(exit), unit: exit.symbol)
         let line: Text = isReady
-            ? Text("Ready on Ethereum · ") + Text("Finish").foregroundStyle(DS.pickInk)
-            : Text(verbatim: String(localized: "On its way") + " · " + PrivateMoney.since(exit.at, now: .now))
+            ? Text("Ready on Ethereum · ") + Text("Claim").foregroundStyle(DS.pickInk)
+            // **WHAT HAPPENS, AND WHEN (2026-11-27, user: "user doesn't know
+            // what they are to do and nothing needs them just yet"):** the
+            // claim, and about how long until it can be made.
+            : Text(verbatim: Self.claimWhen(exit.at, now: .now))
         return DSPushRow(title: Text("\(figure) out of Aztec"),
-                         subtitle: working ? Text("Finishing…") : line,
+                         subtitle: working ? Text("Claiming…") : line,
                          subtitleTone: DS.textSecondary, busy: working, opens: false) {
             guard isReady, !working else { return }
             finish(exit)
@@ -56,12 +59,21 @@ struct WalletAztecExitAsks: View {
                 Color.clear.frame(width: DS.Face.row, height: DS.Face.row)
                 Image(systemName: isReady ? "arrow.down.circle" : "clock")
                     .dsGlyph(.body, weight: .semibold)
-                    .foregroundStyle(isReady ? DS.pickInk : DS.attention)
+                    // Waiting asks nothing of you yet: grey, never amber.
+                    .foregroundStyle(isReady ? DS.pickInk : DS.textSecondary)
                     .accessibilityHidden(true)
             }
         }
         .accessibilityHint(isReady ? Text("Withdraws it to your account") : Text(""))
         .walletListRow()
+    }
+
+    /// "Claim in about 40 min", from the hour Aztec's proof takes to reach
+    /// Ethereum; past it, "Claim soon".
+    static func claimWhen(_ at: Date, now: Date) -> String {
+        let left = Int((3600 - now.timeIntervalSince(at)) / 60)
+        if left <= 5 { return String(localized: "Claim soon, on Ethereum") }
+        return String(localized: "Claim in about \(left) min, on Ethereum")
     }
 
     private func finish(_ exit: AztecAccountStore.ShieldExit) {

@@ -267,7 +267,7 @@ struct TacitOutSheet: View {
             PrivateSendSteps.Step(key: .sent, running: String(localized: "Tacit is taking it"), done: String(localized: "Tacit took it")),
         ]
         if collects {
-            steps.append(PrivateSendSteps.Step(key: .signing, running: String(localized: "Collecting"), done: String(localized: "Collected")))
+            steps.append(PrivateSendSteps.Step(key: .signing, running: String(localized: "Claiming"), done: String(localized: "Claimed")))
         }
         return PrivateSendSteps.Plan(steps: steps)
     }
@@ -359,7 +359,7 @@ struct TacitOutSheet: View {
                 // After a withdrawal was handed, never a second one from here:
                 // Collect, which reads what is owed again.
                 if payTo == nil, out.owedWei > 0 || out.handed {
-                    MoveFootWord(word: String(localized: "Collect")) { Task { await out.collectOwed() } }
+                    MoveFootWord(word: String(localized: "Claim")) { Task { await out.collectOwed() } }
                 } else {
                     MoveFootWord(word: String(localized: "Try again")) {
                         out.reset()
@@ -371,11 +371,11 @@ struct TacitOutSheet: View {
             case .handing, .landing:
                 MoveFootWord(word: String(localized: "Sending…"), ink: DS.textSecondary)
             case .collecting:
-                MoveFootWord(word: String(localized: "Collecting…"), ink: DS.textSecondary)
+                MoveFootWord(word: String(localized: "Claiming…"), ink: DS.textSecondary)
             default:
                 if payTo == nil, out.owedWei > 0 {
                     // Owed from an earlier try: collected before anything new.
-                    MoveFootWord(word: String(localized: "Collect")) { Task { await out.collectOwed() } }
+                    MoveFootWord(word: String(localized: "Claim")) { Task { await out.collectOwed() } }
                 } else if !TacitEngine.shared.isOpen, !DemoMode.isActive, let coSigner {
                     MoveFootWord(word: String(localized: "Connect")) {
                         Task { await account.open(coSigner: coSigner) }

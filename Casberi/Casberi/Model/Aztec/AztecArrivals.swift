@@ -47,7 +47,7 @@ enum AztecArrivals {
             guard case .ready = await ShieldBridge.state(of: exit) else { continue }
             told.insert(exit.transaction)
             UserDefaults.standard.set(Array(told), forKey: key)
-            let body = String(localized: "Finish on Ethereum: \(AztecAccountStore.figure(exit)) to \(AddressTail.short(exit.recipient))")
+            let body = String(localized: "Claim on Ethereum: \(AztecAccountStore.figure(exit)) to \(AddressTail.short(exit.recipient))")
             await Notifications.outcome(.readyToFinish, id: "aztec:exit:" + exit.transaction, place: "Aztec",
                                         body: body, mark: "Aztec", awayOnly: true)
         }
