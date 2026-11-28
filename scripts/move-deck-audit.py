@@ -23,6 +23,10 @@ Checks, over every Swift file in the app (comments ignored):
       draws the sentence), no `MoveFactRow(` (`MoveDeckFacts`), no fade
       spelled by hand (`contentMargins(.bottom, MoveDeck.fade`).
   (3) A FOOT DRAWN BY HAND. `MoveDeckFoot(` outside the template.
+  (4) AN AMOUNT WITH NO $ | TOKEN. A file that draws Move's keypad
+      (`MoveKeypad(`) must offer the flip (`MoveUnitSwitch(`), as every
+      amount does (2026-11-27: the user found it missing on Tacit, Aztec,
+      Railgun and Earn one page at a time).
 
 Public Send (`MoveSentence.swift`) is the deck's origin and is allowed by
 name, with its reason, as a CEILING and a FLOOR: more is a new page off the
@@ -58,10 +62,12 @@ BODY = [
 KEYPAD = re.compile(r'\bMoveKeypad\(')
 DECK = re.compile(r'\bMoveReceiptDeck\(')
 FOOT = re.compile(r'\bMoveDeckFoot\(')
+FLIP = re.compile(r'\bMoveUnitSwitch\(')
 
 WHY = {
     "off-deck": "a Move page with keys that is not a `MoveReceiptDeck`",
     "hand-foot": "a deck foot drawn by hand — compose `MoveReceiptDeck`",
+    "no-flip": "an amount on Move's keys with no $ | token — `MoveUnitSwitch`",
     **{k: why for k, _, why in BODY},
 }
 
@@ -85,6 +91,8 @@ def scan(src: str) -> dict[str, list[str]]:
     is_deck = bool(DECK.search(text))
     if KEYPAD.search(text) and not is_deck:
         hits["off-deck"].append("MoveKeypad( with no MoveReceiptDeck(")
+    if KEYPAD.search(text) and not FLIP.search(text):
+        hits["no-flip"].append("MoveKeypad( with no MoveUnitSwitch(")
     for line in lines:
         if FOOT.search(line):
             hits["hand-foot"].append(line.strip())
@@ -130,9 +138,9 @@ def self_test() -> bool:
         "Casberi/Casberi/Screens/MoveDeck.swift":
             "struct MoveReceiptDeck {}\nScrollView { }\nMoveFlow { s }\nMoveFactRow(name: n)\nMoveDeckFoot(back: b)\n",
         "Casberi/Casberi/Screens/MoveSentence.swift":
-            "MoveKeypad(text: $t)\nMoveDeckFoot(back: a)\nMoveDeckFoot(back: b)\nScrollView { }\n",
+            "MoveKeypad(text: $t)\nMoveUnitSwitch(symbol: s)\nMoveDeckFoot(back: a)\nMoveDeckFoot(back: b)\nScrollView { }\n",
         "Casberi/Casberi/Screens/MovePrivate.swift":
-            "MoveReceiptDeck(title: t, back: b, lines: { }, content: {\n MoveDeckKeys { MoveKeypad(text: $a) }\n"
+            "MoveReceiptDeck(title: t, back: b, lines: { }, content: {\n MoveDeckKeys { MoveKeypad(text: $a) }\n MoveUnitSwitch(symbol: s)\n"
             " MoveDeckScroll { r }\n MoveDeckStatus(linesStand: x, sentence: { s }) { l }\n"
             "}, word: { w })\n// was ScrollView { MoveFlow { sentence } }\n",
         "Casberi/Casberi/Screens/Elsewhere.swift": "ScrollView { MoveFlow { s } }\n",
@@ -146,7 +154,8 @@ def self_test() -> bool:
         return len(f) == 1 and name in f[0] and WHY[check].split(" — ")[0] in f[0]
 
     deck = "MoveReceiptDeck(title: t, back: b, lines: { }, content: {\n"
-    expect("a page with keys off the deck is caught", one("VStack { MoveKeypad(text: $a) }\n", "off-deck"))
+    expect("a page with keys off the deck is caught", one("VStack { MoveKeypad(text: $a) }\nMoveUnitSwitch(symbol: s)\n", "off-deck"))
+    expect("an amount with no $ | token is caught", one(deck + "MoveDeckKeys { MoveKeypad(text: $a) }\n})\n", "no-flip"))
     expect("a scroll in a deck page is caught", one(deck + "ScrollView { x }\n})\n", "scroll"))
     expect("a sentence in a deck page is caught", one(deck + "MoveFlow { sentence }\n})\n", "sentence"))
     expect("a fact row in a deck page is caught", one(deck + "MoveFactRow(name: n, value: v)\n})\n", "fact"))
@@ -160,7 +169,7 @@ def self_test() -> bool:
     grown["Casberi/Casberi/Screens/MoveSentence.swift"] += "MoveDeckFoot(back: c)\n"
     expect("an allowance that grew is a finding", any("MoveSentence" in x for x in audit(grown)))
     stale = dict(base)
-    stale["Casberi/Casberi/Screens/MoveSentence.swift"] = "MoveKeypad(text: $t)\nMoveDeckFoot(back: a)\n"
+    stale["Casberi/Casberi/Screens/MoveSentence.swift"] = "MoveKeypad(text: $t)\nMoveUnitSwitch(symbol: s)\nMoveDeckFoot(back: a)\n"
     expect("a stale allowance is a finding", any("lower it" in x for x in audit(stale)))
     gone = dict(base)
     del gone["Casberi/Casberi/Screens/MoveSentence.swift"]
