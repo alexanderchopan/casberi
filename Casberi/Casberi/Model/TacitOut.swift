@@ -50,12 +50,12 @@ final class TacitOut {
     /// capsule's run hears the rest from here.
     private static func followAway(_ step: Step) {
         let steps = PrivateSendSteps.shared
-        guard steps.awayFrom == .tacit else { return }
+        guard steps.awayFrom == .tacitOut else { return }
         switch step {
-        case .handing, .landing: steps.mark(.sent, from: .tacit)
-        case .collecting: steps.mark(.signing, from: .tacit)
-        case .done: steps.finish(from: .tacit)
-        case .failed(let why): steps.fail(why, from: .tacit)
+        case .handing, .landing: steps.mark(.sent, from: .tacitOut)
+        case .collecting: steps.mark(.signing, from: .tacitOut)
+        case .done: steps.finish(from: .tacitOut)
+        case .failed(let why): steps.fail(why, from: .tacitOut)
         default: break
         }
     }

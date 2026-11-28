@@ -240,6 +240,15 @@ struct MoveStepCapsule: View {
                     chrome.moveLend = kept.mode
                     chrome.moveTray = true
                     if let why { chrome.flash(why, tone: .failure, seconds: 6) }
+                } else if steps.awayFrom == .tacitIn || steps.awayFrom == .tacitOut {
+                    // Tacit's own sheet again, the reason said once more
+                    // (prd §2005): it opens fresh, as every Move page does.
+                    let why = run.reason
+                    let into = steps.awayFrom == .tacitIn
+                    withAnimation(DS.Motion.standard) { steps.clearAway() }
+                    if into { chrome.moveTacitIn = true } else { chrome.moveTacitOut = true }
+                    chrome.moveTray = true
+                    if let why { chrome.flash(why, tone: .failure, seconds: 6) }
                 } else if steps.awayFrom == .privacyPools {
                     // Privacy Pools keeps no sentence: its Send again, the
                     // reason said once more (the review of 2026-11-27).

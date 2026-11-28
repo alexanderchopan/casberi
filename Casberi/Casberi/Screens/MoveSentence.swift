@@ -39,7 +39,7 @@ struct MoveSentence: View {
     init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil,
          privately: PrivateMove.Mode? = nil, lending: LendMove.Mode? = nil,
          aztecPrivately: AztecMove.Mode? = nil, railgunPrivately: RailgunMove.Opening? = nil,
-         tacitOut: Bool = false) {
+         tacitOut: Bool = false, tacitIn: Bool = false) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
@@ -51,7 +51,10 @@ struct MoveSentence: View {
         let railgun = RailgunPocket.available && mode == nil && aztec == nil ? railgunPrivately : nil
         let lends = AaveLend.on && lending != nil && mode == nil && aztec == nil && railgun == nil
         let opensTacit = tacitOut && mode == nil && aztec == nil && railgun == nil && !lends
-        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil || opensTacit ? .send : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        // A failed Make private's capsule opens its sheet again (prd §2005).
+        let opensTacitIn = tacitIn && mode == nil && aztec == nil && railgun == nil && !lends && !opensTacit
+        _verb = State(initialValue: railgun?.swap == true ? .swap : mode != nil || aztec != nil || railgun != nil || opensTacit || opensTacitIn ? .send : lends ? .lend : opening ?? (arrival == nil ? .swap : .receive))
+        _tacitOpen = State(initialValue: opensTacitIn)
         _lendMove = State(initialValue: LendMove(mode: lending ?? .lend, opens: lends))
         // A private TAC row's Send opens Tacit's own Send in Move.
         _tacitOutOpen = State(initialValue: opensTacit)
@@ -110,6 +113,8 @@ struct MoveSentence: View {
     @State private var tacitOpen = false
     /// Private TAC back to public (prd §1977): Tacit's other Send.
     @State private var tacitOutOpen = false
+    /// Tacit's sheets opened from Earn (prd §2005): they wear Earn's title.
+    @State private var tacitFromEarn = false
     /// A Tacit address typed in To (prd §1982): the private send's recipient.
     @State private var tacitPayTo: String?
     @State private var tacitAgainAmount: String?
@@ -1520,6 +1525,7 @@ struct MoveSentence: View {
                 MoveLendSentence(move: lendMove, account: account, inTray: inTray, title: pageTitle(.lend), tacit: { mode in
                     DSHaptic.selection()
                     withAnimation(DS.Motion.standard) {
+                        tacitFromEarn = true
                         if mode == .lend { tacitOpen = true } else { tacitPayTo = nil; tacitOutOpen = true }
                     }
                 }, swapFor: { token, chainId in
@@ -1551,12 +1557,14 @@ struct MoveSentence: View {
                 .transition(.opacity)
             }
             if tacitOutOpen, privateMode == nil, open != .verb {
-                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil; tacitAgainAmount = nil } },
-                              payTo: tacitPayTo, startAmount: tacitAgainAmount)
+                TacitOutSheet(leave: { withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil; tacitAgainAmount = nil; tacitFromEarn = false } },
+                              payTo: tacitPayTo, startAmount: tacitAgainAmount,
+                              header: tacitFromEarn && tacitPayTo == nil ? earnKinds(.takeBack) : nil)
                     .transition(.opacity)
             }
             if tacitOpen, privateMode == nil, open != .verb {
-                TacitShieldSheet(leave: { withAnimation(DS.Motion.standard) { tacitOpen = false } })
+                TacitShieldSheet(leave: { withAnimation(DS.Motion.standard) { tacitOpen = false; tacitFromEarn = false } },
+                                 header: tacitFromEarn ? earnKinds(.lend) : nil)
                     .transition(.opacity)
             }
             if aztecMode != nil, privateMode == nil, open != .verb {
@@ -3388,6 +3396,7 @@ struct MoveSentence: View {
             railgunOpen = false
             tacitOpen = false
             tacitOutOpen = false
+            tacitFromEarn = false
             aztecMode = nil
             verb = v
             receipt = nil
@@ -3453,6 +3462,27 @@ struct MoveSentence: View {
     }
 
     /// The page's name: a verb's two kinds share one (prd §1852).
+    /// **EARN'S TITLE OVER TACIT'S SHEETS (prd §2005).** Opened from Earn,
+    /// Make private is Deposit and back to public is Withdraw: Earn goes
+    /// home, and the other verb opens Tacit's other sheet.
+    private func earnKinds(_ on: LendMove.Mode) -> AnyView {
+        AnyView(MoveKindTitle(kinds: [
+            MoveKindTitle.Kind(id: "home", word: String(localized: "Earn"), on: false) {
+                withAnimation(DS.Motion.standard) {
+                    tacitOpen = false; tacitOutOpen = false; tacitPayTo = nil; tacitFromEarn = false
+                    lendMove.mode = .lend
+                    lendMove.home = true
+                }
+            },
+            MoveKindTitle.Kind(id: "lend", word: String(localized: "Deposit"), on: on == .lend) {
+                withAnimation(DS.Motion.standard) { tacitOutOpen = false; tacitPayTo = nil; tacitOpen = true }
+            },
+            MoveKindTitle.Kind(id: "takeBack", word: String(localized: "Withdraw"), on: on == .takeBack) {
+                withAnimation(DS.Motion.standard) { tacitOpen = false; tacitPayTo = nil; tacitOutOpen = true }
+            },
+        ], disabled: PrivateSendSteps.shared.run?.isRunning == true))
+    }
+
     private func pageTitle(_ v: Verb) -> String {
         switch v {
         case .buy: title(.deposit)

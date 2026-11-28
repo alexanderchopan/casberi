@@ -75727,3 +75727,15 @@ Under Fee, You get and Arrives, Make private's receipt adds "Earned: about 12% a
 **Not seen:** built and run.
 
 **Mac half (§1402).** None: the Mac carries no wallet (§1893).
+
+## §2005 — Tacit in Earn works as Aave and Olla do (amends §1986's sheets, §2003 item 2's failure tap) (user, 2026-11-28, of a table of where Tacit differed: "yes")
+
+1. **Earn's title over Tacit's sheets.** Opened from Earn, Make private is Deposit and back to public is Withdraw: both wear Earn · Deposit · Withdraw in place of "Send"; Earn goes home, the other verb opens Tacit's other sheet. A send to another Tacit account keeps "Send".
+2. **Make private says how it comes back:** "Take back: any time, in a few minutes" (back to public's own arrival), under Earned and In a year.
+3. **Back to public says what it earned:** "Earned: N TAC ($X) since <day>" (the TAC the chain's fees added to your shares since this phone first knew the rate, §1971 item 19d) and "Earns: about 12% a year, last 30 days" (§2002).
+4. **A failed Tacit capsule opens its sheet again** with the reason said once more: Tacit is two sources (`tacitIn`, `tacitOut`), and the shell opens Move on Make private (`ShellChrome.moveTacitIn`) or back to public (`moveTacitOut`).
+5. **Deposit or Withdraw from Earn's home weighs Tacit too:** where Tacit holds more that way than any market, its sheet opens.
+
+**Not seen:** built and run. Written in a Linux container with no Swift toolchain; the Python audits pass.
+
+**Mac half (§1402).** None: the Mac carries no wallet (§1893).

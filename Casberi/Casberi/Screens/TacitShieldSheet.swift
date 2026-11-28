@@ -17,6 +17,8 @@ struct TacitShieldSheet: View {
     /// Drawn inside Move, over Send's sentence (prd §1976), not as a sheet:
     /// its foot leads with Move's way back, and Done goes back to Move.
     var leave: (() -> Void)? = nil
+    /// Opened from Earn: Earn · Deposit · Withdraw in the title's place (prd §2005).
+    var header: AnyView? = nil
 
     private var coSigner: String? { YourAccountFacts.coSigners.first }
     private var walletHeld: Double { account.reading?.publicTAC ?? 0 }
@@ -40,7 +42,7 @@ struct TacitShieldSheet: View {
             withAnimation(DS.Motion.standard) {
                 if let moveBack { moveBack() } else if let leave { leave() } else { dismiss() }
             }
-        }, lines: {
+        }, header: header, lines: {
             if !sending { MoveReceiptSteps(steps: deckSteps) }
         }, content: {
             Group {
@@ -199,6 +201,9 @@ struct TacitShieldSheet: View {
         guard let r = account.reading, let rate = account.earnRateOver(r), let pct = AaveLend.rateOnly(rate.apy) else { return [] }
         var out: [MoveDeckFacts.Fact] = [
             .init(name: String(localized: "Earned"), value: String(localized: "about \(pct) a year, last \(rate.days) days")),
+            // How it comes back, as Aave's and Olla's say (prd §2005):
+            // back to public lands in a few minutes (`TacitOutSheet`).
+            .init(name: String(localized: "Take back"), value: String(localized: "any time, in a few minutes")),
         ]
         if let q = shield.quote, let arrives = TacitEngineWire.tac(q.arrives) {
             let year = NSDecimalNumber(decimal: arrives).doubleValue * rate.apy
@@ -270,7 +275,7 @@ struct TacitShieldSheet: View {
         case .handing:
             steps.mark(.sent)
             // The co-signer has signed: nothing more asks you (prd §2003).
-            if let onAway = shield.onAway, steps.sendAway(from: .tacit, landed: String(localized: "Made private on Tacit")) {
+            if let onAway = shield.onAway, steps.sendAway(from: .tacitIn, landed: String(localized: "Made private on Tacit")) {
                 onAway()
             }
         case .arriving, .landed: steps.finish()

@@ -26,7 +26,9 @@ final class PrivateSendSteps {
     /// Whose engine proves a send behind its sheet, so only its words reach it.
     /// Whose move a run is. Earn (Aave, Olla) and Tacit go behind their
     /// sheets too (prd §2003): your account's Face ID is drawn over anything.
-    enum Source { case aztec, railgun, privacyPools, earn, tacit }
+    /// Tacit is two: Make private (`tacitIn`) and back to public or a send
+    /// from Tacit (`tacitOut`), so a failure reopens the right sheet (prd §2005).
+    enum Source { case aztec, railgun, privacyPools, earn, tacitIn, tacitOut }
 
     /// The engines' step names, as their messages spell them.
     enum Key: String { case checking, proving, signing, sent, screening }

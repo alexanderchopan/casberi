@@ -13,6 +13,8 @@ struct TacitOutSheet: View {
     var payTo: String? = nil
     /// The amount Again fills in (prd §1983).
     var startAmount: String? = nil
+    /// Opened from Earn: Earn · Deposit · Withdraw in the title's place (prd §2005).
+    var header: AnyView? = nil
     @State private var amount = ""
     @State private var toCoSigner = false
     /// The Tacit address being named after a send (prd §1983).
@@ -42,7 +44,7 @@ struct TacitOutSheet: View {
     var body: some View {
         MoveReceiptDeck(title: String(localized: "Send"), inTray: true, backDisabled: out.inFlight, back: {
             withAnimation(DS.Motion.standard) { moveBack?() ?? leave() }
-        }, lines: {
+        }, header: header, lines: {
             if !sending { MoveReceiptSteps(steps: deckSteps) }
         }, content: {
             Group {
@@ -94,6 +96,8 @@ struct TacitOutSheet: View {
         }
         // The shared steps follow the send's own (2026-11-27).
         .onChange(of: out.step) { _, now in follow(now) }
+        // The rate Withdraw says (prd §2005), read once an hour.
+        .task { if payTo == nil { await TacitAccount.shared.readChainYield() } }
         // In Move's tray the send goes behind it (prd §2003).
         .onAppear { out.onAway = chrome.moveTray ? { chrome.moveTray = false } : nil }
         .onAppear {
@@ -171,15 +175,34 @@ struct TacitOutSheet: View {
         .accessibilityAddTraits(picked ? [.isSelected] : [])
     }
 
+    /// **WHAT IT EARNED, WITHDRAWING (prd §2005), as Aave's and Olla's say
+    /// it:** the TAC the Tacit chain's fees added to your shares since this
+    /// phone first knew the rate, and the rate it earns.
+    private var earnFacts: [MoveDeckFacts.Fact] {
+        guard let r = account.reading else { return [] }
+        var out: [MoveDeckFacts.Fact] = []
+        if let earned = r.earnedTAC, earned >= 0.0001, let since = r.earnedSince {
+            let usd = account.tacPrice.map { LendMove.usd(earned * $0) }
+            let day = since.formatted(.dateTime.month(.abbreviated).day())
+            let tac = "\(TacitAccountRows.amount(earned)) TAC"
+            out.append(.init(name: String(localized: "Earned"),
+                             value: usd.map { String(localized: "\(tac) (\($0)) since \(day)") } ?? String(localized: "\(tac) since \(day)")))
+        }
+        if let rate = account.earnRateOver(r), let pct = AaveLend.rateOnly(rate.apy) {
+            out.append(.init(name: String(localized: "Earns"), value: String(localized: "about \(pct) a year, last \(rate.days) days")))
+        }
+        return out
+    }
+
     /// The receipt under the lines: Tacit's fee and when it lands, as every
     /// private send's facts (`MoveDeckFacts`).
     @ViewBuilder private var receipt: some View {
         VStack(alignment: .leading, spacing: MoveReceipt.gap) {
             MoveDeckFacts(facts: [
-                .init(name: String(localized: "Fee"), value: feeWords),
-                .init(name: String(localized: "Arrives"),
-                      value: payTo == nil ? String(localized: "In a few minutes") : String(localized: "In about a minute")),
-            ])
+                MoveDeckFacts.Fact(name: String(localized: "Fee"), value: feeWords),
+                MoveDeckFacts.Fact(name: String(localized: "Arrives"),
+                                   value: payTo == nil ? String(localized: "In a few minutes") : String(localized: "In about a minute")),
+            ] + (payTo == nil ? earnFacts : []))
             // **HOW HIDDEN, WHERE YOU SEND (prd §1983, as Privacy Pools'
             // §1738):** the notes on the Tacit chain at the last reading, the
             // crowd this send's note is one of. It advises, never blocks.
@@ -245,7 +268,7 @@ struct TacitOutSheet: View {
                 steps.begin(.move, plan: Self.plan(collects: payTo == nil), quiet: true)
                 // Proving needs nobody (prd §2003): the capsule says the rest.
                 if let onAway = out.onAway,
-                   steps.sendAway(from: .tacit, landed: payTo == nil ? String(localized: "Back in your account") : String(localized: "Sent from Tacit")) {
+                   steps.sendAway(from: .tacitOut, landed: payTo == nil ? String(localized: "Back in your account") : String(localized: "Sent from Tacit")) {
                     onAway()
                 }
             }

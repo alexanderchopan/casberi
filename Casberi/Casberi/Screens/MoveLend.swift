@@ -841,6 +841,17 @@ struct MoveLendSentence<Head: View>: View {
         let has = AaveLend.markets.filter {
             !move.refused.contains(LendMove.key($0)) && (Decimal(string: move.available($0) ?? "0") ?? 0) > 0
         }
+        // **TACIT TOO (prd §2005):** where Tacit holds more that way than any
+        // market, its own sheet opens: Make private, or back to public.
+        let richest = has.compactMap(worth).max() ?? 0
+        if let tacit, TacitAccount.shared.connected, let r = TacitAccount.shared.reading, let price = TacitAccount.shared.tacPrice {
+            let held = mode == .lend ? (r.accountTAC ?? 0) + (r.publicTAC ?? 0) : (r.privateTAC ?? 0)
+            if held * price > richest, held > 0 {
+                move.mode = .lend
+                tacit(mode)
+                return
+            }
+        }
         enter(mode, place: has)
     }
 

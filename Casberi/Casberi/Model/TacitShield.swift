@@ -44,10 +44,10 @@ final class TacitShield {
     /// hears the rest from here, the sheet being gone.
     private static func followAway(_ step: Step) {
         let steps = PrivateSendSteps.shared
-        guard steps.awayFrom == .tacit else { return }
+        guard steps.awayFrom == .tacitIn else { return }
         switch step {
-        case .arriving, .landed: steps.finish(from: .tacit)
-        case .failed(let why): steps.fail(why, from: .tacit)
+        case .arriving, .landed: steps.finish(from: .tacitIn)
+        case .failed(let why): steps.fail(why, from: .tacitIn)
         default: break
         }
     }

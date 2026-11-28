@@ -268,6 +268,9 @@ final class ShellChrome {
     /// Move raised onto Tacit's Send: Holdings' private TAC row's page
     /// (back to public, or to another Tacit account). Cleared when the tray leaves.
     var moveTacitOut = false
+    /// Move raised onto Tacit's Make private: a failed one's capsule (prd
+    /// §2005). Cleared when the tray leaves.
+    var moveTacitIn = false
     /// Move opens on Lend (prd §1674): a lent row in Holdings takes it back.
     /// Cleared when the tray closes.
     var moveLend: LendMove.Mode?
